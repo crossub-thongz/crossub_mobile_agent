@@ -70,17 +70,17 @@ function ArrearsTable({
   onToggle,
   onToggleAll,
   disabled,
+  emptyMessage = 'No arrears recorded for this property.',
 }: {
   rows: ArrearsRow[];
   selectedKeys: string[];
   onToggle: (key: string) => void;
   onToggleAll: () => void;
   disabled?: boolean;
+  emptyMessage?: string;
 }) {
   if (rows.length === 0) {
-    return (
-      <p className="text-muted-foreground text-sm">No arrears recorded for this property.</p>
-    );
+    return <p className="text-muted-foreground text-sm">{emptyMessage}</p>;
   }
 
   const allSelected = selectedKeys.length === rows.length;
@@ -171,6 +171,7 @@ export function RentChasingArrearsDialog({
   const [paidDateOpen, setPaidDateOpen] = useState(false);
 
   const arrears = prefill?.arrears ?? [];
+  const payments = prefill?.payments ?? [];
 
   const selectedKinds = useMemo(
     () =>
@@ -310,7 +311,37 @@ export function RentChasingArrearsDialog({
                 onToggle={toggleRow}
                 onToggleAll={toggleAll}
                 disabled={saving}
+                emptyMessage={
+                  payments.length > 0
+                    ? 'Nothing left outstanding.'
+                    : 'No arrears recorded for this property.'
+                }
               />
+              {payments.length > 0 ? (
+                <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                  <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                    Payments
+                  </p>
+                  <ul className="mt-2 space-y-1.5">
+                    {payments.map((payment, index) => (
+                      <li
+                        key={`${payment.caseId ?? 'case'}-${payment.paidDate}-${index}`}
+                        className="flex items-baseline justify-between gap-3 text-sm"
+                      >
+                        <span>{formatDate(payment.paidDate)}</span>
+                        <span className="font-medium tabular-nums">
+                          {formatCurrency(payment.amount)}
+                          <span className="text-muted-foreground ml-2 text-xs font-normal">
+                            {payment.remaining > 0
+                              ? `${formatCurrency(payment.remaining)} left`
+                              : 'Paid in full'}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               {arrears.length > 0 ? (
                 <Button
                   type="button"

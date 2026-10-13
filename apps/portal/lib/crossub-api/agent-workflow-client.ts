@@ -448,6 +448,12 @@ export type AgentTribunalRentChasingPrefill = {
   agreementEndDate?: string | null;
   leaseStartDate?: string | null;
   bondArrears: CreateAgentTribunalRentChasingInput['bondArrears'] | null;
+  payments?: Array<{
+    amount: number;
+    paidDate: string;
+    remaining: number;
+    caseId?: string;
+  }>;
 };
 
 export async function fetchAgentTribunalRentChasingPrefill(

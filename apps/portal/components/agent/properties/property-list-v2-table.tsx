@@ -1,25 +1,22 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Briefcase, Building2, MoreHorizontal, Wrench } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 
 import { HoverInfoList } from '@/components/agent/hover-info-list';
-import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   buildPropertyListV2LeaseExpiry,
   buildPropertyListV2RowStatus,
-  buildPropertyListV2RowTasks,
   formatPropertyListV2Rent,
   propertyListV2TenancyLabel,
   type PropertyListV2StatusTone,
 } from '@/lib/property-list-v2';
 import { isPropertyRegistryDraft } from '@/lib/property-registry-persist';
-import { useAgentStore } from '@/lib/store';
 import { usePropertyTenantContacts } from '@/lib/use-property-tenant-contacts';
 import type { LeasingRecord, Property, PropertyAccounting } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 function StatusBadge({
   label,
@@ -49,19 +46,6 @@ function StatusBadge({
       ) : null}
     </div>
   );
-}
-
-function taskCountLabel(
-  kind: 'maintenance' | 'leasing' | 'inspection',
-  count: number,
-): string {
-  const labels = {
-    maintenance: ['maintenance task', 'maintenance tasks'] as const,
-    leasing: ['leasing task', 'leasing tasks'] as const,
-    inspection: ['inspection task', 'inspection tasks'] as const,
-  };
-  const [singular, plural] = labels[kind];
-  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 function PropertyRowActions({
@@ -182,69 +166,12 @@ function PropertyRowActions({
   );
 }
 
-function TaskSummary({
-  maintenanceCount,
-  leasingCount,
-  inspectionCount,
-  summary,
-  subsummary,
-}: {
-  maintenanceCount: number;
-  leasingCount: number;
-  inspectionCount: number;
-  summary: string;
-  subsummary?: string;
-}) {
-  const total = maintenanceCount + leasingCount + inspectionCount;
-  return (
-    <div className="min-w-0">
-      <div className="flex items-center gap-2">
-        {maintenanceCount > 0 ? (
-          <span
-            className="text-muted-foreground inline-flex cursor-default items-center gap-1 text-[11px]"
-            title={taskCountLabel('maintenance', maintenanceCount)}
-            aria-label={taskCountLabel('maintenance', maintenanceCount)}
-          >
-            <Wrench className="size-3.5" aria-hidden />
-            {maintenanceCount}
-          </span>
-        ) : null}
-        {leasingCount > 0 ? (
-          <span
-            className="text-muted-foreground inline-flex cursor-default items-center gap-1 text-[11px]"
-            title={taskCountLabel('leasing', leasingCount)}
-            aria-label={taskCountLabel('leasing', leasingCount)}
-          >
-            <Briefcase className="size-3.5" aria-hidden />
-            {leasingCount}
-          </span>
-        ) : null}
-        {inspectionCount > 0 ? (
-          <span
-            className="text-muted-foreground inline-flex cursor-default items-center gap-1 text-[11px]"
-            title={taskCountLabel('inspection', inspectionCount)}
-            aria-label={taskCountLabel('inspection', inspectionCount)}
-          >
-            <Building2 className="size-3.5" aria-hidden />
-            {inspectionCount}
-          </span>
-        ) : null}
-        {total === 0 ? <span className="text-muted-foreground text-[11px]">—</span> : null}
-      </div>
-      <p className="mt-1 truncate text-xs font-medium">{summary}</p>
-      {subsummary ? (
-        <p className="text-muted-foreground truncate text-[11px]">{subsummary}</p>
-      ) : null}
-    </div>
-  );
-}
-
 export function PropertyListV2Table({
   properties,
   selectedId,
   accounting,
   leasingRecords,
-  needActionCountFor,
+  emphasizeArrears = false,
   onSelect,
   onOpenProfile,
   onDeleteDraft,
@@ -256,7 +183,7 @@ export function PropertyListV2Table({
   selectedId: string | null;
   accounting: PropertyAccounting[];
   leasingRecords: LeasingRecord[];
-  needActionCountFor: (propertyId: string) => number;
+  emphasizeArrears?: boolean;
   onSelect: (propertyId: string) => void;
   /** Desktop: second click (or double-click) on a selected row opens the property profile. */
   onOpenProfile?: (propertyId: string) => void;
@@ -265,27 +192,17 @@ export function PropertyListV2Table({
   onRestore?: (property: Property) => void;
   restoringId?: string | null;
 }) {
-  const {
-    maintenanceAll,
-    inspections,
-    rentReviews,
-    leasingCycles,
-    tenantSelections,
-    vacating,
-    tribunalCases,
-    getPropertyActions,
-  } = useAgentData();
-  const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
   const tenantContactsByProperty = usePropertyTenantContacts(properties.map((property) => property.id));
 
   const rowMeta = useMemo(() => {
     const meta = new Map<
       string,
-      ReturnType<typeof buildPropertyListV2RowTasks> & {
+      {
         status: ReturnType<typeof buildPropertyListV2RowStatus>;
         leaseExpiry: ReturnType<typeof buildPropertyListV2LeaseExpiry>;
         tenancy: ReturnType<typeof propertyListV2TenancyLabel>;
-        needActionCount: number;
+        arrearsAmount: number;
+        daysInArrears: number;
       }
     >();
 
@@ -303,54 +220,24 @@ export function PropertyListV2Table({
           currentLease,
           tenantContactsByProperty[propertyId],
         ),
-        needActionCount: needActionCountFor(propertyId),
-        ...buildPropertyListV2RowTasks({
-          propertyId,
-          property,
-          maintenance: maintenanceAll.filter((row) => row.propertyId === propertyId),
-          inspections: inspections.filter((row) => row.propertyId === propertyId),
-          rentReviews: rentReviews.filter((row) => row.propertyId === propertyId),
-          rentReviewDecisions,
-          leasingCycles: leasingCycles.filter((row) => row.propertyId === propertyId),
-          tenantSelections: tenantSelections.filter((row) => row.propertyId === propertyId),
-          vacatingCases: vacating.filter((row) => row.propertyId === propertyId),
-          tribunalCases: tribunalCases.filter((row) => row.propertyId === propertyId),
-          accounting: acct,
-          currentLease,
-          needActions: getPropertyActions(propertyId),
-        }),
+        arrearsAmount: acct?.arrearsAmount ?? 0,
+        daysInArrears: acct?.daysInArrears ?? 0,
       });
     }
 
     return meta;
-  }, [
-    accounting,
-    getPropertyActions,
-    inspections,
-    leasingCycles,
-    leasingRecords,
-    maintenanceAll,
-    needActionCountFor,
-    properties,
-    rentReviewDecisions,
-    rentReviews,
-    tenantContactsByProperty,
-    tenantSelections,
-    tribunalCases,
-    vacating,
-  ]);
+  }, [accounting, leasingRecords, properties, tenantContactsByProperty]);
 
   return (
     <div className="min-w-0 overflow-hidden rounded-2xl border bg-card shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[48rem] table-fixed border-collapse text-left text-sm">
           <colgroup>
-            <col style={{ width: '19%' }} />
-            <col style={{ width: '16%' }} />
-            <col style={{ width: '11%' }} />
+            <col style={{ width: '24%' }} />
+            <col style={{ width: '20%' }} />
             <col style={{ width: '14%' }} />
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '21%' }} />
+            <col style={{ width: '20%' }} />
+            <col style={{ width: '16%' }} />
             <col style={{ width: '2.75rem' }} />
           </colgroup>
           <thead>
@@ -362,9 +249,8 @@ export function PropertyListV2Table({
               <th className="px-3 py-3">Rent</th>
               <th className="px-3 py-3">Lease expiry</th>
               <th className="px-3 py-3" data-tour="properties-status">
-                Status
+                {emphasizeArrears ? 'Arrears' : 'Status'}
               </th>
-              <th className="px-3 py-3">Tasks</th>
               <th className="px-1 py-3">
                 <span className="sr-only">Actions</span>
               </th>
@@ -443,18 +329,42 @@ export function PropertyListV2Table({
                     {formatPropertyListV2Rent(property)}
                   </td>
                   <td className="px-3 py-3 align-top">
-                    <p className="font-medium tabular-nums">{meta.leaseExpiry.label}</p>
+                    <p
+                      className={cn(
+                        'font-medium tabular-nums',
+                        meta.leaseExpiry.tone === 'warning' && 'text-amber-700',
+                      )}
+                    >
+                      {meta.leaseExpiry.label}
+                    </p>
                     {meta.leaseExpiry.sublabel ? (
-                      <p className="text-muted-foreground text-xs tabular-nums">
+                      <p
+                        className={cn(
+                          'text-xs tabular-nums',
+                          meta.leaseExpiry.tone === 'warning'
+                            ? 'text-amber-700'
+                            : 'text-muted-foreground',
+                        )}
+                      >
                         {meta.leaseExpiry.sublabel}
                       </p>
                     ) : null}
                   </td>
                   <td className="px-3 py-3 align-top">
-                    <StatusBadge {...meta.status} />
-                  </td>
-                  <td className="px-3 py-3 align-top">
-                    <TaskSummary {...meta} />
+                    {emphasizeArrears && (meta.arrearsAmount > 0 || meta.daysInArrears > 0) ? (
+                      <div>
+                        <p className="font-semibold text-rose-700 tabular-nums">
+                          {meta.arrearsAmount > 0 ? formatCurrency(meta.arrearsAmount) : 'Arrears'}
+                        </p>
+                        {meta.daysInArrears > 0 ? (
+                          <p className="text-muted-foreground text-xs">
+                            {meta.daysInArrears} day{meta.daysInArrears === 1 ? '' : 's'} overdue
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <StatusBadge {...meta.status} />
+                    )}
                   </td>
                   <td
                     className="px-1 py-3 align-top"

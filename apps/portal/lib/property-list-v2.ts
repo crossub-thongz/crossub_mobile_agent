@@ -45,7 +45,7 @@ export const PROPERTY_LIST_V2_FILTERS: {
   { id: 'archived', label: 'Archived' },
 ];
 
-export type PropertyListV2Sort = 'newest' | 'oldest' | 'az' | 'za';
+export type PropertyListV2Sort = 'newest' | 'oldest' | 'az' | 'za' | 'arrears';
 
 export const PROPERTY_LIST_V2_SORTS: {
   id: PropertyListV2Sort;
@@ -55,7 +55,16 @@ export const PROPERTY_LIST_V2_SORTS: {
   { id: 'oldest', label: 'Oldest to newest' },
   { id: 'az', label: 'A–Z' },
   { id: 'za', label: 'Z–A' },
+  { id: 'arrears', label: 'Highest arrears' },
 ];
+
+export type PropertyDirectoryTab = 'all' | 'arrears' | 'leases';
+export type PropertyLeaseView = 'all' | 'expiring' | 'periodic';
+export type PropertyLeaseWindow = 30 | 60 | 90;
+export type PropertyOccupancyFilter = 'all' | 'occupied' | 'vacant';
+
+export const PROPERTY_LEASE_WINDOWS: PropertyLeaseWindow[] = [30, 60, 90];
+const LEASE_WARNING_DAYS = 30;
 
 function propertyListV2AddressKey(property: Property): string {
   return [property.address, property.suburb, property.postcode].filter(Boolean).join(' ');
@@ -70,8 +79,17 @@ function propertyListV2CreatedMs(property: Property): number {
 export function sortPropertiesForListV2(
   properties: Property[],
   sort: PropertyListV2Sort,
+  accounting: PropertyAccounting[] = [],
 ): Property[] {
   const rows = [...properties];
+  if (sort === 'arrears') {
+    const amountFor = (property: Property) =>
+      accounting.find((row) => row.propertyId === property.id)?.arrearsAmount ?? 0;
+    const daysFor = (property: Property) =>
+      accounting.find((row) => row.propertyId === property.id)?.daysInArrears ?? 0;
+    rows.sort((a, b) => amountFor(b) - amountFor(a) || daysFor(b) - daysFor(a));
+    return rows;
+  }
   rows.sort((a, b) => {
     if (sort === 'newest' || sort === 'oldest') {
       const byCreated =
@@ -178,21 +196,85 @@ export function buildPropertyListV2RowStatus(
   return { label: 'Occupied', tone: 'muted' };
 }
 
+export type PropertyLeaseExpiryTone = 'muted' | 'normal' | 'warning' | 'periodic';
+
+export type PropertyLeaseExpiryDisplay = {
+  kind: 'empty' | 'vacating' | 'periodic' | 'fixed';
+  label: string;
+  sublabel?: string;
+  tone: PropertyLeaseExpiryTone;
+  daysLeft: number | null;
+};
+
 export function buildPropertyListV2LeaseExpiry(
   property: Property,
   currentLease?: LeasingRecord,
-): { label: string; sublabel?: string } {
-  if (isPropertyRegistryDraft(property)) {
-    return { label: '—' };
+): PropertyLeaseExpiryDisplay {
+  if (isPropertyRegistryDraft(property) || property.leaseStatus === 'vacant') {
+    return { kind: 'empty', label: '—', tone: 'muted', daysLeft: null };
   }
-  const { end } = resolveLeaseDates(property, currentLease);
+
+  const { start, end } = resolveLeaseDates(property, currentLease);
   const leaseEnd = end ?? property.leaseEnd;
-  if (!leaseEnd) return { label: '—' };
-  const days = daysUntilDate(leaseEnd);
+  const days = leaseEnd ? daysUntilDate(leaseEnd) : null;
+  const since = start ?? property.leaseStart;
+  const periodicSince = days != null && days < 0 && leaseEnd ? leaseEnd : since;
+
+  if (property.leaseStatus === 'vacating') {
+    return {
+      kind: 'vacating',
+      label: leaseEnd ? formatDate(leaseEnd) : 'Vacating',
+      sublabel: days != null && days < 0 ? 'Tenant has not left' : daysLeftLabel(days),
+      tone: 'warning',
+      daysLeft: days,
+    };
+  }
+
+  const rolledOver = property.leaseStatus === 'active' && days != null && days < 0;
+  const periodic = property.leaseStatus === 'periodic' || !leaseEnd?.trim() || rolledOver;
+
+  if (periodic) {
+    return {
+      kind: 'periodic',
+      label: 'Periodic',
+      sublabel: periodicSince ? `Since ${formatDate(periodicSince)}` : undefined,
+      tone: 'periodic',
+      daysLeft: null,
+    };
+  }
+
   return {
-    label: formatDate(leaseEnd),
-    sublabel: days != null ? `(${days} day${days === 1 ? '' : 's'})` : undefined,
+    kind: 'fixed',
+    label: formatDate(leaseEnd!),
+    sublabel: daysLeftLabel(days),
+    tone: days != null && days <= LEASE_WARNING_DAYS ? 'warning' : 'normal',
+    daysLeft: days,
   };
+}
+
+function daysLeftLabel(days: number | null): string | undefined {
+  if (days == null) return undefined;
+  if (days < 0) {
+    const overdue = Math.abs(days);
+    return `${overdue} day${overdue === 1 ? '' : 's'} overdue`;
+  }
+  if (days === 0) return 'Due today';
+  return `${days} day${days === 1 ? '' : 's'} left`;
+}
+
+export function propertyInLeaseView(
+  property: Property,
+  currentLease: LeasingRecord | undefined,
+  view: PropertyLeaseView,
+  windowDays: PropertyLeaseWindow,
+): boolean {
+  const display = buildPropertyListV2LeaseExpiry(property, currentLease);
+  if (display.kind === 'empty') return false;
+  if (view === 'periodic') return display.kind === 'periodic';
+  if (view === 'all') return true;
+  if (display.kind === 'periodic') return false;
+  if (display.daysLeft == null) return display.kind === 'vacating';
+  return display.daysLeft <= windowDays;
 }
 
 export function buildPropertyListV2RowTasks(input: {

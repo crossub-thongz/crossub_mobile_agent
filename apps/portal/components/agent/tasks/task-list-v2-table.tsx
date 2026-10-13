@@ -13,7 +13,7 @@ import {
 import type { TaskListV2Row } from '@/lib/task-list-v2';
 import { cn } from '@/lib/utils';
 
-function TaskIcon({ row }: { row: TaskListV2Row }) {
+export function TaskIcon({ row }: { row: TaskListV2Row }) {
   const className = 'size-4';
   const wrapClass = cn(
     'flex size-9 shrink-0 items-center justify-center rounded-xl',

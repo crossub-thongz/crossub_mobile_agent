@@ -72,12 +72,12 @@ export const AGENT_PAGE_TOURS: Record<AgentTutorialModuleId, AgentTourStep[]> = 
     { id: 'properties-arrears', target: 'properties-filter-arrears', ...copy('properties', 'Arrears') },
     {
       id: 'properties-needs',
-      target: 'properties-filter-needs_attention',
+      target: 'properties-more-filters',
       ...copy('properties', 'Needs attention'),
     },
     {
       id: 'properties-archived',
-      target: 'properties-filter-archived',
+      target: 'properties-more-filters',
       ...copy('properties', 'Archived filter'),
     },
     { id: 'properties-sort', target: 'properties-sort', ...copy('properties', 'Sort') },
@@ -86,7 +86,7 @@ export const AGENT_PAGE_TOURS: Record<AgentTutorialModuleId, AgentTourStep[]> = 
     {
       id: 'properties-status',
       target: 'properties-status',
-      ...copy('properties', 'Status and Tasks columns'),
+      ...copy('properties', 'Status and lease'),
     },
     { id: 'properties-preview', target: 'properties-preview', ...copy('properties', 'Preview panel') },
     { id: 'properties-menu', target: 'properties-row-menu', ...copy('properties', 'Use the row menu') },

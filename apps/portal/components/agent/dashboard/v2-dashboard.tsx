@@ -4,185 +4,177 @@ import Link from 'next/link';
 import { useMemo, useState, type FormEvent } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
-  AlertCircle,
+  AlertTriangle,
+  Bell,
   Building2,
+  CalendarDays,
   CheckCircle2,
   ChevronRight,
+  CircleDollarSign,
   ClipboardList,
-  HeartPulse,
+  Clock3,
+  FileText,
   Home,
   Mic,
-  Scale,
-  ShieldCheck,
-  Sparkles,
-  UserRound,
+  Users,
   Wrench,
 } from 'lucide-react';
 
-import {
-  crosNoteForAttentionItem,
-  attentionItemSubtext,
-  DashboardAttentionCard,
-} from '@/components/agent/dashboard/dashboard-attention-card';
 import { InspectionOnlyPlanBanner } from '@/components/agent/inspection-only-plan-banner';
-import { PortfolioHealthDetailDialog } from '@/components/agent/dashboard/portfolio-health-detail-dialog';
 import { CrosAssistantLogo } from '@/components/brand/cros-assistant-logo';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
-import { ACCOUNTING_MODULE_LAUNCHED } from '@/constants/accounting-sections';
 import {
   inspectionDetail,
   maintenanceDetail,
   rentReviewDetail,
   ROUTES,
+  vacatingDetail,
 } from '@/constants/routes';
 import {
-  activityWhen,
-  buildPortfolioHealthBreakdown,
-  buildRecentActivity,
-  crosHandlingTotals,
-  formatDashboardMoney,
-  greetingForNow,
-  type PortfolioHealthBucketKey,
-  underOfferCount,
-  PORTFOLIO_HEALTH_BUCKET_LABEL,
-} from '@/lib/dashboard-home';
+  buildDashboardBoard,
+  DASHBOARD_EVENT_PREVIEW,
+  DASHBOARD_HORIZONS,
+  type DashboardEvent,
+  type DashboardEventBadge,
+  type DashboardHorizon,
+} from '@/lib/dashboard-board';
+import { formatDashboardMoney, greetingForNow } from '@/lib/dashboard-home';
+import {
+  buildPortfolioTaskList,
+  filterTaskListV2RowsForAgencies,
+  taskDueMeta,
+} from '@/lib/task-list-v2';
+import { useAgentStore } from '@/lib/store';
 import { useShellDockStore } from '@/lib/shell-dock-store';
-import { formatTitleCase } from '@/lib/display-text';
 import { cn } from '@/lib/utils';
 
 import './v2-dashboard.css';
 
-const ATTENTION_LIMIT = 3;
-const ACTIVITY_ICON: Record<
-  string,
-  { icon: LucideIcon; tone: string }
-> = {
-  Inspection: { icon: CheckCircle2, tone: 'bg-emerald-500/10 text-emerald-700' },
-  Leasing: { icon: UserRound, tone: 'bg-primary/10 text-primary' },
-  Maintenance: { icon: Wrench, tone: 'bg-primary/10 text-primary' },
-  Tribunal: { icon: Scale, tone: 'bg-sky-500/10 text-sky-700' },
+const BADGE_CLASS: Record<DashboardEventBadge, string> = {
+  action: 'bg-rose-500/12 text-rose-700',
+  awaiting: 'bg-amber-500/15 text-amber-800',
+  scheduled: 'bg-emerald-500/12 text-emerald-700',
+  'coming-up': 'bg-sky-500/12 text-sky-800',
 };
-
-const ACTIVITY_TONE: Record<string, string> = {
-  Inspection: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300',
-  Leasing: 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300',
-  Maintenance: 'border-primary/30 bg-primary/10 text-primary',
-  Tribunal: 'border-sky-500/30 bg-sky-500/10 text-sky-800 dark:text-sky-300',
-};
-
-function SectionHead({
-  title,
-  count,
-  countTone = 'primary',
-  href,
-  linkLabel = 'View All',
-}: {
-  title: string;
-  count?: number;
-  countTone?: 'primary' | 'danger';
-  href: string;
-  linkLabel?: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-2">
-        <h2 className="v2-dashboard__section-title truncate text-sm font-semibold tracking-tight">{title}</h2>
-        {count != null && count > 0 ? (
-          <span
-            className={cn(
-              'rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums',
-              countTone === 'danger' ? 'bg-rose-500 text-white' : 'bg-primary/15 text-primary',
-            )}
-          >
-            {count}
-          </span>
-        ) : null}
-      </div>
-      <Link href={href} className="text-primary flex shrink-0 items-center gap-0.5 text-xs font-medium hover:underline">
-        {linkLabel}
-        <ChevronRight className="size-3" aria-hidden />
-        <span className="sr-only"> {title}</span>
-      </Link>
-    </div>
-  );
-}
 
 export function V2Dashboard() {
   const { user } = useAuth();
   const {
     properties,
-    dashboardKpis: k,
+    agencies,
     needActionItems,
     hasFullManagementAccess,
     inspections,
     rentReviews,
-    tenantSelections,
     maintenanceAll,
+    vacating,
+    accounting,
+    tenantSelections,
+    leasingRecords,
+    leasingCycles,
     tribunalCases,
+    getPropertyActions,
   } = useAgentData();
+  const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
   const openGii = useShellDockStore((s) => s.openGii);
   const expandGii = useShellDockStore((s) => s.expandGii);
   const activePanel = useShellDockStore((s) => s.activePanel);
   const giiExpanded = useShellDockStore((s) => s.giiExpanded);
-
-  const [healthBucket, setHealthBucket] = useState<PortfolioHealthBucketKey | null>(null);
   const [ask, setAsk] = useState('');
+  const [horizon, setHorizon] = useState<DashboardHorizon>(14);
 
   const firstName = user?.firstName?.trim() || 'there';
   const greeting = greetingForNow();
 
-  const health = useMemo(
+  const board = useMemo(
     () =>
-      buildPortfolioHealthBreakdown({
+      buildDashboardBoard({
         properties,
+        rentReviews,
+        inspections,
+        maintenance: maintenanceAll,
+        vacating,
+        accounting,
         needActionItems,
-        maintenance: maintenanceAll,
-        inspections,
-        rentReviews,
-        tenantSelections,
-      }),
-    [properties, needActionItems, maintenanceAll, inspections, rentReviews, tenantSelections],
-  );
-
-  const offerCount = useMemo(
-    () => (hasFullManagementAccess ? underOfferCount(tenantSelections) : 0),
-    [hasFullManagementAccess, tenantSelections],
-  );
-
-  const attentionSubtextCtx = useMemo(
-    () => ({
-      maintenanceAll,
-      rentReviews,
-      tribunalCases,
-      properties,
-      formatMoney: formatDashboardMoney,
-    }),
-    [maintenanceAll, rentReviews, tribunalCases, properties],
-  );
-
-  const attention = useMemo(() => needActionItems.slice(0, ATTENTION_LIMIT), [needActionItems]);
-
-  const activity = useMemo(
-    () =>
-      buildRecentActivity({
-        inspections,
-        maintenance: maintenanceAll,
-        rentReviews,
-        inspectionHref: (id) => inspectionDetail(id),
-        maintenanceHref: (id) => maintenanceDetail(id),
         rentReviewHref: (id) => rentReviewDetail(id),
-        take: 6,
+        inspectionHref: (id) => inspectionDetail(id),
+        vacatingHref: (id) => vacatingDetail(id),
+        maintenanceHref: (id) => maintenanceDetail(id),
+        horizonDays: horizon,
+        fullService: hasFullManagementAccess,
+        leasingInProgress: tenantSelections.filter((row) => {
+          const status = row.status.toLowerCase();
+          return !status.includes('complete') && !status.includes('closed') && !status.includes('cancel');
+        }).length,
       }),
-    [inspections, maintenanceAll, rentReviews],
+    [
+      properties,
+      rentReviews,
+      inspections,
+      maintenanceAll,
+      vacating,
+      accounting,
+      needActionItems,
+      tenantSelections,
+      horizon,
+      hasFullManagementAccess,
+    ],
   );
 
-  const cros = crosHandlingTotals(k);
-  const healthTotal = Math.max(
-    1,
-    health.healthy + health.crosHandling + health.needAction + health.issues,
-  );
+  const actionCounts = useMemo(() => {
+    const rows = filterTaskListV2RowsForAgencies(
+      buildPortfolioTaskList({
+        properties,
+        leasingRecords,
+        maintenanceAll,
+        inspections,
+        rentReviews,
+        rentReviewDecisions,
+        leasingCycles,
+        tenantSelections,
+        vacating,
+        tribunalCases,
+        accounting,
+        getPropertyActions,
+      }),
+      agencies,
+    ).filter((row) => row.bucket === 'need_action');
+    const rentReviewsNeedingAction = rows.filter((row) => row.category === 'rent_review');
+    const leaseRenewals = rows.filter((row) => row.category === 'leasing');
+    const other = rows.filter((row) => row.category !== 'rent_review' && row.category !== 'leasing');
+    const overdue = (group: typeof rows) => group.filter((row) => taskDueMeta(row).tone === 'overdue').length;
+    const dueSoon = (group: typeof rows) => group.filter((row) => taskDueMeta(row).tone === 'soon').length;
+    return {
+      total: rows.length,
+      rentReviews: { count: rentReviewsNeedingAction.length, overdue: overdue(rentReviewsNeedingAction) },
+      leaseRenewals: { count: leaseRenewals.length, dueSoon: dueSoon(leaseRenewals) },
+      other: { count: other.length, urgent: other.filter((row) => row.task.needAction?.priority === 'urgent').length },
+    };
+  }, [
+    accounting,
+    agencies,
+    getPropertyActions,
+    inspections,
+    leasingCycles,
+    leasingRecords,
+    maintenanceAll,
+    properties,
+    rentReviewDecisions,
+    rentReviews,
+    tenantSelections,
+    tribunalCases,
+    vacating,
+  ]);
+
+  const occupied = properties.filter(
+    (property) =>
+      property.leaseStatus === 'active' ||
+      property.leaseStatus === 'periodic' ||
+      property.leaseStatus === 'vacating',
+  ).length;
+  const vacant = properties.filter((property) => property.leaseStatus === 'vacant').length;
 
   const submitAsk = (event: FormEvent) => {
     event.preventDefault();
@@ -196,357 +188,315 @@ export function V2Dashboard() {
       expandGii();
       return;
     }
-    if (activePanel !== 'gii') {
-      openGii();
-    }
+    if (activePanel !== 'gii') openGii();
   };
 
   const showMobileAskBar = !(activePanel === 'gii' && giiExpanded);
+  const summary = board.summary;
 
   return (
-    <div className="v2-dashboard normal-case space-y-4 pb-8 lg:space-y-6 lg:pb-0">
+    <div className="v2-dashboard normal-case space-y-4 pb-8 lg:space-y-5 lg:pb-2">
       <InspectionOnlyPlanBanner />
 
-      <header className="pt-2 lg:pt-6">
+      <header className="pt-1 lg:pt-2">
         <h1 className="v2-dashboard__greeting text-xl font-semibold tracking-tight sm:text-2xl">
-          {greeting}, {firstName} 👋
+          {greeting}, {firstName} <span aria-hidden>👋</span>
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">
           Here&apos;s what&apos;s happening with your portfolio today.
         </p>
       </header>
 
-      {/* Mobile — portfolio overview */}
-      <article className="v2-dashboard__card p-4 lg:hidden">
-        <Link
-          href={k.properties.href}
-          className="text-muted-foreground mb-3 flex items-center justify-between text-xs font-medium"
-        >
-          Portfolio overview
-          <ChevronRight className="size-4" />
-        </Link>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="bg-primary/10 text-primary flex size-11 shrink-0 items-center justify-center rounded-xl">
-              <Building2 className="size-5" />
+      <div className="grid gap-4 xl:grid-cols-[minmax(16rem,0.85fr)_minmax(0,1.5fr)]">
+        <article className="v2-dashboard__card p-4 sm:p-5">
+          <Link
+            href={ROUTES.PROPERTIES}
+            className="text-muted-foreground hover:text-foreground mb-4 flex items-center justify-between text-sm font-medium"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Building2 className="size-4" />
+              Portfolio Overview
             </span>
-            <div>
-              <p className="text-2xl font-semibold tracking-tight tabular-nums">{k.properties.total}</p>
-              <p className="text-muted-foreground text-xs">Properties</p>
-            </div>
+            <ChevronRight className="size-4" />
+          </Link>
+          <p className="text-3xl font-semibold tracking-tight tabular-nums">
+            {properties.length}{' '}
+            <span className="text-muted-foreground text-base font-medium">Properties</span>
+          </p>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <span className="text-muted-foreground inline-flex items-center gap-1.5">
+              <span className="size-1.5 rounded-full bg-emerald-500" />
+              {occupied} Occupied
+            </span>
+            <span className="text-muted-foreground inline-flex items-center gap-1.5">
+              <span className="size-1.5 rounded-full bg-amber-400" />
+              {vacant} Vacant
+            </span>
           </div>
-          <div className="flex shrink-0 divide-x">
-            <OccupancyColumn color="bg-emerald-500" count={k.properties.occupied} label="Occupied" />
-            <OccupancyColumn color="bg-amber-400" count={k.properties.vacant} label="Vacant" />
-            {hasFullManagementAccess ? (
-              <OccupancyColumn color="bg-sky-500" count={offerCount} label="Under offer" />
-            ) : null}
-          </div>
-        </div>
-      </article>
+        </article>
 
-      {/* Mobile — portfolio health */}
-      <article className="v2-dashboard__health-card relative overflow-hidden p-4 lg:hidden">
-        <div className="relative z-[1] mb-3 flex items-center gap-2">
-          <p className="text-xs font-medium">Portfolio health</p>
-          <HealthLabelBadge label={health.label} />
+        <article className="v2-dashboard__card p-4 sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="inline-flex items-center gap-2 text-sm font-medium">
+              <Bell className="text-muted-foreground size-4" />
+              Needs Your Attention
+            </p>
+            {actionCounts.total > 0 ? (
+              <span className="rounded-full bg-rose-500 px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                {actionCounts.total} pending
+              </span>
+            ) : (
+              <span className="text-muted-foreground text-xs font-medium">All clear</span>
+            )}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <AttentionStat
+              href={`${ROUTES.TASKS}?status=need_action&filter=Accounting`}
+              icon={FileText}
+              iconClass="bg-rose-500/12 text-rose-600"
+              count={actionCounts.rentReviews.count}
+              label="Rent Reviews"
+              hint={
+                actionCounts.rentReviews.overdue > 0
+                  ? `${actionCounts.rentReviews.overdue} overdue`
+                  : 'None overdue'
+              }
+              hintClass={
+                actionCounts.rentReviews.overdue > 0 ? 'text-rose-600' : 'text-muted-foreground'
+              }
+            />
+            <AttentionStat
+              href={`${ROUTES.TASKS}?status=need_action&filter=Leasing`}
+              icon={Home}
+              iconClass="bg-violet-500/12 text-violet-700"
+              count={actionCounts.leaseRenewals.count}
+              label="Lease Renewals"
+              hint={
+                actionCounts.leaseRenewals.dueSoon > 0
+                  ? `${actionCounts.leaseRenewals.dueSoon} due soon`
+                  : 'None due soon'
+              }
+              hintClass={
+                actionCounts.leaseRenewals.dueSoon > 0 ? 'text-amber-700' : 'text-muted-foreground'
+              }
+            />
+            <AttentionStat
+              href={`${ROUTES.TASKS}?status=need_action`}
+              icon={Users}
+              iconClass="bg-sky-500/12 text-sky-700"
+              count={actionCounts.other.count}
+              label="Other Decisions"
+              hint={
+                actionCounts.other.urgent > 0
+                  ? `${actionCounts.other.urgent} urgent`
+                  : 'None urgent'
+              }
+              hintClass={
+                actionCounts.other.urgent > 0 ? 'text-rose-600' : 'text-muted-foreground'
+              }
+            />
+          </div>
+        </article>
+      </div>
+
+      <section className="v2-dashboard__card space-y-4 p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="inline-flex items-center gap-2 text-sm font-semibold">
+              <CalendarDays className="text-muted-foreground size-4" />
+              Upcoming Events
+            </h2>
+            <p className="text-muted-foreground mt-0.5 text-xs">Summarised by {CROS_ASSISTANT_NAME}</p>
+          </div>
+          <div className="bg-muted/40 inline-flex rounded-full border p-0.5" aria-label="Event window">
+            {DASHBOARD_HORIZONS.map((days) => (
+              <button
+                key={days}
+                type="button"
+                onClick={() => setHorizon(days)}
+                className={cn(
+                  'rounded-full px-2.5 py-1 text-xs font-semibold',
+                  horizon === days ? 'bg-background shadow-sm' : 'text-muted-foreground',
+                )}
+                aria-pressed={horizon === days}
+              >
+                {days} days
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="relative z-[1] -mx-0.5 flex gap-2 overflow-x-auto pb-0.5">
-          <MobileHealthChip
+
+        <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
+          <CrosAssistantLogo size="sm" />
+          <div className="min-w-0 text-sm">
+            <p className="font-semibold text-emerald-900 dark:text-emerald-200">
+              {CROS_ASSISTANT_NAME} Summary: You have {summary.total} upcoming event
+              {summary.total === 1 ? '' : 's'} in the next {horizon} days.
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {hasFullManagementAccess
+                ? fullServiceSummary(summary)
+                : selfManageSummary(summary)}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-3">
+          <EventColumn
+            title="Needs your decision"
+            icon={AlertTriangle}
+            tone="text-rose-600"
+            countClass="bg-rose-500/12 text-rose-700"
+            events={board.lanes.decision}
+            empty={`No decisions due in the next ${horizon} days.`}
+          />
+          <EventColumn
+            title="Already arranged"
             icon={CheckCircle2}
             tone="text-emerald-600"
-            value={health.healthy}
-            label="Healthy"
-            onClick={() => setHealthBucket('healthy')}
+            countClass="bg-emerald-500/12 text-emerald-700"
+            events={board.lanes.arranged}
+            empty={`Nothing arranged in the next ${horizon} days.`}
           />
-          <MobileHealthChip
-            icon={Sparkles}
-            tone="text-primary"
-            value={health.crosHandling}
-            label="CROS handling"
-            onClick={() => setHealthBucket('crosHandling')}
-          />
-          <MobileHealthChip
-            icon={AlertCircle}
-            tone="text-rose-600"
-            value={health.needAction}
-            label="Need your action"
-            onClick={() => setHealthBucket('needAction')}
+          <EventColumn
+            title="Coming up"
+            icon={Clock3}
+            tone="text-sky-700"
+            countClass="bg-sky-500/12 text-sky-800"
+            events={board.lanes.upcoming}
+            empty={`Nothing else coming up in the next ${horizon} days.`}
           />
         </div>
-        <ShieldCheck
-          className="text-primary/15 pointer-events-none absolute top-1/2 right-2 size-[4.5rem] -translate-y-1/2"
-          aria-hidden
-        />
-      </article>
 
-      {/* Desktop — combined top band */}
-      <article className="v2-dashboard__card hidden overflow-hidden lg:block">
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1fr)] divide-x">
-          <section className="flex flex-col p-5">
-            <Link
-              href={k.properties.href}
-              className="text-muted-foreground mb-3 flex items-center justify-between text-xs font-medium hover:text-foreground"
-            >
-              Portfolio Overview
-              <ChevronRight className="size-4" />
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+          <Link href={`${ROUTES.TASKS}?timing=${horizon}`} className="text-primary text-xs font-semibold hover:underline">
+            View all upcoming events
+          </Link>
+          <button
+            type="button"
+            onClick={() =>
+              openGii({
+                initialPrompt: `Why do these upcoming events matter? I have ${summary.total} in the next ${horizon} days: ${summary.needAction} need a decision, ${summary.awaiting} are waiting on a response, ${summary.arranged} are already arranged, and ${summary.awareness} are for awareness.`,
+              })
+            }
+            className="text-primary text-xs font-semibold hover:underline"
+          >
+            Ask {CROS_ASSISTANT_NAME} why these matter
+          </button>
+        </div>
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="v2-dashboard__card p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="inline-flex items-center gap-2 text-sm font-semibold">
+              <AlertTriangle className="size-4 text-rose-500" />
+              Portfolio Watchlist
+            </h2>
+            <Link href={ROUTES.PROPERTIES} className="text-primary text-xs font-semibold hover:underline">
+              View watchlist
             </Link>
-            <p className="text-3xl font-semibold tracking-tight tabular-nums">
-              {k.properties.total}{' '}
-              <span className="text-muted-foreground text-base font-medium">Properties</span>
-            </p>
-            <div className="mt-3 flex flex-col gap-1.5">
-              <OccupancyRow color="bg-emerald-500" label={`${k.properties.occupied} Occupied`} />
-              <OccupancyRow color="bg-muted-foreground/40" label={`${k.properties.vacant} Vacant`} />
-              {hasFullManagementAccess && offerCount > 0 ? (
-                <OccupancyRow color="bg-sky-500" label={`${offerCount} Under offer`} />
-              ) : null}
-            </div>
-          </section>
-
-          <section className="flex min-w-0 flex-col p-5">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <p className="text-muted-foreground text-xs font-medium">Portfolio Health</p>
-              <HealthLabelBadge label={health.label} />
-            </div>
-            <div className="flex h-2 overflow-hidden rounded-full bg-muted">
-              <HealthBarSegment value={health.healthy} total={healthTotal} className="bg-emerald-500" />
-              <HealthBarSegment value={health.crosHandling} total={healthTotal} className="bg-amber-400" />
-              <HealthBarSegment value={health.needAction} total={healthTotal} className="bg-rose-500" />
-              <HealthBarSegment value={health.issues} total={healthTotal} className="bg-muted-foreground/30" />
-            </div>
-            <div className="mt-4 grid grid-cols-4 items-start gap-1">
-              <HealthStat
-                value={health.healthy}
-                label="Healthy"
-                tone="text-emerald-600"
-                onClick={() => setHealthBucket('healthy')}
-              />
-              <HealthStat
-                value={health.crosHandling}
-                label={PORTFOLIO_HEALTH_BUCKET_LABEL.crosHandling}
-                tone="text-amber-600"
-                onClick={() => setHealthBucket('crosHandling')}
-              />
-              <HealthStat
-                value={health.needAction}
-                label={PORTFOLIO_HEALTH_BUCKET_LABEL.needAction}
-                tone="text-rose-600"
-                onClick={() => setHealthBucket('needAction')}
-              />
-              <HealthStat
-                value={health.issues}
-                label="Issues"
-                tone="text-muted-foreground"
-                onClick={() => setHealthBucket('issues')}
-              />
-            </div>
-          </section>
-
-          <section className="flex flex-col p-5">
-            {ACCOUNTING_MODULE_LAUNCHED && hasFullManagementAccess ? (
-              <>
-                <p className="text-muted-foreground mb-3 text-xs font-medium">Financial Summary</p>
-                <p className="text-2xl font-semibold tracking-tight tabular-nums">
-                  {formatDashboardMoney(k.accounting.totalRentalIncome)}
-                </p>
-                <p className="text-muted-foreground text-xs">Rent Collected (YTD)</p>
-                <dl className="mt-3 space-y-2 text-sm">
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-muted-foreground">In Arrears</dt>
-                    <dd className="font-medium tabular-nums">
-                      {k.accounting.propertiesInArrears} · {formatDashboardMoney(k.accounting.totalArrearsAmount)}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-muted-foreground">Outstanding Rent</dt>
-                    <dd className="font-medium tabular-nums">
-                      {formatDashboardMoney(k.accounting.outstandingBills)}
-                    </dd>
-                  </div>
-                </dl>
-                <Link
-                  href={k.accounting.href}
-                  className="text-primary mt-3 inline-flex items-center text-xs font-medium hover:underline"
-                >
-                  Go to Accounting
-                  <ChevronRight className="size-3.5" />
-                </Link>
-              </>
-            ) : (
-              <>
-                <p className="text-muted-foreground mb-3 text-xs font-medium">Inspections</p>
-                <p className="text-2xl font-semibold tracking-tight tabular-nums">{cros.inspections.count}</p>
-                <p className="text-muted-foreground text-xs">Open Inspection Jobs</p>
-                <Link
-                  href={k.inspection.href}
-                  className="text-primary mt-3 inline-flex items-center text-xs font-medium hover:underline"
-                >
-                  Go to Inspections
-                  <ChevronRight className="size-3.5" />
-                </Link>
-              </>
-            )}
-          </section>
-        </div>
-      </article>
-
-      {/* Needs your attention — mobile only (desktop uses side panel) */}
-      <section className="space-y-3 lg:hidden">
-        <SectionHead
-          title="Needs your attention"
-          count={needActionItems.length}
-          countTone="danger"
-          href={ROUTES.TASKS}
-        />
-        {attention.length === 0 ? (
-          <p className="text-muted-foreground v2-dashboard__empty px-4 py-8 text-center text-sm">
-            You&apos;re all caught up.
-          </p>
-        ) : (
-          <ul className="space-y-2.5">
-            {attention.map((item) => (
-              <li key={item.id}>
-                <DashboardAttentionCard
-                  item={item}
-                  mobile
-                  subtext={attentionItemSubtext(item, attentionSubtextCtx)}
-                  note={crosNoteForAttentionItem(
-                    item,
-                    maintenanceAll,
-                    rentReviews,
-                    formatDashboardMoney,
-                  )}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <SectionHead
-          title={`${CROS_ASSISTANT_NAME} is handling`}
-          count={hasFullManagementAccess ? cros.total : cros.inspections.count}
-          href={ROUTES.TASKS}
-          linkLabel="View all tasks"
-        />
-        <div
-          className={cn(
-            '-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 lg:mx-0 lg:grid lg:gap-3 lg:overflow-visible lg:px-0 lg:pb-0',
-            hasFullManagementAccess ? 'lg:grid-cols-3' : 'lg:grid-cols-1',
-          )}
-        >
-          {hasFullManagementAccess ? (
-            <CrosLane
-              href={k.maintenance.href}
-              icon={Wrench}
-              iconTone="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-              count={cros.maintenance.count}
-              label="Maintenance"
-              status={
-                cros.maintenance.pending > 0
-                  ? `${cros.maintenance.pending} on track`
-                  : cros.maintenance.count > 0
-                    ? 'On track'
-                    : 'Quiet'
-              }
-              warn={cros.maintenance.pending > 0}
-            />
-          ) : null}
-          <CrosLane
-            href={k.inspection.href}
-            icon={ClipboardList}
-            iconTone="bg-sky-500/10 text-sky-700 dark:text-sky-300"
-            count={cros.inspections.count}
-            label="Inspections"
-            status={cros.inspections.count > 0 ? 'All on track' : 'Quiet'}
-          />
-          {hasFullManagementAccess ? (
-            <CrosLane
-              href={k.leasing.href}
+          </div>
+          <ul className="divide-y">
+            <WatchRow
+              href={ROUTES.PROPERTIES}
               icon={Home}
-              iconTone="bg-violet-500/10 text-violet-700 dark:text-violet-300"
-              count={cros.leasing.count}
-              label="Leasing"
-              status={
-                k.leasing.newLeasing > 0
-                  ? `${k.leasing.newLeasing} pending`
-                  : cros.leasing.count > 0
-                    ? 'On track'
-                    : 'Quiet'
+              iconClass="bg-rose-500/12 text-rose-600"
+              title="Vacant Properties"
+              count={board.watchlist.vacantOver30}
+              detail={
+                board.watchlist.vacantOver30 === 1
+                  ? '1 property vacant for more than 30 days'
+                  : `${board.watchlist.vacantOver30} properties vacant for more than 30 days`
               }
-              warn={k.leasing.newLeasing > 0}
             />
-          ) : null}
-        </div>
-      </section>
+            {hasFullManagementAccess ? (
+              <WatchRow
+                href={ROUTES.ACCOUNTING}
+                icon={CircleDollarSign}
+                iconClass="bg-amber-500/15 text-amber-700"
+                title="Rent Arrears"
+                count={board.watchlist.arrearsCount}
+                detail={
+                  board.watchlist.arrearsCount > 0
+                    ? `${board.watchlist.arrearsCount} ${
+                        board.watchlist.arrearsCount === 1 ? 'property' : 'properties'
+                      } in arrears (total ${formatDashboardMoney(board.watchlist.arrearsAmount)})`
+                    : 'No rent arrears on file'
+                }
+              />
+            ) : null}
+            <WatchRow
+              href={`${ROUTES.TASKS}?filter=Maintenance`}
+              icon={Wrench}
+              iconClass="bg-violet-500/12 text-violet-700"
+              title="Delayed Maintenance"
+              count={board.watchlist.delayedMaintenance}
+              detail={
+                board.watchlist.delayedMaintenance > 0
+                  ? `${board.watchlist.delayedMaintenance} jobs overdue (oldest ${board.watchlist.oldestMaintenanceDays} days)`
+                  : 'No jobs overdue past 14 days'
+              }
+            />
+          </ul>
+        </section>
 
-      <section className="space-y-3 max-lg:pb-[calc(7.5rem+env(safe-area-inset-bottom))]">
-        <SectionHead title="Recent activity" href={ROUTES.TASKS} linkLabel="View all" />
-        {activity.length === 0 ? (
-          <p className="text-muted-foreground v2-dashboard__empty px-4 py-8 text-center text-sm">
-            No recent activity yet.
-          </p>
-        ) : (
-          <>
-            <ul className="space-y-2.5 lg:hidden">
-              {activity.map((row) => {
-                const visual = ACTIVITY_ICON[row.category] ?? ACTIVITY_ICON.Maintenance;
-                const ActivityIcon = visual.icon;
-                return (
-                  <li key={row.id}>
-                    <Link
-                      href={row.href}
-                      className="v2-dashboard__card flex items-start gap-3 p-3 transition hover:opacity-95"
-                    >
-                      <span
-                        className={cn(
-                          'flex size-8 shrink-0 items-center justify-center rounded-full',
-                          visual.tone,
-                        )}
-                      >
-                        <ActivityIcon className="size-3.5" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-muted-foreground text-[11px] tabular-nums">
-                          {activityWhen(row.at)}
-                        </p>
-                        <p className="text-sm font-medium leading-snug">{formatTitleCase(row.title)}</p>
-                        <p className="text-muted-foreground truncate text-xs">{row.address}</p>
-                      </div>
-                      <ChevronRight className="text-muted-foreground mt-1 size-4 shrink-0" aria-hidden />
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-            <ul className="v2-dashboard__card divide-y overflow-hidden hidden lg:block">
-              {activity.map((row) => (
-                <li key={row.id}>
-                  <Link href={row.href} className="hover:bg-muted/40 flex items-start gap-3 px-4 py-3">
-                    <span className="text-muted-foreground w-14 shrink-0 pt-0.5 text-[11px] tabular-nums">
-                      {activityWhen(row.at)}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{formatTitleCase(row.title)}</p>
-                      <p className="text-muted-foreground truncate text-xs">{row.address}</p>
-                    </div>
-                    <span
-                      className={cn(
-                        'hidden shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium lg:inline',
-                        ACTIVITY_TONE[row.category],
-                      )}
-                    >
-                      {row.category}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </section>
+        <section className="v2-dashboard__card p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="inline-flex items-center gap-2 text-sm font-semibold">
+              <ClipboardList className="text-primary size-4" />
+              {CROS_ASSISTANT_NAME} Activity
+            </h2>
+            <Link href={ROUTES.TASKS} className="text-primary text-xs font-semibold hover:underline">
+              View all activity
+            </Link>
+          </div>
+          <ul className="divide-y">
+            {hasFullManagementAccess ? (
+              <ActivityRow
+                href={`${ROUTES.TASKS}?filter=Maintenance`}
+                icon={Wrench}
+                iconClass="bg-emerald-500/12 text-emerald-700"
+                count={board.activity.maintenance.count}
+                label="Maintenance"
+                detail={[
+                  `${board.activity.maintenance.onTrack} on track`,
+                  board.activity.maintenance.awaiting > 0
+                    ? `${board.activity.maintenance.awaiting} awaiting response`
+                    : null,
+                  board.activity.maintenance.overdue > 0
+                    ? `${board.activity.maintenance.overdue} overdue`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              />
+            ) : null}
+            <ActivityRow
+              href={`${ROUTES.TASKS}?filter=Inspection&subtype=Routine&timing=${horizon}`}
+              icon={ClipboardList}
+              iconClass="bg-sky-500/12 text-sky-700"
+              count={board.activity.inspections.count}
+              label="Inspections"
+              detail={`${board.activity.inspections.onTrack} on track${
+                board.activity.inspections.pendingFeedback > 0
+                  ? ` · ${board.activity.inspections.pendingFeedback} pending feedback`
+                  : ''
+              }`}
+            />
+            {hasFullManagementAccess ? (
+              <ActivityRow
+                href={`${ROUTES.TASKS}?filter=Leasing`}
+                icon={Home}
+                iconClass="bg-amber-500/15 text-amber-800"
+                count={board.activity.leasing.count}
+                label="Leasing"
+                detail={`${board.activity.leasing.inProgress} in progress · ${board.activity.leasing.upcoming} upcoming`}
+              />
+            ) : null}
+          </ul>
+        </section>
+      </div>
 
       {showMobileAskBar ? (
         <form
@@ -556,9 +506,9 @@ export function V2Dashboard() {
           <CrosAssistantLogo size="sm" />
           <input
             value={ask}
-            onChange={(e) => setAsk(e.target.value)}
+            onChange={(event) => setAsk(event.target.value)}
             onFocus={focusAskBar}
-            placeholder={`Ask ${CROS_ASSISTANT_NAME} anything… e.g. Show me arrears, next inspections, etc.`}
+            placeholder={`Ask ${CROS_ASSISTANT_NAME} anything…`}
             className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-sm outline-none"
             aria-label={`Ask ${CROS_ASSISTANT_NAME}`}
           />
@@ -572,187 +522,217 @@ export function V2Dashboard() {
           </button>
         </form>
       ) : null}
-
-      <PortfolioHealthDetailDialog
-        bucket={healthBucket}
-        entries={healthBucket ? health.buckets[healthBucket] : []}
-        open={healthBucket != null}
-        onOpenChange={(open) => {
-          if (!open) setHealthBucket(null);
-        }}
-      />
     </div>
   );
 }
 
-function OccupancyRow({ color, label }: { color: string; label: string }) {
-  return (
-    <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
-      <span className={cn('size-1.5 rounded-full', color)} aria-hidden />
-      {label}
-    </span>
-  );
+function countPhrase(count: number, singular: string, plural = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : plural}`;
 }
 
-function OccupancyColumn({
-  color,
-  count,
-  label,
-}: {
-  color: string;
-  count: number;
-  label: string;
-}) {
-  return (
-    <div className="flex flex-col items-center px-2.5 first:pl-0 last:pr-0 sm:px-3">
-      <span className="flex items-center gap-1 text-sm font-semibold tabular-nums">
-        <span className={cn('size-1.5 rounded-full', color)} aria-hidden />
-        {count}
-      </span>
-      <span className="text-muted-foreground text-[10px]">{label}</span>
-    </div>
-  );
+function fullServiceSummary(summary: {
+  needAction: number;
+  arranged: number;
+  awaiting: number;
+  awareness: number;
+}): string {
+  const parts = [
+    `${countPhrase(summary.needAction, 'needs', 'need')} your approval`,
+    summary.awaiting > 0
+      ? `${countPhrase(summary.awaiting, 'is', 'are')} waiting on a tenant`
+      : null,
+    `${countPhrase(summary.arranged, 'is', 'are')} already arranged by ${CROS_ASSISTANT_NAME}`,
+    `${countPhrase(summary.awareness, 'is', 'are')} for awareness`,
+  ].filter(Boolean);
+  return `${parts.join(', ')}.`;
 }
 
-function MobileHealthChip({
-  icon: Icon,
-  tone,
-  value,
-  label,
-  onClick,
-}: {
-  icon: LucideIcon;
-  tone: string;
-  value: number;
-  label: string;
-  onClick?: () => void;
-}) {
-  const interactive = value > 0 && onClick;
-  const body = (
-    <>
-      <Icon className={cn('size-3.5 shrink-0', tone)} aria-hidden />
-      <span className="text-xs font-semibold tabular-nums">{value}</span>
-      <span className="text-muted-foreground text-[10px]">{label}</span>
-    </>
-  );
-
-  const className =
-    'v2-dashboard__health-chip flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5';
-
-  if (interactive) {
-    return (
-      <button type="button" onClick={onClick} className={className}>
-        {body}
-      </button>
-    );
+function selfManageSummary(summary: { needAction: number; toSchedule: number; awareness: number }): string {
+  const action = `${countPhrase(summary.needAction, 'needs', 'need')} your action`;
+  const otherAwareness = Math.max(0, summary.awareness - summary.toSchedule);
+  const parts = [action];
+  if (summary.toSchedule > 0) parts.push(`${summary.toSchedule} should be scheduled soon`);
+  if (otherAwareness > 0) {
+    parts.push(`${countPhrase(otherAwareness, 'is', 'are')} for awareness`);
   }
-
-  return <div className={className}>{body}</div>;
+  if (parts.length === 1) return `${action}.`;
+  if (parts.length === 2) return `${parts[0]}, and ${parts[1]}.`;
+  return `${parts[0]}, ${parts[1]}, and ${parts[2]}.`;
 }
 
-function HealthLabelBadge({ label }: { label: 'Good' | 'Needs attention' | 'Quiet' }) {
-  const display =
-    label === 'Needs attention' ? 'Needs Attention' : label === 'Quiet' ? 'Quiet' : 'Good';
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold',
-        label === 'Good'
-          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-          : label === 'Quiet'
-            ? 'bg-muted text-muted-foreground'
-            : 'bg-amber-500/15 text-amber-800 dark:text-amber-300',
-      )}
-    >
-      {display}
-      {label === 'Good' ? <HeartPulse className="size-3" /> : null}
-    </span>
-  );
-}
-
-function HealthBarSegment({
-  value,
-  total,
-  className,
-}: {
-  value: number;
-  total: number;
-  className: string;
-}) {
-  if (value <= 0) return null;
-  return <span className={className} style={{ width: `${(value / total) * 100}%` }} />;
-}
-
-function HealthStat({
-  value,
-  label,
-  tone,
-  onClick,
-}: {
-  value: number;
-  label: string;
-  tone: string;
-  onClick?: () => void;
-}) {
-  const interactive = value > 0 && onClick;
-  const content = (
-    <>
-      <p className={cn('text-base font-semibold tabular-nums leading-none', tone)}>{value}</p>
-      <p className="text-muted-foreground mt-1.5 min-h-[2rem] px-0.5 text-[10px] leading-snug">{label}</p>
-    </>
-  );
-
-  if (interactive) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="hover:bg-muted/60 flex w-full min-w-0 flex-col items-center rounded-lg px-0.5 py-1 text-center transition"
-      >
-        {content}
-      </button>
-    );
-  }
-
-  return <div className="flex w-full min-w-0 flex-col items-center text-center">{content}</div>;
-}
-
-function CrosLane({
+function AttentionStat({
   href,
   icon: Icon,
-  iconTone,
+  iconClass,
   count,
   label,
-  status,
-  warn,
+  hint,
+  hintClass,
 }: {
   href: string;
   icon: LucideIcon;
-  iconTone: string;
+  iconClass: string;
   count: number;
   label: string;
-  status: string;
-  warn?: boolean;
+  hint: string;
+  hintClass: string;
 }) {
   return (
-    <Link
-      href={href}
-      className="v2-dashboard__lane hover:border-primary/20 flex min-w-[8.75rem] shrink-0 items-start gap-2.5 p-3 transition lg:min-w-0 lg:block lg:rounded-2xl lg:p-4"
-    >
-      <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg lg:size-9 lg:rounded-xl', iconTone)}>
-        <Icon className="size-4" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-lg font-semibold leading-tight tabular-nums lg:mt-3 lg:text-2xl">
-          {count}
-          <span className="ml-1 text-xs font-medium lg:hidden">{label}</span>
-        </p>
-        <p className="hidden text-sm font-medium lg:block">{label}</p>
-        <p className={cn('text-[11px] lg:mt-0.5 lg:text-xs', warn ? 'text-amber-600' : 'text-emerald-600')}>
-          <span className="lg:hidden">{status}</span>
-          <span className="hidden lg:inline">{formatTitleCase(status)}</span>
-        </p>
+    <Link href={href} className="hover:bg-muted/40 rounded-2xl border bg-background/50 p-3 transition">
+      <div className="flex items-start justify-between gap-2">
+        <span className={cn('flex size-9 items-center justify-center rounded-xl', iconClass)}>
+          <Icon className="size-4" />
+        </span>
+        <span className="text-2xl font-semibold tabular-nums leading-none">{count}</span>
       </div>
+      <p className="mt-3 text-sm font-medium">{label}</p>
+      <p className={cn('mt-0.5 text-xs font-medium', hintClass)}>{hint}</p>
     </Link>
+  );
+}
+
+function EventColumn({
+  title,
+  icon: Icon,
+  tone,
+  countClass,
+  events,
+  empty,
+}: {
+  title: string;
+  icon: LucideIcon;
+  tone: string;
+  countClass: string;
+  events: DashboardEvent[];
+  empty: string;
+}) {
+  const preview = events.slice(0, DASHBOARD_EVENT_PREVIEW);
+  return (
+    <div className="flex min-w-0 flex-col rounded-2xl border bg-background/40 p-3">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className={cn('inline-flex items-center gap-1.5 text-sm font-semibold', tone)}>
+          <Icon className="size-4" />
+          {title}
+        </p>
+        <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums', countClass)}>
+          {events.length}
+        </span>
+      </div>
+      {preview.length === 0 ? (
+        <p className="text-muted-foreground px-1 py-6 text-center text-xs">{empty}</p>
+      ) : (
+        <ul className="space-y-2">
+          {preview.map((event) => (
+            <li key={event.id}>
+              <EventRow event={event} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function EventRow({ event }: { event: DashboardEvent }) {
+  return (
+    <div className="rounded-xl border bg-background/70 px-3 py-2.5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">{event.title}</p>
+          <p className="text-muted-foreground truncate text-xs">{event.address}</p>
+        </div>
+        <span
+          className={cn(
+            'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+            BADGE_CLASS[event.badge],
+          )}
+        >
+          {event.badgeLabel}
+        </span>
+      </div>
+      <div className="mt-2 flex items-end justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-muted-foreground truncate text-xs">{event.detail}</p>
+          {event.why ? (
+            <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">{event.why}</p>
+          ) : null}
+        </div>
+        <Link
+          href={event.href}
+          className="text-primary inline-flex shrink-0 items-center text-xs font-semibold hover:underline"
+        >
+          {event.actionLabel}
+          <ChevronRight className="size-3.5" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function WatchRow({
+  href,
+  icon: Icon,
+  iconClass,
+  title,
+  count,
+  detail,
+}: {
+  href: string;
+  icon: LucideIcon;
+  iconClass: string;
+  title: string;
+  count: number;
+  detail: string;
+}) {
+  return (
+    <li>
+      <Link href={href} className="hover:bg-muted/30 flex items-center gap-3 rounded-xl px-1 py-3">
+        <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-xl', iconClass)}>
+          <Icon className="size-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            {title}
+            <span className="text-muted-foreground font-medium tabular-nums">{count}</span>
+          </span>
+          <span className="text-muted-foreground mt-0.5 block truncate text-xs">{detail}</span>
+        </span>
+        <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+      </Link>
+    </li>
+  );
+}
+
+function ActivityRow({
+  href,
+  icon: Icon,
+  iconClass,
+  count,
+  label,
+  detail,
+}: {
+  href: string;
+  icon: LucideIcon;
+  iconClass: string;
+  count: number;
+  label: string;
+  detail: string;
+}) {
+  return (
+    <li>
+      <Link href={href} className="hover:bg-muted/30 flex items-center gap-3 rounded-xl px-1 py-3">
+        <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-xl', iconClass)}>
+          <Icon className="size-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline gap-2">
+            <span className="text-lg font-semibold tabular-nums leading-none">{count}</span>
+            <span className="text-sm font-semibold">{label}</span>
+          </span>
+          <span className="text-muted-foreground mt-1 block truncate text-xs">{detail}</span>
+        </span>
+        <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+      </Link>
+    </li>
   );
 }

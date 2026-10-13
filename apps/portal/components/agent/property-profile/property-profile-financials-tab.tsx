@@ -415,6 +415,32 @@ export function PropertyProfileFinancialsTab({
           </div>
         </div>
 
+        {(prefill?.payments?.length ?? 0) > 0 ? (
+          <div className="rounded-xl border bg-muted/20 px-3 py-2.5">
+            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+              Payments
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {prefill!.payments!.map((payment, index) => (
+                <li
+                  key={`${payment.caseId ?? 'case'}-${payment.paidDate}-${index}`}
+                  className="flex items-baseline justify-between gap-3 text-sm"
+                >
+                  <span>{formatDate(payment.paidDate)}</span>
+                  <span className="font-medium tabular-nums">
+                    {formatCurrency(payment.amount)}
+                    <span className="text-muted-foreground ml-2 text-xs font-normal">
+                      {payment.remaining > 0
+                        ? `${formatCurrency(payment.remaining)} left`
+                        : 'Paid in full'}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         {prefillLoading && !prefill ? (
           <div className="text-muted-foreground flex items-center gap-2 rounded-xl border px-4 py-8 text-sm">
             <Loader2 className="size-4 animate-spin" />
