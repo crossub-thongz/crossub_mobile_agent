@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
+  Briefcase,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Flag,
   Gavel,
   Home,
   List,
@@ -17,6 +19,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
+import type { LucideIcon } from 'lucide-react';
 
 import { AgentHowToUseLink } from '@/components/agent/agent-module-tutorial';
 import { EmptyState } from '@/components/agent/empty-state';
@@ -42,7 +45,9 @@ import {
   taskListV2CategoryFiltersForAccess,
   TASK_LIST_V2_BUCKET_FILTERS,
   type TaskDueFilter,
+  type TaskListPriority,
   type TaskListV2Bucket,
+  type TaskServiceFilter,
   type TaskListV2Category,
   type TaskListV2Row,
   type TaskMoreFilters,
@@ -342,102 +347,69 @@ export function V2TasksPage() {
         })}
       </div>
 
-      <section className="v2-dashboard__card space-y-3 rounded-2xl border p-3 sm:p-4">
-        <FilterRow index="1" label="Task Type">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-tour="tasks-type-tabs">
-            {categoryFilters.map((option) => {
-              const Icon = CATEGORY_ICON[option.id];
-              const active = category === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  data-tour={option.id === 'all' ? undefined : `tasks-category-${option.id}`}
-                  onClick={() => setCategory(option.id)}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold',
-                    active ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-muted/50',
-                  )}
-                >
-                  <Icon className="size-3.5" />
-                  {option.label}
-                  <span className="tabular-nums opacity-70">{categoryCounts[option.id]}</span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="relative w-full sm:w-64" data-tour="tasks-search">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search tasks, addresses, or tenants..."
-              className={cn(selectClass, 'w-full pl-9')}
-            />
-          </div>
-        </FilterRow>
-
-        <FilterRow index="2" label="Subtype">
-          {category === 'all' ? (
-            <p className="text-muted-foreground min-w-0 flex-1 text-xs">Select a task type to see its subtypes.</p>
-          ) : (
-            <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+      <section className="v2-dashboard__card grid grid-cols-1 items-center gap-3 rounded-2xl border p-3 sm:p-4 lg:grid-cols-[7.75rem_minmax(0,1fr)_28rem] lg:gap-x-4 lg:gap-y-3">
+        <FilterLabel index="1" label="Work Status" />
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {TASK_LIST_V2_BUCKET_FILTERS.map((option) => {
+            const Icon = BUCKET_ICON[option.id];
+            const active = bucket === option.id;
+            return (
               <button
+                key={option.id}
                 type="button"
-                onClick={() => setSubtype('all')}
+                onClick={() => setBucket((current) => (current === option.id ? 'all' : option.id))}
                 className={cn(
-                  'rounded-full border px-3 py-1.5 text-xs font-semibold',
-                  subtype === 'all' ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-muted/50',
+                  'inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold',
+                  active ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-muted/50',
                 )}
               >
-                All subtypes
+                <Icon className="size-3.5" />
+                {option.label}
+                <span className="tabular-nums opacity-70">{bucketCounts[option.id]}</span>
               </button>
-              {subtypeOptions.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setSubtype(option)}
-                  className={cn(
-                    'rounded-full border px-3 py-1.5 text-xs font-semibold',
-                    subtype === option ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-muted/50',
-                  )}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          )}
-          <label className="text-muted-foreground ml-auto flex items-center gap-2 text-xs font-medium">
-            Date / Timing
-            <select
-              aria-label="Date / Timing"
-              className={selectClass}
-              value={moreFilters.due}
-              onChange={(event) => {
-                const due = event.target.value as TaskDueFilter;
-                setMoreFilters((current) => ({
-                  ...current,
-                  due,
-                  dueFrom: due === 'custom' ? current.dueFrom : '',
-                  dueTo: due === 'custom' ? current.dueTo : '',
-                }));
-              }}
-            >
-              {TIMING_OPTIONS.filter((option) => option.value !== 'custom' || moreFilters.due === 'custom').map(
-                (option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ),
-              )}
-            </select>
-          </label>
+            );
+          })}
+        </div>
+        <div className="relative w-full" data-tour="tasks-search">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search tasks, addresses, or tenants..."
+            className={cn(selectClass, 'w-full pl-9')}
+          />
+        </div>
+
+        <FilterLabel index="2" label="Task Type" />
+        <div className="flex min-w-0 flex-wrap items-center gap-2" data-tour="tasks-type-tabs">
+          {categoryFilters.map((option) => {
+            const Icon = CATEGORY_ICON[option.id];
+            const active = category === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                data-tour={option.id === 'all' ? undefined : `tasks-category-${option.id}`}
+                onClick={() => setCategory(option.id)}
+                className={cn(
+                  'inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold',
+                  active ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-muted/50',
+                )}
+              >
+                <Icon className="size-3.5" />
+                {option.label}
+                <span className="tabular-nums opacity-70">{categoryCounts[option.id]}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex w-full justify-end">
           <button
             type="button"
             data-tour="tasks-filters"
             onClick={() => setFiltersOpen(true)}
             className={cn(
-              'hover:text-foreground ml-auto inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold',
+              'hover:text-foreground inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold',
               filterChips.length > 0 ? 'border-primary text-primary' : 'text-muted-foreground',
             )}
           >
@@ -449,7 +421,70 @@ export function V2TasksPage() {
               </span>
             ) : null}
           </button>
-        </FilterRow>
+        </div>
+
+        <FilterLabel index="3" label="Subtype" className="lg:self-end lg:pb-[18px]" />
+        <select
+          className={cn(selectClass, 'w-full max-w-44 lg:self-end')}
+          value={subtype}
+          onChange={(event) => setSubtype(event.target.value)}
+          aria-label="Subtype"
+        >
+          <option value="all">All subtypes</option>
+          {subtypeOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+        <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3 lg:self-end">
+          <FieldSelect
+            label="Date / Timing"
+            icon={CalendarDays}
+            ariaLabel="Date / Timing"
+            value={moreFilters.due}
+            onChange={(due) =>
+              setMoreFilters((current) => ({
+                ...current,
+                due: due as TaskDueFilter,
+                dueFrom: due === 'custom' ? current.dueFrom : '',
+                dueTo: due === 'custom' ? current.dueTo : '',
+              }))
+            }
+            options={TIMING_OPTIONS.filter((option) => option.value !== 'custom' || moreFilters.due === 'custom')}
+          />
+          <FieldSelect
+            label="Priority"
+            icon={Flag}
+            ariaLabel="Priority"
+            value={moreFilters.priority}
+            onChange={(priority) =>
+              setMoreFilters((current) => ({ ...current, priority: priority as TaskListPriority }))
+            }
+            options={[
+              { value: 'all', label: 'All priorities' },
+              { value: 'urgent', label: 'Urgent' },
+              { value: 'high', label: 'High' },
+              { value: 'normal', label: 'Normal' },
+              { value: 'low', label: 'Low' },
+            ]}
+          />
+          <FieldSelect
+            label="Service Mode"
+            icon={Briefcase}
+            ariaLabel="Service Mode"
+            value={moreFilters.service}
+            onChange={(service) =>
+              setMoreFilters((current) => ({ ...current, service: service as TaskServiceFilter }))
+            }
+            options={[
+              { value: 'all', label: 'All services' },
+              { value: 'full', label: 'Full Service' },
+              { value: 'self', label: 'Self-Manage' },
+              { value: 'inspection', label: 'Inspection Only' },
+            ]}
+          />
+        </div>
       </section>
 
       <TaskMoreFiltersDrawer
@@ -581,22 +616,48 @@ export function V2TasksPage() {
   );
 }
 
-function FilterRow({
-  index,
+function FilterLabel({ index, label, className }: { index: string; label: string; className?: string }) {
+  return (
+    <p className={cn('text-muted-foreground text-xs font-semibold', className)}>
+      {index}. {label}
+    </p>
+  );
+}
+
+function FieldSelect({
   label,
-  children,
+  icon: Icon,
+  ariaLabel,
+  value,
+  onChange,
+  options,
 }: {
-  index: string;
   label: string;
-  children: React.ReactNode;
+  icon: LucideIcon;
+  ariaLabel: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <p className="text-muted-foreground w-28 shrink-0 text-xs font-semibold">
-        {index}. {label}
-      </p>
-      {children}
-    </div>
+    <label className="text-muted-foreground flex min-w-0 flex-col gap-1 text-[11px] font-medium">
+      {label}
+      <span className="relative block">
+        <Icon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+        <select
+          aria-label={ariaLabel}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className={cn(selectClass, 'w-full pl-8')}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </span>
+    </label>
   );
 }
 
