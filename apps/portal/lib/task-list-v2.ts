@@ -16,6 +16,9 @@ import type { RentReviewDecision } from '@/lib/rent-review';
 import type {
   Agency,
   AgentArchiveView,
+  ArchivedEndLeasingCase,
+  ArchivedLeasingCycle,
+  ArchivedRentReview,
   Inspection,
   LeasingCycle,
   LeasingRecord,
@@ -284,49 +287,97 @@ function toTaskListV2Row(
   };
 }
 
+function groupByPropertyId<T extends { propertyId: string }>(rows: readonly T[]): Map<string, T[]> {
+  const grouped = new Map<string, T[]>();
+  for (const row of rows) {
+    const existing = grouped.get(row.propertyId);
+    if (existing) existing.push(row);
+    else grouped.set(row.propertyId, [row]);
+  }
+  return grouped;
+}
+
+type PortfolioTaskIndexes = {
+  maintenance: Map<string, MaintenanceRequest[]>;
+  inspections: Map<string, Inspection[]>;
+  rentReviews: Map<string, RentReviewCase[]>;
+  leasingCycles: Map<string, LeasingCycle[]>;
+  tenantSelections: Map<string, TenantSelectionCase[]>;
+  vacating: Map<string, VacatingCase[]>;
+  tribunalCases: Map<string, TribunalCase[]>;
+  accounting: Map<string, PropertyAccounting>;
+  currentLease: Map<string, LeasingRecord>;
+  deletedLeasingCycles: Map<string, ArchivedLeasingCycle[]>;
+  deletedEndLeasingCases: Map<string, ArchivedEndLeasingCase[]>;
+  deletedRentReviews: Map<string, ArchivedRentReview[]>;
+};
+
+function indexPortfolioTasks(
+  input: Omit<PortfolioTaskListInput, 'properties' | 'getPropertyActions'> & {
+    archive?: AgentArchiveView;
+  },
+): PortfolioTaskIndexes {
+  const currentLease = new Map<string, LeasingRecord>();
+  for (const row of input.leasingRecords) {
+    if (row.status === 'current' && !currentLease.has(row.propertyId)) {
+      currentLease.set(row.propertyId, row);
+    }
+  }
+  const accounting = new Map<string, PropertyAccounting>();
+  for (const row of input.accounting) {
+    if (!accounting.has(row.propertyId)) accounting.set(row.propertyId, row);
+  }
+  return {
+    maintenance: groupByPropertyId(input.maintenanceAll),
+    inspections: groupByPropertyId(input.inspections),
+    rentReviews: groupByPropertyId(input.rentReviews),
+    leasingCycles: groupByPropertyId(input.leasingCycles),
+    tenantSelections: groupByPropertyId(input.tenantSelections),
+    vacating: groupByPropertyId(input.vacating),
+    tribunalCases: groupByPropertyId(input.tribunalCases),
+    accounting,
+    currentLease,
+    deletedLeasingCycles: groupByPropertyId(input.archive?.cancelledLeasingCycles ?? []),
+    deletedEndLeasingCases: groupByPropertyId(input.archive?.cancelledEndLeasing ?? []),
+    deletedRentReviews: groupByPropertyId(input.archive?.cancelledRentReviews ?? []),
+  };
+}
+
 function tasksForProperty(
   property: Property,
   input: Omit<PortfolioTaskListInput, 'properties' | 'getPropertyActions'> & {
     getPropertyActions?: (propertyId: string) => PropertyNeedAction[];
-    archive?: AgentArchiveView;
   },
+  index: PortfolioTaskIndexes,
 ): PropertyProfileTask[] {
   const propertyId = property.id;
-  const currentLease = input.leasingRecords.find(
-    (row) => row.propertyId === propertyId && row.status === 'current',
-  );
 
   return buildPropertyProfileTasks({
     property,
     propertyId,
-    maintenance: input.maintenanceAll.filter((row) => row.propertyId === propertyId),
-    inspections: input.inspections.filter((row) => row.propertyId === propertyId),
-    rentReviews: input.rentReviews.filter((row) => row.propertyId === propertyId),
+    maintenance: index.maintenance.get(propertyId) ?? [],
+    inspections: index.inspections.get(propertyId) ?? [],
+    rentReviews: index.rentReviews.get(propertyId) ?? [],
     rentReviewDecisions: input.rentReviewDecisions,
-    leasingCycles: input.leasingCycles.filter((row) => row.propertyId === propertyId),
-    tenantSelections: input.tenantSelections.filter((row) => row.propertyId === propertyId),
-    vacatingCases: input.vacating.filter((row) => row.propertyId === propertyId),
-    tribunalCases: input.tribunalCases.filter((row) => row.propertyId === propertyId),
-    accounting: input.accounting.find((row) => row.propertyId === propertyId) ?? null,
-    currentLease,
+    leasingCycles: index.leasingCycles.get(propertyId) ?? [],
+    tenantSelections: index.tenantSelections.get(propertyId) ?? [],
+    vacatingCases: index.vacating.get(propertyId) ?? [],
+    tribunalCases: index.tribunalCases.get(propertyId) ?? [],
+    accounting: index.accounting.get(propertyId) ?? null,
+    currentLease: index.currentLease.get(propertyId),
     needActions: input.getPropertyActions?.(propertyId) ?? [],
-    deletedLeasingCycles: input.archive?.cancelledLeasingCycles.filter(
-      (row) => row.propertyId === propertyId,
-    ),
-    deletedEndLeasingCases: input.archive?.cancelledEndLeasing.filter(
-      (row) => row.propertyId === propertyId,
-    ),
-    deletedRentReviews: input.archive?.cancelledRentReviews.filter(
-      (row) => row.propertyId === propertyId,
-    ),
+    deletedLeasingCycles: index.deletedLeasingCycles.get(propertyId),
+    deletedEndLeasingCases: index.deletedEndLeasingCases.get(propertyId),
+    deletedRentReviews: index.deletedRentReviews.get(propertyId),
   });
 }
 
 export function buildPortfolioTaskList(input: PortfolioTaskListInput): TaskListV2Row[] {
   const rows: TaskListV2Row[] = [];
+  const index = indexPortfolioTasks(input);
 
   for (const property of input.properties) {
-    const tasks = tasksForProperty(property, input);
+    const tasks = tasksForProperty(property, input, index);
 
     for (const task of tasks) {
       if (task.lifecycle === 'deleted' || task.lifecycle === 'archived') continue;
@@ -344,6 +395,7 @@ export function buildArchivedPropertyTaskGroups(
     archive: AgentArchiveView;
   },
 ): ArchivedPropertyTaskGroup[] {
+  const index = indexPortfolioTasks(input);
   return [...input.archivedProperties]
     .sort((a, b) =>
       formatPropertyFullAddress(a).localeCompare(formatPropertyFullAddress(b), undefined, {
@@ -351,7 +403,7 @@ export function buildArchivedPropertyTaskGroups(
       }),
     )
     .map((property) => {
-      const tasks = tasksForProperty(property, input);
+      const tasks = tasksForProperty(property, input, index);
       const rows = tasks
         .map((task) => toTaskListV2Row(property, task, { presentAsClosed: true }))
         .sort((a, b) => b.updatedAt - a.updatedAt);

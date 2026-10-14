@@ -183,7 +183,11 @@ export function buildDashboardBoard(input: {
   const horizon = input.horizonDays ?? DEFAULT_HORIZON_DAYS;
   const fullService = input.fullService ?? true;
   const withinHorizon = (days: number) => days <= horizon;
-  const openReviews = input.rentReviews.filter(rentReviewOpen);
+  const rentReviews = fullService ? input.rentReviews : [];
+  const maintenance = fullService ? input.maintenance : [];
+  const vacatingCases = fullService ? input.vacating : [];
+  const accountingRows = fullService ? input.accounting : [];
+  const openReviews = rentReviews.filter(rentReviewOpen);
   const overdueReviews = openReviews.filter((review) => {
     const days = daysUntil(review.reviewDue, now);
     return days != null && days < 0;
@@ -192,11 +196,13 @@ export function buildDashboardBoard(input: {
   const occupied = input.properties.filter(
     (property) => property.leaseStatus === 'active' || property.leaseStatus === 'periodic',
   );
-  const renewals = occupied.flatMap((property) => {
-    const days = daysUntil(property.leaseEnd, now);
-    if (days == null || days > 90) return [];
-    return [{ property, days }];
-  });
+  const renewals = fullService
+    ? occupied.flatMap((property) => {
+        const days = daysUntil(property.leaseEnd, now);
+        if (days == null || days > 90) return [];
+        return [{ property, days }];
+      })
+    : [];
   const dueSoonRenewals = renewals.filter((row) => row.days <= ATTENTION_RENEWAL_DAYS);
 
   const otherItems = input.needActionItems.filter(
@@ -264,7 +270,7 @@ export function buildDashboardBoard(input: {
     });
   }
 
-  for (const job of input.maintenance) {
+  for (const job of maintenance) {
     if (!job.requiresApproval || isClosed(job.status)) continue;
     const due = job.quoteExpiry || job.updatedAt;
     const days = due ? daysUntil(due, now) : 0;
@@ -358,7 +364,7 @@ export function buildDashboardBoard(input: {
     });
   }
 
-  for (const vacating of input.vacating) {
+  for (const vacating of vacatingCases) {
     if (isClosed(vacating.apiStatus)) continue;
     const days = daysUntil(vacating.vacateDate, now);
     if (days == null || days < 0 || !withinHorizon(days)) continue;
@@ -386,8 +392,8 @@ export function buildDashboardBoard(input: {
     return days != null && -days > VACANT_WATCH_DAYS;
   }).length;
 
-  const arrears = input.accounting.filter((row) => row.arrearsAmount > 0);
-  const openMaintenance = input.maintenance.filter((job) => !isClosed(job.status));
+  const arrears = accountingRows.filter((row) => row.arrearsAmount > 0);
+  const openMaintenance = maintenance.filter((job) => !isClosed(job.status));
   const delayed = openMaintenance.flatMap((job) => {
     const age = job.createdAt ? daysUntil(job.createdAt, now) : null;
     if (age == null || -age <= MAINTENANCE_OVERDUE_DAYS) return [];
@@ -434,11 +440,13 @@ export function buildDashboardBoard(input: {
         onTrack: Math.max(0, openInspections.length - pendingFeedback),
         pendingFeedback,
       },
-      leasing: {
-        count: (input.leasingInProgress ?? 0) + openReviews.length,
-        inProgress: input.leasingInProgress ?? openReviews.length,
-        upcoming: dueSoonRenewals.length,
-      },
+      leasing: fullService
+        ? {
+            count: (input.leasingInProgress ?? 0) + openReviews.length,
+            inProgress: input.leasingInProgress ?? openReviews.length,
+            upcoming: dueSoonRenewals.length,
+          }
+        : { count: 0, inProgress: 0, upcoming: 0 },
     },
   };
 }

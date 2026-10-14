@@ -88,56 +88,87 @@ export function V2Dashboard() {
   const firstName = user?.firstName?.trim() || 'there';
   const greeting = greetingForNow();
 
+  const visiblePortfolio = useMemo(() => {
+    const ids = new Set(properties.map((property) => property.id));
+    const owned = <T extends { propertyId: string }>(rows: T[]) =>
+      rows.filter((row) => ids.has(row.propertyId));
+    const management = hasFullManagementAccess;
+    return {
+      inspections: owned(inspections),
+      tribunalCases: owned(tribunalCases),
+      rentReviews: management ? owned(rentReviews) : [],
+      maintenance: management ? owned(maintenanceAll) : [],
+      vacating: management ? owned(vacating) : [],
+      accounting: management ? owned(accounting) : [],
+      tenantSelections: management ? owned(tenantSelections) : [],
+      leasingRecords: management ? owned(leasingRecords) : [],
+      leasingCycles: management ? owned(leasingCycles) : [],
+      rentReviewDecisions: management ? rentReviewDecisions : {},
+      needActionItems: owned(needActionItems).filter(
+        (item) => management || item.category === 'Inspection' || item.category === 'Tribunal',
+      ),
+    };
+  }, [
+    accounting,
+    hasFullManagementAccess,
+    inspections,
+    leasingCycles,
+    leasingRecords,
+    maintenanceAll,
+    needActionItems,
+    properties,
+    rentReviewDecisions,
+    rentReviews,
+    tenantSelections,
+    tribunalCases,
+    vacating,
+  ]);
+
   const board = useMemo(
     () =>
       buildDashboardBoard({
         properties,
-        rentReviews,
-        inspections,
-        maintenance: maintenanceAll,
-        vacating,
-        accounting,
-        needActionItems,
+        rentReviews: visiblePortfolio.rentReviews,
+        inspections: visiblePortfolio.inspections,
+        maintenance: visiblePortfolio.maintenance,
+        vacating: visiblePortfolio.vacating,
+        accounting: visiblePortfolio.accounting,
+        needActionItems: visiblePortfolio.needActionItems,
         rentReviewHref: (id) => rentReviewDetail(id),
         inspectionHref: (id) => inspectionDetail(id),
         vacatingHref: (id) => vacatingDetail(id),
         maintenanceHref: (id) => maintenanceDetail(id),
         horizonDays: horizon,
         fullService: hasFullManagementAccess,
-        leasingInProgress: tenantSelections.filter((row) => {
+        leasingInProgress: visiblePortfolio.tenantSelections.filter((row) => {
           const status = row.status.toLowerCase();
           return !status.includes('complete') && !status.includes('closed') && !status.includes('cancel');
         }).length,
       }),
-    [
-      properties,
-      rentReviews,
-      inspections,
-      maintenanceAll,
-      vacating,
-      accounting,
-      needActionItems,
-      tenantSelections,
-      horizon,
-      hasFullManagementAccess,
-    ],
+    [hasFullManagementAccess, horizon, properties, visiblePortfolio],
   );
 
   const actionCounts = useMemo(() => {
     const rows = filterTaskListV2RowsForAgencies(
       buildPortfolioTaskList({
         properties,
-        leasingRecords,
-        maintenanceAll,
-        inspections,
-        rentReviews,
-        rentReviewDecisions,
-        leasingCycles,
-        tenantSelections,
-        vacating,
-        tribunalCases,
-        accounting,
-        getPropertyActions,
+        leasingRecords: visiblePortfolio.leasingRecords,
+        maintenanceAll: visiblePortfolio.maintenance,
+        inspections: visiblePortfolio.inspections,
+        rentReviews: visiblePortfolio.rentReviews,
+        rentReviewDecisions: visiblePortfolio.rentReviewDecisions,
+        leasingCycles: visiblePortfolio.leasingCycles,
+        tenantSelections: visiblePortfolio.tenantSelections,
+        vacating: visiblePortfolio.vacating,
+        tribunalCases: visiblePortfolio.tribunalCases,
+        accounting: visiblePortfolio.accounting,
+        getPropertyActions: (propertyId) => {
+          const actions = getPropertyActions(propertyId);
+          if (hasFullManagementAccess) return actions;
+          return actions.filter(
+            (item) => item.category === 'Inspection' || item.category === 'Tribunal',
+          );
+        },
       }),
       agencies,
     ).filter((row) => row.bucket === 'need_action');
@@ -152,21 +183,7 @@ export function V2Dashboard() {
       leaseRenewals: { count: leaseRenewals.length, dueSoon: dueSoon(leaseRenewals) },
       other: { count: other.length, urgent: other.filter((row) => row.task.needAction?.priority === 'urgent').length },
     };
-  }, [
-    accounting,
-    agencies,
-    getPropertyActions,
-    inspections,
-    leasingCycles,
-    leasingRecords,
-    maintenanceAll,
-    properties,
-    rentReviewDecisions,
-    rentReviews,
-    tenantSelections,
-    tribunalCases,
-    vacating,
-  ]);
+  }, [agencies, getPropertyActions, hasFullManagementAccess, properties, visiblePortfolio]);
 
   const occupied = properties.filter(
     (property) =>
@@ -249,7 +266,14 @@ export function V2Dashboard() {
               <span className="text-muted-foreground text-xs font-medium">All clear</span>
             )}
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div
+            className={cn(
+              'grid gap-3',
+              hasFullManagementAccess ? 'sm:grid-cols-3' : 'sm:grid-cols-1',
+            )}
+          >
+            {hasFullManagementAccess ? (
+              <>
             <AttentionStat
               href={`${ROUTES.TASKS}?status=need_action&filter=Accounting`}
               icon={FileText}
@@ -280,6 +304,8 @@ export function V2Dashboard() {
                 actionCounts.leaseRenewals.dueSoon > 0 ? 'text-amber-700' : 'text-muted-foreground'
               }
             />
+              </>
+            ) : null}
             <AttentionStat
               href={`${ROUTES.TASKS}?status=need_action`}
               icon={Users}
