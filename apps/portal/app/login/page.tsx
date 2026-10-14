@@ -4,7 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ArrowRight,
   ChartColumn,
-  ChevronDown,
   Eye,
   EyeOff,
   House,
@@ -59,7 +58,6 @@ export default function LoginPage() {
   const { refresh, status, user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(true);
-  const [languageOpen, setLanguageOpen] = useState(false);
 
   useLayoutEffect(() => {
     if (status !== 'authed' || !user) return;
@@ -137,7 +135,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="relative min-h-dvh text-[#0D1836]"
+      className="relative flex min-h-[calc(100dvh-var(--env-banner-height,0px))] flex-col justify-center pt-6 pb-16 text-[#0D1836]"
       style={{
         backgroundColor: '#F6FCFC',
         backgroundImage: 'url(/login/agent-bg.svg)',
@@ -145,92 +143,61 @@ export default function LoginPage() {
         backgroundPosition: 'center',
       }}
     >
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
+      <header className="mx-auto mb-2 w-full max-w-6xl px-5 sm:px-8 lg:-mt-4 lg:px-10">
         <div className="flex items-center gap-2.5">
           <Image src="/crossub-logo.png" alt="" width={36} height={36} priority className="size-9" />
           <span className="text-[15px] font-bold tracking-[0.16em]">CROSSUB</span>
         </div>
-        <div className="relative">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 text-sm text-[#52647C]"
-            aria-expanded={languageOpen}
-            aria-haspopup="listbox"
-            onClick={() => setLanguageOpen((open) => !open)}
-          >
-            English
-            <ChevronDown className="size-4" />
-          </button>
-          {languageOpen ? (
-            <ul
-              role="listbox"
-              className="absolute right-0 z-10 mt-2 min-w-32 rounded-xl border border-[#CED9E4] bg-white p-1 text-sm shadow-lg"
-            >
-              <li>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected
-                  className="w-full rounded-lg px-3 py-2 text-left font-medium"
-                  style={{ color: AGENT_GREEN }}
-                  onClick={() => setLanguageOpen(false)}
-                >
-                  English
-                </button>
-              </li>
-            </ul>
-          ) : null}
-        </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-6xl items-center gap-10 px-5 pb-12 sm:px-8 lg:grid-cols-[minmax(0,1.05fr)_440px] lg:gap-16 lg:px-10 lg:pb-16">
+      <main className="mx-auto mt-12 grid w-full max-w-6xl items-center gap-10 px-5 sm:px-8 lg:mt-16 lg:grid-cols-[minmax(0,1.05fr)_440px] lg:gap-16 lg:px-10">
         <section className="max-w-xl">
-          <p
-            className="text-xs font-semibold tracking-[0.16em]"
-            style={{ color: AGENT_GREEN }}
-          >
-            AGENT PORTAL
-          </p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[#0D1836] sm:text-5xl sm:leading-[1.05]">
-            Smarter property management, together.
+          <div className="flex items-center gap-3">
+            <span className="h-0.5 w-8 rounded-full" style={{ backgroundColor: AGENT_GREEN }} />
+            <p className="text-xs font-semibold tracking-[0.16em]" style={{ color: AGENT_GREEN }}>
+              AGENT PORTAL
+            </p>
+          </div>
+          <h1 className="mt-5 text-4xl font-semibold tracking-tight text-[#0D1836] sm:text-5xl sm:leading-[1.05]">
+            Smarter property management
           </h1>
-          <p className="mt-4 max-w-md text-base leading-relaxed text-[#52647C]">
-            Access your properties, inspections, maintenance and more — all in one place.
+          <p className="mt-6 max-w-md text-base leading-7 text-[#52647C]">
+            Everything you need to manage properties, tenants and growth in one powerful platform.
           </p>
-          <ul className="mt-8 space-y-5">
-            <Feature
-              icon={House}
-              title="Manage your portfolio"
-              body="Leasing, inspections, maintenance"
-            />
+          <ul className="mt-10 space-y-7">
             <Feature
               icon={ChartColumn}
-              title="Real-time updates"
-              body="Stay on top of what matters"
+              title="Streamline operations"
+              body="Save time with automated workflows and rent tracking."
             />
             <Feature
               icon={Users}
-              title="Work with our team"
-              body="Faster communication, better outcomes"
+              title="Build stronger relationships"
+              body="Keep owners and tenants happier, all in one place."
+            />
+            <Feature
+              icon={House}
+              title="Grow your portfolio"
+              body="Powerful insights to help you scale with confidence."
             />
           </ul>
         </section>
 
         <section className="w-full justify-self-end rounded-[22px] bg-white p-6 shadow-[0_18px_48px_rgba(13,24,54,0.10)] sm:p-8">
           <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
-          <p className="mt-1 text-sm text-[#52647C]">Sign in to your Crossub Agent Portal</p>
+          <p className="mt-1 text-sm text-[#52647C]">Sign in to your agent account</p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
             <div className="space-y-1.5">
               <label htmlFor="email" className="text-sm font-medium">
-                Email
+                Email address
               </label>
               <div className="relative">
                 <Mail className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8AA0B5]" />
                 <input
                   id="email"
                   type="email"
-                  placeholder="info@apamgmt.com.au"
+                  placeholder="you@company.com"
                   autoComplete="email"
                   className="h-12 w-full rounded-[9px] border border-[#CED9E4] bg-white pr-3 pl-10 text-sm outline-none placeholder:text-[#9AADC0] focus:border-[#14B88D]"
                   {...register('email')}
@@ -250,7 +217,7 @@ export default function LoginPage() {
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   autoComplete="current-password"
                   className="h-12 w-full rounded-[9px] border border-[#CED9E4] bg-white pr-10 pl-10 text-sm outline-none placeholder:text-[#9AADC0] focus:border-[#14B88D]"
                   {...register('password')}
@@ -307,7 +274,7 @@ export default function LoginPage() {
           <p className="mt-5 text-center text-sm text-[#52647C]">
             First time here?{' '}
             <Link href={ROUTES.REGISTER} className="font-semibold" style={{ color: AGENT_GREEN }}>
-              Register your agency
+              Create an agent account
             </Link>
           </p>
         </section>
@@ -332,7 +299,7 @@ function Feature({
       </span>
       <span>
         <span className="block text-sm font-semibold">{title}</span>
-        <span className="mt-0.5 block text-sm text-[#52647C]">{body}</span>
+        <span className="mt-1.5 block text-sm leading-6 text-[#52647C]">{body}</span>
       </span>
     </li>
   );
