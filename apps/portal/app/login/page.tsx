@@ -304,23 +304,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="my-4 flex items-center gap-3 text-xs text-[#8AA0B5]">
-            <span className="h-px flex-1 bg-[#E4EBF1]" />
-            or
-            <span className="h-px flex-1 bg-[#E4EBF1]" />
-          </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              toast.info('Google sign-in is not available yet. Use your email and password.')
-            }
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-[9px] border border-[#CED9E4] bg-white text-sm font-medium"
-          >
-            <img src="/login/google-g.svg" alt="" width={18} height={18} />
-            Continue with Google
-          </button>
-
           <p className="mt-5 text-center text-sm text-[#52647C]">
             First time here?{' '}
             <Link href={ROUTES.REGISTER} className="font-semibold" style={{ color: AGENT_GREEN }}>
