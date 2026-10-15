@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
+import { LoggingInScreen } from '@/components/auth/logging-in-screen';
 import { useAuth } from '@/components/providers/auth-provider';
 import { ROUTES, isPublicRoute } from '@/constants/routes';
 import {
@@ -37,8 +38,8 @@ export function MustChangePasswordGate({ children }: { children: React.ReactNode
     router.replace(ROUTES.CHANGE_PASSWORD);
   }, [mustChange, pathname, router]);
 
-  if (status === 'loading' && !isPublicRoute(pathname)) return null;
-  if (mustChange && !isPublicRoute(pathname)) return null;
+  if (status === 'loading' && !isPublicRoute(pathname)) return <LoggingInScreen />;
+  if (mustChange && !isPublicRoute(pathname)) return <LoggingInScreen />;
 
   return <>{children}</>;
 }

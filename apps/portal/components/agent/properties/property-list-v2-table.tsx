@@ -168,7 +168,6 @@ function PropertyRowActions({
 
 export function PropertyListV2Table({
   properties,
-  selectedId,
   accounting,
   leasingRecords,
   emphasizeArrears = false,
@@ -180,12 +179,10 @@ export function PropertyListV2Table({
   restoringId,
 }: {
   properties: Property[];
-  selectedId: string | null;
   accounting: PropertyAccounting[];
   leasingRecords: LeasingRecord[];
   emphasizeArrears?: boolean;
   onSelect: (propertyId: string) => void;
-  /** Desktop: second click (or double-click) on a selected row opens the property profile. */
   onOpenProfile?: (propertyId: string) => void;
   onDeleteDraft?: (property: Property) => void;
   onArchive?: (property: Property) => void;
@@ -260,39 +257,20 @@ export function PropertyListV2Table({
             {properties.map((property) => {
               const meta = rowMeta.get(property.id);
               if (!meta) return null;
-              const selected = selectedId === property.id;
               const isDraft = isPropertyRegistryDraft(property);
               const canOpenProfile = Boolean(onOpenProfile) && !isDraft;
 
               return (
-                <tr
-                  key={property.id}
-                  onClick={() => {
-                    if (canOpenProfile && selected) {
-                      onOpenProfile?.(property.id);
-                      return;
-                    }
-                    onSelect(property.id);
-                  }}
-                  onDoubleClick={() => {
-                    if (canOpenProfile) onOpenProfile?.(property.id);
-                  }}
-                  title={
-                    isDraft
-                      ? 'Continue registration'
-                      : canOpenProfile
-                        ? selected
-                          ? 'Click again to enter profile'
-                          : 'Click to preview · Click again to enter profile'
-                        : undefined
-                  }
-                  className={cn(
-                    'cursor-pointer transition-colors hover:bg-muted/20',
-                    selected && 'bg-primary/[0.04]',
-                  )}
-                >
+                <tr key={property.id} className="transition-colors hover:bg-muted/20">
                   <td className="px-3 py-3 align-top">
-                    <p className="truncate font-medium">{property.address}</p>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(property.id)}
+                      className="block w-full truncate text-left font-medium hover:underline"
+                      title={isDraft ? 'Continue registration' : 'Open property'}
+                    >
+                      {property.address}
+                    </button>
                     <p className="text-muted-foreground truncate text-xs">
                       {property.suburb}
                       {property.postcode ? ` ${property.postcode}` : ''}
@@ -301,10 +279,6 @@ export function PropertyListV2Table({
                       <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
                         Draft
                       </span>
-                    ) : selected && canOpenProfile ? (
-                      <p className="text-primary mt-1 text-[11px] font-medium">
-                        Click again to enter profile
-                      </p>
                     ) : null}
                   </td>
                   <td className="px-3 py-3 align-top">

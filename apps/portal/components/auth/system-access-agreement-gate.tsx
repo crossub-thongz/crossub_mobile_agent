@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
+import { LoggingInScreen } from '@/components/auth/logging-in-screen';
 import { useAuth } from '@/components/providers/auth-provider';
 import { ROUTES, isPublicRoute } from '@/constants/routes';
 import { needsSystemAccessAgreement } from '@/lib/system-access-agreement';
@@ -26,8 +27,8 @@ export function SystemAccessAgreementGate({ children }: { children: React.ReactN
     router.replace(ROUTES.SYSTEM_ACCESS_AGREEMENT);
   }, [mustSign, pathname, router]);
 
-  if (status === 'loading' && !isPublicRoute(pathname)) return null;
-  if (mustSign && !isPublicRoute(pathname)) return null;
+  if (status === 'loading' && !isPublicRoute(pathname)) return <LoggingInScreen />;
+  if (mustSign && !isPublicRoute(pathname)) return <LoggingInScreen />;
 
   return <>{children}</>;
 }

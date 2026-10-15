@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { List, Map as MapIcon, Search, SlidersHorizontal } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
@@ -74,19 +74,9 @@ export function V2PropertiesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(10);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
-  const [desktopViewport, setDesktopViewport] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Property | null>(null);
   const [removing, setRemoving] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
-  const initialSelectDone = useRef(false);
-
-  useEffect(() => {
-    const media = window.matchMedia('(min-width: 1024px)');
-    const sync = () => setDesktopViewport(media.matches);
-    sync();
-    media.addEventListener('change', sync);
-    return () => media.removeEventListener('change', sync);
-  }, []);
 
   const handlePropertyOpen = useCallback(
     (propertyId: string) => {
@@ -111,14 +101,9 @@ export function V2PropertiesPage() {
         router.push(propertyRegistryResume(propertyId));
         return;
       }
-      if (!desktopViewport) {
-        router.push(propertyDetail(propertyId));
-        return;
-      }
-      setSelectedId(propertyId);
-      initialSelectDone.current = true;
+      router.push(propertyDetail(propertyId));
     },
-    [archivedProperties, desktopViewport, properties, router, setSelectedId],
+    [archivedProperties, properties, router],
   );
 
   const confirmDeletePermanently = useCallback(async () => {
@@ -315,24 +300,8 @@ export function V2PropertiesPage() {
   }, [directory, hasFullManagementAccess, sort]);
 
   useEffect(() => {
-    if (!desktopViewport) {
-      if (selectedId !== null) setSelectedId(null);
-      return;
-    }
-    const previewable = filtered.filter((property) => !isPropertyRegistryDraft(property));
-    if (previewable.length === 0) {
-      if (selectedId !== null) setSelectedId(null);
-      return;
-    }
-    if (selectedId && !previewable.some((property) => property.id === selectedId)) {
-      setSelectedId(previewable[0]!.id);
-      return;
-    }
-    if (!selectedId && !initialSelectDone.current) {
-      setSelectedId(previewable[0]!.id);
-      initialSelectDone.current = true;
-    }
-  }, [desktopViewport, filtered, selectedId, setSelectedId]);
+    setSelectedId(null);
+  }, [setSelectedId]);
 
   const pageEnd = Math.min(pageStart + pageRows.length, filtered.length);
   const sortOptions = PROPERTY_LIST_V2_SORTS.filter(
@@ -579,7 +548,6 @@ export function V2PropertiesPage() {
         <>
           <PropertyListV2Table
             properties={pageRows}
-            selectedId={selectedId}
             accounting={accounting}
             leasingRecords={leasingRecords}
             emphasizeArrears={directory === 'arrears'}

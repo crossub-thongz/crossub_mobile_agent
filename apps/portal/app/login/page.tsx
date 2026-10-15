@@ -14,12 +14,15 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useLayoutEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
+import { LoggingInScreen } from '@/components/auth/logging-in-screen';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { PASSWORD_MAX } from '@/constants/auth';
 import { ROUTES } from '@/constants/routes';
 import { ApiError, api } from '@/lib/api';
@@ -55,21 +58,62 @@ type FormValues = z.infer<typeof schema>;
 const AGENT_GREEN = '#14B88D';
 
 export default function LoginPage() {
+  const router = useRouter();
   const { refresh, status, user } = useAuth();
+  const { loading: portfolioLoading, portalAccessReady } = useAgentData();
   const [showPassword, setShowPassword] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(true);
+  const [loggingIn, setLoggingIn] = useState(false);
+  const destinationRef = useRef<string | null>(null);
+  const sawPortfolioLoad = useRef(false);
+  const enterStarted = useRef(false);
 
-  useLayoutEffect(() => {
-    if (status !== 'authed' || !user) return;
-    window.location.replace(
-      postAuthDestination(
-        user,
+  const beginEnterApp = useCallback(
+    (nextUser: AuthUser) => {
+      const destination = postAuthDestination(
+        nextUser,
         ROUTES.DASHBOARD,
         ROUTES.SYSTEM_ACCESS_AGREEMENT,
         ROUTES.CHANGE_PASSWORD,
-      ),
-    );
-  }, [status, user]);
+      );
+      setLoggingIn(true);
+      if (destination !== ROUTES.DASHBOARD) {
+        router.push(destination);
+        return;
+      }
+      destinationRef.current = destination;
+    },
+    [router],
+  );
+
+  useLayoutEffect(() => {
+    if (enterStarted.current || status !== 'authed' || !user) return;
+    enterStarted.current = true;
+    beginEnterApp(user);
+  }, [beginEnterApp, status, user]);
+
+  useEffect(() => {
+    if (!loggingIn || !destinationRef.current) return;
+    if (portfolioLoading) {
+      sawPortfolioLoad.current = true;
+      return;
+    }
+    if (!portalAccessReady && !sawPortfolioLoad.current) return;
+    const destination = destinationRef.current;
+    destinationRef.current = null;
+    router.push(destination);
+  }, [loggingIn, portfolioLoading, portalAccessReady, router]);
+
+  useEffect(() => {
+    if (!loggingIn || !destinationRef.current) return;
+    const timeout = window.setTimeout(() => {
+      const destination = destinationRef.current;
+      if (!destination) return;
+      destinationRef.current = null;
+      router.push(destination);
+    }, 8000);
+    return () => window.clearTimeout(timeout);
+  }, [loggingIn, router]);
 
   const {
     register,
@@ -82,24 +126,18 @@ export default function LoginPage() {
 
   const onSubmit = async (values: FormValues) => {
     let apiUnreachable = false;
+    setLoggingIn(true);
 
     try {
       const result = await api.post<{ user: AuthUser }>('/auth/login', values);
       const authStatus = await refresh();
       if (authStatus !== 'authed') {
+        setLoggingIn(false);
         toast.error(
           'Sign-in succeeded but the session cookie was not saved. Clear site cookies for localhost and try again.',
         );
         return;
       }
-      window.location.assign(
-        postAuthDestination(
-          result.user,
-          ROUTES.DASHBOARD,
-          ROUTES.SYSTEM_ACCESS_AGREEMENT,
-          ROUTES.CHANGE_PASSWORD,
-        ),
-      );
       return;
     } catch (err) {
       if (err instanceof ApiError) {
@@ -108,6 +146,7 @@ export default function LoginPage() {
         } else if (err.status >= 500 || err.status === 0) {
           apiUnreachable = true;
         } else {
+          setLoggingIn(false);
           toast.error(`Sign in failed (${err.status}). Check API connection.`);
           return;
         }
@@ -118,11 +157,15 @@ export default function LoginPage() {
 
     const localUser = loginLocalAccount(values.email, values.password);
     if (localUser) {
-      await refresh();
-      window.location.assign(ROUTES.DASHBOARD);
+      const authStatus = await refresh();
+      if (authStatus !== 'authed') {
+        setLoggingIn(false);
+        toast.error('Invalid email or password.');
+      }
       return;
     }
 
+    setLoggingIn(false);
     if (apiUnreachable) {
       toast.error(
         'Cannot reach the CROSSUB API. Start crossub_web on port 3001 (pnpm dev:api), or use Register for a local-only account.',
@@ -143,6 +186,7 @@ export default function LoginPage() {
         backgroundPosition: 'center',
       }}
     >
+      {loggingIn ? <LoggingInScreen /> : null}
       <header className="mx-auto mb-2 w-full max-w-6xl px-5 sm:px-8 lg:-mt-4 lg:px-10">
         <div className="flex items-center gap-2.5">
           <Image src="/crossub-logo.png" alt="" width={36} height={36} priority className="size-9" />
