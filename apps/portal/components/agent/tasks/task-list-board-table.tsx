@@ -21,19 +21,11 @@ import { TaskIcon } from '@/components/agent/tasks/task-list-v2-table';
 export function TaskListBoardTable({
   rows,
   agencies,
-  selectedIds,
-  onToggle,
-  onTogglePage,
 }: {
   rows: TaskListV2Row[];
   agencies: Agency[];
-  selectedIds: string[];
-  onToggle: (id: string) => void;
-  onTogglePage: (ids: string[], selected: boolean) => void;
 }) {
   const router = useRouter();
-  const pageIds = rows.map((row) => row.id);
-  const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
 
   return (
     <div className="v2-dashboard__card min-w-0 overflow-hidden rounded-2xl border">
@@ -41,15 +33,6 @@ export function TaskListBoardTable({
         <table className="w-full min-w-[72rem] border-collapse text-left text-sm">
           <thead>
             <tr className="text-muted-foreground border-b text-[11px] font-semibold tracking-wide">
-              <th className="w-10 px-3 py-3">
-                <input
-                  type="checkbox"
-                  className="size-4 rounded border"
-                  checked={allSelected}
-                  onChange={() => onTogglePage(pageIds, !allSelected)}
-                  aria-label="Select tasks on this page"
-                />
-              </th>
               <th className="px-3 py-3">Task</th>
               <th className="px-3 py-3">Property</th>
               <th className="px-3 py-3">Type</th>
@@ -73,15 +56,6 @@ export function TaskListBoardTable({
                   onClick={() => router.push(row.href)}
                   className="hover:bg-muted/30 cursor-pointer"
                 >
-                  <td className="px-3 py-3 align-middle" onClick={(event) => event.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      className="size-4 rounded border"
-                      checked={selectedIds.includes(row.id)}
-                      onChange={() => onToggle(row.id)}
-                      aria-label={`Select ${row.task.title}`}
-                    />
-                  </td>
                   <td className="px-3 py-3 align-middle">
                     <div className="flex min-w-0 items-center gap-2.5">
                       <TaskIcon row={row} />

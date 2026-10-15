@@ -163,7 +163,6 @@ export function V2TasksPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [page, setPage] = useState(1);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -273,23 +272,6 @@ export function V2TasksPage() {
   useEffect(() => {
     if (subtype !== 'all' && !subtypeOptions.includes(subtype)) setSubtype('all');
   }, [subtype, subtypeOptions]);
-
-  const toggleRow = (id: string) => {
-    setSelectedIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    );
-  };
-
-  const togglePage = (ids: string[], selected: boolean) => {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      for (const id of ids) {
-        if (selected) next.add(id);
-        else next.delete(id);
-      }
-      return [...next];
-    });
-  };
 
   return (
     <div className="task-list-v2 v2-dashboard normal-case space-y-4 px-4 py-4 lg:px-6 lg:py-5">
@@ -525,9 +507,6 @@ export function V2TasksPage() {
         <p className="text-sm">
           <span className="font-semibold">{filtered.length} tasks</span>
           <span className="text-muted-foreground"> · Sorted by: Due date (soonest first)</span>
-          {selectedIds.length > 0 ? (
-            <span className="text-muted-foreground"> · {selectedIds.length} selected</span>
-          ) : null}
         </p>
         <div className="bg-muted/40 inline-flex rounded-full border p-0.5">
           <button
@@ -578,13 +557,7 @@ export function V2TasksPage() {
         />
       ) : (
         <div className="min-w-0 space-y-3" data-tour="tasks-table">
-          <TaskListBoardTable
-            rows={pageRows}
-            agencies={agencies}
-            selectedIds={selectedIds}
-            onToggle={toggleRow}
-            onTogglePage={togglePage}
-          />
+          <TaskListBoardTable rows={pageRows} agencies={agencies} />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground text-xs">
               Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, filtered.length)} of{' '}
