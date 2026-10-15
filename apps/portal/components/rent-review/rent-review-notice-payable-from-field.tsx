@@ -78,7 +78,7 @@ export function RentReviewNoticePayableFromField({
         onChange={(e) => setPayableFrom(e.target.value)}
         onBlur={() => void save(payableFrom)}
       />
-      <p className="text-muted-foreground text-[11px] leading-relaxed">
+      <p className="text-muted-foreground text-[12px] leading-relaxed">
         Suggested from lease end, or the statutory minimum. Earliest permitted is{' '}
         <span className="font-medium tabular-nums">{earliestIncreaseDate}</span> —{' '}
         {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days notice counted from the day after the notice is

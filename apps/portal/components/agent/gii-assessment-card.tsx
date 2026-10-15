@@ -54,7 +54,7 @@ function Row({
       <span className="text-muted-foreground text-xs">{label}</span>
       <span className="flex min-w-0 items-baseline gap-1.5">
         {working ? (
-          <span className="text-muted-foreground shrink-0 text-[10px] tabular-nums">
+          <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
             {working}
           </span>
         ) : null}
@@ -84,19 +84,19 @@ export function GiiAssessmentCard({ assessment }: { assessment: GiiAssessment })
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
         <span
           className={cn(
-            'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+            'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold',
             CASE_TONE[assessment.case] ?? 'bg-secondary text-foreground',
           )}
         >
           {CASE_LABEL[assessment.case] ?? assessment.case}
         </span>
-        <p className="min-w-0 truncate text-right text-[11px] font-medium">
+        <p className="min-w-0 truncate text-right text-[12px] font-medium">
           {assessment.propertyLabel}
         </p>
       </div>
 
       <div className="space-y-3 p-3">
-        <p className="text-muted-foreground truncate text-[10px]">
+        <p className="text-muted-foreground truncate text-[11px]">
           {assessment.leaseStartDate && assessment.leaseEndDate
             ? `${assessment.leaseStartDate} – ${assessment.leaseEndDate}`
             : assessment.basis}
@@ -108,19 +108,19 @@ export function GiiAssessmentCard({ assessment }: { assessment: GiiAssessment })
             <div className="flex items-end justify-between gap-2">
               <div>
                 <p className="text-base font-semibold tabular-nums">{term.daysOccupied}</p>
-                <p className="text-muted-foreground text-[9px] uppercase tracking-wide">
+                <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
                   days occupied
                 </p>
               </div>
               <div>
                 <p className="text-base font-semibold tabular-nums">{term.daysRemaining}</p>
-                <p className="text-muted-foreground text-[9px] uppercase tracking-wide">
+                <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
                   days remaining
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-base font-semibold tabular-nums">{pct!.toFixed(1)}%</p>
-                <p className="text-muted-foreground text-[9px] uppercase tracking-wide">
+                <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
                   of term
                 </p>
               </div>
@@ -132,7 +132,7 @@ export function GiiAssessmentCard({ assessment }: { assessment: GiiAssessment })
               />
             </div>
             {breakFee ? (
-              <p className="text-muted-foreground text-[10px]">Band {breakFee.band}</p>
+              <p className="text-muted-foreground text-[11px]">Band {breakFee.band}</p>
             ) : null}
           </div>
         ) : null}
@@ -183,7 +183,7 @@ export function GiiAssessmentCard({ assessment }: { assessment: GiiAssessment })
             </span>
             <span
               className={cn(
-                'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold',
                 notice.sufficient
                   ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                   : 'bg-rose-500/15 text-rose-700 dark:text-rose-300',
@@ -196,11 +196,11 @@ export function GiiAssessmentCard({ assessment }: { assessment: GiiAssessment })
 
         <div className="space-y-0.5 border-t pt-2.5">
           {assessment.ruleCitations.map((c) => (
-            <p key={c} className="text-muted-foreground text-[9px] leading-relaxed">
+            <p key={c} className="text-muted-foreground text-[10px] leading-relaxed">
               {c}
             </p>
           ))}
-          <p className="text-muted-foreground text-[9px]">
+          <p className="text-muted-foreground text-[10px]">
             Advisory estimate — confirm before issuing.
           </p>
         </div>

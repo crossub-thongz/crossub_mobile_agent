@@ -68,7 +68,7 @@ export function AgentWorkflowTraining({
                   : 'text-muted-foreground hover:border-primary/20 hover:bg-muted/60 hover:text-foreground',
               )}
             >
-              <span className="text-[10px] font-bold tabular-nums opacity-70">{index + 1}</span>
+              <span className="text-[11px] font-bold tabular-nums opacity-70">{index + 1}</span>
               <TabIcon className="size-4" />
               {module.pageName}
             </button>
@@ -83,7 +83,7 @@ export function AgentWorkflowTraining({
               <Icon className="size-5" />
             </span>
             <div className="min-w-0">
-              <p className="text-primary text-[10px] font-semibold uppercase tracking-[0.2em]">
+              <p className="text-primary text-[11px] font-semibold uppercase tracking-[0.2em]">
                 {active.eyebrow}
               </p>
               <h2 className="mt-1 text-xl font-semibold tracking-tight">{active.pageName}</h2>

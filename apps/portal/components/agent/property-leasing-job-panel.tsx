@@ -390,7 +390,7 @@ export function PropertyLeasingJobPanel({
 
         {propertyTenantSelections.length > 0 ? (
           <div className="space-y-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Tenant applications
             </p>
             <TenantSelectionsTable

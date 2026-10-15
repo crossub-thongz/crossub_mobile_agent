@@ -23,7 +23,7 @@ export function OpenInspectionReportStage({
       <h2 className="text-sm font-semibold">Report</h2>
 
       <div>
-        <p className="text-muted-foreground mb-2 text-[10px] font-medium uppercase tracking-wide">
+        <p className="text-muted-foreground mb-2 text-[11px] font-medium uppercase tracking-wide">
           Check-in details
         </p>
         {visitors.length === 0 ? (
@@ -52,7 +52,7 @@ export function OpenInspectionReportStage({
 
       {reportReady ? (
         <div className="space-y-2">
-          <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+          <p className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
             Open inspection report
           </p>
           <InspectionReportDownloadActions

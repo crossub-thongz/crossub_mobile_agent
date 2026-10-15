@@ -235,7 +235,7 @@ export function MaintenanceAgentWorkflowPanel({
             <div className="min-w-0">
               <p
                 className={cn(
-                  'text-[10px] font-semibold uppercase tracking-wide',
+                  'text-[11px] font-semibold uppercase tracking-wide',
                   isLiveStep ? 'text-primary' : 'text-amber-700 dark:text-amber-300',
                 )}
               >

@@ -208,7 +208,7 @@ export default function AccountingPage() {
               <div className="rounded-2xl border bg-gradient-to-br from-primary/10 to-card p-4">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="text-primary size-4" />
-                  <p className="text-muted-foreground text-[10px] font-medium uppercase">
+                  <p className="text-muted-foreground text-[11px] font-medium uppercase">
                     Income YTD
                   </p>
                 </div>
@@ -219,7 +219,7 @@ export default function AccountingPage() {
               <div className="rounded-2xl border border-destructive/25 bg-gradient-to-br from-destructive/10 to-card p-4">
                 <div className="flex items-center gap-2">
                   <TrendingDown className="text-destructive size-4" />
-                  <p className="text-destructive text-[10px] font-medium uppercase">
+                  <p className="text-destructive text-[11px] font-medium uppercase">
                     Outstanding
                   </p>
                 </div>
@@ -323,7 +323,7 @@ export default function AccountingPage() {
             {(totalRentArrears > 0 || totalBillArrears > 0) && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-2xl border border-destructive/25 bg-gradient-to-br from-destructive/10 to-card p-4">
-                  <p className="text-destructive text-[10px] font-medium uppercase">
+                  <p className="text-destructive text-[11px] font-medium uppercase">
                     Rent arrears
                   </p>
                   <p className="text-destructive mt-2 text-xl font-bold tabular-nums">
@@ -331,7 +331,7 @@ export default function AccountingPage() {
                   </p>
                 </div>
                 <div className="rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/10 to-card p-4">
-                  <p className="text-[10px] font-medium uppercase text-amber-600 dark:text-amber-400">
+                  <p className="text-[11px] font-medium uppercase text-amber-600 dark:text-amber-400">
                     Invoice arrears
                   </p>
                   <p className="mt-2 text-xl font-bold tabular-nums text-amber-600 dark:text-amber-400">

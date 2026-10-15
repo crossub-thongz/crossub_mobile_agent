@@ -349,7 +349,7 @@ export function MaintenanceTaskDetailView({
                 <span
                   data-tour="workflow-case-badge"
                   className={cn(
-                    'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                    'rounded-full px-2 py-0.5 text-[12px] font-semibold',
                     tenantRejected
                       ? TENANT_REJECTED_BADGE_CLASS
                       : workspaceCase.status === 'completed' || workspaceCase.status === 'closed'
@@ -506,13 +506,13 @@ export function MaintenanceTaskDetailView({
                           </div>
                           <div className="flex flex-col items-end gap-1">
                             {quote.recommended ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
                                 <Star className="size-3" />
                                 Recommended
                               </span>
                             ) : null}
                             {quote.selected ? (
-                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                                 Selected
                               </span>
                             ) : null}
@@ -596,7 +596,7 @@ export function MaintenanceTaskDetailView({
               ) : null}
               <div className="p-3">
                 <p className="text-sm font-semibold">{address}</p>
-                <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                   {resolvedProperty?.leaseStatus === 'vacant' ? 'Vacant' : 'Occupied'}
                 </span>
                 <dl className="mt-3 space-y-2 text-xs">

@@ -17,7 +17,7 @@ export function PriorityBadge({ priority }: { priority: string }) {
   return (
     <span
       className={cn(
-        'rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+        'rounded border px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
         urgent
           ? 'border-destructive/50 bg-destructive/10 text-destructive'
           : 'border-primary/40 bg-primary/5 text-primary',

@@ -50,7 +50,7 @@ export function BondConfirmationChecklistItem({
         <div className="min-w-0 flex-1 space-y-1">
           <p className="text-xs font-semibold leading-snug">{title}</p>
           {description ? (
-            <p className="text-muted-foreground text-[11px] leading-relaxed whitespace-pre-wrap">
+            <p className="text-muted-foreground text-[12px] leading-relaxed whitespace-pre-wrap">
               {description}
             </p>
           ) : null}

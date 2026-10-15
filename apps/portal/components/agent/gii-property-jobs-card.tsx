@@ -53,11 +53,11 @@ export function GiiPropertyJobsCard({
       )}
     >
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-        <span className="flex items-center gap-1.5 text-[11px] font-semibold">
+        <span className="flex items-center gap-1.5 text-[12px] font-semibold">
           <Briefcase className="size-3.5 shrink-0 text-primary" />
           Jobs in progress
         </span>
-        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary tabular-nums">
+        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary tabular-nums">
           {jobs.length}
         </span>
       </div>
@@ -83,7 +83,7 @@ export function GiiPropertyJobsCard({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs font-medium">{jobTitle(row)}</span>
                   {subtitle ? (
-                    <span className="text-muted-foreground block truncate text-[10px]">
+                    <span className="text-muted-foreground block truncate text-[11px]">
                       {subtitle}
                     </span>
                   ) : null}
@@ -96,7 +96,7 @@ export function GiiPropertyJobsCard({
       </ul>
 
       {overflow > 0 ? (
-        <p className="text-muted-foreground border-t px-3 py-2 text-center text-[11px] font-medium">
+        <p className="text-muted-foreground border-t px-3 py-2 text-center text-[12px] font-medium">
           +{overflow} more in this property
         </p>
       ) : null}

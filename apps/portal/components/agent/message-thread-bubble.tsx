@@ -29,11 +29,11 @@ export function MessageThreadBubble({
       <div className={cn(layout.bubble, textSize === 'text-xs' && 'text-xs')}>
         <div className={cn('mb-1 flex flex-wrap items-center gap-1.5', layout.meta)}>
           {layout.kind === 'system' ? (
-            <span className="rounded bg-amber-600/15 px-1 py-0.5 text-[9px] font-semibold tracking-wide text-amber-900 uppercase dark:text-amber-100">
+            <span className="rounded bg-amber-600/15 px-1 py-0.5 text-[10px] font-semibold tracking-wide text-amber-900 uppercase dark:text-amber-100">
               System
             </span>
           ) : layout.kind === 'received' ? (
-            <span className="rounded bg-sky-600/15 px-1 py-0.5 text-[9px] font-semibold tracking-wide text-sky-800 uppercase dark:text-sky-200">
+            <span className="rounded bg-sky-600/15 px-1 py-0.5 text-[10px] font-semibold tracking-wide text-sky-800 uppercase dark:text-sky-200">
               Received
             </span>
           ) : null}

@@ -57,7 +57,7 @@ export function AgentModuleTutorial({
               <Icon className="size-5" />
             </span>
             <div className="min-w-0">
-              <p className="text-primary text-[10px] font-semibold uppercase tracking-[0.2em]">
+              <p className="text-primary text-[11px] font-semibold uppercase tracking-[0.2em]">
                 {active.eyebrow}
               </p>
               <h2 className="mt-1 text-xl font-semibold tracking-tight">{active.pageName}</h2>

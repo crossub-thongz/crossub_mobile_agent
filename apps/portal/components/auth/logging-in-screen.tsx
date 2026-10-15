@@ -11,7 +11,7 @@ export function LoggingInScreen() {
       aria-live="polite"
     >
       <div className="flex flex-col items-center gap-3">
-        <Loader2 className="size-8 animate-spin text-[#14B88D]" aria-hidden />
+        <Loader2 className="size-8 animate-spin text-[#00bd85]" aria-hidden />
         <p className="text-sm font-medium text-[#0D1836]">Logging in...</p>
       </div>
     </div>

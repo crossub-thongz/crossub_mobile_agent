@@ -15,7 +15,7 @@ export function NeedActionBadge({
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/15 font-bold text-destructive',
-        size === 'sm' ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-0.5 text-[10px]',
+        size === 'sm' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-[11px]',
         className,
       )}
     >

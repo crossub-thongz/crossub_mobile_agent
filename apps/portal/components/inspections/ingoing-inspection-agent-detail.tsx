@@ -103,7 +103,7 @@ function ProofPhotoGrid({ urls, label }: { urls: string[]; label: string }) {
   if (urls.length === 0) return null;
   return (
     <div className="space-y-1.5">
-      <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+      <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
         {label}
       </p>
       <div className="flex flex-wrap gap-1.5">
@@ -417,12 +417,12 @@ export function IngoingInspectionAgentDetail({
             </span>
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-secondary rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                <span className="bg-secondary rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
                   {INSPECTION_TYPE_LABEL[inspection.type]}
                 </span>
                 <span
                   className={cn(
-                    'rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                    'rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
                     awaitingPayment
                       ? INSPECTION_AWAITING_PAYMENT_BADGE_CLASS
                       : gateStatusTone(gateStatus),
@@ -484,7 +484,7 @@ export function IngoingInspectionAgentDetail({
       />
 
       <section className="rounded-2xl border bg-card p-3">
-        <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground px-1 text-[11px] font-semibold uppercase tracking-wide">
           Ingoing progress
         </p>
         <TaskWorkflowRailPortal>
@@ -536,30 +536,30 @@ export function IngoingInspectionAgentDetail({
 
       {/* Pending content: New tenant + inspector details (kept on later steps for context). */}
       <section className="rounded-2xl border bg-card p-4">
-        <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground mb-3 text-[11px] font-semibold uppercase tracking-wide">
           New tenant
         </p>
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Name
             </dt>
             <dd className="mt-1 text-sm font-medium">{tenantName}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Move-in date
             </dt>
             <dd className="mt-1 text-sm font-medium">{moveInDate}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Phone
             </dt>
             <dd className="mt-1 text-sm font-medium">{tenantPhone}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Email
             </dt>
             <dd className="mt-1 text-sm font-medium break-all">{tenantEmail}</dd>
@@ -568,26 +568,26 @@ export function IngoingInspectionAgentDetail({
       </section>
 
       <section className="rounded-2xl border bg-card p-4">
-        <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground mb-3 text-[11px] font-semibold uppercase tracking-wide">
           Inspector details
         </p>
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Ingoing inspection date
             </dt>
             <dd className="mt-1 text-sm font-medium">
               {dateDisplay.iso ? formatDateTime(dateDisplay.iso) : 'Not scheduled'}
             </dd>
             {dateDisplay.isSuggested ? (
-              <p className="text-muted-foreground mt-1 text-[11px]">
+              <p className="text-muted-foreground mt-1 text-[12px]">
                 Target: {LEASING_INGOING_SCHEDULE_WINDOW_DAYS} days before move-in (same rule as
                 admin portal)
               </p>
             ) : null}
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Inspector name
             </dt>
             <dd className="mt-1">
@@ -600,7 +600,7 @@ export function IngoingInspectionAgentDetail({
           </div>
           {gateStatus !== 'pending' ? (
             <div className="sm:col-span-2">
-              <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
                 Inspector status
               </dt>
               <dd className="mt-1 text-sm font-medium">{inspectorStatus}</dd>
@@ -622,7 +622,7 @@ export function IngoingInspectionAgentDetail({
       {/* Scheduled / Completed: four post-accept steps */}
       {!loading && viewingStep !== 'pending' && liveGateIndex >= 1 ? (
         <div className="space-y-3">
-          <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground px-1 text-[11px] font-semibold uppercase tracking-wide">
             {viewingStep === 'completed'
               ? 'Completion steps'
               : viewingStep === 'awaiting_approval'
@@ -782,7 +782,7 @@ export function IngoingInspectionAgentDetail({
                       href={signUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-primary mt-1 inline-flex items-center gap-1 text-[11px] hover:underline"
+                      className="text-primary mt-1 inline-flex items-center gap-1 text-[12px] hover:underline"
                     >
                       <CheckCircle2 className="size-3" />
                       View signature
@@ -805,7 +805,7 @@ export function IngoingInspectionAgentDetail({
           aria-expanded={auditExpanded}
         >
           <span className="text-sm font-medium">Audit</span>
-          <span className="text-muted-foreground flex items-center gap-2 text-[11px]">
+          <span className="text-muted-foreground flex items-center gap-2 text-[12px]">
             {auditEntries.length} event{auditEntries.length === 1 ? '' : 's'}
             <ChevronDown
               className={cn('size-4 transition-transform', auditExpanded && 'rotate-180')}

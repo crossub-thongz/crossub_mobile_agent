@@ -63,7 +63,7 @@ function NavLink({
         href={href}
         title={label}
         className={cn(
-          'agent-sidebar-v2__nav-link relative flex items-center text-[14px] font-medium',
+          'agent-sidebar-v2__nav-link relative flex items-center text-[15px] font-medium',
           compact
             ? 'justify-center px-2 py-3.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-5'
             : 'gap-3 px-5 py-3.5',
@@ -165,7 +165,7 @@ function AgentSidebarSupport({
           title="Support"
           data-tour="contact-account-manager"
           className={cn(
-            'agent-sidebar-v2__nav-link relative flex w-full items-center rounded-xl text-[13px] font-medium',
+            'agent-sidebar-v2__nav-link relative flex w-full items-center rounded-xl text-[14px] font-medium',
             compact
               ? 'justify-center px-2 py-2.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-3'
               : 'gap-3 px-3 py-2.5',
@@ -473,7 +473,7 @@ export function AgentSidebar({
       <nav className="scrollbar-subtle flex-1 overflow-x-hidden overflow-y-auto p-2">
         {!compact ? (
           <>
-            <p className="text-muted-foreground mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide ui-v2:tracking-wider">
+            <p className="text-muted-foreground mb-2 px-2 text-[11px] font-semibold uppercase tracking-wide ui-v2:tracking-wider">
               Menu
             </p>
             <ul className="space-y-0.5">

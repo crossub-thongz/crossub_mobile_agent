@@ -27,19 +27,19 @@ export function WorkspacePeoplePanel({
 }: TenantProps) {
   return (
     <div className="rounded-lg border border-border bg-background p-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
         Tenant Information
       </p>
       <p className="mt-1.5 text-sm font-semibold text-foreground">{tenantName || '—'}</p>
       <div className="mt-1 space-y-0.5">
         {tenantEmail ? (
-          <p className="text-[11px] break-words text-muted-foreground">{tenantEmail}</p>
+          <p className="text-[12px] break-words text-muted-foreground">{tenantEmail}</p>
         ) : null}
         {tenantPhone ? (
-          <p className="text-[11px] break-words text-muted-foreground">{tenantPhone}</p>
+          <p className="text-[12px] break-words text-muted-foreground">{tenantPhone}</p>
         ) : null}
         {!tenantEmail && !tenantPhone ? (
-          <p className="text-[11px] text-muted-foreground">—</p>
+          <p className="text-[12px] text-muted-foreground">—</p>
         ) : null}
       </div>
     </div>
@@ -69,7 +69,7 @@ export function WorkspaceMetaPanel({
           urgent ? 'border-destructive/40 bg-destructive/5' : 'border-border'
         }`}
       >
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Priority
         </p>
         <div className="mt-1.5">
@@ -78,7 +78,7 @@ export function WorkspaceMetaPanel({
       </div>
 
       <div className="rounded-lg border border-border bg-background p-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Responsibility
         </p>
         <div className="mt-1.5">
@@ -87,17 +87,17 @@ export function WorkspaceMetaPanel({
       </div>
 
       <div className={`rounded-lg border bg-background p-2 ${statusBoxClassName}`}>
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Status
         </p>
         <div className="mt-1.5">{statusBoxContent}</div>
       </div>
 
       <div className="rounded-lg border border-border bg-background p-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Source
         </p>
-        <p className="mt-1.5 text-[11px] font-semibold text-foreground">{sourceLabel}</p>
+        <p className="mt-1.5 text-[12px] font-semibold text-foreground">{sourceLabel}</p>
       </div>
     </div>
   );

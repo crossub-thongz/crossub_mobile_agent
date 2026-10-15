@@ -1,5 +1,4 @@
 import { formatDate, formatTime } from '@/lib/format-datetime';
-import { formatDashboardMoney } from '@/lib/dashboard-home';
 import type {
   Inspection,
   MaintenanceRequest,
@@ -94,11 +93,6 @@ function isClosed(status: string | undefined): boolean {
 function rentReviewOpen(review: RentReviewCase): boolean {
   if (review.workflowState === 'COMPLETED' || review.workflowState === 'CANCELLED') return false;
   return !isClosed(review.status);
-}
-
-function weeklyRent(amount: number | undefined): string {
-  if (amount == null || amount <= 0) return '';
-  return ` · Current rent ${formatDashboardMoney(amount)}/wk`;
 }
 
 function duePhrase(days: number): string {
@@ -227,7 +221,7 @@ export function buildDashboardBoard(input: {
         lane: 'decision',
         title: 'Rent Review',
         address,
-        detail: `${duePhrase(days)}${weeklyRent(review.currentRent)}`,
+        detail: duePhrase(days),
         why: reviewTenantReplied(review)
           ? 'The tenant has replied and is waiting on your decision.'
           : review.requiresApproval
@@ -300,7 +294,7 @@ export function buildDashboardBoard(input: {
         lane: 'decision',
         title: 'Lease Renewal',
         address,
-        detail: `${duePhrase(row.days)} · Current lease ends`,
+        detail: duePhrase(row.days),
         why: 'The lease is ending and no renewal has been finalised.',
         ...decisionBadge(),
         actionLabel: 'Review',

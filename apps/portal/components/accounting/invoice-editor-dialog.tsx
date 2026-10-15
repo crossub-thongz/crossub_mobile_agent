@@ -435,7 +435,7 @@ export function InvoiceEditorDialog({
             </div>
             {periodDays > 0 ? (
               <div className="rounded-lg border bg-muted/40 px-3 py-2 text-right">
-                <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
                   Service period
                 </p>
                 <p className="mt-0.5 text-sm font-medium tabular-nums">
@@ -571,7 +571,7 @@ export function InvoiceEditorDialog({
                   <div className="overflow-x-auto rounded-lg border">
                     <table className="w-full min-w-[720px] border-collapse text-sm">
                       <thead>
-                        <tr className="bg-muted/50 text-muted-foreground border-b text-left text-[11px] font-semibold uppercase tracking-wide">
+                        <tr className="bg-muted/50 text-muted-foreground border-b text-left text-[12px] font-semibold uppercase tracking-wide">
                           <th className="w-10 px-2 py-2.5">#</th>
                           <th className="px-2 py-2.5">Property</th>
                           <th className="w-28 px-2 py-2.5">Rent</th>
@@ -794,7 +794,7 @@ export function InvoiceEditorDialog({
               {/* Live preview */}
               <aside className="border-border bg-muted/20 hidden min-h-0 flex-col border-l lg:flex">
                 <div className="border-border shrink-0 border-b px-4 py-3">
-                  <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                  <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
                     Live preview
                   </p>
                   <p className="mt-0.5 text-sm font-medium">Tax invoice</p>
@@ -960,7 +960,7 @@ function SimpleLinesTable({
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
-              <tr className="bg-muted/50 text-muted-foreground border-b text-left text-[11px] font-semibold uppercase tracking-wide">
+              <tr className="bg-muted/50 text-muted-foreground border-b text-left text-[12px] font-semibold uppercase tracking-wide">
                 <th className="w-10 px-2 py-2.5">#</th>
                 <th className="px-2 py-2.5">Property</th>
                 <th className="px-2 py-2.5">Description</th>

@@ -28,11 +28,11 @@ export function TaskListBoardTable({
   const router = useRouter();
 
   return (
-    <div className="v2-dashboard__card min-w-0 overflow-hidden rounded-2xl border">
+    <div className="v2-dashboard__card min-w-0 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[72rem] border-collapse text-left text-sm">
           <thead>
-            <tr className="text-muted-foreground border-b text-[11px] font-semibold tracking-wide">
+            <tr className="text-muted-foreground border-b text-[12px] font-semibold tracking-wide">
               <th className="px-3 py-3">Task</th>
               <th className="px-3 py-3">Property</th>
               <th className="px-3 py-3">Type</th>
@@ -68,7 +68,7 @@ export function TaskListBoardTable({
                     </div>
                   </td>
                   <td className="px-3 py-3 align-middle">
-                    <p className="truncate font-medium">{row.property.address}</p>
+                    <p className="cursor-pointer truncate font-medium">{row.property.address}</p>
                     <p className="text-muted-foreground truncate text-xs">
                       {[row.property.suburb, row.property.state, row.property.postcode]
                         .filter(Boolean)
@@ -82,7 +82,7 @@ export function TaskListBoardTable({
                   <td className="px-3 py-3 align-middle">
                     <span
                       className={cn(
-                        'inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                        'inline-flex rounded-full px-2 py-0.5 text-[12px] font-semibold',
                         row.statusTone === 'action' && 'bg-rose-500/12 text-rose-700',
                         row.statusTone === 'handling' && 'bg-emerald-500/12 text-emerald-700',
                         row.statusTone === 'waiting' && 'bg-amber-500/15 text-amber-800',
@@ -93,7 +93,7 @@ export function TaskListBoardTable({
                       {row.statusLabel}
                     </span>
                     {row.statusSublabel ? (
-                      <p className="text-muted-foreground mt-1 max-w-[12rem] truncate text-[11px]">
+                      <p className="text-muted-foreground mt-1 max-w-[12rem] truncate text-[12px]">
                         {row.statusSublabel}
                       </p>
                     ) : null}
@@ -110,14 +110,14 @@ export function TaskListBoardTable({
                       {due.primary}
                     </p>
                     {due.secondary ? (
-                      <p className="text-muted-foreground text-[11px]">{due.secondary}</p>
+                      <p className="text-muted-foreground text-[12px]">{due.secondary}</p>
                     ) : null}
                   </td>
                   <td className="px-3 py-3 align-middle">
                     <div className="flex min-w-0 items-center gap-2">
                       <span
                         className={cn(
-                          'flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold',
+                          'flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold',
                           initials ? 'bg-primary/12 text-primary' : 'bg-muted text-muted-foreground',
                         )}
                       >

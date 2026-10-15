@@ -77,7 +77,7 @@ export function DashboardNeedActionPreview({
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <p className="truncate font-medium">{item.label}</p>
                     <p className="text-muted-foreground truncate text-xs">{item.propertyAddress}</p>
-                    <p className="text-foreground/80 truncate text-[11px]">{item.category}</p>
+                    <p className="text-foreground/80 truncate text-[12px]">{item.category}</p>
                   </div>
                   <ChevronRight className="text-muted-foreground size-4 shrink-0" />
                 </Link>

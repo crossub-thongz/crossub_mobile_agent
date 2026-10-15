@@ -40,14 +40,14 @@ export function MaintenanceV2SpinePanel({
 
   return (
     <div className="rounded-lg border border-border bg-background p-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
         Authorisation
       </p>
       <div className="mt-1.5 space-y-1.5">
         {workOrder ? (
           <div className="flex items-start gap-1.5">
             <Wrench className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
-            <p className="text-[11px] text-foreground">
+            <p className="text-[12px] text-foreground">
               <span className="font-semibold">{workOrder.orderNumber}</span>
               <span className="text-muted-foreground">
                 {' · '}
@@ -60,13 +60,13 @@ export function MaintenanceV2SpinePanel({
           </div>
         ) : null}
         {spendingLimit != null ? (
-          <p className="text-[11px] text-foreground">
+          <p className="text-[12px] text-foreground">
             <span className="text-muted-foreground">Authorised limit </span>
             <span className="font-semibold">{formatCurrency(spendingLimit)}</span>
           </p>
         ) : null}
         {makeSafeOnly ? (
-          <span className="inline-flex items-center gap-1 rounded border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+          <span className="inline-flex items-center gap-1 rounded border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
             <ShieldAlert className="size-3" />
             Make-safe only
           </span>

@@ -93,7 +93,7 @@ function TerminationDetailContent({
       {!hideHeader ? (
         <>
           <section className="rounded-2xl border bg-card p-4">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
               Case ref {workflowCaseReferenceLabel(caseData.id, 'end_leasing')}
             </p>
             <CaseAddressAssignedBar

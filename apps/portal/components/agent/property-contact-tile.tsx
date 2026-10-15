@@ -83,19 +83,19 @@ export function ContactTile({
         ) : null}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
           <div className="min-w-0">
-            <p className="text-muted-foreground text-[10px] font-medium">
+            <p className="text-muted-foreground text-[11px] font-medium">
               Name
             </p>
             <p className="mt-0.5 truncate text-sm font-semibold">{name?.trim() || '—'}</p>
           </div>
           <div className="min-w-0">
-            <p className="text-muted-foreground text-[10px] font-medium">
+            <p className="text-muted-foreground text-[11px] font-medium">
               Email
             </p>
             <p className="mt-0.5 truncate text-sm">{email?.trim() || '—'}</p>
           </div>
           <div className="min-w-0">
-            <p className="text-muted-foreground text-[10px] font-medium">
+            <p className="text-muted-foreground text-[11px] font-medium">
               Number
             </p>
             <p className="mt-0.5 truncate text-sm tabular-nums">{phone?.trim() || '—'}</p>
@@ -113,14 +113,14 @@ export function ContactTile({
       title={updatedHint ?? undefined}
     >
       <div className="flex items-center justify-between gap-1">
-        <p className="text-muted-foreground text-[10px] font-semibold">
+        <p className="text-muted-foreground text-[11px] font-semibold">
           {title}
         </p>
         {onEdit ? (
           <button
             type="button"
             onClick={onEdit}
-            className="text-primary shrink-0 text-[10px] font-medium"
+            className="text-primary shrink-0 text-[11px] font-medium"
           >
             Edit
           </button>
@@ -132,15 +132,15 @@ export function ContactTile({
           <button
             type="button"
             onClick={metaOnClick}
-            className="text-primary mt-0.5 truncate text-left text-[10px] font-medium hover:underline"
+            className="text-primary mt-0.5 truncate text-left text-[11px] font-medium hover:underline"
           >
             {meta}
           </button>
         ) : (
-          <p className="text-muted-foreground mt-0.5 truncate text-[10px]">{meta}</p>
+          <p className="text-muted-foreground mt-0.5 truncate text-[11px]">{meta}</p>
         )
       ) : null}
-      <p className="text-muted-foreground mt-0.5 truncate text-[10px]">{detail || (meta ? '' : '—')}</p>
+      <p className="text-muted-foreground mt-0.5 truncate text-[11px]">{detail || (meta ? '' : '—')}</p>
     </div>
   );
 }

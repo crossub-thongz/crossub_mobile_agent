@@ -24,12 +24,12 @@ export function TaskCard({
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             {item.requiresApproval && (
-              <span className="text-primary text-[10px] font-semibold uppercase">
+              <span className="text-primary text-[11px] font-semibold uppercase">
                 Action needed
               </span>
             )}
             {item.priority === 'urgent' && (
-              <span className="text-destructive text-[10px] font-semibold uppercase">
+              <span className="text-destructive text-[11px] font-semibold uppercase">
                 Urgent
               </span>
             )}

@@ -56,7 +56,7 @@ export function MaintenanceStepAudit({
         aria-expanded={expanded}
       >
         <span className="text-sm font-medium">{title}</span>
-        <span className="text-muted-foreground flex items-center gap-2 text-[11px]">
+        <span className="text-muted-foreground flex items-center gap-2 text-[12px]">
           {sorted.length} event{sorted.length === 1 ? '' : 's'}
           <ChevronDown
             className={cn('size-4 transition-transform', expanded && 'rotate-180')}

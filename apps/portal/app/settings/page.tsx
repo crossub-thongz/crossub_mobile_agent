@@ -108,7 +108,7 @@ export default function SettingsPage() {
               </button>
             </div>
           ))}
-          <p className="text-muted-foreground px-1 text-[11px]">
+          <p className="text-muted-foreground px-1 text-[12px]">
             Preferences are saved on this device and control which alerts appear in the
             notification bell and live pop-ups.
           </p>

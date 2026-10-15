@@ -41,10 +41,10 @@ export function LeasingAgreementSignedDocumentPanel({
               <FileSignature className="size-4" />
             </span>
             <div className="min-w-0">
-              <p className="text-[12px] font-medium">Tenant signed document</p>
-              <p className="text-muted-foreground mt-0.5 truncate text-[11px]">{displayName}</p>
+              <p className="text-[13px] font-medium">Tenant signed document</p>
+              <p className="text-muted-foreground mt-0.5 truncate text-[12px]">{displayName}</p>
               {pending ? (
-                <p className="mt-1 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                <p className="mt-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
                   Pending your confirmation
                 </p>
               ) : null}
@@ -56,13 +56,13 @@ export function LeasingAgreementSignedDocumentPanel({
                 type="button"
                 size="sm"
                 variant="outline"
-                className="h-7 gap-1 text-[11px]"
+                className="h-7 gap-1 text-[12px]"
                 onClick={() => setPreviewOpen(true)}
               >
                 <Eye className="size-3" />
                 View signed
               </Button>
-              <Button asChild size="sm" variant="outline" className="h-7 gap-1 text-[11px]">
+              <Button asChild size="sm" variant="outline" className="h-7 gap-1 text-[12px]">
                 <a
                   href={proofUrl ?? undefined}
                   download={fileName ?? undefined}
@@ -116,7 +116,7 @@ export function LeasingAgreementActionGroup({
 }) {
   return (
     <div className="w-full">
-      <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold uppercase tracking-wider">
+      <p className="text-muted-foreground mb-1.5 text-[11px] font-semibold uppercase tracking-wider">
         {label}
       </p>
       <div className="flex flex-wrap gap-2">{children}</div>

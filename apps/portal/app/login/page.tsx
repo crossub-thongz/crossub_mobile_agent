@@ -54,7 +54,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-const AGENT_GREEN = '#14B88D';
+const AGENT_GREEN = '#00bd85';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -149,7 +149,7 @@ export default function LoginPage() {
       <header className="mx-auto mb-2 w-full max-w-6xl px-5 sm:px-8 lg:-mt-4 lg:px-10">
         <div className="flex items-center gap-2.5">
           <Image src="/crossub-logo.png" alt="" width={36} height={36} priority className="size-9" />
-          <span className="text-[15px] font-bold tracking-[0.16em]">CROSSUB</span>
+          <span className="text-[16px] font-bold tracking-[0.16em]">CROSSUB</span>
         </div>
       </header>
 
@@ -202,7 +202,7 @@ export default function LoginPage() {
                   type="email"
                   placeholder="you@company.com"
                   autoComplete="email"
-                  className="h-12 w-full rounded-[9px] border border-[#CED9E4] bg-white pr-3 pl-10 text-sm outline-none placeholder:text-[#9AADC0] focus:border-[#14B88D]"
+                  className="h-12 w-full rounded-[9px] border border-[#CED9E4] bg-white pr-3 pl-10 text-sm outline-none placeholder:text-[#9AADC0] focus:border-[#00bd85]"
                   {...register('email')}
                 />
               </div>
@@ -222,7 +222,7 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter your password"
                   autoComplete="current-password"
-                  className="h-12 w-full rounded-[9px] border border-[#CED9E4] bg-white pr-10 pl-10 text-sm outline-none placeholder:text-[#9AADC0] focus:border-[#14B88D]"
+                  className="h-12 w-full rounded-[9px] border border-[#CED9E4] bg-white pr-10 pl-10 text-sm outline-none placeholder:text-[#9AADC0] focus:border-[#00bd85]"
                   {...register('password')}
                 />
                 <button
@@ -245,7 +245,7 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={keepSignedIn}
                   onChange={(event) => setKeepSignedIn(event.target.checked)}
-                  className="size-4 rounded border-[#CED9E4] accent-[#14B88D]"
+                  className="size-4 rounded border-[#CED9E4] accent-[#00bd85]"
                 />
                 Keep me signed in
               </label>
@@ -297,7 +297,7 @@ function Feature({
 }) {
   return (
     <li className="flex items-start gap-3">
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#E2FAF1] text-[#14B88D]">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#E2FAF1] text-[#00bd85]">
         <Icon className="size-5" strokeWidth={1.75} />
       </span>
       <span>

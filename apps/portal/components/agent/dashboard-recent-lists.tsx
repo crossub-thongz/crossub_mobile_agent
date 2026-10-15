@@ -135,7 +135,7 @@ export function DashboardRecentCasesList({ showTitle = true }: { showTitle?: boo
           >
             <div className="min-w-0 flex-1">
               <p className="leading-snug font-medium">{visit.label}</p>
-              <p className="text-muted-foreground mt-0.5 text-[11px]">
+              <p className="text-muted-foreground mt-0.5 text-[12px]">
                 {MODULE_LABEL[visit.module]}
               </p>
             </div>

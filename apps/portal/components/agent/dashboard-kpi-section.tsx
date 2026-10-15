@@ -135,7 +135,7 @@ export function DashboardHubSection({
               stat.highlight && styles.tileHighlight,
             )}
           >
-            <p className="text-muted-foreground text-[10px] font-medium leading-tight">
+            <p className="text-muted-foreground text-[11px] font-medium leading-tight">
               {stat.label}
             </p>
             <p
@@ -177,7 +177,7 @@ export function KpiTile({
           : 'border-border/80 bg-secondary/30 hover:border-primary/25 hover:bg-card',
       )}
     >
-      <p className="text-muted-foreground text-[10px] leading-tight font-medium">{label}</p>
+      <p className="text-muted-foreground text-[11px] leading-tight font-medium">{label}</p>
       <p className={cn('text-xl font-bold tabular-nums', highlight && 'text-primary')}>{value}</p>
     </Link>
   );
@@ -305,15 +305,15 @@ export function InspectionKpiGroup({
           >
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold">{g.label}</p>
-              <p className="text-muted-foreground text-[10px]">{g.sub}</p>
+              <p className="text-muted-foreground text-[11px]">{g.sub}</p>
             </div>
             <div className="flex shrink-0 gap-2">
               <div className="min-w-[52px] rounded-lg bg-secondary/60 px-2 py-1.5 text-center">
-                <p className="text-muted-foreground text-[9px]">Pending</p>
+                <p className="text-muted-foreground text-[10px]">Pending</p>
                 <p className="text-base font-bold tabular-nums">{g.pending}</p>
               </div>
               <div className="min-w-[52px] rounded-lg bg-secondary/60 px-2 py-1.5 text-center">
-                <p className="text-muted-foreground text-[9px]">Done</p>
+                <p className="text-muted-foreground text-[10px]">Done</p>
                 <p className="text-base font-bold tabular-nums">{g.completed}</p>
               </div>
             </div>

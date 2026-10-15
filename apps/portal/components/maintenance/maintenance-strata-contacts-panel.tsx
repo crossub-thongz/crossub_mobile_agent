@@ -34,7 +34,7 @@ function ContactCard({
       <div className="flex items-start gap-2">
         <Icon className="text-primary mt-0.5 size-4 shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
             {title}
           </p>
           <p className="mt-1 text-sm font-semibold">{contact?.name ?? '—'}</p>

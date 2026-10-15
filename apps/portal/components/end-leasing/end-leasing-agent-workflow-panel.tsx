@@ -142,7 +142,7 @@ export function EndLeasingAgentWorkflowPanel({
 
       <div className="rounded-xl border bg-card" data-tour="workflow-action-panel">
         <div className="border-b px-3 py-3 md:px-4">
-          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
             {isLiveStep ? 'Current step' : 'Step detail'}
           </p>
           <p className="mt-0.5 text-sm font-semibold">{stepTitles[viewingStepId]}</p>

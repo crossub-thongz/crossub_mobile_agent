@@ -211,7 +211,7 @@ function ContractorQuoteCollapsible({
           ) : (
             <span
               className={cn(
-                'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                'rounded-full px-2 py-0.5 text-[11px] font-semibold',
                 statusBadgeClass,
               )}
             >
@@ -247,7 +247,7 @@ function ContractorQuoteCollapsible({
               ) : null}
               <div className="space-y-2">
                 {viewingPreviousQuote ? (
-                  <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                  <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
                     Current quotation
                   </p>
                 ) : null}

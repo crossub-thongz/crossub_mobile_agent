@@ -302,7 +302,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="rounded-lg border border-border/60 bg-secondary/20 p-3">
-              <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Agency details
               </p>
               <div className="space-y-3">

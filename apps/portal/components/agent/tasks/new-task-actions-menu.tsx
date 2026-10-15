@@ -125,7 +125,7 @@ export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
                 key={group.tab}
                 className={cn(groupIndex > 0 && 'border-border/60 mt-2 border-t pt-2')}
               >
-                <p className="text-muted-foreground px-2 py-1 text-[10px] font-semibold uppercase tracking-wide">
+                <p className="text-muted-foreground px-2 py-1 text-[11px] font-semibold uppercase tracking-wide">
                   {group.title}
                 </p>
                 <ul className="space-y-0.5">

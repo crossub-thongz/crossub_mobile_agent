@@ -71,7 +71,7 @@ export function LeasingApplicantDocumentIntake({
     <div className="bg-card space-y-3 rounded-xl border px-4 py-4">
       <div>
         <p className="text-sm font-medium">Upload application materials</p>
-        <p className="text-muted-foreground mt-0.5 text-[11px] leading-relaxed">
+        <p className="text-muted-foreground mt-0.5 text-[12px] leading-relaxed">
           Drag in all documents for one applicant, then confirm to create{' '}
           <span className="text-foreground font-medium">{nextLabel}</span>. You can add more files
           to an existing applicant order later.
@@ -86,7 +86,7 @@ export function LeasingApplicantDocumentIntake({
 
       {files.length > 0 ? (
         <div className="rounded-lg border border-violet-500/25 bg-violet-500/[0.05] px-3 py-3">
-          <p className="text-[11px] font-medium leading-relaxed">
+          <p className="text-[12px] font-medium leading-relaxed">
             Confirm these {files.length} file{files.length === 1 ? '' : 's'} belong to{' '}
             <span className="text-violet-700 dark:text-violet-300">{nextLabel}</span>?
           </p>

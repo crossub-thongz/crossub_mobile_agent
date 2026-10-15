@@ -118,7 +118,7 @@ export function InspectionCompareEvidenceSection({
     <section className="space-y-3 rounded-xl border bg-card p-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">{title}</h3>
-        <span className="text-muted-foreground text-[10px] uppercase tracking-wider">
+        <span className="text-muted-foreground text-[11px] uppercase tracking-wider">
           {count > 0 ? `${count} photos` : 'Awaiting upload'}
         </span>
       </div>

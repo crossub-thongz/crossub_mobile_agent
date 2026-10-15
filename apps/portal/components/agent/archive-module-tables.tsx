@@ -48,7 +48,7 @@ export function ArchivedLeasingCyclesTable({ items }: { items: ArchivedLeasingCy
                 </div>
                 <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                 {deletedStatusBadge(item.cancelReason)}
                 <span className="font-medium tabular-nums">
                   {item.rentPerWeek != null ? `${formatCurrency(item.rentPerWeek)}/wk` : '—'}
@@ -113,7 +113,7 @@ export function ArchivedEndLeasingTable({ items }: { items: ArchiveEndLeasingRow
                   <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                 ) : null}
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                 {archiveOutcomeBadge(item.outcome, item.note)}
                 <span className="text-muted-foreground">
                   Vacate {item.vacateDate ? formatDate(item.vacateDate) : '—'}
@@ -196,7 +196,7 @@ export function ArchivedRentReviewsTable({ items }: { items: ArchivedRentReview[
                   <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                 ) : null}
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                 {deletedStatusBadge(item.cancelReason)}
                 <span className="font-medium tabular-nums">
                   {item.currentRent != null ? `${formatCurrency(item.currentRent)}/wk` : '—'}

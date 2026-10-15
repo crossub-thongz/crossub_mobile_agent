@@ -56,14 +56,14 @@ function IntakeEvidenceGrid({
               ) : isVideo ? (
                 <div className="flex h-full flex-col items-center justify-center gap-0.5 bg-black/80">
                   <Play className="size-4 text-white" />
-                  <span className="text-muted-foreground line-clamp-1 px-1 text-[9px] text-white/80">
+                  <span className="text-muted-foreground line-clamp-1 px-1 text-[10px] text-white/80">
                     {att.fileName}
                   </span>
                 </div>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-0.5 px-1">
                   <FileText className="text-muted-foreground/60 size-4" />
-                  <span className="text-muted-foreground line-clamp-2 text-[9px]">{att.fileName}</span>
+                  <span className="text-muted-foreground line-clamp-2 text-[10px]">{att.fileName}</span>
                 </div>
               )}
             </button>
@@ -169,7 +169,7 @@ export function MaintenanceJobIntakeSummary({
 
       {!hideEvidence ? (
         <div className="mt-4 border-t pt-4">
-          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wide">
             Intake photos &amp; videos
             {intakeAttachments.length > 0 ? ` (${intakeAttachments.length})` : ''}
           </p>

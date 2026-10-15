@@ -60,7 +60,7 @@ export function PropertyPicker({
                 <p className="truncate text-sm font-semibold">{property.address}</p>
                 <p className="text-muted-foreground truncate text-xs">{property.suburb}</p>
                 {property.tenantName.toLowerCase() !== 'vacant' ? (
-                  <p className="text-muted-foreground mt-0.5 truncate text-[11px]">
+                  <p className="text-muted-foreground mt-0.5 truncate text-[12px]">
                     {property.tenantName}
                   </p>
                 ) : null}

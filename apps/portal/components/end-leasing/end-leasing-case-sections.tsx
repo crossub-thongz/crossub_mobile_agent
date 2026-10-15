@@ -37,7 +37,7 @@ function SummaryField({
 }) {
   return (
     <div>
-      <dt className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+      <dt className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
         {label}
       </dt>
       <dd className="mt-1 text-sm font-medium leading-snug">{children}</dd>
@@ -78,7 +78,7 @@ function SectionCard({
             {title}
           </h3>
           {highlight ? (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
               Action required
             </span>
           ) : null}
@@ -268,7 +268,7 @@ export function EndLeasingKeysReturnSection({
               type="button"
               size="sm"
               variant={needsKeyReturnAction ? 'default' : 'outline'}
-              className={cn('h-7 text-[11px]', needsKeyReturnAction && 'bg-amber-600 hover:bg-amber-600/90')}
+              className={cn('h-7 text-[12px]', needsKeyReturnAction && 'bg-amber-600 hover:bg-amber-600/90')}
               disabled={keysReturned}
               onClick={() => setKeyReturnDialogOpen(true)}
             >
@@ -278,7 +278,7 @@ export function EndLeasingKeysReturnSection({
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 text-[11px]"
+              className="h-7 text-[12px]"
               onClick={() => setVacateDialogOpen(true)}
             >
               Change vacate date
@@ -321,7 +321,7 @@ export function EndLeasingKeysReturnSection({
                   {savingKeyReturnDate ? 'Saving…' : 'Save date'}
                 </Button>
               </dd>
-              <p className="text-muted-foreground text-[11px]">
+              <p className="text-muted-foreground text-[12px]">
                 Defaults to the vacate date — change if keys are returned on a different day.
               </p>
             </div>
@@ -344,7 +344,7 @@ export function EndLeasingKeysReturnSection({
               <dt className="text-muted-foreground text-xs font-medium">Tenant key return proof</dt>
               <dd>
                 {tenantKeyReturnSubmittedAt ? (
-                  <p className="text-muted-foreground mb-2 text-[11px]">
+                  <p className="text-muted-foreground mb-2 text-[12px]">
                     Submitted {formatDate(tenantKeyReturnSubmittedAt)}
                   </p>
                 ) : null}

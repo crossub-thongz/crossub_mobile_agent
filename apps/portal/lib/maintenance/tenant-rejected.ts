@@ -27,7 +27,7 @@ export const TENANT_REJECTED_ROW_CLASS =
   'border-l-4 border-l-amber-500 bg-amber-500/[0.06]';
 
 export const TENANT_REJECTED_BADGE_CLASS =
-  'inline-flex items-center rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300';
+  'inline-flex items-center rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[12px] font-semibold text-amber-700 dark:text-amber-300';
 
 /** True when the tenant DISAGREED with the responsibility call — parked or (legacy) closed. */
 export function isTenantRejectedMaintenance(request: MaintenanceRequest): boolean {

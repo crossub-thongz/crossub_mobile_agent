@@ -174,7 +174,7 @@ export function CrossubServiceSummaryCard({
     <div className="rounded-lg border border-violet-500/25 bg-violet-500/8 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+          <p className="text-muted-foreground text-[12px] font-semibold tracking-wider uppercase">
             CROSSUB SERVICE
           </p>
           <p className="mt-0.5 text-sm font-semibold">Full Service</p>
@@ -234,14 +234,14 @@ export function CrossubPlatformFeeSummaryRow({
   return (
     <div className="grid grid-cols-1 gap-2 rounded-lg border border-violet-500/25 bg-violet-500/5 p-3 sm:grid-cols-2 sm:items-end lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto]">
       <div className="space-y-1">
-        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">CROSSUB charge</p>
+        <p className="text-[12px] uppercase tracking-wider text-muted-foreground">CROSSUB charge</p>
         <p className="text-sm font-medium text-foreground">Full Service platform fee</p>
         <p className="text-muted-foreground text-xs">
           {serviceFeePercent}% of management income · min 4% incl GST · billed by active days
         </p>
       </div>
       <div className="space-y-1">
-        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">At this property</p>
+        <p className="text-[12px] uppercase tracking-wider text-muted-foreground">At this property</p>
         <p className="text-sm font-semibold tabular-nums">
           {formatCurrency(monthlyIncGst)} / month
         </p>
@@ -252,7 +252,7 @@ export function CrossubPlatformFeeSummaryRow({
         </p>
       </div>
       <div className="space-y-1 sm:col-span-2 lg:col-span-1">
-        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Collection</p>
+        <p className="text-[12px] uppercase tracking-wider text-muted-foreground">Collection</p>
         <p className="text-sm text-foreground">Monthly invoice</p>
       </div>
       <div className="hidden lg:block" aria-hidden />

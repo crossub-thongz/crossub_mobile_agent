@@ -31,7 +31,7 @@ function StatusBadge({
     <div className="min-w-0">
       <span
         className={cn(
-          'inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold',
+          'inline-flex rounded-full px-2 py-0.5 text-[12px] font-semibold',
           tone === 'good' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
           tone === 'warn' && 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
           tone === 'new' && 'bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-200',
@@ -42,7 +42,7 @@ function StatusBadge({
         {label}
       </span>
       {sublabel ? (
-        <p className="text-muted-foreground mt-1 truncate text-[11px]">{sublabel}</p>
+        <p className="text-muted-foreground mt-1 truncate text-[12px]">{sublabel}</p>
       ) : null}
     </div>
   );
@@ -226,8 +226,7 @@ export function PropertyListV2Table({
   }, [accounting, leasingRecords, properties, tenantContactsByProperty]);
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-2xl border bg-card shadow-sm">
-      <div className="overflow-x-auto">
+    <div className="min-w-0 overflow-x-auto">
         <table className="w-full min-w-[48rem] table-fixed border-collapse text-left text-sm">
           <colgroup>
             <col style={{ width: '24%' }} />
@@ -238,7 +237,7 @@ export function PropertyListV2Table({
             <col style={{ width: '2.75rem' }} />
           </colgroup>
           <thead>
-            <tr className="border-b bg-muted/30 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <tr className="border-b bg-muted/30 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
               <th className="px-3 py-3">Property</th>
               <th className="px-3 py-3" data-tour="properties-tenancy">
                 Tenancy
@@ -266,7 +265,7 @@ export function PropertyListV2Table({
                     <button
                       type="button"
                       onClick={() => onSelect(property.id)}
-                      className="block w-full truncate text-left font-medium hover:underline"
+                      className="block w-full cursor-pointer truncate text-left font-medium hover:underline"
                       title={isDraft ? 'Continue registration' : 'Open property'}
                     >
                       {property.address}
@@ -276,7 +275,7 @@ export function PropertyListV2Table({
                       {property.postcode ? ` ${property.postcode}` : ''}
                     </p>
                     {isDraft ? (
-                      <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+                      <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
                         Draft
                       </span>
                     ) : null}
@@ -378,7 +377,6 @@ export function PropertyListV2Table({
             })}
           </tbody>
         </table>
-      </div>
     </div>
   );
 }

@@ -120,7 +120,7 @@ export function AddToHomeScreenPrompt() {
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-primary text-[10px] font-semibold tracking-wider uppercase">
+                <p className="text-primary text-[11px] font-semibold tracking-wider uppercase">
                   Install app
                 </p>
                 <p className="mt-0.5 text-sm font-semibold leading-snug">Add to Home Screen</p>

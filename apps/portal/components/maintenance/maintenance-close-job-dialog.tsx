@@ -113,7 +113,7 @@ export function MaintenanceCloseJobDialog({
           <div className="space-y-1.5">
             <Label
               htmlFor="close-job-reason"
-              className="text-muted-foreground text-[11px] uppercase tracking-wider"
+              className="text-muted-foreground text-[12px] uppercase tracking-wider"
             >
               Reason
             </Label>
@@ -138,7 +138,7 @@ export function MaintenanceCloseJobDialog({
           <div className="space-y-1.5">
             <Label
               htmlFor="close-job-note"
-              className="text-muted-foreground text-[11px] uppercase tracking-wider"
+              className="text-muted-foreground text-[12px] uppercase tracking-wider"
             >
               Note {noteRequired ? '(required)' : '(optional)'}
             </Label>
@@ -153,7 +153,7 @@ export function MaintenanceCloseJobDialog({
               className="min-h-[80px] resize-none text-sm"
               disabled={saving}
             />
-            <p className="text-muted-foreground text-[11px]">
+            <p className="text-muted-foreground text-[12px]">
               Internal only — the tenant never sees this note.
             </p>
           </div>
@@ -164,7 +164,7 @@ export function MaintenanceCloseJobDialog({
                 <AlertTriangle className="text-warning mt-0.5 size-3.5 shrink-0" />
                 <span>{commitments}</span>
               </p>
-              <p className="text-muted-foreground mt-1.5 pl-5 text-[11px]">
+              <p className="text-muted-foreground mt-1.5 pl-5 text-[12px]">
                 Closing will not tell them. Stand the contractor down yourself if the visit is no
                 longer going ahead.
               </p>

@@ -97,7 +97,7 @@ function RentReviewDetailContent({
       {!hideHeader ? (
         <>
           <section className="rounded-2xl border bg-card p-4">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
               Case ref {workflowCaseReferenceLabel(detail.id, 'rent_review')}
             </p>
             <CaseAddressAssignedBar

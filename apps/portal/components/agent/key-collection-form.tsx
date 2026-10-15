@@ -172,7 +172,7 @@ export function KeyCollectionForm({
       <p className="text-xs font-medium">
         Key handover {live ? '(live API)' : '(offline)'}
       </p>
-      <p className="text-muted-foreground text-[10px]">
+      <p className="text-muted-foreground text-[11px]">
         Sets the same arrangement Tenant sees under leasing onboarding and Inspector sees on the
         ingoing inspection job.
       </p>
@@ -212,14 +212,14 @@ export function KeyCollectionForm({
               </span>
             ) : null}
           </p>
-          <p className="text-muted-foreground text-[10px]">
+          <p className="text-muted-foreground text-[11px]">
             Checklist counts and proof photos, materialised onto the handover record.
           </p>
 
           <div className="grid grid-cols-2 gap-2">
             {COUNT_FIELDS.map((field) => (
               <div key={field.key} className="space-y-1">
-                <Label htmlFor={`kc-${field.key}`} className="text-[10px]">
+                <Label htmlFor={`kc-${field.key}`} className="text-[11px]">
                   {field.label}
                 </Label>
                 <Input
@@ -236,7 +236,7 @@ export function KeyCollectionForm({
               </div>
             ))}
             <div className="space-y-1">
-              <Label htmlFor="kc-tag" className="text-[10px]">
+              <Label htmlFor="kc-tag" className="text-[11px]">
                 Tag number
               </Label>
               <Input
@@ -249,7 +249,7 @@ export function KeyCollectionForm({
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="kc-photos" className="text-[10px]">
+            <Label htmlFor="kc-photos" className="text-[11px]">
               Proof photos
             </Label>
             <Input

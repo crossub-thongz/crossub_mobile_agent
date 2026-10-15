@@ -17,7 +17,7 @@ export function ContractorPreviousQuotationPanel({
         <p className="text-xs font-semibold text-yellow-900 dark:text-yellow-200">
           {versionLabel ?? 'Previous quotation'}
         </p>
-        <p className="text-muted-foreground text-[10px] tabular-nums">
+        <p className="text-muted-foreground text-[11px] tabular-nums">
           {formatDateTime(quote.submittedAt)} · {formatCurrency(quote.price)}
         </p>
       </div>

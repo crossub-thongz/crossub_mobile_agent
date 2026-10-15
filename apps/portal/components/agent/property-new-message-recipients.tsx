@@ -38,7 +38,7 @@ function RecipientRow({
         <span className="block font-medium">{recipient.label}</span>
         <span className="text-muted-foreground block truncate text-xs">{recipient.name}</span>
         {recipient.detail ? (
-          <span className="text-muted-foreground block truncate text-[11px]">{recipient.detail}</span>
+          <span className="text-muted-foreground block truncate text-[12px]">{recipient.detail}</span>
         ) : null}
       </span>
     </button>

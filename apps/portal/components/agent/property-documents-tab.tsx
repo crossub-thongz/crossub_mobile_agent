@@ -87,7 +87,7 @@ function SlotUploadButton({
       type="button"
       size="sm"
       variant={hasFiles ? 'outline' : 'default'}
-      className="h-7 shrink-0 px-2 text-[11px]"
+      className="h-7 shrink-0 px-2 text-[12px]"
       disabled={disabled || busy}
       onClick={onClick}
     >
@@ -144,12 +144,12 @@ function DocumentColumn({
             <p className="text-sm font-semibold leading-tight">
               {CREATE_PROPERTY_DOCUMENT_GROUP_LABELS[group]}
               {readOnly ? (
-                <span className="text-muted-foreground ml-1.5 text-[10px] font-medium uppercase">
+                <span className="text-muted-foreground ml-1.5 text-[11px] font-medium uppercase">
                   Archived
                 </span>
               ) : null}
             </p>
-            <p className="text-muted-foreground mt-0.5 text-[11px] tabular-nums">
+            <p className="text-muted-foreground mt-0.5 text-[12px] tabular-nums">
               {uploadedFileCount > 0
                 ? `${uploadedFileCount} document${uploadedFileCount === 1 ? '' : 's'} uploaded`
                 : `${allRows.filter((r) => r.uploaded).length}/${fixedRows.length} types uploaded`}
@@ -186,7 +186,7 @@ function DocumentColumn({
                         <span className="text-foreground group-hover:text-primary block text-sm font-medium leading-snug">
                           {row.title}
                         </span>
-                        <span className="text-primary mt-1 block text-[11px] font-semibold">
+                        <span className="text-primary mt-1 block text-[12px] font-semibold">
                           {row.files.length} document{row.files.length === 1 ? '' : 's'} uploaded
                         </span>
                       </span>
@@ -194,7 +194,7 @@ function DocumentColumn({
                   ) : (
                     <>
                       <p className="text-sm font-medium leading-snug">{row.title}</p>
-                      <span className="text-muted-foreground mt-1 block text-[11px]">
+                      <span className="text-muted-foreground mt-1 block text-[12px]">
                         Not uploaded
                       </span>
                     </>
@@ -232,7 +232,7 @@ function DocumentColumn({
                       <span className="text-foreground group-hover:text-primary block text-sm font-medium leading-snug">
                         {row.title}
                       </span>
-                      <span className="text-primary mt-1 block text-[11px] font-semibold">
+                      <span className="text-primary mt-1 block text-[12px] font-semibold">
                         {row.files.length} document{row.files.length === 1 ? '' : 's'} uploaded
                       </span>
                     </span>
@@ -266,7 +266,7 @@ function DocumentColumn({
             >
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1 space-y-1">
-                  <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <Label className="text-[12px] uppercase tracking-wider text-muted-foreground">
                     Document title <span className="text-destructive">*</span>
                   </Label>
                   <Input

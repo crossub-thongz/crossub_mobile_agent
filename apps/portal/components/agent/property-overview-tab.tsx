@@ -132,7 +132,7 @@ export function PropertyOverviewTab({
   return (
     <div className="space-y-3">
       <OverviewSection title="Jobs in progress">
-        <p className="text-muted-foreground mb-2 text-[11px]">
+        <p className="text-muted-foreground mb-2 text-[12px]">
           Choose a job type from the dropdown to view active jobs, then click a row to open the
           workflow.
         </p>

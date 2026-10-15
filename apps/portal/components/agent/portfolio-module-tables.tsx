@@ -184,7 +184,7 @@ export function MaintenanceListTable({
                 </div>
                 <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                 <span className="text-muted-foreground tabular-nums">{m.trackingNumber}</span>
                 {tenantRejected ? (
                   <span className={TENANT_REJECTED_BADGE_CLASS} title={tenantRejectionTitle(m)}>
@@ -434,7 +434,7 @@ export function RentReviewListTable({
                 </div>
                 <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                 <span className="text-primary font-medium">{progress.currentStepLabel}</span>
                 <span className="font-medium tabular-nums">
                   {formatCurrency(r.currentRent)}/wk
@@ -550,7 +550,7 @@ function TribunalTableCountdown({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 text-[11px] font-medium',
+        'inline-flex items-center gap-1 text-[12px] font-medium',
         tone === 'overdue' && days > 0 && 'text-rose-600 dark:text-rose-400',
         tone === 'upcoming' && days >= 0 && 'text-amber-700 dark:text-amber-300',
         tone === 'muted' && 'text-muted-foreground',
@@ -624,7 +624,7 @@ function TribunalHearingCell({ hearingDate }: { hearingDate?: string | null }) {
 function TribunalActionBadge({ show }: { show: boolean }) {
   if (!show) return null;
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+    <span className="inline-flex items-center gap-1 text-[12px] font-medium text-rose-600 dark:text-rose-400">
       <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
       Action required
     </span>
@@ -671,13 +671,13 @@ export function TribunalListTable({
                         {c.propertyAddress || '—'}
                       </p>
                     ) : null}
-                    <p className="text-muted-foreground mt-1 text-[11px]">
+                    <p className="text-muted-foreground mt-1 text-[12px]">
                       {tribunalTypeLabel(c.tribunalType)}
                     </p>
                   </div>
                   <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
                   <div>
                     <p className="text-muted-foreground mb-0.5">Claimed</p>
                     <TribunalArrearsCell
@@ -799,7 +799,7 @@ export function TribunalListTable({
                 </div>
                 <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                 <span className="text-muted-foreground tabular-nums">
                   {c.caseNumber ?? workflowCaseReferenceLabel(c.id, 'tribunal')}
                 </span>
@@ -807,7 +807,7 @@ export function TribunalListTable({
                   {c.createdAt ? formatDate(c.createdAt) : '—'}
                 </span>
               </div>
-              <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
+              <div className="mt-2 grid grid-cols-3 gap-2 text-[12px]">
                 <div>
                   <p className="text-muted-foreground mb-0.5">Rent</p>
                   <TribunalArrearsCell
@@ -999,7 +999,7 @@ export function InspectionsListTable({
                   </div>
                   <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                 </div>
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                   <span className="text-muted-foreground tabular-nums">{i.trackingNumber}</span>
                   <span className="text-primary font-medium">{progress.currentStepLabel}</span>
                   <span className="text-muted-foreground">
@@ -1174,7 +1174,7 @@ export function AccountingListTable({
                 </div>
                 <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                 <span className="text-muted-foreground">
                   Paid {formatCurrency(a.rentPaidYtd)}
                 </span>
@@ -1185,7 +1185,7 @@ export function AccountingListTable({
                   Bal {formatCurrency(a.currentBalance)}
                 </span>
               </div>
-              <div className="mt-1.5 text-[11px]">
+              <div className="mt-1.5 text-[12px]">
                 <span
                   className={cn(
                     'font-medium tabular-nums',
@@ -1255,7 +1255,7 @@ export function AccountingListTable({
                   {arrearsLabel}
                 </ModuleTableTruncateText>
                 {a.arrearsAmount > 0 ? (
-                  <ModuleTableTruncateText className="text-primary mt-0.5 text-[11px]">
+                  <ModuleTableTruncateText className="text-primary mt-0.5 text-[12px]">
                     {progress.currentStepLabel}
                   </ModuleTableTruncateText>
                 ) : null}
@@ -1416,7 +1416,7 @@ export function LeasingCyclesTable({
                 </div>
                 <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                 {!awaiting && statusLabel ? (
                   <StatusBadge label={statusLabel} variant={statusVariant} />
                 ) : null}
@@ -1608,7 +1608,7 @@ export function TenantSelectionsTable({
                 </div>
                 <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                 <span className="font-medium tabular-nums">
                   {formatCurrency(t.proposedRent)}/wk
                 </span>
@@ -1765,7 +1765,7 @@ export function LeasingHistoryTable({
                 </div>
                 <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                 <span className="font-medium tabular-nums">
                   {formatCurrency(l.rentWeekly)}/wk
                 </span>

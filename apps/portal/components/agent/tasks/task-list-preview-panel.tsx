@@ -101,7 +101,7 @@ export function TaskListPreviewPanel({
               <h2 className="text-base font-semibold leading-snug">{task.title}</h2>
               <span
                 className={cn(
-                  'mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+                  'mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[12px] font-semibold',
                   row.statusTone === 'action'
                     ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
                     : row.statusTone === 'handling'
@@ -116,7 +116,7 @@ export function TaskListPreviewPanel({
               <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
                 {formatPropertyFullAddress(property)}
               </p>
-              <p className="text-muted-foreground mt-1 text-[11px]">
+              <p className="text-muted-foreground mt-1 text-[12px]">
                 {row.typeLabel} • Reported {reported}
                 {reference ? ` • Ref: ${reference}` : ''}
               </p>
@@ -177,7 +177,7 @@ export function TaskListPreviewPanel({
                         <div className="min-w-0 text-center">
                           <div
                             className={cn(
-                              'mx-auto flex size-7 items-center justify-center rounded-full text-[10px] font-semibold',
+                              'mx-auto flex size-7 items-center justify-center rounded-full text-[11px] font-semibold',
                               current
                                 ? 'bg-rose-600 text-white'
                                 : done
@@ -187,7 +187,7 @@ export function TaskListPreviewPanel({
                           >
                             {index + 1}
                           </div>
-                          <p className="mt-1 truncate text-[10px] font-medium">{step.label}</p>
+                          <p className="mt-1 truncate text-[11px] font-medium">{step.label}</p>
                         </div>
                         {index < progress.steps.length - 1 ? (
                           <div
@@ -243,7 +243,7 @@ export function TaskListPreviewPanel({
                 <p className="text-sm font-semibold">{formatPropertyFullAddress(property)}</p>
                 <span
                   className={cn(
-                    'mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+                    'mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[12px] font-semibold',
                     isVacant
                       ? 'bg-muted text-muted-foreground'
                       : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',

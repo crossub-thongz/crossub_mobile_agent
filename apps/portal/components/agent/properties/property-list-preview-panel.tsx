@@ -67,7 +67,7 @@ function PreviewMetric({
         frosted ? 'v2-frosted-surface' : 'bg-background/60',
       )}
     >
-      <p className="text-muted-foreground text-[10px] font-medium">
+      <p className="text-muted-foreground text-[11px] font-medium">
         {label}
       </p>
       <p
@@ -320,7 +320,7 @@ export function PropertyListPreviewPanel({
             </p>
             <span
               className={cn(
-                'mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+                'mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[12px] font-semibold',
                 isVacant
                   ? 'bg-muted text-muted-foreground'
                   : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
@@ -584,7 +584,7 @@ export function PropertyListPreviewPanel({
                             <p className="text-muted-foreground mt-0.5 text-xs">
                               {propertyJobDisplaySubtext(job)}
                             </p>
-                            <span className="mt-1.5 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                            <span className="mt-1.5 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
                               No Action Required
                             </span>
                           </div>
@@ -688,7 +688,7 @@ export function PropertyListPreviewPanel({
                             <p className="text-muted-foreground mt-0.5 text-xs">
                               {propertyJobDisplaySubtext(job)}
                             </p>
-                            <span className="mt-1.5 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                            <span className="mt-1.5 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
                               No Action Required
                             </span>
                           </div>

@@ -114,7 +114,7 @@ export default function ReportsPage() {
                   onChange={handleUpload}
                 />
               </label>
-              <p className="text-muted-foreground text-[10px]">
+              <p className="text-muted-foreground text-[11px]">
                 When offline, upload metadata is saved on this device until the API syncs.
               </p>
             </div>
@@ -140,7 +140,7 @@ export default function ReportsPage() {
                       <p className="text-muted-foreground truncate text-xs">
                         {doc.propertyAddress}
                       </p>
-                      <p className="text-muted-foreground text-[11px]">
+                      <p className="text-muted-foreground text-[12px]">
                         {formatDateTime(doc.uploadedAt)} · {doc.category.replace('_', ' ')}
                       </p>
                     </div>

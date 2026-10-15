@@ -90,7 +90,7 @@ function ContractorSuggestionRow({
                 {contractor.serviceTypes.slice(0, 4).map((tag) => (
                   <span
                     key={`${contractor.id}-${tag}`}
-                    className="text-muted-foreground rounded bg-muted/40 px-2 py-0.5 text-[10px] font-medium ring-1 ring-border"
+                    className="text-muted-foreground rounded bg-muted/40 px-2 py-0.5 text-[11px] font-medium ring-1 ring-border"
                   >
                     {tag}
                   </span>
@@ -101,17 +101,17 @@ function ContractorSuggestionRow({
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           {isClientPreferred ? (
-            <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+            <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
               Preferred
             </span>
           ) : null}
           {isAutoPick ? (
-            <span className="rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+            <span className="rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
               Auto
             </span>
           ) : null}
           {!isAutoPick && index < MAINTENANCE_CONTRACTOR_AUTO_PICK_COUNT ? (
-            <span className="text-muted-foreground text-[10px] tabular-nums">#{index + 1}</span>
+            <span className="text-muted-foreground text-[11px] tabular-nums">#{index + 1}</span>
           ) : null}
         </div>
       </div>
@@ -244,14 +244,14 @@ export function MaintenanceResponsibilityLandlordPanel({
     <>
       <div className="rounded-xl border bg-card p-3">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
             Tradesmen
           </p>
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="h-7 px-2 text-[11px]"
+            className="h-7 px-2 text-[12px]"
             disabled={disabled || !agencyId}
             onClick={() => setAddOpen(true)}
           >
@@ -290,7 +290,7 @@ export function MaintenanceResponsibilityLandlordPanel({
         </div>
 
         {selectedContractorIds.length > 0 ? (
-          <p className="text-muted-foreground mt-3 text-[11px]">
+          <p className="text-muted-foreground mt-3 text-[12px]">
             {selectedContractorIds.length} contractor
             {selectedContractorIds.length === 1 ? '' : 's'} selected for quote review.
           </p>

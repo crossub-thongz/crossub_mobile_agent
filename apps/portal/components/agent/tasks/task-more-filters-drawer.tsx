@@ -233,7 +233,7 @@ export function TaskMoreFiltersDrawer({
 function FilterSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">{title}</h3>
+      <h3 className="text-muted-foreground text-[12px] font-semibold tracking-wide uppercase">{title}</h3>
       {children}
     </section>
   );

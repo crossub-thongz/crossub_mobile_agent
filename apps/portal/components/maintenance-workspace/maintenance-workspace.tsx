@@ -283,7 +283,7 @@ export function MaintenanceWorkspace({
               disabled={!enabled}
               onClick={() => goToStage(active ? null : target)}
               className={cn(
-                'rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors',
+                'rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors',
                 !enabled && 'cursor-not-allowed opacity-50',
                 active
                   ? 'border-primary/80 bg-primary/15 text-primary'
@@ -306,7 +306,7 @@ export function MaintenanceWorkspace({
 
           <div>
             {!embedded ? (
-              <p className="text-muted-foreground mt-3 mb-3 text-[10px] font-semibold uppercase tracking-wider">
+              <p className="text-muted-foreground mt-3 mb-3 text-[11px] font-semibold uppercase tracking-wider">
                 Workflow
               </p>
             ) : null}
@@ -354,7 +354,7 @@ export function MaintenanceWorkspace({
                           </div>
                           <p
                             className={cn(
-                              'mt-2 text-center text-[10px] font-semibold leading-tight',
+                              'mt-2 text-center text-[11px] font-semibold leading-tight',
                               isPreviewStep || step.status === 'active'
                                 ? 'text-primary'
                                 : step.status === 'done'
@@ -383,7 +383,7 @@ export function MaintenanceWorkspace({
                 {isReviewStep && (
                   <>
                     <div className="rounded-lg border border-border bg-background p-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Problem Description
                       </p>
                       <p className="mt-2 text-sm font-medium whitespace-pre-wrap text-foreground">
@@ -397,10 +397,10 @@ export function MaintenanceWorkspace({
                       className="mt-3 flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2"
                     >
                       <span className="min-w-0 text-left">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                           Photo / Video Uploaded
                         </p>
-                        <p className="text-muted-foreground mt-1 text-[12px] tabular-nums">0 items</p>
+                        <p className="text-muted-foreground mt-1 text-[13px] tabular-nums">0 items</p>
                       </span>
                       <ChevronDown
                         className={cn('size-4 transition-transform', evidenceExpanded && 'rotate-180')}
@@ -423,10 +423,10 @@ export function MaintenanceWorkspace({
 
                     <div className="mt-3 rounded-lg border border-border bg-background p-3">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                           CROSSUB Advice
                         </p>
-                        <span className="text-muted-foreground text-[10px]">Reasoning only</span>
+                        <span className="text-muted-foreground text-[11px]">Reasoning only</span>
                       </div>
                       <p className="text-muted-foreground mt-2 text-xs">Supporting reasoning:</p>
                       <p className="text-muted-foreground mt-2 text-xs whitespace-pre-wrap">{aiAdvice}</p>
@@ -443,7 +443,7 @@ export function MaintenanceWorkspace({
                         : 'bg-muted/30',
                     )}
                   >
-                    <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+                    <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
                       {quickJumpReadOnlyMode ? 'Stage view' : 'Current Action'}
                     </p>
                     <p
@@ -457,7 +457,7 @@ export function MaintenanceWorkspace({
                       {displayActionLabel}
                     </p>
                     {displayActionSublabel && (
-                      <p className="text-muted-foreground text-[11px]">{displayActionSublabel}</p>
+                      <p className="text-muted-foreground text-[12px]">{displayActionSublabel}</p>
                     )}
                   </div>
 
@@ -470,7 +470,7 @@ export function MaintenanceWorkspace({
                     {quickJumpReadOnlyMode && quickJumpTargetKey && (
                       <div className="pointer-events-auto mb-3 rounded-lg border border-border bg-background px-3 py-2">
                         <p className="text-xs font-semibold text-muted-foreground">Quick view: read-only</p>
-                        <p className="text-muted-foreground mt-1 text-[11px]">
+                        <p className="text-muted-foreground mt-1 text-[12px]">
                           Review historical data for this stage. Click the active workflow step to return to live actions.
                         </p>
                       </div>
@@ -517,7 +517,7 @@ export function MaintenanceWorkspace({
                         <div className="rounded-xl border border-border bg-background p-3">
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                                 Requesting More Evidence
                               </p>
                               <p className="text-muted-foreground mt-1 text-xs">
@@ -600,7 +600,7 @@ export function MaintenanceWorkspace({
                     {!showLandlordQuoteReview && uiStatusForUI === 'pending_quotation' && (
                       <div className="space-y-3">
                         <div>
-                          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+                          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
                             Contractor response
                           </p>
                           <p className="mt-2 text-sm font-semibold">
@@ -652,7 +652,7 @@ export function MaintenanceWorkspace({
                             {agentDetail?.invoiceMatch ? (
                               <span
                                 className={cn(
-                                  'inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                                  'inline-flex items-center rounded border px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
                                   MAINTENANCE_PAYMENT_STATUS_TONE[
                                     agentDetail.invoiceMatch.paymentStatus
                                   ],
@@ -721,7 +721,7 @@ export function MaintenanceWorkspace({
                   : 'border-border'
               }
               statusBoxContent={
-                <p className="text-[11px] font-semibold text-foreground">{statusLabel}</p>
+                <p className="text-[12px] font-semibold text-foreground">{statusLabel}</p>
               }
             />
             <MaintenanceV2SpinePanel agentDetail={agentDetail} />

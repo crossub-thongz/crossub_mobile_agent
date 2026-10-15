@@ -295,8 +295,8 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                         data-tour="workflow-case-badge"
                         className={
                           banner.needsAction
-                            ? 'rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
-                            : 'rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                            ? 'rounded-full bg-rose-100 px-2 py-0.5 text-[12px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                            : 'rounded-full bg-emerald-100 px-2 py-0.5 text-[12px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
                         }
                       >
                         {banner.needsAction ? 'Need your action' : 'CROS handling'}
@@ -418,7 +418,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                           <p className="text-sm font-semibold">{card.title}</p>
                           <span
                             className={cn(
-                              'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase',
+                              'rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase',
                               card.status === 'in_progress' && 'bg-violet-100 text-violet-700',
                               card.status === 'pending' && 'bg-muted text-muted-foreground',
                               card.status === 'complete' && 'bg-emerald-100 text-emerald-700',
@@ -464,7 +464,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                             Submitted {formatDateTime(application.submittedAt)}
                           </p>
                         </div>
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                           {application.agentDecision}
                         </span>
                       </div>
@@ -549,7 +549,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
               ) : null}
               <div className="p-3">
                 <p className="text-sm font-semibold leading-snug">{address}</p>
-                <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                   {property.leaseStatus === 'vacant' ? 'Vacant' : 'Occupied'}
                 </span>
                 <dl className="mt-3 space-y-2 text-xs">
@@ -607,7 +607,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                 </span>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold">{tenant.applicant}</p>
-                  <span className="mt-1 inline-flex rounded-full border border-emerald-500/30 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                  <span className="mt-1 inline-flex rounded-full border border-emerald-500/30 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                     Pre-approved
                   </span>
                   <div className="text-muted-foreground mt-2 space-y-1 text-xs">
@@ -660,7 +660,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                             <span className="text-sm font-semibold">{task.jobType}</span>
                             <span
                               className={cn(
-                                'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                                'rounded-full px-2 py-0.5 text-[11px] font-semibold',
                                 badge.tone === 'warn'
                                   ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
                                   : 'bg-muted text-muted-foreground',

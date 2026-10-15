@@ -977,7 +977,7 @@ export function GiiAssistant({
                       key={item.id}
                       type="button"
                       onClick={() => void runQuery(item.prompt)}
-                      className="rounded-full border border-border/80 bg-secondary/50 px-2.5 py-1 text-[10px] font-medium transition hover:border-primary/30 hover:bg-primary/5"
+                      className="rounded-full border border-border/80 bg-secondary/50 px-2.5 py-1 text-[11px] font-medium transition hover:border-primary/30 hover:bg-primary/5"
                     >
                       {item.label}
                     </button>
@@ -1171,7 +1171,7 @@ export function GiiAssistant({
           <CrosAssistantLogoBadge size="xl" />
           <div className="min-w-0">
             <p className="text-sm font-bold">{CROS_ASSISTANT_NAME}</p>
-            <p className="text-muted-foreground truncate text-[10px]">
+            <p className="text-muted-foreground truncate text-[11px]">
               {messageScoped
                 ? 'Message assistant · context loaded'
                 : isEmbedded || isPanel
@@ -1364,7 +1364,7 @@ export function GiiAssistant({
                 type="button"
                 onClick={() => void runQuery(item.prompt)}
                 className={cn(
-                  'rounded-full border border-border/80 px-2.5 py-1 text-[11px] font-medium transition hover:border-primary/30',
+                  'rounded-full border border-border/80 px-2.5 py-1 text-[12px] font-medium transition hover:border-primary/30',
                   isFrostedV2Panel
                     ? 'v2-frosted-nav'
                     : 'bg-secondary/50 hover:bg-primary/5',
@@ -1494,7 +1494,7 @@ export function GiiAssistant({
             </div>
           </div>
         </div>
-        <p className="text-muted-foreground mt-1.5 text-[10px]">
+        <p className="text-muted-foreground mt-1.5 text-[11px]">
           Enter to send · Shift+Enter for a new line · Attach PDFs or images
         </p>
       </div>

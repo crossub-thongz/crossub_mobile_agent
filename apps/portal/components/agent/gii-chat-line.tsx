@@ -20,7 +20,7 @@ function AttachmentPreview({ attachments }: { attachments: GiiChatAttachmentView
         ) : (
           <span
             key={att.fileName}
-            className="rounded-lg border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-medium"
+            className="rounded-lg border border-white/20 bg-white/10 px-2 py-1 text-[12px] font-medium"
           >
             {att.fileName}
           </span>
@@ -62,7 +62,7 @@ export function GiiChatLine({
   return (
     <div className={cn('flex w-full justify-start', className)}>
       <div className="max-w-[92%]">
-        <p className="text-violet-700 dark:text-violet-300 mb-1 flex items-center gap-1 text-[10px] font-semibold tracking-wide uppercase">
+        <p className="text-violet-700 dark:text-violet-300 mb-1 flex items-center gap-1 text-[11px] font-semibold tracking-wide uppercase">
           <CrosAssistantLogo size="sm" className="shrink-0" />
           {CROS_ASSISTANT_NAME}
         </p>
@@ -83,7 +83,7 @@ export function GiiChatGreeting({ text, className }: { text: string; className?:
   return (
     <div className={cn('flex w-full justify-start', className)}>
       <div className="max-w-[92%]">
-        <p className="text-violet-700 dark:text-violet-300 mb-1 flex items-center gap-1 text-[10px] font-semibold tracking-wide uppercase">
+        <p className="text-violet-700 dark:text-violet-300 mb-1 flex items-center gap-1 text-[11px] font-semibold tracking-wide uppercase">
           <CrosAssistantLogo size="sm" className="shrink-0" />
           {CROS_ASSISTANT_NAME}
         </p>

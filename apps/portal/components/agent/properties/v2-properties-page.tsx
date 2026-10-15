@@ -371,7 +371,7 @@ export function V2PropertiesPage() {
                 <SlidersHorizontal className="size-3.5" />
                 More filters
                 {moreFilterCount > 0 ? (
-                  <span className="bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 text-[10px] leading-none">
+                  <span className="bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 text-[11px] leading-none">
                     {moreFilterCount}
                   </span>
                 ) : null}
@@ -379,7 +379,7 @@ export function V2PropertiesPage() {
             </PopoverTrigger>
             <PopoverContent align="end" className="w-64 space-y-4 p-3">
               <div className="space-y-2">
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+                <p className="text-muted-foreground text-[12px] font-semibold tracking-wide uppercase">
                   Occupancy
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -545,7 +545,7 @@ export function V2PropertiesPage() {
           onSelect={handlePropertySelect}
         />
       ) : (
-        <>
+        <div className="v2-dashboard__card min-w-0 overflow-hidden">
           <PropertyListV2Table
             properties={pageRows}
             accounting={accounting}
@@ -564,7 +564,7 @@ export function V2PropertiesPage() {
           />
 
           <div
-            className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm"
+            className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t px-3 py-3 text-sm"
             data-tour="properties-pagination"
           >
             <p className="text-muted-foreground text-xs">
@@ -625,7 +625,7 @@ export function V2PropertiesPage() {
               </label>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       <PropertyRemoveDialog

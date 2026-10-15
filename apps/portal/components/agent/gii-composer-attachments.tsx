@@ -37,7 +37,7 @@ export function GiiAttachmentPreviewRow({
                 <FileText className="text-muted-foreground size-4" />
               </div>
             )}
-            <span className="min-w-0 flex-1 truncate text-[11px] font-medium">
+            <span className="min-w-0 flex-1 truncate text-[12px] font-medium">
               {att.file.name}
             </span>
             <button

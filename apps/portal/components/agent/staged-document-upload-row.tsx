@@ -90,21 +90,21 @@ export function StagedDocumentUploadRow({
               <p className="min-w-0 truncate text-xs font-medium">{file.fileName}</p>
               <div className="flex shrink-0 items-center gap-1">
                 {file.uploadStatus === 'uploading' ? (
-                  <span className="text-muted-foreground inline-flex items-center gap-1 px-1 text-[10px]">
+                  <span className="text-muted-foreground inline-flex items-center gap-1 px-1 text-[11px]">
                     <Loader2 className="size-3 animate-spin" />
                     Uploading
                   </span>
                 ) : file.uploadStatus === 'staged' ? (
-                  <span className="text-muted-foreground px-1 text-[10px]">Added</span>
+                  <span className="text-muted-foreground px-1 text-[11px]">Added</span>
                 ) : file.uploadStatus === 'queued' ? (
-                  <span className="text-muted-foreground px-1 text-[10px]">Queued</span>
+                  <span className="text-muted-foreground px-1 text-[11px]">Queued</span>
                 ) : file.uploadStatus === 'uploaded' ? (
-                  <span className="inline-flex items-center gap-0.5 px-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                  <span className="inline-flex items-center gap-0.5 px-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
                     <Check className="size-3" />
                     Saved
                   </span>
                 ) : file.uploadStatus === 'failed' ? (
-                  <span className="text-destructive px-1 text-[10px] font-medium">Failed</span>
+                  <span className="text-destructive px-1 text-[11px] font-medium">Failed</span>
                 ) : null}
                 {onPreview ? (
                   <Button

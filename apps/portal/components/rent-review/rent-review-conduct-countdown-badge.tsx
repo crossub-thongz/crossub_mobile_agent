@@ -32,7 +32,7 @@ export function RentReviewConductCountdownBadge({
       title={title}
       className={cn(
         'inline-flex items-center gap-1 rounded-full border font-semibold tabular-nums',
-        compact ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs',
+        compact ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs',
         TONE_CLASS[tone],
       )}
     >

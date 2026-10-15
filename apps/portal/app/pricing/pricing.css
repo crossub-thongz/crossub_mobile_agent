@@ -74,7 +74,7 @@
 }
 
 .pricing-account-level-tag {
-  font-size: 0.8125rem;
+  font-size: calc(0.8125rem + 1px);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   box-shadow: 0 1px 0 color-mix(in oklab, white 30%, transparent);
@@ -184,7 +184,7 @@
   border: 1px solid var(--pricing-accent-border);
   background: var(--pricing-accent-soft);
   padding: 0.2rem 0.65rem;
-  font-size: 0.65rem;
+  font-size: calc(0.65rem + 1px);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -203,7 +203,7 @@
 .pricing-check-list li {
   position: relative;
   padding-left: 1.35rem;
-  font-size: 0.875rem;
+  font-size: calc(0.875rem + 1px);
   line-height: 1.45;
   color: var(--muted-foreground);
 }
@@ -235,12 +235,12 @@
   border: 1px solid var(--pricing-accent-border);
   background: var(--pricing-accent-soft);
   padding: 0.35rem 0.65rem;
-  font-size: 0.75rem;
+  font-size: calc(0.75rem + 1px);
   font-weight: 500;
 }
 
 .pricing-chip strong {
-  font-size: 0.875rem;
+  font-size: calc(0.875rem + 1px);
   color: var(--foreground);
 }
 
@@ -322,7 +322,7 @@
 }
 
 .pricing-rate-card__price {
-  font-size: 1.125rem;
+  font-size: calc(1.125rem + 1px);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--foreground);
@@ -369,7 +369,7 @@
 }
 
 .pricing-tier__label {
-  font-size: 0.65rem;
+  font-size: calc(0.65rem + 1px);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -378,7 +378,7 @@
 
 .pricing-tier__value {
   margin-top: 0.2rem;
-  font-size: 0.8125rem;
+  font-size: calc(0.8125rem + 1px);
   font-weight: 600;
   line-height: 1.35;
   color: var(--foreground);
@@ -391,7 +391,7 @@
   background: color-mix(in oklab, var(--foreground) 3%, var(--card));
   padding: 0.65rem 0.75rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.6875rem;
+  font-size: calc(0.6875rem + 1px);
   line-height: 1.55;
   color: var(--muted-foreground);
 }
@@ -419,7 +419,7 @@
   background: color-mix(in oklab, var(--foreground) 2%, var(--card));
   padding: 0.75rem 0.85rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.75rem;
+  font-size: calc(0.75rem + 1px);
   line-height: 1.65;
   color: var(--muted-foreground);
 }
@@ -472,7 +472,7 @@
   min-width: 20rem;
   height: 100%;
   border-collapse: collapse;
-  font-size: 0.8125rem;
+  font-size: calc(0.8125rem + 1px);
   table-layout: fixed;
 }
 
@@ -487,7 +487,7 @@
 .pricing-bed-table-wrap th {
   padding: 0.55rem 0.85rem;
   text-align: left;
-  font-size: 0.65rem;
+  font-size: calc(0.65rem + 1px);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -521,7 +521,7 @@
   border: 1px solid var(--border);
   background: var(--muted);
   padding: 0.65rem 0.85rem;
-  font-size: 0.75rem;
+  font-size: calc(0.75rem + 1px);
   line-height: 1.45;
   color: var(--muted-foreground);
 }
@@ -537,13 +537,13 @@
   width: 100%;
   min-width: 28rem;
   border-collapse: collapse;
-  font-size: 0.8125rem;
+  font-size: calc(0.8125rem + 1px);
 }
 
 .pricing-included-usage__table th {
   padding: 0.45rem 0.65rem;
   text-align: left;
-  font-size: 0.65rem;
+  font-size: calc(0.65rem + 1px);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;

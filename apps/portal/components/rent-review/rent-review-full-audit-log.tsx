@@ -51,7 +51,7 @@ export function RentReviewFullAuditLog({
       {expanded ? (
         <>
           {onNavigateToStep ? (
-            <p className="text-muted-foreground mt-3 text-[11px]">
+            <p className="text-muted-foreground mt-3 text-[12px]">
               Tap an event to open the step where it was recorded.
             </p>
           ) : null}
@@ -67,7 +67,7 @@ export function RentReviewFullAuditLog({
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-muted-foreground tabular-nums">{formatDateTime(e.at)}</span>
                     <span className="text-muted-foreground capitalize">· {e.actor}</span>
-                    <span className="bg-background rounded border px-1.5 py-0.5 text-[10px] font-medium">
+                    <span className="bg-background rounded border px-1.5 py-0.5 text-[11px] font-medium">
                       {stepLabel}
                     </span>
                   </div>

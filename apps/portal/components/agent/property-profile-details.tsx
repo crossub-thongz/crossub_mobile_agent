@@ -54,7 +54,7 @@ function StatCell({
   return (
     <div className="rounded-lg border border-border/40 bg-background/60 px-2.5 py-2">
       <div className="flex items-center justify-between gap-1">
-        <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium">
+        <p className="text-muted-foreground flex items-center gap-1 text-[11px] font-medium">
           <span>{label}</span>
           {labelAccessory}
         </p>
@@ -62,7 +62,7 @@ function StatCell({
           <button
             type="button"
             onClick={onEdit}
-            className="text-primary shrink-0 text-[10px] font-medium"
+            className="text-primary shrink-0 text-[11px] font-medium"
           >
             Edit
           </button>
@@ -80,7 +80,7 @@ function StatCell({
         <p className="mt-0.5 text-sm font-semibold tabular-nums">{value}</p>
       )}
       {hint ? (
-        <p className="text-muted-foreground mt-0.5 text-[10px] leading-snug tabular-nums">
+        <p className="text-muted-foreground mt-0.5 text-[11px] leading-snug tabular-nums">
           → {hint}
         </p>
       ) : null}
@@ -246,13 +246,13 @@ export function PropertyProfileDetails({
       </div>
       {property.paymentReference ? (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-2">
-          <p className="text-[10px] font-medium text-amber-800 dark:text-amber-200">
+          <p className="text-[11px] font-medium text-amber-800 dark:text-amber-200">
             Rent Payment Reference
           </p>
           <p className="mt-0.5 text-sm font-semibold tabular-nums tracking-wide text-amber-950 dark:text-amber-50">
             {property.paymentReference}
           </p>
-          <p className="text-muted-foreground mt-0.5 text-[10px] leading-snug">
+          <p className="text-muted-foreground mt-0.5 text-[11px] leading-snug">
             Quote this reference when paying rent by bank transfer.
           </p>
         </div>

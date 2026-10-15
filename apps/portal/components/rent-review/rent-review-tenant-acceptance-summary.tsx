@@ -89,7 +89,7 @@ export function RentReviewTenantAcceptanceSummary({
       </div>
 
       {showSchedulingNote ? (
-        <p className="text-muted-foreground rounded-lg border bg-muted/20 p-3 text-[11px] leading-relaxed whitespace-pre-wrap">
+        <p className="text-muted-foreground rounded-lg border bg-muted/20 p-3 text-[12px] leading-relaxed whitespace-pre-wrap">
           {buildRentIncreaseSchedulingNote(summary)}
         </p>
       ) : null}

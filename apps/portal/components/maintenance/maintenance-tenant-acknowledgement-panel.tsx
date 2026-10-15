@@ -50,7 +50,7 @@ export function MaintenanceTenantAcknowledgementPanel({
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Tenant responsible
             </p>
             <p className="mt-1 text-sm font-semibold">

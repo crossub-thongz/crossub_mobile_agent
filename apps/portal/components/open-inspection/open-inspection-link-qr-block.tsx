@@ -60,7 +60,7 @@ export function OpenInspectionLinkQrBlock({
           className="rounded-lg border bg-white p-1"
         />
         <div className="min-w-0 flex-1 space-y-2">
-          <p className="break-all rounded-md border bg-muted/30 px-2 py-1.5 font-mono text-[10px]">
+          <p className="break-all rounded-md border bg-muted/30 px-2 py-1.5 font-mono text-[11px]">
             {url}
           </p>
           <div className="flex flex-wrap gap-2">

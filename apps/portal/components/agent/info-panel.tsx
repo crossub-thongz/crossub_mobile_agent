@@ -48,7 +48,7 @@ export function InfoRow({
 }) {
   return (
     <div className="flex flex-col gap-0.5 py-2 first:pt-0 last:pb-0">
-      <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
+      <dt className="text-muted-foreground text-[12px] font-medium uppercase tracking-wide">
         {label}
       </dt>
       <dd className="text-sm">{children ?? value ?? '—'}</dd>

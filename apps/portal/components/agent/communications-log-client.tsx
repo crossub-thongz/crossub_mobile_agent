@@ -88,13 +88,13 @@ function ThreadListItem({
         )}
         <span className="truncate font-medium">{thread.subject}</span>
         {thread.unread > 0 && (
-          <span className="bg-destructive ml-auto shrink-0 rounded-full px-1.5 text-[10px] font-bold text-white">
+          <span className="bg-destructive ml-auto shrink-0 rounded-full px-1.5 text-[11px] font-bold text-white">
             {thread.unread}
           </span>
         )}
       </div>
       <p className="text-muted-foreground line-clamp-2 text-xs">{thread.propertyAddress}</p>
-      <div className="text-muted-foreground mt-1 flex items-center justify-between text-[10px]">
+      <div className="text-muted-foreground mt-1 flex items-center justify-between text-[11px]">
         <span>{category}</span>
         <span>{formatRelative(thread.lastAt)}</span>
       </div>
@@ -154,7 +154,7 @@ function ThreadDetailPanel({
                   Tenant
                 </Button>
               )}
-            <span className="bg-secondary text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-medium">
+            <span className="bg-secondary text-muted-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
               {channelLabel(thread.channel)}
             </span>
           </div>
@@ -212,14 +212,14 @@ function LinkedMailboxRow({
       <Mail className="text-muted-foreground mt-0.5 size-4 shrink-0" />
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{mailbox.email}</p>
-        <p className="text-muted-foreground text-[10px]">
+        <p className="text-muted-foreground text-[11px]">
           {providerLabel(mailbox.provider)}
           {mailbox.lastSyncAt
             ? ` · synced ${formatRelative(mailbox.lastSyncAt)}`
             : ' · not synced yet'}
         </p>
         {mailbox.lastError && (
-          <p className="text-destructive mt-0.5 flex items-center gap-1 text-[10px]">
+          <p className="text-destructive mt-0.5 flex items-center gap-1 text-[11px]">
             <AlertCircle className="size-3 shrink-0" />
             {mailbox.lastError}
           </p>
@@ -511,12 +511,12 @@ export function CommunicationsLogClient() {
                   <p className="font-semibold">Email account connection — configure on the API server</p>
                   <p className="mt-1 opacity-90">
                     Gmail/Yahoo OAuth is not fully set up in{' '}
-                    <code className="text-[10px]">crossub_web/apps/api/.env</code>. Add{' '}
-                    <code className="text-[10px]">GOOGLE_MAIL_CLIENT_ID</code>,{' '}
-                    <code className="text-[10px]">GOOGLE_MAIL_CLIENT_SECRET</code>, and{' '}
-                    <code className="text-[10px]">MAILBOX_TOKEN_ENCRYPTION_KEY</code>, then
+                    <code className="text-[11px]">crossub_web/apps/api/.env</code>. Add{' '}
+                    <code className="text-[11px]">GOOGLE_MAIL_CLIENT_ID</code>,{' '}
+                    <code className="text-[11px]">GOOGLE_MAIL_CLIENT_SECRET</code>, and{' '}
+                    <code className="text-[11px]">MAILBOX_TOKEN_ENCRYPTION_KEY</code>, then
                     restart the API. Register redirect URI:{' '}
-                    <code className="text-[10px]">
+                    <code className="text-[11px]">
                       http://localhost:3001/api/v1/agent/mailboxes/oauth/google/callback
                     </code>
                   </p>
@@ -578,7 +578,7 @@ export function CommunicationsLogClient() {
 
             {linkedMailboxes.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
                   Inbox filter
                 </span>
                 <div className="flex flex-wrap gap-1">
@@ -617,7 +617,7 @@ export function CommunicationsLogClient() {
           )}
 
           {user && hubView === 'inbox' && (
-            <p className="text-muted-foreground mt-2 text-[11px]">
+            <p className="text-muted-foreground mt-2 text-[12px]">
               Signed in as {displayName(user)} — CROSSUB threads plus linked inbox mail
               for your managed properties.
             </p>
@@ -633,7 +633,7 @@ export function CommunicationsLogClient() {
         ) : (
         <div className="flex min-h-0 flex-1">
           <aside className="border-border w-[220px] shrink-0 overflow-y-auto border-r p-3">
-            <p className="text-muted-foreground mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground mb-2 px-2 text-[11px] font-semibold uppercase tracking-wide">
               Modules
             </p>
             <ul className="space-y-0.5">
@@ -649,7 +649,7 @@ export function CommunicationsLogClient() {
                   )}
                 >
                   <span>All modules</span>
-                  <span className="text-[10px]">{moduleCounts.all}</span>
+                  <span className="text-[11px]">{moduleCounts.all}</span>
                 </button>
               </li>
               {COMMUNICATIONS_LOG_MODULES.map((mod) => (
@@ -666,9 +666,9 @@ export function CommunicationsLogClient() {
                   >
                     <div className="flex items-center justify-between text-sm font-medium">
                       <span>{mod.label}</span>
-                      <span className="text-[10px]">{moduleCounts[mod.id] ?? 0}</span>
+                      <span className="text-[11px]">{moduleCounts[mod.id] ?? 0}</span>
                     </div>
-                    <p className="mt-0.5 text-[10px] leading-snug opacity-80">
+                    <p className="mt-0.5 text-[11px] leading-snug opacity-80">
                       {mod.description}
                     </p>
                   </button>

@@ -193,18 +193,18 @@ export function DashboardAttentionCard({
               <p className="text-muted-foreground mt-0.5 text-xs leading-snug">{subtext}</p>
             ) : null}
             {note ? (
-              <p className="text-primary mt-2 flex items-start gap-1 rounded-lg bg-primary/10 px-2 py-1.5 text-[10px] leading-snug">
+              <p className="text-primary mt-2 flex items-start gap-1 rounded-lg bg-primary/10 px-2 py-1.5 text-[11px] leading-snug">
                 <Sparkles className="mt-0.5 size-3 shrink-0" aria-hidden />
                 <span>{note}</span>
               </p>
             ) : null}
             <div className="mt-2 flex items-center justify-end gap-2">
               {item.updatedAt ? (
-                <span className="text-muted-foreground text-[10px]">{formatRelative(item.updatedAt)}</span>
+                <span className="text-muted-foreground text-[11px]">{formatRelative(item.updatedAt)}</span>
               ) : null}
               <span
                 className={cn(
-                  'inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-semibold',
+                  'inline-flex items-center rounded-lg px-2.5 py-1 text-[12px] font-semibold',
                   surface.button,
                 )}
               >
@@ -244,7 +244,7 @@ export function DashboardAttentionCard({
               {shortNeedLabel(item.label)}
             </p>
             {item.updatedAt ? (
-              <span className={cn('text-muted-foreground shrink-0', compact ? 'text-[10px]' : 'text-[11px]')}>
+              <span className={cn('text-muted-foreground shrink-0', compact ? 'text-[11px]' : 'text-[12px]')}>
                 {formatRelative(item.updatedAt)}
               </span>
             ) : null}
@@ -259,7 +259,7 @@ export function DashboardAttentionCard({
             <p
               className={cn(
                 'text-primary rounded-md bg-primary/10 leading-snug',
-                compact ? 'mt-1.5 px-2 py-1 text-[10px]' : 'mt-2 rounded-lg px-2.5 py-1.5 text-[11px]',
+                compact ? 'mt-1.5 px-2 py-1 text-[11px]' : 'mt-2 rounded-lg px-2.5 py-1.5 text-[12px]',
               )}
             >
               {note}
@@ -271,7 +271,7 @@ export function DashboardAttentionCard({
         <span
           className={cn(
             'inline-flex items-center rounded-md font-semibold',
-            compact ? 'px-2 py-1 text-[10px]' : 'rounded-lg px-3 py-1.5 text-xs',
+            compact ? 'px-2 py-1 text-[11px]' : 'rounded-lg px-3 py-1.5 text-xs',
             surface.button,
           )}
         >

@@ -31,9 +31,9 @@ export function MaintenanceEmailLog({
         <div key={email.id} className="rounded-xl border bg-card space-y-2 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-medium">{email.subject}</p>
-            <span className="text-muted-foreground text-[10px]">{formatDateTime(email.at)}</span>
+            <span className="text-muted-foreground text-[11px]">{formatDateTime(email.at)}</span>
           </div>
-          <dl className="grid gap-1 text-[11px] sm:grid-cols-2">
+          <dl className="grid gap-1 text-[12px] sm:grid-cols-2">
             <div>
               <dt className="text-muted-foreground">From</dt>
               <dd>{email.from}</dd>

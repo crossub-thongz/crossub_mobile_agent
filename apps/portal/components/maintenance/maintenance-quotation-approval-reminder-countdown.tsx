@@ -62,7 +62,7 @@ export function MaintenanceQuotationApprovalReminderCountdown({
   }
 
   return (
-    <p className={cn('text-[11px] tabular-nums', tone, className)}>
+    <p className={cn('text-[12px] tabular-nums', tone, className)}>
       <span className="inline-flex items-center gap-1">
         <Clock className="size-3 shrink-0" />
         {ui.remindersSent} reminder{ui.remindersSent === 1 ? '' : 's'} sent

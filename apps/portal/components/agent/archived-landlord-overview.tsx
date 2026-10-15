@@ -28,7 +28,7 @@ function StatCell({
 }) {
   return (
     <div className="rounded-lg border border-border/50 bg-muted/10 px-2.5 py-2">
-      <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium">
+      <p className="text-muted-foreground flex items-center gap-1 text-[11px] font-medium">
         <span>{label}</span>
         {labelAccessory}
       </p>
@@ -78,7 +78,7 @@ function NextRoutineStatValue({
         {date ? formatDate(date) : '—'}
       </p>
       {cadence ? (
-        <p className="text-muted-foreground mt-0.5 text-[10px] font-normal leading-snug">
+        <p className="text-muted-foreground mt-0.5 text-[11px] font-normal leading-snug">
           {cadence}
         </p>
       ) : null}

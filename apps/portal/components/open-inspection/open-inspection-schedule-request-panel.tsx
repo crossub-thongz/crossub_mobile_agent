@@ -239,7 +239,7 @@ export function OpenInspectionScheduleRequestPanel({
         disabled={busy}
         defaultTime="10:00"
       />
-      <p className="text-muted-foreground -mt-2 text-[11px] leading-relaxed">
+      <p className="text-muted-foreground -mt-2 text-[12px] leading-relaxed">
         {OPEN_PREFERRED_TIME_HINT}
       </p>
 
@@ -269,7 +269,7 @@ export function OpenInspectionScheduleRequestPanel({
           placeholder="e.g. Lockbox on front gate — code 4821"
           disabled={busy}
         />
-        <p className="text-muted-foreground text-[11px] leading-relaxed">
+        <p className="text-muted-foreground text-[12px] leading-relaxed">
           The assigned inspector sees this only after they accept the job.
         </p>
       </div>

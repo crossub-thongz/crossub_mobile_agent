@@ -64,7 +64,7 @@ export function NeedActionTaskCard({
       <div className="min-w-0 flex-1">
         <span
           className={cn(
-            'inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+            'inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
             urgent ? 'bg-destructive/15 text-destructive' : 'bg-primary/10 text-primary',
           )}
         >

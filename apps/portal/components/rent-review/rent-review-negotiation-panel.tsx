@@ -288,7 +288,7 @@ export function RentReviewNegotiationPanel({
                     onChange={(e) => setAgentCounterRent(e.target.value)}
                   />
                   {initialNoticeWeekly != null ? (
-                    <p className="text-muted-foreground text-[11px] leading-relaxed">
+                    <p className="text-muted-foreground text-[12px] leading-relaxed">
                       At or below {formatCurrency(initialNoticeWeekly)}/wk — emailed to the tenant
                       directly. Above that amount — return to Agent decision to re-send a formal notice.
                     </p>

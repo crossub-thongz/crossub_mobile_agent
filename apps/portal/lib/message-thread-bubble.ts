@@ -53,7 +53,7 @@ export function messageThreadBubbleClasses(
           : 'border border-sky-500/35 bg-sky-500/12 text-foreground dark:border-sky-400/25 dark:bg-sky-950/40',
     ),
     meta: cn(
-      'text-[10px]',
+      'text-[11px]',
       kind === 'own'
         ? 'text-primary-foreground/75'
         : kind === 'system'

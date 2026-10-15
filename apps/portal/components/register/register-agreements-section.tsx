@@ -180,7 +180,7 @@ export function RegisterAgreementsSection({
                   Service Agreement
                 </p>
                 <ExternalLink className="size-3.5 shrink-0 text-primary opacity-70 group-hover:opacity-100" />
-                <span className="text-muted-foreground text-[11px] font-medium normal-case tracking-normal">
+                <span className="text-muted-foreground text-[12px] font-medium normal-case tracking-normal">
                   {servicePreviewLoading ? 'Preparing preview…' : 'Click to preview'}
                 </span>
               </div>
@@ -193,7 +193,7 @@ export function RegisterAgreementsSection({
                   onClick={(event) => event.stopPropagation()}
                   onKeyDown={(event) => event.stopPropagation()}
                 >
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-foreground">
+                  <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-foreground">
                     Intermediary information (saved to agent profile)
                   </p>
                   <dl className="text-xs">
@@ -288,7 +288,7 @@ export function RegisterAgreementsSection({
                   {REGISTER_TERMS_AND_CONDITIONS_TITLE}
                 </p>
                 <ExternalLink className="size-3.5 shrink-0 text-primary opacity-70 group-hover:opacity-100" />
-                <span className="text-muted-foreground text-[11px] font-medium normal-case tracking-normal">
+                <span className="text-muted-foreground text-[12px] font-medium normal-case tracking-normal">
                   Click to preview
                 </span>
               </div>

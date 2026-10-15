@@ -488,9 +488,9 @@ export function AgentShell({
                           : undefined
                   }
                   className={cn(
-                    'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium',
+                    'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[10px] font-medium',
                     active ? 'text-primary' : 'text-muted-foreground',
-                    'ui-v2:rounded-xl ui-v2:text-[10px]',
+                    'ui-v2:rounded-xl ui-v2:text-[11px]',
                     active && isV2 && 'v2-frosted-nav text-foreground',
                     active && !isV2 && 'text-primary',
                   )}
@@ -514,7 +514,7 @@ export function AgentShell({
               onClick={() => setMoreOpen((v) => !v)}
               data-tour="contact-account-manager"
               className={cn(
-                'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium lg:hidden',
+                'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[10px] font-medium lg:hidden',
                 !isV2 && (moreOpen ? 'text-primary' : 'text-muted-foreground'),
                 'ui-v2:hidden',
               )}
@@ -527,7 +527,7 @@ export function AgentShell({
                 href={ROUTES.MORE}
                 data-tour="contact-account-manager"
                 className={cn(
-                  'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[10px] font-medium lg:hidden',
+                  'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] font-medium lg:hidden',
                   'ui-v2:rounded-xl',
                   isActive(pathname, ROUTES.MORE)
                     ? 'v2-frosted-nav text-foreground'

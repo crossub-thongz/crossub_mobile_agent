@@ -233,7 +233,7 @@ export default function ChangePasswordPage() {
                 {showNew ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
-            <p className="text-muted-foreground text-[11px]">
+            <p className="text-muted-foreground text-[12px]">
               At least {PASSWORD_MIN} characters.
             </p>
             {errors.newPassword ? (

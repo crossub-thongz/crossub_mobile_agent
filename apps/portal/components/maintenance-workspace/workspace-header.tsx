@@ -69,7 +69,7 @@ export function WorkspaceHeader({
 
       <div className="flex flex-wrap items-start gap-4 sm:items-center">
         <div className="min-w-0 flex-1 space-y-2 pr-2">
-          <p className="text-primary text-[10px] font-semibold uppercase tracking-[0.2em]">
+          <p className="text-primary text-[11px] font-semibold uppercase tracking-[0.2em]">
             Maintenance workspace
           </p>
           <h1 className="text-foreground text-xl font-semibold tracking-tight md:text-2xl">
@@ -80,7 +80,7 @@ export function WorkspaceHeader({
             assignedToName={assignedToName}
             titleClassName="text-sm font-medium"
           />
-          <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 text-[11px]">
+          <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 text-[12px]">
             <span>
               Case ref{' '}
               <kbd className="border-border bg-muted text-foreground rounded border px-1.5 py-0.5 tabular-nums tracking-tight">
@@ -94,7 +94,7 @@ export function WorkspaceHeader({
                 <span className="bg-border hidden h-4 w-px sm:inline-block" aria-hidden />
                 <span
                   className={cn(
-                    'inline-flex items-center gap-1.5 text-[11px] font-medium',
+                    'inline-flex items-center gap-1.5 text-[12px] font-medium',
                     syncing ? 'text-primary' : 'text-emerald-700 dark:text-emerald-400',
                   )}
                 >
@@ -122,7 +122,7 @@ export function WorkspaceHeader({
             <button
               type="button"
               onClick={onOpenChat}
-              className="border-amber-500/35 bg-amber-500/10 text-amber-600 inline-flex shrink-0 items-center gap-2 rounded-md border px-2.5 py-1.5 text-[11px] font-semibold hover:bg-amber-500/15 dark:text-amber-400"
+              className="border-amber-500/35 bg-amber-500/10 text-amber-600 inline-flex shrink-0 items-center gap-2 rounded-md border px-2.5 py-1.5 text-[12px] font-semibold hover:bg-amber-500/15 dark:text-amber-400"
             >
               <Bell className="size-4" />
               {unreadCount} unread
@@ -136,7 +136,7 @@ export function WorkspaceHeader({
             aria-pressed={caseFlagged}
             onClick={onToggleFlag}
             className={cn(
-              'h-8 shrink-0 gap-1.5 rounded-full px-3 text-[11px] shadow-sm',
+              'h-8 shrink-0 gap-1.5 rounded-full px-3 text-[12px] shadow-sm',
               caseFlagged &&
                 'border-amber-400/55 bg-amber-500/[0.12] text-amber-950 hover:bg-amber-500/[0.16] dark:text-amber-50',
             )}
@@ -145,7 +145,7 @@ export function WorkspaceHeader({
             {caseFlagged ? 'Flagged' : 'Flag case'}
           </Button>
 
-          <span className="border-border shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide">
+          <span className="border-border shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide">
             {statusLabel}
           </span>
         </div>

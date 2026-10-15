@@ -60,11 +60,11 @@ export function InspectionJobCard({
 
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="bg-secondary text-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+            <span className="bg-secondary text-foreground rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
               {INSPECTION_TYPE_SHORT[inspection.type]}
             </span>
             {needsAction && (
-              <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[10px] font-semibold">
+              <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[11px] font-semibold">
                 Action needed
               </span>
             )}
@@ -76,7 +76,7 @@ export function InspectionJobCard({
             <p className="text-muted-foreground mt-0.5 text-xs">{inspection.trackingNumber}</p>
           </div>
 
-          <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
+          <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
             {inspection.scheduledAt && (
               <span className="inline-flex items-center gap-1">
                 <Calendar className="size-3 shrink-0" />

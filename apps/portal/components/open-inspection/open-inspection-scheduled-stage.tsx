@@ -19,7 +19,7 @@ const POOL_INSPECTOR_LABEL = 'Pending — task pool';
 function FactTile({ label, value, icon: Icon }: { label: string; value: string; icon?: React.ElementType }) {
   return (
     <div className="bg-secondary/30 rounded-xl px-3 py-2.5">
-      <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide">
+      <p className="text-muted-foreground flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide">
         {Icon ? <Icon className="size-3" /> : null}
         {label}
       </p>

@@ -33,7 +33,7 @@ export function CaseAddressAssignedBar({
         {subtitle ? <div className="mt-1">{subtitle}</div> : null}
       </div>
       <div className="shrink-0 sm:min-w-[120px] sm:text-right">
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
           {CASE_ASSIGNED_TO_LABEL}
         </p>
         <p

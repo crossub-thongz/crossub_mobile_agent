@@ -258,7 +258,7 @@ function SummaryTile({
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">{label}</p>
+        <p className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">{label}</p>
         {Icon && <Icon className={cn('size-3.5', highlight ? 'text-primary' : 'text-muted-foreground')} />}
       </div>
       <p className={cn('mt-1 text-xl font-semibold tabular-nums', highlight && 'text-primary')}>{value}</p>

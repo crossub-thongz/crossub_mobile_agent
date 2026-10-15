@@ -63,7 +63,7 @@ function headerQuickActionClass(active: boolean, inline: boolean) {
   }
 
   return cn(
-    'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[10px] font-medium transition-colors',
+    'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[11px] font-medium transition-colors',
     active
       ? 'bg-primary-foreground/20 text-primary-foreground'
       : 'text-primary-foreground/90 hover:bg-primary-foreground/10',
@@ -248,7 +248,7 @@ function MessageActionSheet({
             ) : (
               <div className="space-y-4">
                 <section>
-                  <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+                  <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wide">
                     Messages
                   </p>
                   <div className="space-y-2">
@@ -265,7 +265,7 @@ function MessageActionSheet({
                           <Building2 className="text-primary size-4 shrink-0" />
                           <span className="min-w-0 flex-1 text-left">Property conversations</span>
                           {propertyUnread > 0 ? (
-                            <span className="bg-destructive shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold text-white">
+                            <span className="bg-destructive shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold text-white">
                               {propertyUnread}
                             </span>
                           ) : null}
@@ -306,7 +306,7 @@ function MessageActionSheet({
                           <MessageSquare className="text-primary size-4 shrink-0" />
                           All conversations
                           {messages.some((m) => m.unread > 0) && (
-                            <span className="bg-destructive ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold text-white">
+                            <span className="bg-destructive ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold text-white">
                               {messages.reduce((s, m) => s + m.unread, 0)}
                             </span>
                           )}
@@ -318,7 +318,7 @@ function MessageActionSheet({
 
                 {actions.length > 0 ? (
                   <section>
-                    <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+                    <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wide">
                       Actions
                     </p>
                     <div className="space-y-1">
@@ -389,8 +389,8 @@ function UnreadBadge({
       className={cn(
         'bg-destructive absolute flex items-center justify-center rounded-full font-bold text-white',
         variant === 'header'
-          ? 'top-0 right-0 size-3.5 min-w-3.5 translate-x-1/4 -translate-y-1/4 text-[8px] leading-none'
-          : '-top-0.5 -right-0.5 size-4 min-w-4 text-[9px]',
+          ? 'top-0 right-0 size-3.5 min-w-3.5 translate-x-1/4 -translate-y-1/4 text-[9px] leading-none'
+          : '-top-0.5 -right-0.5 size-4 min-w-4 text-[10px]',
       )}
     >
       {count > 9 ? '9+' : count}
@@ -483,7 +483,7 @@ function CommunicationDockSheet({
                 <Building2 className="text-primary size-4 shrink-0" />
                 <span className="min-w-0 flex-1 text-left">Property conversations</span>
                 {propertyUnread > 0 ? (
-                  <span className="bg-destructive shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold text-white">
+                  <span className="bg-destructive shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold text-white">
                     {propertyUnread}
                   </span>
                 ) : null}
@@ -525,7 +525,7 @@ function CommunicationDockSheet({
               <MessageSquare className="text-primary size-4" />
               All conversations
               {messages.some((m) => m.unread > 0) && (
-                <span className="bg-destructive ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold text-white">
+                <span className="bg-destructive ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold text-white">
                   {messages.reduce((s, m) => s + m.unread, 0)}
                 </span>
               )}
@@ -684,7 +684,7 @@ function QuickCreateDockSheet({
                   >
                     <Icon className="text-primary size-4 shrink-0" />
                     <span className="flex-1 font-medium">{label}</span>
-                    <span className="text-[10px] font-semibold uppercase">
+                    <span className="text-[11px] font-semibold uppercase">
                       {enabled ? 'On' : 'Off'}
                     </span>
                   </button>

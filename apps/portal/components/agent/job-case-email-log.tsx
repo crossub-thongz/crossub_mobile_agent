@@ -107,7 +107,7 @@ function EmailListRow({
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{email.subject}</p>
           <p className="text-muted-foreground mt-0.5 truncate text-xs">{emailPartyLine(email, contacts)}</p>
-          <p className="text-muted-foreground mt-1 text-[11px] tabular-nums">{formatDateTime(email.at)}</p>
+          <p className="text-muted-foreground mt-1 text-[12px] tabular-nums">{formatDateTime(email.at)}</p>
         </div>
         <ChevronRight className="text-muted-foreground mt-1 size-4 shrink-0" />
       </button>
@@ -249,14 +249,14 @@ function RecipientPicker({
 
   return (
     <div className="space-y-1.5">
-      <p className="text-muted-foreground text-[11px] font-medium">Suggested recipients</p>
+      <p className="text-muted-foreground text-[12px] font-medium">Suggested recipients</p>
       <div className="flex flex-wrap gap-1.5">
         {contacts.map((contact) => (
           <button
             key={`${contact.role}-${contact.email}`}
             type="button"
             onClick={() => onSelect(contact)}
-            className="hover:bg-primary/10 rounded-full border bg-background px-2.5 py-1 text-[11px] font-medium transition-colors"
+            className="hover:bg-primary/10 rounded-full border bg-background px-2.5 py-1 text-[12px] font-medium transition-colors"
           >
             {formatWorkflowEmailContact(contact)}
           </button>
@@ -396,7 +396,7 @@ export function JobCaseEmailDetailDialog({
                 placeholder="name@example.com"
               />
               {toLabel && toLabel !== toEmail ? (
-                <p className="text-muted-foreground text-[11px]">{toLabel}</p>
+                <p className="text-muted-foreground text-[12px]">{toLabel}</p>
               ) : null}
             </div>
             <div className="space-y-1">
@@ -473,7 +473,7 @@ export function JobCaseEmailLog({
             <Mail className="text-primary size-4" />
             <p className="text-sm font-semibold">{title}</p>
           </div>
-          <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+          <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
             History
           </span>
         </div>
@@ -625,7 +625,7 @@ export function JobCaseStageEmailHistory({
         <Mail className="text-primary size-4 shrink-0" />
         <span className="min-w-0 flex-1 text-sm font-semibold">{title}</span>
         {!open ? (
-          <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tabular-nums">
+          <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums">
             {emailCount} {emailCount === 1 ? 'email' : 'emails'}
           </span>
         ) : null}

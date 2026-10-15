@@ -304,7 +304,7 @@ export function V2TasksPage() {
               data-tour={`tasks-bucket-${option.id}`}
               onClick={() => setBucket((current) => (current === option.id ? 'all' : option.id))}
               className={cn(
-                'v2-dashboard__card flex items-center gap-3 rounded-2xl border p-4 text-left transition',
+                'v2-dashboard__card flex items-center gap-3 p-4 text-left transition',
                 active && 'ring-primary/30 ring-2',
               )}
             >
@@ -329,7 +329,7 @@ export function V2TasksPage() {
         })}
       </div>
 
-      <section className="v2-dashboard__card grid grid-cols-1 items-center gap-3 rounded-2xl border p-3 sm:p-4 lg:grid-cols-[7.75rem_minmax(0,1fr)_28rem] lg:gap-x-4 lg:gap-y-3">
+      <section className="v2-dashboard__card grid grid-cols-1 items-center gap-3 p-3 sm:p-4 lg:grid-cols-[7.75rem_minmax(0,1fr)_28rem] lg:gap-x-4 lg:gap-y-3">
         <FilterLabel index="1" label="Work Status" />
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {TASK_LIST_V2_BUCKET_FILTERS.map((option) => {
@@ -398,7 +398,7 @@ export function V2TasksPage() {
             <SlidersHorizontal className="size-3.5" />
             More Filters
             {filterChips.length > 0 ? (
-              <span className="bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 text-[10px] leading-none">
+              <span className="bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 text-[11px] leading-none">
                 {filterChips.length}
               </span>
             ) : null}
@@ -613,7 +613,7 @@ function FieldSelect({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="text-muted-foreground flex min-w-0 flex-col gap-1 text-[11px] font-medium">
+    <label className="text-muted-foreground flex min-w-0 flex-col gap-1 text-[12px] font-medium">
       {label}
       <span className="relative block">
         <Icon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
@@ -666,7 +666,7 @@ function TaskCalendar({
   const selectedRows = selectedDay ? byDay.get(selectedDay) ?? [] : [];
 
   return (
-    <div className="v2-dashboard__card space-y-4 rounded-2xl border p-4">
+    <div className="v2-dashboard__card space-y-4 p-4">
       <div className="flex items-center justify-between">
         <button
           type="button"
@@ -688,7 +688,7 @@ function TaskCalendar({
           <ChevronRight className="size-4" />
         </button>
       </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold">
+      <div className="grid grid-cols-7 gap-1 text-center text-[12px] font-semibold">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
           <div key={day} className="text-muted-foreground py-1">
             {day}
@@ -711,7 +711,7 @@ function TaskCalendar({
               )}
             >
               <span>{day}</span>
-              {count > 0 ? <span className="text-[10px] font-semibold">{count}</span> : null}
+              {count > 0 ? <span className="text-[11px] font-semibold">{count}</span> : null}
             </button>
           );
         })}

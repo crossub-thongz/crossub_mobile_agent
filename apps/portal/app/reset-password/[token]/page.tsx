@@ -187,7 +187,7 @@ export default function ResetPasswordPage() {
                 {showNew ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[12px] text-muted-foreground">
               At least {PASSWORD_MIN} characters.
             </p>
             {errors.newPassword ? (

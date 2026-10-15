@@ -90,7 +90,7 @@ function ArchivedLandlordList({
             className="flex items-center gap-3 rounded-xl border border-dashed bg-muted/10 p-3 transition hover:border-primary/30"
           >
             <div className="min-w-0 flex-1">
-              <p className="text-muted-foreground text-[10px]">
+              <p className="text-muted-foreground text-[11px]">
                 Archived {landlord.archivedAt ? formatDateTime(landlord.archivedAt) : '—'}
               </p>
               <p className="mt-1 text-sm font-semibold">{landlord.name}</p>
@@ -132,7 +132,7 @@ function ArchivedTenancySnapshots({
           key={`${snapshot.archivedAt}-${index}`}
           className="rounded-xl border border-dashed bg-muted/10 p-3 text-sm"
         >
-          <p className="text-muted-foreground text-[10px]">
+          <p className="text-muted-foreground text-[11px]">
             Archived {snapshot.archivedAt ? formatDateTime(snapshot.archivedAt) : '—'}
             {snapshot.source === 'vacate_date' ? ' · Vacate date reached' : ''}
           </p>

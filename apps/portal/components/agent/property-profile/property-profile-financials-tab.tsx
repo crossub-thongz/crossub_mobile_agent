@@ -50,7 +50,7 @@ function SnapshotCard({
 }) {
   return (
     <div className="property-profile-v2__metric rounded-2xl border bg-background/40 px-4 py-3">
-      <p className="text-muted-foreground text-[10px] font-medium">
+      <p className="text-muted-foreground text-[11px] font-medium">
         {label}
       </p>
       <p className="mt-2 text-lg font-semibold leading-tight tabular-nums">{value}</p>
@@ -65,7 +65,7 @@ function LedgerStatusBadge({ status }: { status: PropertyRentLedgerRow['status']
   return (
     <span
       className={cn(
-        'inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+        'inline-flex rounded-full px-2.5 py-0.5 text-[12px] font-semibold',
         status === 'paid' && 'bg-primary/12 text-primary',
         status === 'outstanding' && 'bg-amber-500/12 text-amber-700 dark:text-amber-300',
         status === 'overdue' && 'bg-rose-500/12 text-rose-700 dark:text-rose-300',
@@ -159,7 +159,7 @@ function ArrearsKindCard({
             <Icon className="text-primary mt-0.5 size-4 shrink-0" aria-hidden />
             <div className="min-w-0">
               <p className="text-sm font-semibold leading-tight">{title}</p>
-              <p className="text-muted-foreground mt-0.5 text-[11px] tabular-nums">
+              <p className="text-muted-foreground mt-0.5 text-[12px] tabular-nums">
                 {hasItems ? daysOverdueLabel(days) : 'No items'}
               </p>
             </div>
@@ -185,7 +185,7 @@ function ArrearsKindCard({
               <dl className="space-y-2">
                 {details.map((item) => (
                   <div key={item.label}>
-                    <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+                    <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
                       {item.label}
                     </dt>
                     <dd className="mt-0.5 text-sm font-medium">{item.value}</dd>
@@ -417,7 +417,7 @@ export function PropertyProfileFinancialsTab({
 
         {(prefill?.payments?.length ?? 0) > 0 ? (
           <div className="rounded-xl border bg-muted/20 px-3 py-2.5">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
               Payments
             </p>
             <ul className="mt-2 space-y-1.5">
@@ -555,7 +555,7 @@ export function PropertyProfileFinancialsTab({
             ) : (
               <div className="overflow-hidden rounded-2xl border">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted/30 text-muted-foreground text-left text-[11px]">
+                  <thead className="bg-muted/30 text-muted-foreground text-left text-[12px]">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Due Date</th>
                       <th className="px-4 py-3 font-semibold">Description</th>

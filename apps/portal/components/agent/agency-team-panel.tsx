@@ -127,7 +127,7 @@ export function AgencyTeamPanel({
                   <Mail className="size-3 shrink-0" />
                   {member.email}
                 </p>
-                <p className="text-muted-foreground mt-1 text-[10px]">
+                <p className="text-muted-foreground mt-1 text-[11px]">
                   {member.tier === 'PRINCIPAL' ? 'Principal' : 'Agent'}
                   {showPropertyCounts
                     ? ` · ${member.assignedPropertyCount} propert${member.assignedPropertyCount === 1 ? 'y' : 'ies'}`
@@ -168,7 +168,7 @@ export function AgencyTeamPanel({
                 ) : (
                   <span
                     className={cn(
-                      'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                      'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold',
                       member.tier === 'PRINCIPAL'
                         ? 'bg-primary/15 text-primary'
                         : 'bg-muted text-muted-foreground',

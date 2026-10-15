@@ -225,14 +225,14 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
 
       {readOnly ? (
         <div className="bg-card rounded-xl border px-4 py-2.5">
-          <p className="text-muted-foreground text-[12px]">
+          <p className="text-muted-foreground text-[13px]">
             Application approval is complete. The approved tenant is shown for reference — decisions
             cannot be changed.
           </p>
         </div>
       ) : (
         <div className="bg-card flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-2.5">
-          <p className="text-muted-foreground text-[12px]">
+          <p className="text-muted-foreground text-[13px]">
             <span className="text-foreground font-semibold tabular-nums">{apps.length}</span>{' '}
             applicant order{apps.length === 1 ? '' : 's'} ·{' '}
             <span className="text-foreground font-semibold tabular-nums">{selectedCount}</span>{' '}

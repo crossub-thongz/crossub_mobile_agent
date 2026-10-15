@@ -123,7 +123,7 @@ export function InspectorNameWithHistory({
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
       >
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
           Inspector history
         </p>
         <ul className="mt-2 space-y-2">

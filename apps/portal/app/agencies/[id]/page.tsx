@@ -77,7 +77,7 @@ export default function AgencyDetailPage() {
             <div className="flex shrink-0 flex-col items-end gap-1.5">
               <span
                 className={cn(
-                  'inline-block rounded-full px-2.5 py-1 text-[10px] font-semibold',
+                  'inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold',
                   STATUS_STYLES[agency.status],
                 )}
               >
@@ -93,17 +93,17 @@ export default function AgencyDetailPage() {
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
             <div className="rounded-xl border bg-card/60 p-2">
               <p className="text-lg font-semibold tabular-nums">{agencyProperties.length}</p>
-              <p className="text-muted-foreground text-[10px]">
+              <p className="text-muted-foreground text-[11px]">
                 {isPrincipal ? 'Properties' : 'Your properties'}
               </p>
             </div>
             <div className="rounded-xl border bg-card/60 p-2">
               <p className="text-lg font-semibold tabular-nums">{occupied}</p>
-              <p className="text-muted-foreground text-[10px]">Occupied</p>
+              <p className="text-muted-foreground text-[11px]">Occupied</p>
             </div>
             <div className="rounded-xl border bg-card/60 p-2">
               <p className="text-lg font-semibold tabular-nums">{vacant}</p>
-              <p className="text-muted-foreground text-[10px]">Vacant</p>
+              <p className="text-muted-foreground text-[11px]">Vacant</p>
             </div>
           </div>
         </div>

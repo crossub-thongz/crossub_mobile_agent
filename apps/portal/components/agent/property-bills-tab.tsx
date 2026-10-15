@@ -239,7 +239,7 @@ export function PropertyBillsTab({
                                   </p>
                                   <span
                                     className={cn(
-                                      'rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                                      'rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
                                       STATUS_TONE[row.status] ??
                                         'border-border bg-muted text-muted-foreground',
                                     )}
@@ -284,7 +284,7 @@ export function PropertyBillsTab({
                                 >
                                   {platformChargeServiceAmountLabel(row, formatCurrency)}
                                 </p>
-                                <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
+                                <p className="text-muted-foreground text-[11px] uppercase tracking-wide">
                                   {row.status === 'void'
                                     ? 'Not charged'
                                     : row.status === 'included' || row.includedInAllowance

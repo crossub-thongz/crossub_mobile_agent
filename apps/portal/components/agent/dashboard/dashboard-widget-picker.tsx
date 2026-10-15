@@ -61,14 +61,14 @@ export function DashboardWidgetPicker({
         )}
         {activeWidgets.length > 0 ? (
           <div className="border-t pt-3">
-            <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground mb-2 text-[12px] font-semibold uppercase tracking-wide">
               On your dashboard
             </p>
             <div className="flex flex-wrap gap-1.5">
               {activeWidgets.map((id) => (
                 <span
                   key={id}
-                  className="bg-muted text-muted-foreground rounded-full px-2.5 py-1 text-[11px] font-medium"
+                  className="bg-muted text-muted-foreground rounded-full px-2.5 py-1 text-[12px] font-medium"
                 >
                   {DASHBOARD_WIDGET_BY_ID[id].title}
                 </span>

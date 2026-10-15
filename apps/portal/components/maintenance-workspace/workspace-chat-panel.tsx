@@ -249,7 +249,7 @@ export function WorkspaceChatPanel({
           >
             <MessageSquareText className="size-4" />
             App Messages
-            <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-[10px] font-semibold">
+            <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-[11px] font-semibold">
               {appMessages.length}
             </span>
           </button>
@@ -265,7 +265,7 @@ export function WorkspaceChatPanel({
           >
             <Mail className="size-4" />
             Email
-            <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-[10px] font-semibold">
+            <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-[11px] font-semibold">
               {emailMessages.length}
             </span>
           </button>
@@ -297,7 +297,7 @@ export function WorkspaceChatPanel({
                     >
                       <div className="mb-1 flex items-center justify-between gap-3">
                         <span className="font-semibold">{msg.who}</span>
-                        <span className="text-muted-foreground text-[10px]">
+                        <span className="text-muted-foreground text-[11px]">
                           {formatDateTime(msg.atIso)}
                         </span>
                       </div>

@@ -41,13 +41,13 @@ export function EnvironmentBanner() {
         className="fixed inset-x-0 top-0 z-[100] flex items-center justify-center gap-2 border-b border-amber-700/40 bg-amber-400 px-3 pt-[env(safe-area-inset-top)] text-amber-950"
       >
         <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
-        <p className="truncate text-[11px] leading-none font-semibold tracking-wide">
+        <p className="truncate text-[12px] leading-none font-semibold tracking-wide">
           <span className="uppercase">{banner.label}</span>
           <span className="font-normal"> — {banner.detail}</span>
         </p>
         <a
           href={banner.productionUrl}
-          className="shrink-0 text-[11px] leading-none font-semibold whitespace-nowrap underline underline-offset-2 hover:no-underline"
+          className="shrink-0 text-[12px] leading-none font-semibold whitespace-nowrap underline underline-offset-2 hover:no-underline"
         >
           {ENVIRONMENT_BANNER_COPY.LINK}
         </a>

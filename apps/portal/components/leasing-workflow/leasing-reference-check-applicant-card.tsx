@@ -218,7 +218,7 @@ export function LeasingReferenceCheckApplicantCard({
               />
             ) : null}
           </div>
-          <p className="text-muted-foreground mt-1 text-[11px]">
+          <p className="text-muted-foreground mt-1 text-[12px]">
             Applied {formatDateTime(app.submittedAt)}
             {app.email ? ` · ${app.email}` : ''}
             {app.phone ? ` · ${app.phone}` : ''}
@@ -313,17 +313,17 @@ export function LeasingReferenceCheckApplicantCard({
             </Button>
           </div>
           {isChosen ? (
-            <p className="text-muted-foreground text-[11px]">
+            <p className="text-muted-foreground text-[12px]">
               Selected for approval — confirm rent and lease terms in the dialog.
             </p>
           ) : (
-            <p className="text-muted-foreground text-[11px]">
+            <p className="text-muted-foreground text-[12px]">
               Select this applicant above to approve with confirmed lease terms.
             </p>
           )}
         </div>
       ) : (
-        <div className="rounded-lg border bg-muted/10 px-3 py-2.5 text-[11px]">
+        <div className="rounded-lg border bg-muted/10 px-3 py-2.5 text-[12px]">
           {alreadySent ? (
             <p className="text-emerald-700 dark:text-emerald-400">
               Results sent
@@ -346,7 +346,7 @@ export function LeasingReferenceCheckApplicantCard({
           aria-expanded={auditExpanded}
         >
           <span className="text-sm font-medium">Audit</span>
-          <span className="text-muted-foreground flex items-center gap-2 text-[11px]">
+          <span className="text-muted-foreground flex items-center gap-2 text-[12px]">
             {auditEntries.length} event{auditEntries.length === 1 ? '' : 's'}
             <ChevronDown
               className={cn('size-4 transition-transform', auditExpanded && 'rotate-180')}

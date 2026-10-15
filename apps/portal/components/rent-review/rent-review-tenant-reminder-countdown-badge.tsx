@@ -52,7 +52,7 @@ export function RentReviewTenantReminderCountdownBadge({
     <span
       title={title}
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold tabular-nums',
+        'inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-semibold tabular-nums',
         TONE_CLASS[tone],
       )}
     >

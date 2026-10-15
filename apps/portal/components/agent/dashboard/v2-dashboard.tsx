@@ -261,7 +261,7 @@ export function V2Dashboard() {
             {properties.length}{' '}
             <span className="text-muted-foreground text-base font-medium">Properties</span>
           </p>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <div className="mt-3 flex flex-col gap-1 text-sm">
             <span className="text-muted-foreground inline-flex items-center gap-1.5">
               <span className="size-1.5 rounded-full bg-emerald-500" />
               {occupied} Occupied
@@ -280,7 +280,7 @@ export function V2Dashboard() {
               Needs Your Attention
             </p>
             {actionCounts.total > 0 ? (
-              <span className="rounded-full bg-rose-500 px-2.5 py-0.5 text-[11px] font-semibold text-white">
+              <span className="rounded-full bg-rose-500 px-2.5 py-0.5 text-[12px] font-semibold text-white">
                 {actionCounts.total} pending
               </span>
             ) : (
@@ -661,7 +661,7 @@ function EventColumn({
           <Icon className="size-4" />
           {title}
         </p>
-        <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums', countClass)}>
+        <span className={cn('rounded-full px-2 py-0.5 text-[12px] font-semibold tabular-nums', countClass)}>
           {events.length}
         </span>
       </div>
@@ -690,7 +690,7 @@ function EventRow({ event }: { event: DashboardEvent }) {
         </div>
         <span
           className={cn(
-            'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+            'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold',
             BADGE_CLASS[event.badge],
           )}
         >
@@ -700,9 +700,6 @@ function EventRow({ event }: { event: DashboardEvent }) {
       <div className="mt-2 flex items-end justify-between gap-2">
         <div className="min-w-0">
           <p className="text-muted-foreground truncate text-xs">{event.detail}</p>
-          {event.why ? (
-            <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">{event.why}</p>
-          ) : null}
         </div>
         <Link
           href={event.href}

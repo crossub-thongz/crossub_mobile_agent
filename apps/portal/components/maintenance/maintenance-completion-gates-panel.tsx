@@ -27,7 +27,7 @@ function GateStatusBadge({ checked }: { checked: boolean }) {
   return (
     <span
       className={cn(
-        'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+        'rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
         checked
           ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
           : 'bg-muted text-muted-foreground',
@@ -184,10 +184,10 @@ export function MaintenanceCompletionGatesPanel({
 
         <div className="rounded-lg border bg-background p-3">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
               Uploaded evidence
             </p>
-            <span className="text-muted-foreground text-[10px] tabular-nums">
+            <span className="text-muted-foreground text-[11px] tabular-nums">
               {evidenceAttachments.length}/{MAX_COMPLETION_EVIDENCE}
             </span>
           </div>
@@ -350,7 +350,7 @@ export function MaintenanceCompletionGatesPanel({
           )
         ) : (
           <div className="rounded-lg border bg-background p-3">
-            <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wide">
               Invoice file
             </p>
             <InvoiceAttachmentGallery
@@ -433,13 +433,13 @@ function InvoiceAttachmentGallery({
               ) : (
                 <div className="flex size-full flex-col items-center justify-center gap-2 px-2">
                   <FileText className="text-muted-foreground/50 size-8" />
-                  <span className="text-muted-foreground text-center text-[10px]">Tap to preview</span>
+                  <span className="text-muted-foreground text-center text-[11px]">Tap to preview</span>
                 </div>
               )}
             </div>
             <div className="border-t bg-background px-2.5 py-2">
               <p className="truncate text-xs font-medium">{att.fileName}</p>
-              <p className="text-muted-foreground text-[10px]">Tap to open full preview</p>
+              <p className="text-muted-foreground text-[11px]">Tap to open full preview</p>
             </div>
           </button>
         );
@@ -504,14 +504,14 @@ function EvidenceGallery({
               ) : isVideo ? (
                 <div className="flex size-full flex-col items-center justify-center gap-1 px-1">
                   <Play className="text-muted-foreground size-5" />
-                  <span className="text-muted-foreground max-w-full truncate text-[9px]">
+                  <span className="text-muted-foreground max-w-full truncate text-[10px]">
                     {att.fileName}
                   </span>
                 </div>
               ) : (
                 <div className="flex size-full flex-col items-center justify-center gap-1 px-1">
                   <FileText className="text-muted-foreground/50 size-5" />
-                  <span className="text-muted-foreground max-w-full truncate text-[9px]">
+                  <span className="text-muted-foreground max-w-full truncate text-[10px]">
                     {att.fileName}
                   </span>
                 </div>

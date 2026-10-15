@@ -25,7 +25,7 @@ export function ConnectionBanner() {
         <div className="flex items-center gap-2">
           <DataSourceBadge source={apiConnected ? 'api' : 'offline'} />
           {typeof navigator !== 'undefined' && !navigator.onLine && (
-            <span className="text-muted-foreground flex items-center gap-1 text-[10px]">
+            <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
               <WifiOff className="size-3" />
               Offline
             </span>

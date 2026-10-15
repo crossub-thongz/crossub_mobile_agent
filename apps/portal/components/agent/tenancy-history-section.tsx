@@ -51,7 +51,7 @@ export function TenancyHistorySection({
               Lease period: {formatLeasePeriodMonthYear(lease.leaseStart, lease.leaseEnd)}
             </p>
             {lease.status === 'current' && (
-              <span className="text-primary mt-0.5 inline-block text-[10px] font-semibold uppercase">
+              <span className="text-primary mt-0.5 inline-block text-[11px] font-semibold uppercase">
                 Current tenancy
               </span>
             )}

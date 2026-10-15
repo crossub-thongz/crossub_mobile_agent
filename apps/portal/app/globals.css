@@ -7,9 +7,9 @@
 /* CROSSUB — light default, dark via .dark class (aligned with crossub_web) */
 :root {
   /* Brand kit — logo, crossub.com.au, crossub_web/DESIGN.md, crossub-brand.constants.ts */
-  --crossub-mint: #00d4a4;
-  --crossub-mint-deep: #00b48a;
-  --crossub-mint-soft: #7cebcb;
+  --crossub-mint: #00bd85;
+  --crossub-mint-deep: #00bd85;
+  --crossub-mint-soft: #8ce1c8;
   --crossub-mint-wash: #ecfdf8;
   --crossub-navy: #004063;
   --crossub-ink: #2d333e;
@@ -466,6 +466,21 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* One pixel above Tailwind’s default scale (12/14/16/18/20/24/30/36/48/60/72/96/128). */
+  --text-xs: 13px;
+  --text-sm: 15px;
+  --text-base: 17px;
+  --text-lg: 19px;
+  --text-xl: 21px;
+  --text-2xl: 25px;
+  --text-3xl: 31px;
+  --text-4xl: 37px;
+  --text-5xl: 49px;
+  --text-6xl: 61px;
+  --text-7xl: 73px;
+  --text-8xl: 97px;
+  --text-9xl: 129px;
 }
 
 @layer base {
@@ -473,7 +488,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground text-base;
   }
 }
 

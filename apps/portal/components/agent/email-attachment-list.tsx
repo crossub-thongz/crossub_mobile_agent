@@ -184,7 +184,7 @@ export function EmailAttachmentList({
             onClick={stopRowClick}
             className={cn(
               'flex items-center gap-2 rounded-lg border bg-background px-2.5 py-2',
-              variant === 'inline' ? 'text-[11px]' : 'text-xs',
+              variant === 'inline' ? 'text-[12px]' : 'text-xs',
             )}
           >
             <FileText className="size-4 shrink-0 text-primary" />
@@ -200,7 +200,7 @@ export function EmailAttachmentList({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-7 gap-1 px-2 text-[11px]"
+                  className="h-7 gap-1 px-2 text-[12px]"
                   disabled={loading}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -218,7 +218,7 @@ export function EmailAttachmentList({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-7 gap-1 px-2 text-[11px]"
+                  className="h-7 gap-1 px-2 text-[12px]"
                   disabled={loading}
                   onClick={(event) => {
                     event.stopPropagation();

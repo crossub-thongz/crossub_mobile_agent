@@ -20,7 +20,7 @@ export function WorkflowStageRail({
   return (
     <div className="space-y-2 rounded-xl border bg-card p-4">
       {title && (
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
           {title}
         </p>
       )}

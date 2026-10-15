@@ -29,7 +29,7 @@ export function PropertyChatFab({ propertyId }: { propertyId: string }) {
     >
       <MessageSquare className="size-6" />
       {unread > 0 && (
-        <span className="bg-destructive absolute -top-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full text-[10px] font-bold text-white">
+        <span className="bg-destructive absolute -top-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full text-[11px] font-bold text-white">
           {unread}
         </span>
       )}

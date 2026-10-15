@@ -222,11 +222,11 @@ export default function ProfilePage() {
                           {item.detail}
                         </p>
                       </div>
-                      <span className="text-muted-foreground shrink-0 text-[10px]">
+                      <span className="text-muted-foreground shrink-0 text-[11px]">
                         {formatRelative(item.at)}
                       </span>
                     </div>
-                    <p className="text-muted-foreground mt-2 text-[10px]">
+                    <p className="text-muted-foreground mt-2 text-[11px]">
                       {formatDateTime(item.at)}
                     </p>
                   </div>
@@ -325,7 +325,7 @@ export default function ProfilePage() {
                   )}
                 </dd>
                 {isAgencyPrincipal ? (
-                  <p className="text-muted-foreground text-[11px]">
+                  <p className="text-muted-foreground text-[12px]">
                     Defaults to the agency. Choosing an agent does not change the agency login.
                   </p>
                 ) : null}
@@ -576,7 +576,7 @@ function ProfileSectionTabs({
                 </span>
                 <span
                   className={cn(
-                    'rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
+                    'rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
                     isActive
                       ? 'bg-primary/15 text-primary lg:bg-primary-foreground/20 lg:text-primary-foreground'
                       : 'bg-muted text-muted-foreground',

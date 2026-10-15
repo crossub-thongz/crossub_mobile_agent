@@ -74,18 +74,18 @@ function ContractorQuotesCollapsible({
           </p>
         </div>
         {isApprovedContractor ? (
-          <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+          <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
             Selected
           </span>
         ) : null}
         {approved ? (
-          <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+          <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
             Approved
           </span>
         ) : latest ? (
           <span
             className={cn(
-              'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+              'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
               quoteStatusClass(latest.status),
             )}
           >
@@ -101,7 +101,7 @@ function ContractorQuotesCollapsible({
               <div className="flex flex-wrap items-center gap-2">
                 <span
                   className={cn(
-                    'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                    'rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
                     quoteStatusClass(quote.status),
                   )}
                 >
@@ -126,7 +126,7 @@ function ContractorQuotesCollapsible({
             </div>
           ))}
           {review?.decidedAt ? (
-            <p className="text-muted-foreground text-[11px]">
+            <p className="text-muted-foreground text-[12px]">
               Decision recorded {formatDateTime(review.decidedAt)}
               {review.decidedBy ? ` · ${review.decidedBy}` : ''}
             </p>
@@ -247,7 +247,7 @@ export function MaintenanceCompletedCaseArchive({
           <div className="flex items-center gap-2 border-b border-emerald-500/20 bg-emerald-500/[0.06] px-4 py-3">
             <CheckCircle2 className="size-4 text-emerald-600" />
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
                 Approved quotation
               </p>
               <p className="text-sm font-semibold">
@@ -281,7 +281,7 @@ export function MaintenanceCompletedCaseArchive({
 
       <section className="rounded-xl border bg-card">
         <div className="border-b px-4 py-3">
-          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
             Contractor quotations
           </p>
           <p className="text-muted-foreground mt-0.5 text-xs">

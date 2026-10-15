@@ -49,14 +49,14 @@ export function PropertyHistorySection({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
               {propertyHistoryKindLabel(entry.kind)}
             </p>
             <p className="truncate font-medium">{entry.title}</p>
             {entry.subtitle && (
               <p className="text-muted-foreground truncate text-xs">{entry.subtitle}</p>
             )}
-            <p className="text-muted-foreground mt-0.5 text-[10px]">
+            <p className="text-muted-foreground mt-0.5 text-[11px]">
               {formatDateTime(entry.at)}
             </p>
           </div>

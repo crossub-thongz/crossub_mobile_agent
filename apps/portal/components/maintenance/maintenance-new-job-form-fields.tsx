@@ -76,7 +76,7 @@ export function MaintenanceNewJobFormFields({
     <div className="space-y-4">
       {address ? (
         <div className="space-y-1">
-          <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+          <p className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
             Address
           </p>
           <p className="bg-muted/40 rounded-md px-3 py-2 text-sm">{address}</p>
@@ -108,11 +108,11 @@ export function MaintenanceNewJobFormFields({
         />
         {isV2 && description.trim().length > 0 &&
         description.trim().length < MAINTENANCE_DESCRIPTION_MIN_CHARS ? (
-          <p className="text-destructive text-[11px]">
+          <p className="text-destructive text-[12px]">
             Description must be at least {MAINTENANCE_DESCRIPTION_MIN_CHARS} characters
           </p>
         ) : isV2 ? (
-          <p className="text-muted-foreground text-[11px]">
+          <p className="text-muted-foreground text-[12px]">
             At least {MAINTENANCE_DESCRIPTION_MIN_CHARS} characters
           </p>
         ) : null}
@@ -161,7 +161,7 @@ export function MaintenanceNewJobFormFields({
           ) : null}
         </div>
         {issueTypeSelection && !urgentEligible ? (
-          <p className="text-muted-foreground mt-1.5 text-[11px] leading-snug">
+          <p className="text-muted-foreground mt-1.5 text-[12px] leading-snug">
             Urgent is immediate for flooding, locksmith, electrical, and hot water repairs.
             For other issues, use Request urgent and explain why — admin will confirm.
           </p>
@@ -185,7 +185,7 @@ export function MaintenanceNewJobFormFields({
       </div>
 
       <div className="rounded-md border bg-background p-3">
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
           Tenant contact{' '}
           <span className="font-normal text-muted-foreground/70">(required for status tracking)</span>
         </p>
@@ -212,7 +212,7 @@ export function MaintenanceNewJobFormFields({
           />
         </div>
         {tenantIncomplete ? (
-          <p className="text-amber-600 mt-2 flex items-center gap-1 text-[11px] dark:text-amber-400">
+          <p className="text-amber-600 mt-2 flex items-center gap-1 text-[12px] dark:text-amber-400">
             <AlertTriangle className="size-3 shrink-0" />
             Incomplete contact → job flagged as &quot;Pending More Details from Tenant&quot;
           </p>

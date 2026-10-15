@@ -59,7 +59,7 @@ export function EndLeasingCasesList({
               </div>
               <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
               <span className="text-primary font-medium">{currentStepLabel}</span>
               <span className="text-muted-foreground">{vacateLabel}</span>
               {v.requiresApproval ? (

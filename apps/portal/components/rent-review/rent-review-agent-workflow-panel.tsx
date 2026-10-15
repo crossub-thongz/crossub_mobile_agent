@@ -204,7 +204,7 @@ export function RentReviewAgentWorkflowPanel({
     <div className="space-y-4">
       <TaskWorkflowRailPortal>
       <div className="md:hidden">
-        <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wide">
           Workflow step
         </p>
         <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
@@ -261,7 +261,7 @@ export function RentReviewAgentWorkflowPanel({
 
       <div className="rounded-xl border bg-card">
         <div className="border-b px-3 py-3 md:px-4">
-          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
             {isLiveStep ? 'Current step' : 'Step detail'}
           </p>
           <p className="mt-0.5 text-sm font-semibold">{RENT_REVIEW_AGENT_STEP_LABEL[viewingStepId]}</p>

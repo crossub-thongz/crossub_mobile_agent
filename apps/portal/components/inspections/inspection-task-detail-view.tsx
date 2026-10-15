@@ -221,7 +221,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
                 <span
                   data-tour="workflow-case-badge"
                   className={cn(
-                    'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                    'rounded-full px-2 py-0.5 text-[12px] font-semibold',
                     banner.needsAction && 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
                     !banner.needsAction &&
                       banner.statusLabel === 'Completed' &&
@@ -367,7 +367,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
               ) : null}
               <div className="p-3">
                 <p className="text-sm font-semibold">{address}</p>
-                <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                   {property?.leaseStatus === 'vacant' ? 'Vacant' : 'Occupied'}
                 </span>
                 <dl className="mt-3 space-y-2 text-xs">

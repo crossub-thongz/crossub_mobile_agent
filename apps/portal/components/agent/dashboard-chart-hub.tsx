@@ -84,7 +84,7 @@ function DonutChart({
         y="50%"
         textAnchor="middle"
         dominantBaseline="central"
-        className={cn('fill-foreground font-bold', large ? 'text-sm' : 'text-[11px]')}
+        className={cn('fill-foreground font-bold', large ? 'text-sm' : 'text-[12px]')}
       >
         {total}
       </text>
@@ -115,7 +115,7 @@ function SegmentBarRow({
         <span className="shrink-0 font-semibold tabular-nums">
           {value}
           {total > 0 ? (
-            <span className="text-muted-foreground ml-1 text-[10px] font-normal">{pct}%</span>
+            <span className="text-muted-foreground ml-1 text-[11px] font-normal">{pct}%</span>
           ) : null}
         </span>
       </div>
@@ -167,7 +167,7 @@ function ChartCard({
           </div>
           <ChevronRight className="text-muted-foreground size-4 shrink-0 transition group-hover:translate-x-0.5 group-hover:text-primary" />
         </div>
-        <p className="text-muted-foreground mb-1.5 text-[10px] tabular-nums lg:hidden">
+        <p className="text-muted-foreground mb-1.5 text-[11px] tabular-nums lg:hidden">
           {total} total
         </p>
         <ul className="space-y-1">
@@ -227,11 +227,11 @@ function CompactKpiTile({
         </div>
         <ChevronRight className="text-muted-foreground size-4 shrink-0 opacity-0 transition group-hover:opacity-100" />
       </div>
-      <p className="text-muted-foreground mt-2 text-[10px] font-semibold uppercase tracking-wide">
+      <p className="text-muted-foreground mt-2 text-[11px] font-semibold uppercase tracking-wide">
         {title}
       </p>
       <p className="mt-0.5 text-2xl font-bold tabular-nums leading-none">{value}</p>
-      <p className="text-muted-foreground mt-1.5 line-clamp-2 text-[11px] leading-snug">{subtitle}</p>
+      <p className="text-muted-foreground mt-1.5 line-clamp-2 text-[12px] leading-snug">{subtitle}</p>
     </Link>
   );
 }
@@ -586,10 +586,10 @@ function MobilePortfolioBreakdown({
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm md:hidden">
       <div className="border-b bg-muted/20 px-3 py-2.5">
-        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground text-[12px] font-semibold uppercase tracking-wide">
           Breakdown
         </p>
-        <p className="text-muted-foreground mt-0.5 text-[11px]">Swipe categories or tap to compare</p>
+        <p className="text-muted-foreground mt-0.5 text-[12px]">Swipe categories or tap to compare</p>
       </div>
 
       <div className="relative border-b">
@@ -628,7 +628,7 @@ function MobilePortfolioBreakdown({
                 {item.title}
                 <span
                   className={cn(
-                    'rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
+                    'rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
                     isActive ? 'bg-primary-foreground/20' : 'bg-muted',
                   )}
                 >

@@ -201,7 +201,7 @@ export function AgentPageTourOverlay({
         style={tooltipStyle}
       >
         <div className="flex shrink-0 items-start justify-between gap-2">
-          <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+          <p className="text-muted-foreground text-[12px] font-semibold tracking-wide uppercase">
             {index + 1} of {playable.length}
           </p>
           <button

@@ -96,7 +96,7 @@ function MaintenanceReviewStatusCell({
 }) {
   return (
     <td className="px-2 py-2">
-      <span className="text-muted-foreground text-[10px] leading-snug">
+      <span className="text-muted-foreground text-[11px] leading-snug">
         {row.maintenanceRequestId
           ? 'End of Lease job opened'
           : row.handymanName
@@ -1103,7 +1103,7 @@ function CompareReportColumn({
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 gap-1 text-[11px]"
+              className="h-7 gap-1 text-[12px]"
               disabled={actionBusy || deletingReportId !== null}
               onClick={() => inputRef.current?.click()}
             >
@@ -1122,7 +1122,7 @@ function CompareReportColumn({
         <div className="space-y-2">
           {hasSystemReport && inspectionDetail ? (
             <div className="space-y-1">
-              <p className="text-muted-foreground text-[10px]">Inspector report (system)</p>
+              <p className="text-muted-foreground text-[11px]">Inspector report (system)</p>
               <InspectionReportDownloadActions
                 inspectionId={inspectionDetail.id}
                 reportUrl={inspectionDetail.reportUrl}
@@ -1152,7 +1152,7 @@ function CompareReportColumn({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  className="h-7 gap-1 px-2 text-[11px]"
+                  className="h-7 gap-1 px-2 text-[12px]"
                   onClick={() => void viewManualReport(report)}
                 >
                   <Eye className="size-3" />
@@ -1162,7 +1162,7 @@ function CompareReportColumn({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  className="h-7 gap-1 px-2 text-[11px]"
+                  className="h-7 gap-1 px-2 text-[12px]"
                   disabled={deletingReportId === report.id}
                   onClick={() => void downloadManualReport(report)}
                 >
@@ -1174,7 +1174,7 @@ function CompareReportColumn({
                     type="button"
                     size="sm"
                     variant="ghost"
-                    className="h-7 gap-1 px-2 text-[11px] text-destructive hover:text-destructive"
+                    className="h-7 gap-1 px-2 text-[12px] text-destructive hover:text-destructive"
                     disabled={deletingReportId === report.id || actionBusy}
                     onClick={() => void deleteManualReport(report)}
                   >
@@ -1285,13 +1285,13 @@ function CompareReportsSection({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold">Ingoing / outgoing comparison</h3>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">
+          <p className="text-muted-foreground mt-0.5 text-[12px]">
             Open inspector reports when available, upload PDFs manually if needed, compare condition
             changes, then confirm as the managing agent.
           </p>
         </div>
         {agentAcknowledged ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-800 dark:text-emerald-200">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[12px] font-medium text-emerald-800 dark:text-emerald-200">
             <CheckCircle2 className="size-3.5" />
             Agent confirmed
             {agentAcknowledgedAt ? (
@@ -1323,7 +1323,7 @@ function CompareReportsSection({
         onUploaded={onCaseUpdated}
       />
       {!agentAcknowledged && !loading && (!hasOutgoingReport || !hasIngoingReport) ? (
-        <p className="text-muted-foreground text-[11px]">
+        <p className="text-muted-foreground text-[12px]">
           {!hasOutgoingReport && !hasIngoingReport
             ? 'Reports are not linked yet — upload PDFs manually or confirm once you have reviewed the comparison.'
             : !hasIngoingReport
@@ -1380,7 +1380,7 @@ function CommentField({
 
   return (
     <div className={`rounded-lg border px-3 py-2.5 ${toneClasses}`}>
-      <p className="text-[11px] font-semibold tracking-tight text-foreground/90">{label}</p>
+      <p className="text-[12px] font-semibold tracking-tight text-foreground/90">{label}</p>
       <p
         className={`mt-1.5 min-h-[2.5rem] text-xs leading-relaxed whitespace-pre-wrap ${
           savedComment.trim() ? 'text-foreground/80' : 'text-muted-foreground italic'
@@ -1447,11 +1447,11 @@ function ResponsibilityAgentAcknowledgment({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold tracking-tight">Agent acknowledgment</p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">
+          <p className="text-muted-foreground mt-0.5 text-[12px]">
             Confirm whether you agree with this responsibility list (Yes or No).
           </p>
           {answered && acknowledgedAt ? (
-            <p className="mt-1.5 text-[10px] font-medium">
+            <p className="mt-1.5 text-[11px] font-medium">
               {acknowledged ? 'Agreed' : 'Disagreed'} · {formatDateTime(acknowledgedAt)}
             </p>
           ) : null}
@@ -1493,8 +1493,8 @@ function ResponsibilityAgentAcknowledgment({
           <span
             className={
               acknowledged
-                ? 'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-600 bg-emerald-600 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm'
-                : 'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-rose-600 bg-rose-600 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm'
+                ? 'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-600 bg-emerald-600 px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide text-white shadow-sm'
+                : 'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-rose-600 bg-rose-600 px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide text-white shadow-sm'
             }
           >
             {acknowledged ? (
@@ -1510,7 +1510,7 @@ function ResponsibilityAgentAcknowledgment({
             )}
           </span>
         ) : (
-          <span className="inline-flex shrink-0 items-center rounded-full border-2 border-amber-500 bg-amber-100 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-amber-900 shadow-sm">
+          <span className="inline-flex shrink-0 items-center rounded-full border-2 border-amber-500 bg-amber-100 px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide text-amber-900 shadow-sm">
             Pending agent response
           </span>
         )}
@@ -1638,7 +1638,7 @@ function CompareResponsibilitySection({
       <div className="border-b px-4 py-2.5">
         <h3 className="text-sm font-semibold">{title}</h3>
         {description ? (
-          <p className="text-muted-foreground mt-0.5 text-[11px]">{description}</p>
+          <p className="text-muted-foreground mt-0.5 text-[12px]">{description}</p>
         ) : null}
       </div>
       <div className="p-4">
@@ -1723,7 +1723,7 @@ function CompareResponsibilitySection({
             </Button>
           </div>
         ) : (
-          <p className="text-muted-foreground mt-3 text-[10px]">View only — maintained by CROSSUB staff</p>
+          <p className="text-muted-foreground mt-3 text-[11px]">View only — maintained by CROSSUB staff</p>
         )}
         {showResponsibilityAcknowledgment ? (
           <ResponsibilityAgentAcknowledgment
@@ -1823,7 +1823,7 @@ function QuoteResponsibilitySection({
       <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2.5">
         <h3 className="text-sm font-semibold">{title}</h3>
         {readOnly && lockedHint ? (
-          <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px]">
+          <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
             <Lock className="size-3" />
             {lockedHint}
           </span>
@@ -1847,7 +1847,7 @@ function QuoteResponsibilitySection({
           tenantReviewPending={tenantReviewPending}
         />
         {readOnly ? (
-          <p className="text-muted-foreground mt-2 text-[10px]">
+          <p className="text-muted-foreground mt-2 text-[11px]">
             {lockedHint ?? 'View only — quotes maintained by CROSSUB staff'}
           </p>
         ) : null}
@@ -1897,7 +1897,7 @@ function MaintenanceQuoteCell({ row }: { row: ReportComparisonRepairItem }) {
     <div>
       <span className="tabular-nums">{row.quote || '—'}</span>
       {note ? (
-        <p className="text-muted-foreground mt-1 text-[10px] leading-snug">{note}</p>
+        <p className="text-muted-foreground mt-1 text-[11px] leading-snug">{note}</p>
       ) : null}
     </div>
   );
@@ -2053,7 +2053,7 @@ function HandymanField({
         <option value="__add_new__">Add new handyman…</option>
       </select>
       {!selectValue && row.handymanName?.trim() ? (
-        <p className="text-muted-foreground text-[10px]">Saved as: {row.handymanName}</p>
+        <p className="text-muted-foreground text-[11px]">Saved as: {row.handymanName}</p>
       ) : null}
       <AddHandymanDialog
         open={addOpen}
@@ -2123,7 +2123,7 @@ function RepairItemsTable({
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-semibold">{title}</p>
           {readOnly && lockedHint ? (
-            <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px]">
+            <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
               <Lock className="size-3" />
               {lockedHint}
             </span>
@@ -2233,7 +2233,7 @@ function RepairItemsTable({
                                     onChange={(e) => updateRow(index, { quote: e.target.value })}
                                   />
                                   {maintenanceQuoteNote(row) ? (
-                                    <p className="text-muted-foreground mt-1 text-[10px] leading-snug">
+                                    <p className="text-muted-foreground mt-1 text-[11px] leading-snug">
                                       {maintenanceQuoteNote(row)}
                                     </p>
                                   ) : null}
@@ -2315,7 +2315,7 @@ function InspectorSyncedResponsibilityTable({
     <section className="rounded-xl border bg-card">
       <div className="border-b px-4 py-2.5">
         <h3 className="text-sm font-semibold">{title}</h3>
-        <p className="text-muted-foreground mt-0.5 text-[11px]">
+        <p className="text-muted-foreground mt-0.5 text-[12px]">
           Synced from the inspector outgoing report — read only.
         </p>
       </div>
@@ -2992,7 +2992,7 @@ export function EndLeasingReportComparisonPanel({
               : 'Email property update to Landlord'}
           </Button>
           {!rc.landlordPropertyUpdateEmail?.sentAt ? (
-            <p className="text-muted-foreground max-w-md text-right text-[10px]">
+            <p className="text-muted-foreground max-w-md text-right text-[11px]">
               Attaches ingoing and outgoing reports, responsibility summary, and all staff and agent
               comments.
             </p>

@@ -86,7 +86,7 @@ export function LeasingTicketCard({
           </div>
           {activeSelection.timeline.length > 0 && (
             <div>
-              <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase">
+              <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase">
                 Timeline
               </p>
               <Timeline entries={activeSelection.timeline} />

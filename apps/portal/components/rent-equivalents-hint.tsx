@@ -71,7 +71,7 @@ export function RentEquivalentsHint({
         onMouseEnter={openNow}
         onMouseLeave={closeSoon}
       >
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Also payable as
         </p>
         <ul className="space-y-0.5 text-xs">

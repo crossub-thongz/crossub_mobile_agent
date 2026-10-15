@@ -200,7 +200,7 @@ export function ApplicantListDialog({
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{a.name}</p>
                         {isApproved && (
-                          <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                          <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[11px] font-semibold">
                             Approved
                           </span>
                         )}
@@ -209,7 +209,7 @@ export function ApplicantListDialog({
                         {a.score} · {a.income}
                         {a.submittedAt ? ` · ${formatDateTime(a.submittedAt)}` : ''}
                       </p>
-                      <p className="text-muted-foreground mt-0.5 text-[11px]">
+                      <p className="text-muted-foreground mt-0.5 text-[12px]">
                         {a.documents.length} document{a.documents.length === 1 ? '' : 's'}
                       </p>
                     </div>
@@ -277,7 +277,7 @@ function ApplicantDetail({
         </dl>
 
         <div className="mt-4">
-          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wide">
             Documents
           </p>
           <ul className="space-y-2">
@@ -292,13 +292,13 @@ function ApplicantDetail({
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="h-7 gap-1 px-2 text-[11px]"
+                    className="h-7 gap-1 px-2 text-[12px]"
                     onClick={() => onViewDocument(doc)}
                   >
                     <Eye className="size-3" />
                     View
                   </Button>
-                  <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-[11px]" asChild>
+                  <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-[12px]" asChild>
                     <a href={doc.downloadUrl} download={doc.name}>
                       <Download className="size-3" />
                       Download

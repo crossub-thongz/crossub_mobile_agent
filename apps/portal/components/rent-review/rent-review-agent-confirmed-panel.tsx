@@ -296,7 +296,7 @@ export function RentReviewAgentConfirmedPanel({
                   onChange={(e) => setPreferredRent(e.target.value)}
                 />
               </div>
-              <p className="text-muted-foreground text-[11px]">Per week</p>
+              <p className="text-muted-foreground text-[12px]">Per week</p>
             </div>
 
             <div className="space-y-2">
@@ -335,7 +335,7 @@ export function RentReviewAgentConfirmedPanel({
                       <option value={26}>26 weeks (6 months)</option>
                       <option value={52}>52 weeks (12 months)</option>
                     </select>
-                    <p className="text-muted-foreground text-[11px]">
+                    <p className="text-muted-foreground text-[12px]">
                       New agreement ends{' '}
                       <span className="font-medium tabular-nums">
                         {formatDateOnly(computedFixedEnd) ?? '—'}
@@ -349,7 +349,7 @@ export function RentReviewAgentConfirmedPanel({
                       value={fixedTermEndDate}
                       onChange={(e) => setFixedTermEndDate(e.target.value)}
                     />
-                    <p className="text-muted-foreground text-[11px]">
+                    <p className="text-muted-foreground text-[12px]">
                       End date for the new fixed-term agreement.
                     </p>
                   </>
@@ -382,7 +382,7 @@ export function RentReviewAgentConfirmedPanel({
             </div>
           </div>
 
-          <div className="text-muted-foreground mt-4 space-y-3 rounded-lg border border-dashed bg-muted/20 p-3 text-[11px]">
+          <div className="text-muted-foreground mt-4 space-y-3 rounded-lg border border-dashed bg-muted/20 p-3 text-[12px]">
             {editable ? (
               <div className="space-y-2">
                 <Label htmlFor={`rent-increase-on-${detail.id}`} className="text-foreground text-xs">
@@ -396,7 +396,7 @@ export function RentReviewAgentConfirmedPanel({
                   disabled={busy}
                   onChange={(e) => setManualRentIncreaseOn(e.target.value)}
                 />
-                <p className="text-[10px] leading-relaxed">
+                <p className="text-[11px] leading-relaxed">
                   Suggested: {formatDateOnly(autoRentIncreaseOnResolved) ?? '—'} — the later of the
                   lease end date or the statutory minimum. Earliest permitted is{' '}
                   <span className="font-medium tabular-nums">

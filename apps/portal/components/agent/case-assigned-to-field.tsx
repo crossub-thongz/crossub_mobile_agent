@@ -16,7 +16,7 @@ export function CaseAssignedToField({
 
   return (
     <div className={cn('space-y-0.5', className)}>
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
         {CASE_ASSIGNED_TO_LABEL}
       </p>
       <p
@@ -43,7 +43,7 @@ export function CaseAssignedToRow({
 
   return (
     <div>
-      <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+      <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
         {CASE_ASSIGNED_TO_LABEL}
       </p>
       <p className="mt-0.5 text-xs font-semibold text-foreground">{label}</p>

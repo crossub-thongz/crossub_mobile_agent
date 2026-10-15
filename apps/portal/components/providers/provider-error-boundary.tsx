@@ -49,7 +49,7 @@ class ProviderErrorBoundaryInner extends Component<Props, State> {
               ? 'Your browser cached an older version of the app. Reload to fetch the latest build.'
               : 'The app hit an unexpected error while loading. Clearing saved data on this device often fixes it after an update.'}
           </p>
-          <p className="text-destructive mt-3 max-w-md font-mono text-[11px] break-words">
+          <p className="text-destructive mt-3 max-w-md font-mono text-[12px] break-words">
             {this.state.error.message}
           </p>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">

@@ -299,7 +299,7 @@ export function LeasingStepOpenInspection({
 
       {rental.lettingNotes ? (
         <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
-          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
             Notes
           </p>
           <p className="mt-1 whitespace-pre-wrap text-sm">{rental.lettingNotes}</p>

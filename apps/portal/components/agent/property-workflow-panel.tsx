@@ -905,7 +905,7 @@ export function PropertyWorkflowCreateDialog({
                   </Button>
                 </div>
                 {tenantMovedOut === false ? (
-                  <p className="text-amber-700 dark:text-amber-400 text-[11px]">
+                  <p className="text-amber-700 dark:text-amber-400 text-[12px]">
                     Contact current tenant to schedule open inspection.
                   </p>
                 ) : null}
@@ -968,7 +968,7 @@ export function PropertyWorkflowCreateDialog({
                 value={availableFrom}
                 onChange={(e) => setAvailableFrom(e.target.value)}
               />
-              <p className="text-muted-foreground text-[11px]">
+              <p className="text-muted-foreground text-[12px]">
                 Must be at least {LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today (earliest{' '}
                 {minAvailableFrom}).
               </p>
@@ -1011,13 +1011,13 @@ export function PropertyWorkflowCreateDialog({
                 </Button>
               </div>
               {crossubConductsOpen === true ? (
-                <p className="text-muted-foreground text-[11px]">
+                <p className="text-muted-foreground text-[12px]">
                   CROSSUB will arrange the open inspection and contact the tenant or listing
                   contacts on your behalf. The open-inspection fee is charged when you
                   request the open — the amount is shown before you pay.
                 </p>
               ) : crossubConductsOpen === false ? (
-                <p className="text-amber-700 dark:text-amber-400 text-[11px]">
+                <p className="text-amber-700 dark:text-amber-400 text-[12px]">
                   {SELF_OPEN_INSPECTION_DISCLAIMER}
                 </p>
               ) : null}
@@ -1068,7 +1068,7 @@ export function PropertyWorkflowCreateDialog({
                   Landlord pre-agreed
                 </Button>
               </div>
-              <p className="text-muted-foreground text-[11px]">
+              <p className="text-muted-foreground text-[12px]">
                 {rentReviewPath === 'crossub_managed'
                   ? 'CROSSUB runs the full rent review in the staff portal. You only need to specify the lease term.'
                   : 'Record terms you have already agreed with the landlord.'}
@@ -1083,11 +1083,11 @@ export function PropertyWorkflowCreateDialog({
                 disabled={prefillLoading && !rentPaidUntil}
               />
               {prefillLoading && !rentPaidUntil ? (
-                <p className="text-muted-foreground text-[11px]">
+                <p className="text-muted-foreground text-[12px]">
                   Loading rent paid-to from the property record…
                 </p>
               ) : (
-                <p className="text-muted-foreground text-[11px]">
+                <p className="text-muted-foreground text-[12px]">
                   Matches the Overview tenancy field — update here or on the property Overview tab.
                 </p>
               )}
@@ -1136,7 +1136,7 @@ export function PropertyWorkflowCreateDialog({
                   />
                 ) : null}
                 {prefillLoading ? (
-                  <p className="text-muted-foreground text-[11px]">
+                  <p className="text-muted-foreground text-[12px]">
                     Loading tenancy details from the property record…
                   </p>
                 ) : null}
@@ -1153,7 +1153,7 @@ export function PropertyWorkflowCreateDialog({
                     disabled={prefillLoading}
                   />
                   {tenantNameHint && !prefillLoading ? (
-                    <p className="text-muted-foreground text-[11px]">
+                    <p className="text-muted-foreground text-[12px]">
                       Auto-filled · {tenantNameHint}
                     </p>
                   ) : null}
@@ -1168,7 +1168,7 @@ export function PropertyWorkflowCreateDialog({
                       disabled={prefillLoading}
                     />
                     {currentWeeklyRent && !prefillLoading ? (
-                      <p className="text-muted-foreground text-[11px]">
+                      <p className="text-muted-foreground text-[12px]">
                         From active tenancy or leasing cycle.
                       </p>
                     ) : null}
@@ -1227,7 +1227,7 @@ export function PropertyWorkflowCreateDialog({
                     ) : null}
                   </div>
                   {preferredLeaseStartHint && !prefillLoading ? (
-                    <p className="text-muted-foreground text-[11px]">
+                    <p className="text-muted-foreground text-[12px]">
                       Auto-filled · {preferredLeaseStartHint}
                     </p>
                   ) : null}
@@ -1272,7 +1272,7 @@ export function PropertyWorkflowCreateDialog({
                     </Button>
                   </div>
                   {rentNegotiationChoice === 'negotiable' ? (
-                    <p className="text-amber-700 text-[11px] font-medium dark:text-amber-400">
+                    <p className="text-amber-700 text-[12px] font-medium dark:text-amber-400">
                       Discuss the proposed rent with the tenant before it is finalised.
                     </p>
                   ) : null}
@@ -1365,7 +1365,7 @@ export function PropertyWorkflowCreateDialog({
                 ) : null}
               </div>
               {bondHeldHint && !prefillLoading ? (
-                <p className="text-muted-foreground text-[11px]">Auto-filled · {bondHeldHint}</p>
+                <p className="text-muted-foreground text-[12px]">Auto-filled · {bondHeldHint}</p>
               ) : null}
             </Field>
             <Field label="Notes">
@@ -1407,7 +1407,7 @@ export function PropertyWorkflowCreateDialog({
                   End management
                 </Button>
               </div>
-              <p className="text-muted-foreground text-[11px] leading-relaxed">
+              <p className="text-muted-foreground text-[12px] leading-relaxed">
                 {endLeasingNextStep === 'relist'
                   ? 'A new leasing order is created with this vacate case. Confirm whether CROSSUB should handle the open.'
                   : 'Record the end of management date. The property stays on your portfolio after Job completed.'}
@@ -1426,7 +1426,7 @@ export function PropertyWorkflowCreateDialog({
               <>
                 <div className="border-t pt-4">
                   <p className="text-sm font-semibold">New leasing order</p>
-                  <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
+                  <p className="text-muted-foreground mt-1 text-[12px] leading-relaxed">
                     Created automatically with End Leasing so you can confirm relist terms while
                     the vacate case runs.
                   </p>
@@ -1489,7 +1489,7 @@ export function PropertyWorkflowCreateDialog({
                     value={availableFrom}
                     onChange={(e) => setAvailableFrom(e.target.value)}
                   />
-                  <p className="text-muted-foreground text-[11px]">
+                  <p className="text-muted-foreground text-[12px]">
                     Auto-suggested from the vacate date when set. Must be at least{' '}
                     {LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today (earliest{' '}
                     {minAvailableFrom}).
@@ -1535,13 +1535,13 @@ export function PropertyWorkflowCreateDialog({
                     </Button>
                   </div>
                   {crossubConductsOpen === true ? (
-                    <p className="text-muted-foreground text-[11px]">
+                    <p className="text-muted-foreground text-[12px]">
                       CROSSUB will arrange the open inspection for the new letting after the tenant
                       vacates. The open-inspection fee is charged when you request the
                       open — the amount is shown before you pay.
                     </p>
                   ) : crossubConductsOpen === false ? (
-                    <p className="text-amber-700 dark:text-amber-400 text-[11px]">
+                    <p className="text-amber-700 dark:text-amber-400 text-[12px]">
                       {SELF_OPEN_INSPECTION_DISCLAIMER}
                     </p>
                   ) : null}
@@ -1658,7 +1658,7 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   if (!value) return null;
   return (
     <div className="space-y-1">
-      <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+      <p className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
         {label}
       </p>
       <p className="bg-muted/40 rounded-md px-3 py-2 text-sm">{value}</p>

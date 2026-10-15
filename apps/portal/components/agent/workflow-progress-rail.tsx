@@ -57,9 +57,9 @@ const RAIL_SIZE: Record<
     markerCheck: 'size-3.5',
     markerDot: 'size-1.5',
     label:
-      'mt-2 max-w-[3.25rem] text-center text-[8px] font-semibold uppercase leading-tight tracking-wide sm:max-w-[4.75rem] sm:text-[9px]',
+      'mt-2 max-w-[3.25rem] text-center text-[9px] font-semibold uppercase leading-tight tracking-wide sm:max-w-[4.75rem] sm:text-[10px]',
     sentenceLabel:
-      'mt-2 max-w-[5.5rem] text-center text-[11px] font-medium leading-tight sm:max-w-[6.5rem] sm:text-xs',
+      'mt-2 max-w-[5.5rem] text-center text-[12px] font-medium leading-tight sm:max-w-[6.5rem] sm:text-xs',
     padding: 'px-1 py-3',
   },
   compact: {
@@ -68,9 +68,9 @@ const RAIL_SIZE: Record<
     markerCheck: 'size-2.5',
     markerDot: 'size-1',
     label:
-      'mt-1.5 max-w-[3rem] text-center text-[7px] font-semibold uppercase leading-tight tracking-wide sm:max-w-[4rem] sm:text-[8px]',
+      'mt-1.5 max-w-[3rem] text-center text-[8px] font-semibold uppercase leading-tight tracking-wide sm:max-w-[4rem] sm:text-[9px]',
     sentenceLabel:
-      'mt-1.5 max-w-[4.5rem] text-center text-[10px] font-medium leading-tight sm:max-w-[5.5rem] sm:text-[11px]',
+      'mt-1.5 max-w-[4.5rem] text-center text-[11px] font-medium leading-tight sm:max-w-[5.5rem] sm:text-[12px]',
     padding: 'px-0.5 py-2',
   },
 };
@@ -254,11 +254,11 @@ export function WorkflowProgressRail<T extends string>({
                 {label}
               </span>
               {showStatusCaption && isViewing ? (
-                <span className="text-primary mt-0.5 text-[7px] font-bold uppercase tracking-wider">
+                <span className="text-primary mt-0.5 text-[8px] font-bold uppercase tracking-wider">
                   Viewing
                 </span>
               ) : showStatusCaption && isLive ? (
-                <span className="mt-0.5 text-[7px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                <span className="mt-0.5 text-[8px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                   Live
                 </span>
               ) : null}

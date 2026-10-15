@@ -99,7 +99,7 @@ export function LeasingWorkflowTimeline({
   return (
     <div className="space-y-1.5">
       {!hideSectionLabel ? (
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
           Leasing workflow
         </p>
       ) : null}

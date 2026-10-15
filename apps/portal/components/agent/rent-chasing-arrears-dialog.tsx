@@ -54,7 +54,7 @@ function ArrearsDetailGrid({
     <dl className="grid gap-2 sm:grid-cols-2">
       {items.map((item) => (
         <div key={item.label} className="rounded-lg border bg-muted/20 px-3 py-2.5">
-          <dt className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+          <dt className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
             {item.label}
           </dt>
           <dd className="mt-1 text-sm font-medium">{item.value}</dd>
@@ -88,7 +88,7 @@ function ArrearsTable({
   return (
     <div className="overflow-hidden rounded-lg border">
       <table className="w-full text-left text-sm">
-        <thead className="bg-muted/40 text-muted-foreground text-[11px] uppercase tracking-wide">
+        <thead className="bg-muted/40 text-muted-foreground text-[12px] uppercase tracking-wide">
           <tr>
             <th className="w-10 px-3 py-2 font-medium">
               <input
@@ -319,7 +319,7 @@ export function RentChasingArrearsDialog({
               />
               {payments.length > 0 ? (
                 <div className="rounded-lg border bg-muted/20 px-3 py-2">
-                  <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                  <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
                     Payments
                   </p>
                   <ul className="mt-2 space-y-1.5">
@@ -386,7 +386,7 @@ export function RentChasingArrearsDialog({
                 <h3 className="text-sm font-semibold">Bills</h3>
                 <div className="overflow-hidden rounded-lg border">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-muted/40 text-muted-foreground text-[11px] uppercase tracking-wide">
+                    <thead className="bg-muted/40 text-muted-foreground text-[12px] uppercase tracking-wide">
                       <tr>
                         <th className="px-3 py-2 font-medium">Type</th>
                         <th className="px-3 py-2 font-medium">Due</th>

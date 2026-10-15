@@ -51,7 +51,7 @@ function MessageThreadRow({ thread }: { thread: MessageThread }) {
           >
             {thread.subject}
           </p>
-          <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
+          <span className="text-muted-foreground shrink-0 text-[12px] tabular-nums">
             {formatRelative(thread.lastAt)}
           </span>
         </div>
@@ -59,7 +59,7 @@ function MessageThreadRow({ thread }: { thread: MessageThread }) {
 
       <div className="flex shrink-0 items-center gap-1.5">
         {thread.unread > 0 ? (
-          <span className="bg-primary flex size-5 items-center justify-center rounded-full text-[10px] font-bold text-primary-foreground">
+          <span className="bg-primary flex size-5 items-center justify-center rounded-full text-[11px] font-bold text-primary-foreground">
             {thread.unread}
           </span>
         ) : null}
@@ -96,7 +96,7 @@ function PropertyMessageGroupSection({
         />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-semibold">{group.propertyAddress}</h2>
-          <p className="text-muted-foreground mt-0.5 line-clamp-1 text-[11px]">
+          <p className="text-muted-foreground mt-0.5 line-clamp-1 text-[12px]">
             {open
               ? `${group.threads.length} thread${group.threads.length === 1 ? '' : 's'}`
               : latestThread
@@ -106,11 +106,11 @@ function PropertyMessageGroupSection({
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {group.unreadTotal > 0 ? (
-            <span className="bg-primary text-primary-foreground shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+            <span className="bg-primary text-primary-foreground shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums">
               {group.unreadTotal}
             </span>
           ) : null}
-          <span className="text-muted-foreground text-[11px] tabular-nums">
+          <span className="text-muted-foreground text-[12px] tabular-nums">
             {group.threads.length}
           </span>
         </div>
@@ -194,7 +194,7 @@ export default function MessagesPage() {
         <div className="flex items-center justify-between gap-2">
           <FilterChips options={READ_FILTERS} value={readFilter} onChange={setReadFilter} />
           {unreadCount > 0 ? (
-            <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
+            <span className="text-muted-foreground shrink-0 text-[12px] tabular-nums">
               {unreadCount} unread
             </span>
           ) : null}

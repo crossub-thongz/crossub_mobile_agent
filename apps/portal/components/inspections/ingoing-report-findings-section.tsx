@@ -124,7 +124,7 @@ function AreaNode({
 
           {sectionItems.length > 0 ? (
             <div className="space-y-1">
-              <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+              <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
                 Sections
               </p>
               <ul className="text-muted-foreground text-xs">
@@ -185,7 +185,7 @@ export function IngoingReportFindingsSection({
 
       {detail.inspectionPhotos.filter((photo) => isReportPhotoUrl(photo.url)).length > 0 ? (
         <div className="rounded-lg border border-dashed p-3">
-          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wider">
+          <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wider">
             General inspection photos
           </p>
           <div className="flex flex-wrap gap-1.5">

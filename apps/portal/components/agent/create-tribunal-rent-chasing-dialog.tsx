@@ -929,7 +929,7 @@ export function CreateTribunalRentChasingDialog({
                   </div>
                   <div className="overflow-hidden rounded-lg border bg-card">
                     <table className="w-full text-left text-sm">
-                      <thead className="bg-muted/40 text-muted-foreground text-[11px] uppercase tracking-wide">
+                      <thead className="bg-muted/40 text-muted-foreground text-[12px] uppercase tracking-wide">
                         <tr>
                           {canPickRecordedArrears || isAddingArrears ? (
                             <th className="w-10 px-3 py-2 font-medium">

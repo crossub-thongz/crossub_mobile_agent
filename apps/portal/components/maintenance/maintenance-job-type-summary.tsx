@@ -24,7 +24,7 @@ function SummaryField({
 }) {
   return (
     <div className={className}>
-      <dt className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+      <dt className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
         {label}
       </dt>
       <dd className="mt-1 text-sm font-medium leading-snug">{children}</dd>

@@ -45,7 +45,7 @@ function AgencyTeamSection({
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <span
                   className={cn(
-                    'inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                    'inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold',
                     isPrincipal
                       ? 'bg-primary/15 text-primary'
                       : 'bg-muted text-muted-foreground',

@@ -115,7 +115,7 @@ function RecommendedRentEditor({
           <X className="size-4" />
         </Button>
       </div>
-      <p className="text-muted-foreground text-[11px] leading-relaxed">
+      <p className="text-muted-foreground text-[12px] leading-relaxed">
         Leave blank to use the researched recommendation. The landlord pack, report and notice
         all quote this rate.
       </p>
@@ -262,7 +262,7 @@ export function RentReviewResearchResultSection({
         </Button>
       </div>
       {!researchComplete || helperText ? (
-        <p className="text-muted-foreground mt-2 text-[11px]">
+        <p className="text-muted-foreground mt-2 text-[12px]">
           {helperText ??
             'Market research is completed in the admin portal. Send the pack to the landlord once results are shown above.'}
         </p>

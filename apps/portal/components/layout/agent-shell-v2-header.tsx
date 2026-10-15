@@ -85,7 +85,7 @@ export function AgentShellV2Header({
         <span className="text-muted-foreground min-w-0 flex-1 truncate text-sm">
           Search properties, tasks, tenants…
         </span>
-        <kbd className="text-muted-foreground hidden shrink-0 rounded-md border border-border/70 bg-background/80 px-1.5 py-0.5 text-[10px] font-medium sm:inline">
+        <kbd className="text-muted-foreground hidden shrink-0 rounded-md border border-border/70 bg-background/80 px-1.5 py-0.5 text-[11px] font-medium sm:inline">
           ⌘ K
         </kbd>
       </Link>

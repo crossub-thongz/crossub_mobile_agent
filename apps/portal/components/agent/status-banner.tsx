@@ -27,7 +27,7 @@ export function StatusBanner({
 }) {
   return (
     <div className={cn('rounded-xl border px-4 py-3', TONE[tone])}>
-      <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+      <p className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
         Current status
       </p>
       <p className={cn('mt-0.5 text-lg font-semibold leading-tight', LABEL[tone])}>
