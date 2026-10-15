@@ -64,9 +64,6 @@ export function BillingBlockedGate({ children }: { children: React.ReactNode }) 
   }, [blocked, checked, onExemptPage, pathname, router]);
 
   if (status === 'loading' && !isPublicRoute(pathname)) return <LoggingInScreen />;
-  if (!checked && status === 'authed' && !isPublicRoute(pathname) && !onExemptPage) {
-    return <LoggingInScreen />;
-  }
   if (blocked && !onExemptPage && !isPublicRoute(pathname)) return <LoggingInScreen />;
 
   return <>{children}</>;

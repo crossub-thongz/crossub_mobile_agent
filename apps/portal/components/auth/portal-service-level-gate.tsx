@@ -25,8 +25,12 @@ export function PortalServiceLevelGate({ children }: { children: React.ReactNode
     router.replace(ROUTES.DASHBOARD);
   }, [blocked, router]);
 
-  if (loading && !isPublicRoute(pathname)) return <LoggingInScreen />;
-  if (blocked) return <LoggingInScreen />;
+  const waitingOnAccess =
+    loading &&
+    !portalAccessReady &&
+    !isPublicRoute(pathname) &&
+    isFullManagementRoute(pathname);
+  if (waitingOnAccess || blocked) return <LoggingInScreen />;
 
   return <>{children}</>;
 }

@@ -65,6 +65,7 @@ export function V2Dashboard() {
     properties,
     agencies,
     needActionItems,
+    loading,
     hasFullManagementAccess,
     inspections,
     rentReviews,
@@ -210,6 +211,26 @@ export function V2Dashboard() {
 
   const showMobileAskBar = !(activePanel === 'gii' && giiExpanded);
   const summary = board.summary;
+
+  if (loading && properties.length === 0) {
+    return (
+      <div className="v2-dashboard normal-case space-y-4 pb-8 lg:space-y-5 lg:pb-2">
+        <header className="pt-1 lg:pt-2">
+          <h1 className="v2-dashboard__greeting text-xl font-semibold tracking-tight sm:text-2xl">
+            {greeting}, {firstName} <span aria-hidden>👋</span>
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Here&apos;s what&apos;s happening with your portfolio today.
+          </p>
+        </header>
+        <div className="grid gap-4 xl:grid-cols-[minmax(16rem,0.85fr)_minmax(0,1.5fr)]">
+          <div className="v2-dashboard__card h-48 animate-pulse" />
+          <div className="v2-dashboard__card h-48 animate-pulse" />
+        </div>
+        <div className="v2-dashboard__card h-72 animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="v2-dashboard normal-case space-y-4 pb-8 lg:space-y-5 lg:pb-2">

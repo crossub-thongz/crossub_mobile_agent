@@ -15,14 +15,13 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
 import { LoggingInScreen } from '@/components/auth/logging-in-screen';
 import { useAuth } from '@/components/providers/auth-provider';
-import { useAgentData } from '@/components/providers/agent-data-provider';
 import { PASSWORD_MAX } from '@/constants/auth';
 import { ROUTES } from '@/constants/routes';
 import { ApiError, api } from '@/lib/api';
@@ -59,29 +58,23 @@ const AGENT_GREEN = '#14B88D';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { refresh, status, user } = useAuth();
-  const { loading: portfolioLoading, portalAccessReady } = useAgentData();
+  const { adoptUser, status, user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [loggingIn, setLoggingIn] = useState(false);
-  const destinationRef = useRef<string | null>(null);
-  const sawPortfolioLoad = useRef(false);
   const enterStarted = useRef(false);
 
   const beginEnterApp = useCallback(
     (nextUser: AuthUser) => {
-      const destination = postAuthDestination(
-        nextUser,
-        ROUTES.DASHBOARD,
-        ROUTES.SYSTEM_ACCESS_AGREEMENT,
-        ROUTES.CHANGE_PASSWORD,
-      );
       setLoggingIn(true);
-      if (destination !== ROUTES.DASHBOARD) {
-        router.push(destination);
-        return;
-      }
-      destinationRef.current = destination;
+      router.push(
+        postAuthDestination(
+          nextUser,
+          ROUTES.DASHBOARD,
+          ROUTES.SYSTEM_ACCESS_AGREEMENT,
+          ROUTES.CHANGE_PASSWORD,
+        ),
+      );
     },
     [router],
   );
@@ -91,29 +84,6 @@ export default function LoginPage() {
     enterStarted.current = true;
     beginEnterApp(user);
   }, [beginEnterApp, status, user]);
-
-  useEffect(() => {
-    if (!loggingIn || !destinationRef.current) return;
-    if (portfolioLoading) {
-      sawPortfolioLoad.current = true;
-      return;
-    }
-    if (!portalAccessReady && !sawPortfolioLoad.current) return;
-    const destination = destinationRef.current;
-    destinationRef.current = null;
-    router.push(destination);
-  }, [loggingIn, portfolioLoading, portalAccessReady, router]);
-
-  useEffect(() => {
-    if (!loggingIn || !destinationRef.current) return;
-    const timeout = window.setTimeout(() => {
-      const destination = destinationRef.current;
-      if (!destination) return;
-      destinationRef.current = null;
-      router.push(destination);
-    }, 8000);
-    return () => window.clearTimeout(timeout);
-  }, [loggingIn, router]);
 
   const {
     register,
@@ -130,14 +100,7 @@ export default function LoginPage() {
 
     try {
       const result = await api.post<{ user: AuthUser }>('/auth/login', values);
-      const authStatus = await refresh();
-      if (authStatus !== 'authed') {
-        setLoggingIn(false);
-        toast.error(
-          'Sign-in succeeded but the session cookie was not saved. Clear site cookies for localhost and try again.',
-        );
-        return;
-      }
+      adoptUser(result.user);
       return;
     } catch (err) {
       if (err instanceof ApiError) {
@@ -157,11 +120,7 @@ export default function LoginPage() {
 
     const localUser = loginLocalAccount(values.email, values.password);
     if (localUser) {
-      const authStatus = await refresh();
-      if (authStatus !== 'authed') {
-        setLoggingIn(false);
-        toast.error('Invalid email or password.');
-      }
+      adoptUser(localUser);
       return;
     }
 

@@ -24,6 +24,8 @@ interface AuthContextValue {
   user: AuthUser | null;
   status: AuthStatus;
   refresh: () => Promise<AuthStatus>;
+  /** Mark the session signed in from a login response, without another `/auth/me` round trip. */
+  adoptUser: (next: AuthUser) => void;
   logout: () => Promise<void>;
 }
 
@@ -67,6 +69,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return 'guest';
   }, []);
 
+  const adoptUser = useCallback((next: AuthUser) => {
+    setUser(next);
+    setStatus('authed');
+  }, []);
+
   const logout = useCallback(async () => {
     clearLocalSession();
     clearAddToHomeScreenDismissedForSession();
@@ -88,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   return (
-    <AuthContext.Provider value={{ user, status, refresh, logout }}>
+    <AuthContext.Provider value={{ user, status, refresh, adoptUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

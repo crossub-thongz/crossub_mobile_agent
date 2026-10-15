@@ -55,7 +55,7 @@ export default function TasksPage() {
 
   if (isV2) {
     return (
-      <AgentShell title="Tasks" wide hideNeedAction>
+      <AgentShell wide hideNeedAction>
         <V2TasksPage />
       </AgentShell>
     );
