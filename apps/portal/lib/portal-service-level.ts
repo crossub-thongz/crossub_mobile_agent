@@ -3,6 +3,7 @@ import type { Agency } from '@/lib/types';
 import { ROUTES } from '@/constants/routes';
 import { AGENCY_MEMBERSHIP_TIER } from '@/constants/api-enums';
 import { AGENT_COPY_VARIANT, type AgentCopyVariant } from '@/constants/agent-copy-variant';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 
 export type AgentPortalServiceLevel =
   | 'LEVEL_1_INSPECTION_ONLY'
@@ -52,7 +53,7 @@ export const REGISTER_SERVICE_LEVEL_DESCRIPTION: Record<
   string
 > = {
   SELF_MANAGED:
-    'Run your whole portfolio yourself with free software and Cros AI — maintenance, inspections, leasing, conversations and trust accounting. Owners get a copy of your decisions by email.',
+    `Run your whole portfolio yourself with free software and ${CROS_ASSISTANT_NAME} AI — maintenance, inspections, leasing, conversations and trust accounting. Owners get a copy of your decisions by email.`,
   LEVEL_1_INSPECTION_ONLY:
     'Add properties and order inspections and tribunal support. Pay when you place the order. Inspection module only — upgrade anytime for leasing, maintenance, and accounting.',
   LEVEL_2_FULL_MANAGEMENT:

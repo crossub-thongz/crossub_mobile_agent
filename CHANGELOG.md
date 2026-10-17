@@ -25,6 +25,7 @@
 - `/maintenance`, `/inspections` and `/leasing` still redirect to Tasks for every tier except Self-Manage.
 
 ### Fixed
+- Self-Manage plan description says CROS AI, matching the assistant name elsewhere.
 - Redesign task list keeps Self-Manage inspection rows in Needs My Action instead of the hidden In Progress bucket.
 - Redesign task list labels Self-Manage properties as Self-Manage, not Full Service.
 - Type errors in `register-confirm-panel.tsx` and `add-payment-method-gate.tsx`.
