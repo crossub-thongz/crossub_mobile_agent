@@ -25,7 +25,8 @@
 - `/maintenance`, `/inspections` and `/leasing` still redirect to Tasks for every tier except Self-Manage.
 
 ### Fixed
-- Add Property unlocks the postcode for manual entry when Google rejects the Maps key, not only when the script fails to load.
+- Add Property postcode is always editable; it no longer locks while Google Maps address search is available.
+- Add Property swaps the dead map and search box for the manual-entry hint when Google rejects the Maps key.
 - Self-Manage plan description says CROS AI, matching the assistant name elsewhere.
 - Redesign task list keeps Self-Manage inspection rows in Needs My Action instead of the hidden In Progress bucket.
 - Redesign task list labels Self-Manage properties as Self-Manage, not Full Service.

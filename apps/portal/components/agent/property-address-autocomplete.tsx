@@ -28,8 +28,6 @@ interface PropertyAddressAutocompleteProps {
   disabled?: boolean;
   /** Address fields shown on the left beside the map. */
   locationFields?: ReactNode;
-  /** Called when map search is ready / failed so parent can lock address fields. */
-  onMapsStatusChange?: (status: { ready: boolean; failed: boolean; enabled: boolean }) => void;
 }
 
 export function PropertyAddressAutocomplete({
@@ -38,7 +36,6 @@ export function PropertyAddressAutocomplete({
   longitude,
   disabled,
   locationFields,
-  onMapsStatusChange,
 }: PropertyAddressAutocompleteProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -67,10 +64,6 @@ export function PropertyAddressAutocomplete({
     onPlaceSelectRef.current = onPlaceSelect;
   }, [onPlaceSelect]);
 
-  useEffect(() => {
-    onMapsStatusChange?.({ ready: mapsReady, failed: mapsFailed, enabled: mapsEnabled });
-  }, [mapsReady, mapsFailed, mapsEnabled, onMapsStatusChange]);
-
   const applyParsedPlace = useCallback((parsed: ParsedAustralianAddress) => {
     onPlaceSelectRef.current(parsed);
     if (searchInputRef.current) {
@@ -78,8 +71,8 @@ export function PropertyAddressAutocomplete({
     }
   }, []);
 
-  // A rejected key loads fine but leaves search dead; treat it as failed so the address
-  // fields unlock for manual entry.
+  // A rejected key loads fine but leaves search dead; treat it as failed so the dead map
+  // and search box are swapped for the manual-entry hint.
   useEffect(() => {
     if (!mapsEnabled) return;
     return onGoogleMapsAuthFailure(() => setMapsFailed(true));

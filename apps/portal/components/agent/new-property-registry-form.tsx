@@ -399,7 +399,6 @@ export function NewPropertyRegistryForm({
   const [step, setStep] = useState<PropertyRegistryWizardStep>(initialState?.step ?? 'property');
   const [furthestStepIndex, setFurthestStepIndex] = useState(initialState?.furthestStepIndex ?? 0);
   const [stepErrors, setStepErrors] = useState<Partial<Record<WizardStep, string[]>>>({});
-  const [addressFieldsLocked, setAddressFieldsLocked] = useState(true);
   const [duplicateBlocked, setDuplicateBlocked] = useState(false);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
   const [existingPropertyHref, setExistingPropertyHref] = useState<string | null>(null);
@@ -991,9 +990,6 @@ export function NewPropertyRegistryForm({
               onPlaceSelect={handlePlaceSelect}
               latitude={form.latitude}
               longitude={form.longitude}
-              onMapsStatusChange={({ enabled, failed }) => {
-                setAddressFieldsLocked(enabled && !failed);
-              }}
               locationFields={
                 <>
                   <div className="grid grid-cols-2 gap-3">
@@ -1090,9 +1086,6 @@ export function NewPropertyRegistryForm({
                         placeholder="e.g. 2193"
                         inputMode="numeric"
                         required
-                        disabled={addressFieldsLocked}
-                        readOnly={addressFieldsLocked}
-                        className={cn(addressFieldsLocked && 'bg-muted/40')}
                       />
                     </FormField>
                   </div>
