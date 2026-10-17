@@ -109,7 +109,7 @@ export function OpenInspectionConfirmTimeButton({
         <CalendarCheck className="size-3.5" />
         {busy ? OPEN_INSPECTION_CONFIRM_COPY.BUSY : OPEN_INSPECTION_CONFIRM_COPY.ACTION}
       </Button>
-      <p className="text-muted-foreground text-[11px] leading-relaxed">
+      <p className="text-muted-foreground text-[12px] leading-relaxed">
         {OPEN_INSPECTION_CONFIRM_COPY.HELP}
       </p>
     </div>

@@ -13,7 +13,7 @@ function PropertyTaskGroupCard({ group }: { group: ArchivedPropertyTaskGroup }) 
   const taskCount = group.rows.length;
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm" data-tour="history-task-group">
+    <section className="v2-dashboard__card overflow-hidden" data-tour="history-task-group">
       <button
         type="button"
         aria-expanded={open}

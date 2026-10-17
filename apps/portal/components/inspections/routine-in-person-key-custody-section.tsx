@@ -16,7 +16,7 @@ function ProofPhotoGrid({ urls, label }: { urls: string[]; label: string }) {
   if (urls.length === 0) return null;
   return (
     <div className="space-y-1.5">
-      <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+      <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
         {label}
       </p>
       <div className="flex flex-wrap gap-1.5">
@@ -94,12 +94,12 @@ export function RoutineInPersonKeyCustodySection({
           <h3 className="text-sm font-semibold">Key handover</h3>
         </div>
         {loading ? (
-          <span className="text-muted-foreground flex items-center gap-1 text-[10px]">
+          <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
             <Loader2 className="size-3 animate-spin" />
             Syncing…
           </span>
         ) : (
-          <span className="text-muted-foreground text-[10px] uppercase tracking-wider">
+          <span className="text-muted-foreground text-[11px] uppercase tracking-wider">
             Live · inspector app
           </span>
         )}

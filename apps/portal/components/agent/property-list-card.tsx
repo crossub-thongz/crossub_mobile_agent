@@ -97,7 +97,7 @@ export function PropertyListCard({
           <div className="flex flex-wrap items-center gap-1.5 pr-6">
             <span
               className={cn(
-                'inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                'inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold',
                 isDraft
                   ? 'bg-amber-100 uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200'
                   : cn('capitalize', STATUS_STYLES[property.leaseStatus]),

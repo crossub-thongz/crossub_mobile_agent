@@ -33,8 +33,8 @@ function CasePicker({
           onClick={() => onSelect(item.id)}
           className={
             selectedId === item.id
-              ? 'shrink-0 rounded-full border border-primary bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary'
-              : 'text-muted-foreground shrink-0 rounded-full border border-border bg-muted/30 px-2.5 py-1 text-[11px] font-medium'
+              ? 'shrink-0 rounded-full border border-primary bg-primary/10 px-2.5 py-1 text-[12px] font-medium text-primary'
+              : 'text-muted-foreground shrink-0 rounded-full border border-border bg-muted/30 px-2.5 py-1 text-[12px] font-medium'
           }
         >
           {item.label}
@@ -159,7 +159,7 @@ export function PropertyLeasingWorkflowShell({
       {selectedCase ? (
         <div className="space-y-3">
           <div className="space-y-1">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
               {LEASING_CATEGORY_LABEL[selectedCase.category]} · {selectedCase.label}
             </p>
             <p className="text-sm font-medium">{selectedCase.currentStep}</p>

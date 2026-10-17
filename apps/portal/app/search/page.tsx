@@ -130,7 +130,7 @@ export default function SearchPage() {
               href={r.href}
               className="block rounded-xl border bg-card px-4 py-3 active:bg-secondary/50"
             >
-              <p className="text-muted-foreground text-[10px] uppercase">{r.kind}</p>
+              <p className="text-muted-foreground text-[11px] uppercase">{r.kind}</p>
               <p className="text-sm font-medium">{r.label}</p>
               <p className="text-muted-foreground text-xs">{r.sub}</p>
             </Link>

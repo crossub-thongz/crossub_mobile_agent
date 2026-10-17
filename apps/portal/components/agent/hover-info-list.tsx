@@ -70,7 +70,7 @@ export function HoverInfoList({
         onClick={stopRowClick}
         onPointerDown={stopRowClick}
       >
-        <p className="text-muted-foreground mb-1.5 text-[11px] font-semibold tracking-wide uppercase">
+        <p className="text-muted-foreground mb-1.5 text-[12px] font-semibold tracking-wide uppercase">
           {heading}
         </p>
         <ul className="space-y-1">

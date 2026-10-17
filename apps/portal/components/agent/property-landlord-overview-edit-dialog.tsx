@@ -178,7 +178,7 @@ export function PropertyLandlordOverviewEditDialog({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-7 gap-1 px-2 text-[11px]"
+                  className="h-7 gap-1 px-2 text-[12px]"
                   onClick={startNewLandlord}
                   disabled={replacingLandlord}
                 >
@@ -188,7 +188,7 @@ export function PropertyLandlordOverviewEditDialog({
               ) : null}
             </div>
             {replacingLandlord ? (
-              <p className="text-muted-foreground text-[11px]">
+              <p className="text-muted-foreground text-[12px]">
                 Enter the new landlord below. The current landlord will be saved on this
                 property Archive tab (Landlord archive) when you save. Editing the fields
                 without this button updates the Owner Details and Agency Details cards instead.
@@ -255,7 +255,7 @@ export function PropertyLandlordOverviewEditDialog({
 
           <div className="space-y-2 border-t pt-3">
             <p className="text-xs font-semibold">Management agreement</p>
-            <p className="text-muted-foreground text-[11px]">
+            <p className="text-muted-foreground text-[12px]">
               Landlord insurance and other property documents are managed on the Documents tab.
             </p>
             <input

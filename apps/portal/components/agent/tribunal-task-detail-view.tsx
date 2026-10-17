@@ -261,8 +261,8 @@ export function TribunalTaskDetailView({
                   data-tour="workflow-case-badge"
                   className={
                     banner.needsAction
-                      ? 'rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
-                      : 'rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                      ? 'rounded-full bg-rose-100 px-2 py-0.5 text-[12px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                      : 'rounded-full bg-emerald-100 px-2 py-0.5 text-[12px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
                   }
                 >
                   {banner.needsAction ? 'Need your action' : 'CROS handling'}
@@ -383,7 +383,7 @@ export function TribunalTaskDetailView({
                     >
                       <div className="flex items-start justify-between gap-3">
                         <h3 className="text-sm font-semibold">{card.title}</h3>
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
                           {card.status}
                         </span>
                       </div>
@@ -500,7 +500,7 @@ export function TribunalTaskDetailView({
               ) : null}
               <div className="p-3">
                 <p className="text-sm font-semibold">{address}</p>
-                <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                   {property?.leaseStatus === 'vacant' ? 'Vacant' : 'Occupied'}
                 </span>
                 {tenantName !== '—' ? (
@@ -553,7 +553,7 @@ export function TribunalTaskDetailView({
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold">{tenantName}</p>
-                <span className="mt-1 inline-flex rounded-full border border-emerald-500/30 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                <span className="mt-1 inline-flex rounded-full border border-emerald-500/30 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                   Current tenant
                 </span>
                 <dl className="mt-3 space-y-2 text-xs">

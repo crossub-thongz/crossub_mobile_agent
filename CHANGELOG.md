@@ -16,6 +16,7 @@
 - Agent client calls `updateAgencyServiceLevel`, `fetchOwnerDecisions` and `createOwnerDecision` (contract 0.26.0).
 
 ### Changed
+- Merged the `redesign` branch into `main`; Tasks bucket labels, page tour targets and agreement sizing follow the redesign.
 - Self-Manage module pages and Conversations list only Self-Manage properties; Settings → Plan shows only Self-Manage agencies.
 - Registration lists Self-Manage first, preselected and free; Inspection Only and Full Service are optional paid services.
 - Self-Manage signup and invite registration skip the CROSSUB Service Agreement and only require the Terms and Conditions.
@@ -24,6 +25,8 @@
 - `/maintenance`, `/inspections` and `/leasing` still redirect to Tasks for every tier except Self-Manage.
 
 ### Fixed
+- Redesign task list keeps Self-Manage inspection rows in Needs My Action instead of the hidden In Progress bucket.
+- Redesign task list labels Self-Manage properties as Self-Manage, not Full Service.
 - Type errors in `register-confirm-panel.tsx` and `add-payment-method-gate.tsx`.
 - A portfolio refresh requested while another is in flight now runs once more instead of being dropped, so a plan switch shows straight away.
 - Message threads in the new `SALES` department map to Others.

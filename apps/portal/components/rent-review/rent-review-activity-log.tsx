@@ -15,7 +15,7 @@ export function RentReviewActivityLog({
 
   return (
     <section className="rounded-xl border bg-muted/20 p-3">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide">Activity</p>
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide">Activity</p>
       <ul className="space-y-1 text-xs">
         {entries.map((e) => {
           const detail = formatRentReviewAuditDetail(e);

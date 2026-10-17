@@ -45,7 +45,7 @@ function BondSummaryEmailCard({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-semibold">{title}</p>
         {email.commConversationId ? (
-          <Button asChild size="sm" variant="outline" className="h-7 gap-1 text-[10px]">
+          <Button asChild size="sm" variant="outline" className="h-7 gap-1 text-[11px]">
             <Link href={communicationsThread(email.commConversationId)}>
               <ExternalLink className="size-3" />
               Message Center
@@ -217,7 +217,7 @@ export function EndLeasingBondReleasedPanel({
           </div>
         </dl>
 
-        <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wide">
           Deduct
         </p>
         <div className="overflow-hidden rounded-xl border divide-y">
@@ -381,8 +381,8 @@ export function EndLeasingBondReleasedPanel({
                   onClick={() => setAuditExpanded((value) => !value)}
                   aria-expanded={auditExpanded}
                 >
-                  <p className="text-[10px] font-semibold uppercase tracking-wide">Audit</p>
-                  <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide">Audit</p>
+                  <span className="text-muted-foreground flex items-center gap-1.5 text-[12px]">
                     {auditEntries.length} event{auditEntries.length === 1 ? '' : 's'}
                     <ChevronDown
                       className={cn('size-3.5 transition-transform', auditExpanded && 'rotate-180')}

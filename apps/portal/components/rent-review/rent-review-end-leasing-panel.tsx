@@ -54,7 +54,7 @@ export function RentReviewEndLeasingPanel({
       {showMoveOutSummary ? (
         detail.tenantMoveOutDate ? (
           <div className="rounded-lg border border-rose-500/30 bg-background/60 p-3">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
               Move-out date
             </p>
             <p className="mt-1 text-lg font-semibold tabular-nums">

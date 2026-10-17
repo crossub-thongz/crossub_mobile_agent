@@ -147,7 +147,7 @@ export function LeasingReletDecisionCard({
             {LEASING_RELET_COPY.explanation}
           </p>
           {reminders > 0 ? (
-            <p className="text-muted-foreground text-[11px] font-medium">
+            <p className="text-muted-foreground text-[12px] font-medium">
               {LEASING_RELET_COPY.reminderLine(reminders)}
             </p>
           ) : null}
@@ -245,7 +245,7 @@ export function LeasingReletDecisionCard({
                 })}
               </div>
               {provider ? (
-                <p className="text-muted-foreground text-[11px]">
+                <p className="text-muted-foreground text-[12px]">
                   {LEASING_OPEN_PROVIDER_OPTIONS.find((option) => option.value === provider)?.description}
                 </p>
               ) : null}
@@ -343,7 +343,7 @@ function ReletAction({
   return (
     <div className="space-y-1" aria-label={label}>
       {children}
-      <p className="text-muted-foreground text-[11px] leading-snug">{description}</p>
+      <p className="text-muted-foreground text-[12px] leading-snug">{description}</p>
     </div>
   );
 }

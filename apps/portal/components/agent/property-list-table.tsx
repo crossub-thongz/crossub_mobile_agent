@@ -55,7 +55,7 @@ function NotificationIconBadge({
   return (
     <span
       className={cn(
-        'pointer-events-none absolute top-0 right-0 z-10 flex h-4 min-w-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none text-white ring-2 ring-card',
+        'pointer-events-none absolute top-0 right-0 z-10 flex h-4 min-w-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full px-0.5 text-[11px] font-bold leading-none text-white ring-2 ring-card',
         variant === 'message' ? 'bg-[#fa5151]' : 'bg-destructive',
       )}
     >
@@ -276,7 +276,7 @@ export function PropertyListTable({
                 align="center"
               />
             )}
-            <th className="px-2 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:px-3 lg:py-3">
+            <th className="px-2 py-2.5 text-right text-[12px] font-semibold uppercase tracking-wide text-muted-foreground lg:px-3 lg:py-3">
               {isArchived ? 'View' : 'Actions'}
             </th>
           </tr>
@@ -317,7 +317,7 @@ export function PropertyListTable({
                       </ModuleTableTruncateText>
                     </Link>
                     {isDraft ? (
-                      <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+                      <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
                         <AlertCircle className="size-3 shrink-0" aria-hidden />
                         <span className="truncate">Draft</span>
                       </span>
@@ -329,8 +329,8 @@ export function PropertyListTable({
                       <span
                         className={
                           property.approvalStatus === PROPERTY_APPROVAL_STATUS.DECLINED
-                            ? 'mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-900 dark:bg-rose-950/50 dark:text-rose-200'
-                            : 'mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200'
+                            ? 'mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-rose-900 dark:bg-rose-950/50 dark:text-rose-200'
+                            : 'mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200'
                         }
                       >
                         <span className="truncate">

@@ -328,7 +328,7 @@ export function PropertyIncludedSummary({
       'rounded-xl border border-sky-500/30 bg-sky-500/[0.08] px-3 py-2.5 dark:border-sky-400/25 dark:bg-sky-500/10',
       className ?? 'mt-2.5',
     )}>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-900 dark:text-sky-100">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-900 dark:text-sky-100">
         Yearly included remaining
       </p>
       <ul className="mt-2 flex flex-wrap gap-1.5">
@@ -374,7 +374,7 @@ export function PropertyChargeGroupCard({
         onClick={() => setOpen((value) => !value)}
         className="w-full border-l-[3px] border-l-sky-500/70 bg-muted/35 px-4 py-3.5 text-left transition hover:bg-muted/50 md:px-5"
       >
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           {propertyGroupKindLabel(property)}
         </p>
         <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
@@ -520,21 +520,21 @@ function Level2MonthGroupCard({
             <h3 className="text-base font-semibold tracking-tight">{group.label}</h3>
             <span
               className={cn(
-                'inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
+                'inline-flex rounded-full border px-2.5 py-0.5 text-[12px] font-semibold',
                 paymentStatusTone(group.paymentStatus),
               )}
             >
               {paymentStatusLabel(group.paymentStatus)}
             </span>
             {group.invoice?.status === 'overdue' ? (
-              <span className="inline-flex rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive">
+              <span className="inline-flex rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[12px] font-semibold text-destructive">
                 Overdue
               </span>
             ) : null}
             {showLockCountdown ? (
               <span
                 className={cn(
-                  'inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
+                  'inline-flex rounded-full border px-2.5 py-0.5 text-[12px] font-semibold',
                   group.daysUntilAccountLock! <= 3
                     ? 'border-destructive/30 bg-destructive/10 text-destructive'
                     : 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200',
@@ -546,7 +546,7 @@ function Level2MonthGroupCard({
               </span>
             ) : null}
             {billingBlocked && group.paymentStatus === 'unpaid' ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive">
+              <span className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[12px] font-semibold text-destructive">
                 <Lock className="size-3" />
                 Account locked
               </span>

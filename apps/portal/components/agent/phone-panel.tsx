@@ -242,7 +242,7 @@ export function PhonePanel({
                 if (groupContacts.length === 0) return null;
                 return (
                   <li key={group}>
-                    <p className="bg-card/95 text-muted-foreground sticky top-0 px-3 py-1.5 text-[10px] font-semibold tracking-wide uppercase">
+                    <p className="bg-card/95 text-muted-foreground sticky top-0 px-3 py-1.5 text-[11px] font-semibold tracking-wide uppercase">
                       {AGENT_PHONEBOOK_GROUP_LABEL[group]}
                     </p>
                     <ul>
@@ -281,7 +281,7 @@ export function PhonePanel({
           {amProperty ? (
             <div className="border-border/60 flex items-center justify-between gap-2 rounded-xl border px-3 py-2">
               <div className="min-w-0">
-                <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
                   Property
                 </p>
                 <p className="truncate text-sm font-medium">

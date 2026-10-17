@@ -34,7 +34,7 @@ export function RoutineAuditTrail({ entries }: { entries: ServerRoutineScheduleA
       <div className="flex items-center gap-2 px-4 py-3">
         <History className="text-muted-foreground size-4" />
         <h3 className="text-sm font-semibold">Audit trail</h3>
-        <span className="text-muted-foreground ml-auto text-[11px]">
+        <span className="text-muted-foreground ml-auto text-[12px]">
           {entries.length} change{entries.length === 1 ? '' : 's'}
         </span>
       </div>

@@ -137,14 +137,14 @@ export function LeasingContractDialog({
             <Label className="text-muted-foreground text-xs font-medium">Special conditions</Label>
             <ul className="mt-2 space-y-1.5">
               {contract.specialConditions.length === 0 ? (
-                <li className="border-border text-muted-foreground rounded-md border border-dashed px-3 py-2 text-[12px]">
+                <li className="border-border text-muted-foreground rounded-md border border-dashed px-3 py-2 text-[13px]">
                   No special conditions.
                 </li>
               ) : (
                 contract.specialConditions.map((c) => (
                   <li
                     key={c.id}
-                    className="border-border bg-secondary/20 rounded-md border px-3 py-2 text-[12.5px]"
+                    className="border-border bg-secondary/20 rounded-md border px-3 py-2 text-[13.5px]"
                   >
                     {c.text}
                   </li>

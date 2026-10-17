@@ -142,7 +142,7 @@ export function AgentSidebarStatus({
           <span className="text-muted-foreground mx-1">·</span>
           <span>{time}</span>
         </p>
-        <div className="text-muted-foreground mt-0.5 flex min-w-0 items-center justify-end gap-1 text-[11px] leading-tight">
+        <div className="text-muted-foreground mt-0.5 flex min-w-0 items-center justify-end gap-1 text-[12px] leading-tight">
           {weatherLoading ? (
             <Loader2 className="size-3 shrink-0 animate-spin opacity-60" />
           ) : weather ? (
@@ -169,7 +169,7 @@ export function AgentSidebarStatus({
         className,
       )}
     >
-      <p className="text-foreground truncate text-[10px] font-medium leading-tight tabular-nums">
+      <p className="text-foreground truncate text-[11px] font-medium leading-tight tabular-nums">
         <Popover open={calendarOpen} onOpenChange={setCalendarOpen} modal={false}>
           <PopoverTrigger asChild>
             <button
@@ -202,7 +202,7 @@ export function AgentSidebarStatus({
         <span>{time}</span>
       </p>
 
-      <div className="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1 text-[10px] leading-tight">
+      <div className="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1 text-[11px] leading-tight">
         {weatherLoading ? (
           <Loader2 className="size-3 shrink-0 animate-spin opacity-60" />
         ) : weather ? (

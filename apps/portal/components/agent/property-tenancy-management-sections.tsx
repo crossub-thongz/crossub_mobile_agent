@@ -74,14 +74,14 @@ function DetailsSubsection({
   return (
     <section className="border-border/60 border-t pt-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h4 className="text-muted-foreground text-[10px] font-semibold">
+        <h4 className="text-muted-foreground text-[11px] font-semibold">
           {title}
         </h4>
         {onEdit ? (
           <button
             type="button"
             onClick={onEdit}
-            className="text-primary text-[10px] font-medium"
+            className="text-primary text-[11px] font-medium"
           >
             Edit
           </button>
@@ -118,14 +118,14 @@ function StatCell({
   return (
     <div className="rounded-lg border border-border/50 bg-muted/10 px-2.5 py-2">
       <div className="flex items-center justify-between gap-1">
-        <p className="text-muted-foreground text-[10px] font-medium">
+        <p className="text-muted-foreground text-[11px] font-medium">
           {label}
         </p>
         {onEdit ? (
           <button
             type="button"
             onClick={onEdit}
-            className="text-primary shrink-0 text-[10px] font-medium"
+            className="text-primary shrink-0 text-[11px] font-medium"
           >
             Edit
           </button>
@@ -151,8 +151,8 @@ function BondStatValue({
   return (
     <p className="flex min-w-0 items-baseline gap-1 whitespace-nowrap text-sm font-semibold leading-tight">
       <span className="shrink-0 tabular-nums">{amountLabel}</span>
-      <span className="text-muted-foreground shrink-0 text-[10px] font-normal">·</span>
-      <span className="text-primary min-w-0 truncate text-[10px] font-medium leading-none">
+      <span className="text-muted-foreground shrink-0 text-[11px] font-normal">·</span>
+      <span className="text-primary min-w-0 truncate text-[11px] font-medium leading-none">
         {bondIdLabel}
       </span>
     </p>
@@ -185,7 +185,7 @@ function NextRoutineStatValue({
         {date ? formatDate(date) : '—'}
       </p>
       {cadence ? (
-        <p className="text-muted-foreground mt-0.5 text-[10px] font-normal leading-snug">
+        <p className="text-muted-foreground mt-0.5 text-[11px] font-normal leading-snug">
           {cadence}
         </p>
       ) : null}
@@ -698,7 +698,7 @@ export function PropertyTenancyManagementSections({
           </div>
           {tenancyArchives.length > 0 ? (
             <div className="mt-2">
-              <label className="text-muted-foreground mb-1 block text-[10px] font-semibold">
+              <label className="text-muted-foreground mb-1 block text-[11px] font-semibold">
                 Tenant History
               </label>
               <select

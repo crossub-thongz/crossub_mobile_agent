@@ -42,7 +42,7 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
       {
         title: 'Find the right property',
         description:
-          'Search by address, suburb, tenant, or owner. Then use the chips — All, Occupied, Vacant, Needs attention, and Archived. Arrears appears when your agency has full management access.',
+          'Search by address, suburb, tenant, or owner. Use All Properties, Rent Arrears, and Leases to switch the list. Occupancy, needs attention, and archived live under More filters.',
       },
       {
         title: 'Preview, then open',
@@ -69,22 +69,22 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
       {
         title: 'All / Occupied / Vacant',
         description:
-          'All shows every live listing. Occupied is currently tenanted. Vacant is available to let. Counts on each chip are for the live list, not the search results.',
+          'These sit in More filters. All shows every listing in the current tab. Occupied is currently tenanted. Vacant is available to let.',
       },
       {
         title: 'Arrears',
         description:
-          'Full-management agencies only. Shows properties with outstanding rent, bills, or bond recorded on the portfolio. Open the property Financials tab to chase or record arrears.',
+          'Full-management agencies only. Rent Arrears lists properties with outstanding rent and shows the amount and how many days it is overdue. Chasing rent stays in the property, not on this list.',
       },
       {
         title: 'Needs attention',
         description:
-          'Properties that have at least one item waiting on you — quote approval, application decision, inspection follow-up, or similar. The red number on Tasks in the sidebar is the portfolio total of those items.',
+          'Inside More filters. Limits the list to properties that have at least one item waiting on you. Open Tasks for the work itself.',
       },
       {
         title: 'Archived filter',
         description:
-          'Shows properties you have archived off the live list. Restore from the row menu to bring one back. Permanent deletes never appear here.',
+          'Inside More filters. Shows properties you have archived off the live list. Restore from the row menu to bring one back. Permanent deletes never appear here.',
       },
       {
         title: 'Sort',
@@ -94,7 +94,7 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
       {
         title: 'List and Map',
         description:
-          'List is the table (property, tenancy, rent, lease expiry, status, open tasks). Map plots the same filtered set. Selecting a pin or row still drives the desktop preview.',
+          'List is the table (property, tenancy, rent, lease expiry, status). Map plots the same filtered set. Selecting a pin or row still drives the desktop preview.',
       },
       {
         title: 'Tenancy column',
@@ -102,9 +102,9 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
           'Shows the primary tenant. If there are co-tenants, the info icon lists the other names on hover. Vacant properties show as vacant instead of a tenant name.',
       },
       {
-        title: 'Status and Tasks columns',
+        title: 'Status and lease',
         description:
-          'Status is occupancy and health (including new, draft, arrears, or needs attention). Tasks summarises open maintenance, leasing, and inspection work on that address.',
+          'Lease expiry shows the fixed end date and days left. Periodic leases show Periodic and the date they started, without a warning colour. A fixed term that has rolled into periodic is shown as Periodic, not expired. Status is occupancy and health. Rent Arrears replaces status with the amount and overdue days.',
       },
       {
         title: 'Preview panel',

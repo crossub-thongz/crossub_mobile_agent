@@ -77,20 +77,20 @@ export function TaskProgressRail({
             </div>
             <p
               className={cn(
-                'mt-2 px-1 text-center text-[11px] font-medium leading-tight',
+                'mt-2 px-1 text-center text-[12px] font-medium leading-tight',
                 stage.state === 'current' ? current.text : 'text-muted-foreground',
               )}
             >
               {stage.label}
             </p>
             {stage.state === 'current' ? (
-              <span className={cn('mt-1 rounded-full px-2 py-0.5 text-[10px] font-semibold', current.pill)}>
+              <span className={cn('mt-1 rounded-full px-2 py-0.5 text-[11px] font-semibold', current.pill)}>
                 Current
               </span>
             ) : stage.dateLabel ? (
-              <span className="text-muted-foreground mt-1 text-[10px]">{stage.dateLabel}</span>
+              <span className="text-muted-foreground mt-1 text-[11px]">{stage.dateLabel}</span>
             ) : stage.state === 'pending' ? (
-              <span className="text-muted-foreground mt-1 text-[10px]">Pending</span>
+              <span className="text-muted-foreground mt-1 text-[11px]">Pending</span>
             ) : null}
           </div>
         ))}

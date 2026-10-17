@@ -83,7 +83,7 @@ export function AgentNotificationBell({
           {unreadCount > 0 ? (
             <span
               className={cn(
-                'bg-primary absolute top-1 right-1 flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white ring-2 ring-background',
+                'bg-primary absolute top-1 right-1 flex min-w-[18px] items-center justify-center rounded-full px-1 text-[11px] font-bold text-white ring-2 ring-background',
                 badgeClassName,
               )}
             >
@@ -161,7 +161,7 @@ export function AgentNotificationBell({
                         <span className="text-muted-foreground mt-0.5 line-clamp-2 block text-xs leading-relaxed">
                           {display.body}
                         </span>
-                        <span className="text-muted-foreground mt-1 block text-[10px]">
+                        <span className="text-muted-foreground mt-1 block text-[11px]">
                           {formatRelative(notification.at)}
                         </span>
                       </span>

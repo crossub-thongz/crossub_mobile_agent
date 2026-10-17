@@ -31,7 +31,7 @@ export function DocumentViewer({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">{title}</p>
           <p className="text-muted-foreground text-xs">{propertyAddress}</p>
-          <p className="text-muted-foreground mt-1 text-[11px] capitalize">
+          <p className="text-muted-foreground mt-1 text-[12px] capitalize">
             {category.replace('_', ' ')}
           </p>
         </div>

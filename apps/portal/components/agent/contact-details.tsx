@@ -42,7 +42,7 @@ function ContactBlock({
         highlighted ? 'border-primary bg-primary/5 ring-1 ring-primary/30' : 'bg-secondary/30'
       }`}
     >
-      <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+      <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
         {label}
       </dt>
       <dd className="mt-0.5 font-medium">{name}</dd>
@@ -69,7 +69,7 @@ function ContactBlock({
         </dd>
       ) : (
         !vacant && (
-          <dd className="text-muted-foreground mt-1 text-[11px]">No contact on file</dd>
+          <dd className="text-muted-foreground mt-1 text-[12px]">No contact on file</dd>
         )
       )}
     </div>

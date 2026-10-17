@@ -22,7 +22,7 @@ export function PropertyProfileIncludedUsage({
         className,
       )}
     >
-      <p className="text-muted-foreground text-[10px] font-medium">
+      <p className="text-muted-foreground text-[11px] font-medium">
         Included Usage
         <span className="font-normal"> · {usage.calendarYear}</span>
       </p>

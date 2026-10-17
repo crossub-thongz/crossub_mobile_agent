@@ -803,7 +803,7 @@ export default function PropertyDetailPage() {
                 >
                   <ListTodo className="size-4 shrink-0" />
                   <span className="text-xs font-bold leading-none">Reminder</span>
-                  <span className="bg-amber-600 min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold text-white tabular-nums">
+                  <span className="bg-amber-600 min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-center text-[11px] font-bold text-white tabular-nums">
                     {needActions.length}
                   </span>
                 </button>

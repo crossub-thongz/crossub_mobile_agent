@@ -115,7 +115,7 @@ export function PropertyLeasingWorkflowActions({
         </div>
       ) : (
         <div className="rounded-xl border border-teal-500/25 bg-gradient-to-br from-teal-500/[0.06] via-card to-card p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
             Actions
           </p>
           <p className="text-muted-foreground mt-1 text-xs">{description}</p>

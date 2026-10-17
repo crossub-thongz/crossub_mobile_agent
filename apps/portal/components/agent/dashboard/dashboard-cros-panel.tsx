@@ -31,7 +31,7 @@ export function DashboardNeedsAttentionPanel({ onOpenItem }: { onOpenItem?: () =
           <div className="flex min-w-0 items-center gap-2">
             <h2 className="truncate text-sm font-semibold tracking-tight">Needs Your Attention</h2>
             {needActionItems.length > 0 ? (
-              <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[11px] font-semibold text-white tabular-nums">
+              <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[12px] font-semibold text-white tabular-nums">
                 {needActionItems.length}
               </span>
             ) : null}
@@ -168,7 +168,7 @@ export function DashboardAskCrosPanel({
             <Send className="size-4" />
           </button>
         </form>
-        <p className="text-muted-foreground mt-2 text-center text-[10px]">
+        <p className="text-muted-foreground mt-2 text-center text-[11px]">
           {CROS_ASSISTANT_NAME} Can Make Mistakes. Check Important Info.
         </p>
       </div>

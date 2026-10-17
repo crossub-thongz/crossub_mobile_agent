@@ -42,12 +42,12 @@ function CollapsibleHistoryRow({
 
 function rentStatusClass(status: RentPaymentRecord['status']) {
   if (status === 'paid') {
-    return 'rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary';
+    return 'rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary';
   }
   if (status === 'late') {
-    return 'rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400';
+    return 'rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400';
   }
-  return 'rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-semibold text-destructive';
+  return 'rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold text-destructive';
 }
 
 export function LeaseHistorySection({
@@ -132,8 +132,8 @@ export function LeaseDocumentList({ documents }: { documents: LeaseDocumentItem[
               <span
                 className={
                   doc.status === 'available'
-                    ? 'text-muted-foreground shrink-0 text-[10px] font-medium capitalize'
-                    : 'text-muted-foreground shrink-0 text-[10px] font-medium'
+                    ? 'text-muted-foreground shrink-0 text-[11px] font-medium capitalize'
+                    : 'text-muted-foreground shrink-0 text-[11px] font-medium'
                 }
               >
                 {doc.status === 'available' ? 'On file' : 'Pending'}
@@ -198,7 +198,7 @@ export function LeaseHistoryList({
           >
             <div className="space-y-2">
               {item.date ? (
-                <p className="text-muted-foreground text-[10px]">{formatDateTime(item.date)}</p>
+                <p className="text-muted-foreground text-[11px]">{formatDateTime(item.date)}</p>
               ) : null}
               <div className="flex flex-wrap items-center gap-3">
                 <Link
@@ -258,7 +258,7 @@ export function RentHistoryList({ payments }: { payments: RentPaymentRecord[] })
             <p className="text-muted-foreground text-xs">
               {p.reference ?? 'Rent payment'}
             </p>
-            <p className="text-muted-foreground text-[10px]">{formatDateTime(p.at)}</p>
+            <p className="text-muted-foreground text-[11px]">{formatDateTime(p.at)}</p>
           </div>
         </CollapsibleHistoryRow>
       ))}

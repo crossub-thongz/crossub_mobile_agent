@@ -1,36 +1,33 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ArrowRight,
+  ChartColumn,
   Eye,
   EyeOff,
+  House,
   Loader2,
   Lock,
   Mail,
+  Users,
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
-import { useLayoutEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
-import { CrossubLogo } from '@/components/brand/crossub-logo';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { zodResolver } from '@hookform/resolvers/zod';
-
+import { LoggingInScreen } from '@/components/auth/logging-in-screen';
 import { useAuth } from '@/components/providers/auth-provider';
-import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { PASSWORD_MAX } from '@/constants/auth';
 import { ROUTES } from '@/constants/routes';
 import { ApiError, api } from '@/lib/api';
 import type { AuthUser } from '@/lib/auth-types';
 import { loginLocalAccount } from '@/lib/local-auth';
 import { postAuthDestination } from '@/lib/system-access-agreement';
-import { AuthScreen, authPanelClass } from '@/lib/auth-page';
-import { cn } from '@/lib/utils';
 
 /**
  * ⚠️ `password` deliberately carries NO `.min(PASSWORD_MIN)`. Signing in VERIFIES a password;
@@ -57,22 +54,36 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+const AGENT_GREEN = '#00bd85';
+
 export default function LoginPage() {
-  const { refresh, status, user } = useAuth();
-  const isV2 = useIsAgentUiV2();
+  const router = useRouter();
+  const { adoptUser, status, user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
+  const [loggingIn, setLoggingIn] = useState(false);
+  const enterStarted = useRef(false);
+
+  const beginEnterApp = useCallback(
+    (nextUser: AuthUser) => {
+      setLoggingIn(true);
+      router.push(
+        postAuthDestination(
+          nextUser,
+          ROUTES.DASHBOARD,
+          ROUTES.SYSTEM_ACCESS_AGREEMENT,
+          ROUTES.CHANGE_PASSWORD,
+        ),
+      );
+    },
+    [router],
+  );
 
   useLayoutEffect(() => {
-    if (status !== 'authed' || !user) return;
-    window.location.replace(
-      postAuthDestination(
-        user,
-        ROUTES.DASHBOARD,
-        ROUTES.SYSTEM_ACCESS_AGREEMENT,
-        ROUTES.CHANGE_PASSWORD,
-      ),
-    );
-  }, [status, user]);
+    if (enterStarted.current || status !== 'authed' || !user) return;
+    enterStarted.current = true;
+    beginEnterApp(user);
+  }, [beginEnterApp, status, user]);
 
   const {
     register,
@@ -85,24 +96,11 @@ export default function LoginPage() {
 
   const onSubmit = async (values: FormValues) => {
     let apiUnreachable = false;
+    setLoggingIn(true);
 
     try {
       const result = await api.post<{ user: AuthUser }>('/auth/login', values);
-      const authStatus = await refresh();
-      if (authStatus !== 'authed') {
-        toast.error(
-          'Sign-in succeeded but the session cookie was not saved. Clear site cookies for localhost and try again.',
-        );
-        return;
-      }
-      window.location.assign(
-        postAuthDestination(
-          result.user,
-          ROUTES.DASHBOARD,
-          ROUTES.SYSTEM_ACCESS_AGREEMENT,
-          ROUTES.CHANGE_PASSWORD,
-        ),
-      );
+      adoptUser(result.user);
       return;
     } catch (err) {
       if (err instanceof ApiError) {
@@ -111,6 +109,7 @@ export default function LoginPage() {
         } else if (err.status >= 500 || err.status === 0) {
           apiUnreachable = true;
         } else {
+          setLoggingIn(false);
           toast.error(`Sign in failed (${err.status}). Check API connection.`);
           return;
         }
@@ -121,11 +120,11 @@ export default function LoginPage() {
 
     const localUser = loginLocalAccount(values.email, values.password);
     if (localUser) {
-      await refresh();
-      window.location.assign(ROUTES.DASHBOARD);
+      adoptUser(localUser);
       return;
     }
 
+    setLoggingIn(false);
     if (apiUnreachable) {
       toast.error(
         'Cannot reach the CROSSUB API. Start crossub_web on port 3001 (pnpm dev:api), or use Register for a local-only account.',
@@ -137,116 +136,174 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthScreen isV2={isV2} className="py-0">
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
-      <div className="mb-8 flex flex-col items-center gap-2">
-        <CrossubLogo href="" size="lg" showTagline className="md:items-center" />
-        <p
-          className={cn(
-            'text-muted-foreground text-sm',
-            isV2 && 'text-[11px] font-medium uppercase tracking-wider',
-          )}
-        >
-          Agent portal
-        </p>
-      </div>
-
-      <div className={authPanelClass(isV2, 'max-w-md')}>
-        <div className={cn('mb-6 space-y-1', isV2 ? 'text-left' : 'text-center')}>
-          <h1 className={cn('text-xl font-semibold', isV2 && 'tracking-tight')}>Sign in</h1>
-          <p className="text-sm text-muted-foreground">
-            Use your CROSSUB account credentials
-          </p>
+    <div
+      className="relative flex min-h-[calc(100dvh-var(--env-banner-height,0px))] flex-col justify-center pt-6 pb-16 text-[#0D1836]"
+      style={{
+        backgroundColor: '#F6FCFC',
+        backgroundImage: 'url(/login/agent-bg.svg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      {loggingIn ? <LoggingInScreen /> : null}
+      <header className="mx-auto mb-2 w-full max-w-6xl px-5 sm:px-8 lg:-mt-4 lg:px-10">
+        <div className="flex items-center gap-2.5">
+          <Image src="/crossub-logo.png" alt="" width={36} height={36} priority className="size-9" />
+          <span className="text-[16px] font-bold tracking-[0.16em]">CROSSUB</span>
         </div>
+      </header>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <div className="relative">
-              <Mail className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@agency.com"
-                autoComplete="email"
-                className="pl-10"
-                {...register('email')}
-              />
-            </div>
-            {errors.email && (
-              <p className="text-xs text-destructive">{errors.email.message}</p>
-            )}
+      <main className="mx-auto mt-12 grid w-full max-w-6xl items-center gap-10 px-5 sm:px-8 lg:mt-16 lg:grid-cols-[minmax(0,1.05fr)_440px] lg:gap-16 lg:px-10">
+        <section className="max-w-xl">
+          <div className="flex items-center gap-3">
+            <span className="h-0.5 w-8 rounded-full" style={{ backgroundColor: AGENT_GREEN }} />
+            <p className="text-xs font-semibold tracking-[0.16em]" style={{ color: AGENT_GREEN }}>
+              AGENT PORTAL
+            </p>
           </div>
+          <h1 className="mt-5 text-4xl font-semibold tracking-tight text-[#0D1836] sm:text-5xl sm:leading-[1.05]">
+            Smarter property management
+          </h1>
+          <p className="mt-6 max-w-md text-base leading-7 text-[#52647C]">
+            Everything you need to manage properties, tenants and growth in one powerful platform.
+          </p>
+          <ul className="mt-10 space-y-7">
+            <Feature
+              icon={ChartColumn}
+              title="Streamline operations"
+              body="Save time with automated workflows and rent tracking."
+            />
+            <Feature
+              icon={Users}
+              title="Build stronger relationships"
+              body="Keep owners and tenants happier, all in one place."
+            />
+            <Feature
+              icon={House}
+              title="Grow your portfolio"
+              body="Powerful insights to help you scale with confidence."
+            />
+          </ul>
+        </section>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Lock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Enter your password"
-                autoComplete="current-password"
-                className="pl-10 pr-10"
-                {...register('password')}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? (
-                  <EyeOff className="size-4" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
-              </button>
+        <section className="w-full justify-self-end rounded-[22px] bg-white p-6 shadow-[0_18px_48px_rgba(13,24,54,0.10)] sm:p-8">
+          <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
+          <p className="mt-1 text-sm text-[#52647C]">Sign in to your agent account</p>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="text-sm font-medium">
+                Email address
+              </label>
+              <div className="relative">
+                <Mail className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8AA0B5]" />
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="you@company.com"
+                  autoComplete="email"
+                  className="h-12 w-full rounded-[9px] border border-[#CED9E4] bg-white pr-3 pl-10 text-sm outline-none placeholder:text-[#9AADC0] focus:border-[#00bd85]"
+                  {...register('email')}
+                />
+              </div>
+              {errors.email ? (
+                <p className="text-xs text-[#D45656]">{errors.email.message}</p>
+              ) : null}
             </div>
-            {errors.password && (
-              <p className="text-xs text-destructive">
-                {errors.password.message}
-              </p>
-            )}
-          </div>
 
-          <div className="flex justify-between text-sm">
-            <Link href={ROUTES.REGISTER} className="text-primary hover:underline">
-              First time? Register
-            </Link>
-            <Link
-              href={ROUTES.FORGOT_PASSWORD}
-              className="text-primary hover:underline"
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="text-sm font-medium">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8AA0B5]" />
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  className="h-12 w-full rounded-[9px] border border-[#CED9E4] bg-white pr-10 pl-10 text-sm outline-none placeholder:text-[#9AADC0] focus:border-[#00bd85]"
+                  {...register('password')}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-[#8AA0B5]"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+              {errors.password ? (
+                <p className="text-xs text-[#D45656]">{errors.password.message}</p>
+              ) : null}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <label className="inline-flex items-center gap-2 text-[#52647C]">
+                <input
+                  type="checkbox"
+                  checked={keepSignedIn}
+                  onChange={(event) => setKeepSignedIn(event.target.checked)}
+                  className="size-4 rounded border-[#CED9E4] accent-[#00bd85]"
+                />
+                Keep me signed in
+              </label>
+              <Link href={ROUTES.FORGOT_PASSWORD} className="font-medium" style={{ color: AGENT_GREEN }}>
+                Forgot password?
+              </Link>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[9px] text-sm font-semibold text-white disabled:opacity-70"
+              style={{ backgroundColor: AGENT_GREEN }}
             >
-              Forgot password?
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Sign in
+                  <ArrowRight className="size-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          <p className="mt-5 text-center text-sm text-[#52647C]">
+            First time here?{' '}
+            <Link href={ROUTES.REGISTER} className="font-semibold" style={{ color: AGENT_GREEN }}>
+              Create an agent account
             </Link>
-          </div>
+          </p>
+        </section>
+      </main>
+    </div>
+  );
+}
 
-          <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              <>
-                Sign in
-                <ArrowRight className="size-4" />
-              </>
-            )}
-          </Button>
-        </form>
-
-        <p className="text-muted-foreground mt-6 text-center text-xs">
-          First-time login?{' '}
-          <Link href={ROUTES.REGISTER} className="text-primary hover:underline">
-            Register here
-          </Link>
-          {' — '}contact the Leasing Team for registration details.
-        </p>
-      </div>
-    </AuthScreen>
+function Feature({
+  icon: Icon,
+  title,
+  body,
+}: {
+  icon: typeof House;
+  title: string;
+  body: string;
+}) {
+  return (
+    <li className="flex items-start gap-3">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#E2FAF1] text-[#00bd85]">
+        <Icon className="size-5" strokeWidth={1.75} />
+      </span>
+      <span>
+        <span className="block text-sm font-semibold">{title}</span>
+        <span className="mt-1.5 block text-sm leading-6 text-[#52647C]">{body}</span>
+      </span>
+    </li>
   );
 }

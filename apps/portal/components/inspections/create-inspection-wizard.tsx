@@ -1049,7 +1049,7 @@ export function CreateInspectionWizard({
                   )}
                 >
                   <p className="text-sm font-semibold">{option.label}</p>
-                  <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
+                  <p className="text-muted-foreground mt-1 text-[12px] leading-relaxed">
                     {option.description}
                   </p>
                 </button>
@@ -1340,11 +1340,11 @@ function OpenInspectionForm({
             ))}
           </div>
           {conductedBy === 'crossub' ? (
-            <p className="text-muted-foreground text-[11px]">
+            <p className="text-muted-foreground text-[12px]">
               The open-inspection fee is charged when you place this order. The amount is shown on the payment screen.
             </p>
           ) : conductedBy === 'agent' ? (
-            <p className="text-amber-700 dark:text-amber-400 text-[11px]">
+            <p className="text-amber-700 dark:text-amber-400 text-[12px]">
               {SELF_OPEN_INSPECTION_DISCLAIMER}
             </p>
           ) : null}
@@ -1383,7 +1383,7 @@ function OpenInspectionForm({
                 </Button>
               </div>
               {tenantMovedOut === false ? (
-                <p className="text-amber-700 dark:text-amber-400 text-[11px]">
+                <p className="text-amber-700 dark:text-amber-400 text-[12px]">
                   {conductedBy === 'crossub'
                     ? "The current tenant's details will appear on the job case for CROSSUB to contact them."
                     : 'You must notify the current tenant of the open inspection date and time yourself.'}
@@ -1450,7 +1450,7 @@ function OpenInspectionForm({
                   value={preferredAvailableFrom}
                   onChange={(e) => onPreferredAvailableFromChange(e.target.value)}
                 />
-                <p className="text-muted-foreground text-[11px]">
+                <p className="text-muted-foreground text-[12px]">
                   Must be at least {LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today (earliest{' '}
                   {minAvailableFrom}).
                 </p>
@@ -1470,11 +1470,11 @@ function OpenInspectionForm({
               onChange={(e) => onPreferredStartLocalChange(e.target.value)}
             />
             {conductedBy === 'crossub' ? (
-              <p className="text-muted-foreground mt-1 text-[11px]">
+              <p className="text-muted-foreground mt-1 text-[12px]">
                 {OPEN_PREFERRED_TIME_HINT}
               </p>
             ) : (
-              <p className="text-muted-foreground mt-1 text-[11px]">
+              <p className="text-muted-foreground mt-1 text-[12px]">
                 You set the viewing time. Any day of the week — Saturday is only required when
                 CROSSUB conducts.
               </p>
@@ -1493,7 +1493,7 @@ function OpenInspectionForm({
               onChange={(e) => onPreferredEndLocalChange(e.target.value)}
             />
             {conductedBy === 'agent' ? (
-              <p className="text-muted-foreground mt-1 text-[11px]">
+              <p className="text-muted-foreground mt-1 text-[12px]">
                 Defaults to one hour after the start if left blank.
               </p>
             ) : null}
@@ -1591,7 +1591,7 @@ function IngoingInspectionForm({
         account manager — the move-in date above stays, because it is a fact about the
         tenancy the agent arranged rather than a slot in our diary.
       */}
-      <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[11px] leading-relaxed">
+      <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[12px] leading-relaxed">
         {INSPECTION_TIME_REQUEST_HINT}
       </p>
       <Field label="Access instructions">
@@ -1648,7 +1648,7 @@ function RoutineInspectionForm({
         already chosen. The date and the inspector are CROSSUB's for the same reason they
         are on every other type.
       */}
-      <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[11px] leading-relaxed">
+      <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[12px] leading-relaxed">
         {INSPECTION_TIME_REQUEST_HINT}
       </p>
       <Field label={INSPECTION_TIME_REQUEST_NOTE_LABEL}>
@@ -1708,7 +1708,7 @@ function OutgoingInspectionForm({
           same decision: naming an inspector settled who would drive before anyone knew
           when the job would run.
         */}
-        <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[11px] leading-relaxed">
+        <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[12px] leading-relaxed">
           {INSPECTION_TIME_REQUEST_HINT}
         </p>
       </div>
@@ -1738,7 +1738,7 @@ function OutgoingInspectionForm({
         than choosing one, and CROSSUB inherited a booking nobody had actually weighed
         against the inspector's week.
       */}
-      <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[11px] leading-relaxed">
+      <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[12px] leading-relaxed">
         {INSPECTION_TIME_REQUEST_HINT}
       </p>
     </div>

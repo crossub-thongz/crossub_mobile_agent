@@ -33,16 +33,16 @@ export const TASK_LIST_COPY: Record<
   }
 > = {
   serviced: {
-    pageSubtitle: 'Track all work being handled by CROSSUB',
-    needActionLabel: 'Need my action',
-    needActionSublabel: 'Require your decision',
+    pageSubtitle: 'Track and manage all work across your portfolio',
+    needActionLabel: 'Needs My Action',
+    needActionSublabel: 'Agent needs to act',
     showCrosHandlingBucket: true,
-    ownWorkStatusLabel: 'Need your action',
+    ownWorkStatusLabel: 'Needs My Action',
     ownWorkStatusFallback: 'Approval required',
   },
   self_managed: {
     pageSubtitle: `Run all work across your portfolio, with ${CROS_ASSISTANT_NAME} assisting`,
-    needActionLabel: 'Need my action',
+    needActionLabel: 'Needs My Action',
     needActionSublabel: `Your work, ${CROS_ASSISTANT_NAME} assisting`,
     showCrosHandlingBucket: false,
     ownWorkStatusLabel: 'Your next step',

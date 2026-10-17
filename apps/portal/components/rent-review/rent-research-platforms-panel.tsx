@@ -28,7 +28,7 @@ const STATUS_META: Record<
 function FileTypeBadge({ type }: { type: 'jpg' | 'pdf' }) {
   const Icon = type === 'pdf' ? FileText : FileImage;
   return (
-    <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide">
+    <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide">
       <Icon className="size-3" />
       {type}
     </span>
@@ -84,7 +84,7 @@ function PlatformResearchRow({
             {index}. Research on {label}{' '}
             <span className="text-muted-foreground font-normal">({fileType})</span>
           </p>
-          <p className={cn('mt-1 inline-flex items-center gap-1 text-[11px] font-medium', meta.tone)}>
+          <p className={cn('mt-1 inline-flex items-center gap-1 text-[12px] font-medium', meta.tone)}>
             <Icon className={cn('size-3.5', loading && 'animate-spin')} />
             {meta.label}
           </p>
@@ -94,7 +94,7 @@ function PlatformResearchRow({
             href={platform.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary inline-flex items-center gap-1 text-[11px] font-medium hover:underline"
+            className="text-primary inline-flex items-center gap-1 text-[12px] font-medium hover:underline"
           >
             View source
             <ExternalLink className="size-3" />

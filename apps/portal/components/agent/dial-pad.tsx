@@ -113,9 +113,9 @@ export function DialPad({
               onClick={() => onDigit(digit)}
               className="group bg-muted/50 text-foreground hover:bg-muted flex h-[58px] flex-col items-center justify-center rounded-full transition-colors active:scale-95"
             >
-              <span className="text-[22px] leading-none font-normal">{digit}</span>
+              <span className="text-[23px] leading-none font-normal">{digit}</span>
               {letters ? (
-                <span className="text-muted-foreground mt-0.5 text-[9px] font-medium tracking-[0.2em]">
+                <span className="text-muted-foreground mt-0.5 text-[10px] font-medium tracking-[0.2em]">
                   {letters}
                 </span>
               ) : (

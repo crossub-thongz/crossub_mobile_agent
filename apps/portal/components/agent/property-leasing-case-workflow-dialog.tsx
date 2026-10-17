@@ -34,7 +34,7 @@ function LeasingCaseDialogSummary({
 
   return (
     <section className="mb-4 rounded-xl border bg-white p-3 md:mb-3 md:p-4 dark:bg-card">
-      <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+      <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
         {item.label}
       </p>
       <CaseAddressAssignedBar

@@ -56,7 +56,7 @@ export function ShellPrimaryNav({
 
   const baseClass =
     variant === 'tabbar'
-      ? 'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[9px] font-medium'
+      ? 'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium'
       : 'relative flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition';
 
   const idleClass =

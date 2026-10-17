@@ -79,7 +79,7 @@ function TabNeedActionBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
     <span
-      className="bg-destructive pointer-events-none absolute -top-1 -right-1 flex min-w-[1rem] items-center justify-center rounded-full px-0.5 text-[9px] font-bold leading-none text-white"
+      className="bg-destructive pointer-events-none absolute -top-1 -right-1 flex min-w-[1rem] items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none text-white"
       aria-hidden
     >
       {count > 99 ? '99+' : count}
@@ -132,7 +132,7 @@ function PropertyTabButton<T extends string>({
       {needActionCount > 0 ? (
         <span
           className={cn(
-            'rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
+            'rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
             isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-destructive/15 text-destructive',
           )}
           aria-hidden
@@ -225,7 +225,7 @@ function PropertySectionPicker<T extends string>({
                     }}
                     aria-current={selected ? 'page' : undefined}
                     className={cn(
-                      'flex w-full items-center justify-center gap-2 px-4 py-3.5 text-[15px] transition-colors active:bg-secondary/80',
+                      'flex w-full items-center justify-center gap-2 px-4 py-3.5 text-[16px] transition-colors active:bg-secondary/80',
                       index > 0 && 'border-t border-border/60',
                       selected ? 'font-semibold text-primary' : 'font-medium text-foreground',
                     )}
@@ -233,7 +233,7 @@ function PropertySectionPicker<T extends string>({
                     {selected ? <Check className="size-4 shrink-0" aria-hidden /> : null}
                     <span>{label}</span>
                     {count > 0 ? (
-                      <span className="bg-destructive rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white">
+                      <span className="bg-destructive rounded-full px-1.5 py-0.5 text-[11px] font-bold text-white">
                         {count > 99 ? '99+' : count}
                       </span>
                     ) : null}
@@ -246,7 +246,7 @@ function PropertySectionPicker<T extends string>({
         <button
           type="button"
           onClick={onClose}
-          className="animate-in slide-in-from-bottom-4 fade-in-0 mt-2 shrink-0 rounded-2xl bg-card py-3.5 text-center text-[15px] font-semibold shadow-lg duration-200 active:bg-secondary/80"
+          className="animate-in slide-in-from-bottom-4 fade-in-0 mt-2 shrink-0 rounded-2xl bg-card py-3.5 text-center text-[16px] font-semibold shadow-lg duration-200 active:bg-secondary/80"
         >
           Cancel
         </button>
@@ -307,7 +307,7 @@ function PropertyMobileSegmentBar<T extends string>({
         >
           Message
           {messageAlertCount > 0 ? (
-            <span className="bg-destructive absolute -top-0.5 right-2 flex min-w-[1rem] items-center justify-center rounded-full px-1 text-[9px] font-bold text-white">
+            <span className="bg-destructive absolute -top-0.5 right-2 flex min-w-[1rem] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white">
               {messageAlertCount > 99 ? '99+' : messageAlertCount}
             </span>
           ) : null}

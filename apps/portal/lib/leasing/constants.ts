@@ -128,7 +128,7 @@ export const LEASING_UI = {
   stepAccent: 'bg-violet-500/10 text-violet-800 dark:text-violet-300',
   ingoingBtn: 'bg-teal-600 text-white hover:bg-teal-700',
   ingoingTabGlow: 'shadow-sm',
-  sectionLabel: 'text-[10px] font-semibold uppercase tracking-wider text-muted-foreground',
+  sectionLabel: 'text-[11px] font-semibold uppercase tracking-wider text-muted-foreground',
   iconChip: 'rounded-lg bg-violet-500/10 p-2 text-violet-800 dark:text-violet-300',
   kpiDefault: 'border-border/80 bg-card',
   kpiDestructive: 'border-rose-500/30 bg-rose-500/10',

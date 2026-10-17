@@ -26,7 +26,7 @@ export function SettlementDeductionDialog({ caseData }: { caseData: TerminationC
               <div>
                 <p className="font-medium">{line.category}</p>
                 <p className="text-muted-foreground text-xs">{line.description}</p>
-                <p className="text-muted-foreground text-[10px] uppercase">{line.responsibility}</p>
+                <p className="text-muted-foreground text-[11px] uppercase">{line.responsibility}</p>
               </div>
               <span className="shrink-0 tabular-nums">{formatCurrency(line.amount)}</span>
             </li>

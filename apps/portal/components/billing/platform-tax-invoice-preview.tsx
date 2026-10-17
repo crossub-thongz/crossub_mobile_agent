@@ -122,7 +122,7 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
               height={40}
               className="size-10 rounded-sm object-cover"
             />
-            <p className="w-10 text-center text-[11px] font-bold leading-none tracking-wide text-[#004063]">
+            <p className="w-10 text-center text-[12px] font-bold leading-none tracking-wide text-[#004063]">
               CROSSUB
             </p>
           </div>
@@ -188,7 +188,7 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
                 </td>
               </tr>,
               ...group.lines.map((line) => (
-                <tr key={line.id} className="text-muted-foreground border-b align-top text-[11px]">
+                <tr key={line.id} className="text-muted-foreground border-b align-top text-[12px]">
                   <td className="px-2 py-1.5" />
                   <td className="px-2 py-1.5 pl-3">{serviceLabelFor(line)}</td>
                   <td className="px-2 py-1.5 whitespace-pre-wrap">{line.rentAud ?? ''}</td>
@@ -209,7 +209,7 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
       </div>
 
       {invoice.lines.some((line) => line.footnote) ? (
-        <ul className="text-muted-foreground space-y-0.5 text-[11px]">
+        <ul className="text-muted-foreground space-y-0.5 text-[12px]">
           {invoice.lines
             .filter((line) => line.footnote)
             .map((line) => (
@@ -223,7 +223,7 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
           <p>
             <span className="font-semibold">Due Date:</span> {formatAuDate(invoice.dueDate)}
           </p>
-          <p className="text-[11px] font-bold leading-snug break-words">
+          <p className="text-[12px] font-bold leading-snug break-words">
             All payments are processed securely via Stripe. Please ensure a valid
             payment method is added to your Agent Portal to allow payment to be
             processed.

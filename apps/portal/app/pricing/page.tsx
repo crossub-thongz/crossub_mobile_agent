@@ -183,7 +183,7 @@ export default function PricingPage() {
               >
                 <div className="relative flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">
+                    <p className="text-[12px] font-semibold uppercase tracking-widest text-primary">
                       Your account
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2.5">
@@ -201,7 +201,7 @@ export default function PricingPage() {
                     </div>
                   </div>
                   <div className="rounded-xl border border-primary/25 bg-background/70 px-3 py-2 text-right backdrop-blur-sm">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       How you pay
                     </p>
                     <p className="text-sm font-semibold text-foreground">

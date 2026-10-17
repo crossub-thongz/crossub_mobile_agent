@@ -95,8 +95,8 @@ function EvidenceRow({
       <div className="flex min-w-0 items-start gap-2.5">
         <AvailabilityMark available={available} />
         <div className="min-w-0">
-          <p className="text-[12px] font-medium text-foreground">{label}</p>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[13px] font-medium text-foreground">{label}</p>
+          <p className="text-[12px] text-muted-foreground">
             {available ? availableLabel : missingLabel}
           </p>
         </div>
@@ -140,7 +140,7 @@ export function LeasingKeyCollectionEvidencePanel({
                 type="button"
                 size="sm"
                 variant="outline"
-                className="h-7 gap-1 px-2 text-[11px]"
+                className="h-7 gap-1 px-2 text-[12px]"
                 onClick={() => setPhotosOpen(true)}
               >
                 <Camera className="size-3" />
@@ -151,7 +151,7 @@ export function LeasingKeyCollectionEvidencePanel({
                   key={`${url}-${index}`}
                   size="sm"
                   variant="outline"
-                  className="h-7 gap-1 px-2 text-[11px]"
+                  className="h-7 gap-1 px-2 text-[12px]"
                   asChild
                 >
                   <a
@@ -185,7 +185,7 @@ export function LeasingKeyCollectionEvidencePanel({
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 gap-1 px-2 text-[11px]"
+              className="h-7 gap-1 px-2 text-[12px]"
               onClick={() => setReportOpen(true)}
             >
               <ClipboardList className="size-3" />
@@ -217,10 +217,10 @@ export function LeasingKeyCollectionEvidencePanel({
                   className="aspect-[4/3] w-full object-cover"
                 />
                 <figcaption className="flex items-center justify-between gap-2 px-3 py-2">
-                  <span className="text-[11px] font-medium text-muted-foreground">
+                  <span className="text-[12px] font-medium text-muted-foreground">
                     Photo {index + 1}
                   </span>
-                  <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-[11px]" asChild>
+                  <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-[12px]" asChild>
                     <a
                       href={url}
                       download={photoFileName(url, index)}
@@ -260,7 +260,7 @@ export function LeasingKeyCollectionEvidencePanel({
                 )}
                 {report.tagNumber && (
                   <div className="rounded-lg border border-border/60 bg-secondary/20 px-3 py-2.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Tag number
                     </p>
                     <p className="mt-0.5 font-mono text-sm font-medium text-foreground">
@@ -271,7 +271,7 @@ export function LeasingKeyCollectionEvidencePanel({
                 <div className="overflow-hidden rounded-lg border border-border">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-border bg-secondary/30 text-[10px] uppercase tracking-wider text-muted-foreground">
+                      <tr className="border-b border-border bg-secondary/30 text-[11px] uppercase tracking-wider text-muted-foreground">
                         <th className="px-3 py-2 font-semibold">Item</th>
                         <th className="px-3 py-2 text-right font-semibold">Qty</th>
                       </tr>

@@ -147,7 +147,7 @@ export function AgentFaqSectionList({
                 {section.title}
                 <span
                   className={cn(
-                    'rounded-full px-1.5 py-0.5 text-[10px] tabular-nums',
+                    'rounded-full px-1.5 py-0.5 text-[11px] tabular-nums',
                     active ? 'bg-primary/15' : 'bg-secondary',
                   )}
                 >
@@ -183,12 +183,12 @@ export function AgentFaqSectionList({
                   <Icon className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className={cn('text-[11px] font-semibold tracking-wider uppercase', meta.accent)}>
+                  <p className={cn('text-[12px] font-semibold tracking-wider uppercase', meta.accent)}>
                     Section {sectionIndex + 1}
                   </p>
                   <h2 className="truncate text-base font-semibold tracking-tight">{section.title}</h2>
                 </div>
-                <span className="text-muted-foreground bg-secondary/80 rounded-full px-2.5 py-1 text-[11px] font-medium tabular-nums">
+                <span className="text-muted-foreground bg-secondary/80 rounded-full px-2.5 py-1 text-[12px] font-medium tabular-nums">
                   {section.items.length} Q&amp;A
                 </span>
               </div>
@@ -200,7 +200,7 @@ export function AgentFaqSectionList({
                     className="faq-details group rounded-xl transition-colors open:bg-primary/[0.04]"
                   >
                     <summary className="faq-summary flex cursor-pointer list-none items-start gap-3 rounded-xl px-3 py-3.5 text-sm font-medium transition-colors hover:bg-secondary/60 [&::-webkit-details-marker]:hidden">
-                      <span className="bg-secondary text-muted-foreground group-open:bg-primary/15 group-open:text-primary mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold tabular-nums transition-colors">
+                      <span className="bg-secondary text-muted-foreground group-open:bg-primary/15 group-open:text-primary mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg text-[12px] font-semibold tabular-nums transition-colors">
                         {itemIndex + 1}
                       </span>
                       <span className="min-w-0 flex-1 pt-0.5 leading-snug">{item.question}</span>

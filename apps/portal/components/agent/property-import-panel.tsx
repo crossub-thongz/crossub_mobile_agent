@@ -47,7 +47,7 @@ export function PropertyImportPanel({ onImport }: PropertyImportPanelProps) {
           <p className="text-sm font-semibold">One-click import</p>
           <p className="text-muted-foreground text-xs">
             Upload a PropertyMe or PropertyTree export folder (or multi-select files). Include{' '}
-            <code className="text-[10px]">manifest.json</code> when available. Documents auto-map
+            <code className="text-[11px]">manifest.json</code> when available. Documents auto-map
             to the checklist and fields pre-fill.
           </p>
         </div>

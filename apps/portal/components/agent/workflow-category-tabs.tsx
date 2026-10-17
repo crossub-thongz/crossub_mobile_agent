@@ -44,7 +44,7 @@ export function WorkflowCategoryTabs({
             {showCount ? (
               <span
                 className={cn(
-                  'inline-flex min-w-[1.125rem] items-center justify-center rounded-full px-1 text-[10px] font-semibold',
+                  'inline-flex min-w-[1.125rem] items-center justify-center rounded-full px-1 text-[11px] font-semibold',
                   active
                     ? 'bg-primary-foreground/20 text-primary-foreground'
                     : 'bg-muted text-muted-foreground',

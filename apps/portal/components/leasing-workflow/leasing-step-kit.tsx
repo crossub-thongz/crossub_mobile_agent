@@ -40,9 +40,9 @@ export function StepCard({
             <Icon className="size-4" />
           </span>
           <div className="min-w-0">
-            <h3 className="truncate text-[13px] font-semibold">{title}</h3>
+            <h3 className="truncate text-[14px] font-semibold">{title}</h3>
             {description ? (
-              <p className="text-muted-foreground mt-0.5 text-[11.5px]">{description}</p>
+              <p className="text-muted-foreground mt-0.5 text-[12.5px]">{description}</p>
             ) : null}
           </div>
         </div>
@@ -67,8 +67,8 @@ export function StepFact({
 }) {
   return (
     <div className={cn('min-w-0', className)}>
-      <p className="text-muted-foreground text-[10px] uppercase tracking-wider">{label}</p>
-      <p className="mt-0.5 truncate text-[12.5px] font-medium tabular-nums">{value}</p>
+      <p className="text-muted-foreground text-[11px] uppercase tracking-wider">{label}</p>
+      <p className="mt-0.5 truncate text-[13.5px] font-medium tabular-nums">{value}</p>
     </div>
   );
 }
@@ -85,7 +85,7 @@ export function BoolStatus({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 text-[12px] font-medium',
+        'inline-flex items-center gap-1.5 text-[13px] font-medium',
         done ? LEASING_PILL_TEXT.emerald : 'text-muted-foreground',
       )}
     >

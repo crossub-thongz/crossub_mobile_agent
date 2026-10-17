@@ -189,7 +189,7 @@ export function PropertyChatDialog({
               >
                 <MessageSquareText className="size-4" />
                 App Messages
-                <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-[10px] font-semibold">
+                <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-[11px] font-semibold">
                   {appMessages.length}
                 </span>
               </button>
@@ -205,7 +205,7 @@ export function PropertyChatDialog({
               >
                 <Mail className="size-4" />
                 Email
-                <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-[10px] font-semibold">
+                <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-[11px] font-semibold">
                   {emailMessages.length}
                 </span>
               </button>
@@ -255,7 +255,7 @@ export function PropertyChatDialog({
                             <p className="line-clamp-3 text-sm font-semibold leading-snug">
                               {item.title}
                             </p>
-                            <p className="text-muted-foreground mt-1.5 text-[10px] tabular-nums">
+                            <p className="text-muted-foreground mt-1.5 text-[11px] tabular-nums">
                               {formatDateTime(item.msg.at)}
                             </p>
                           </button>
@@ -267,7 +267,7 @@ export function PropertyChatDialog({
                   <div className="min-w-0 flex-1 overflow-y-auto p-4">
                     {selectedEmail ? (
                       <div className="space-y-3">
-                        <p className="text-muted-foreground text-[11px]">
+                        <p className="text-muted-foreground text-[12px]">
                           {selectedEmail.msg.from} · {formatDateTime(selectedEmail.msg.at)}
                         </p>
                         <div className="rounded-lg border bg-card/40 p-3 text-sm leading-relaxed">

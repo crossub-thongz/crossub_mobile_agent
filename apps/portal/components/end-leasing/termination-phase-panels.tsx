@@ -186,7 +186,7 @@ function PhaseExitCleaning({ caseData }: { caseData: TerminationCaseDetail }) {
     >
       <div className="space-y-3">
         <div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-wider">
+          <p className="text-muted-foreground text-[11px] uppercase tracking-wider">
             Move-out services
           </p>
           <select
@@ -201,7 +201,7 @@ function PhaseExitCleaning({ caseData }: { caseData: TerminationCaseDetail }) {
               </option>
             ))}
           </select>
-          <p className="text-muted-foreground mt-1 text-[11px]">
+          <p className="text-muted-foreground mt-1 text-[12px]">
             Whether the tenant books end-of-lease cleaning through CROSSUB or arranges their own.
           </p>
         </div>
@@ -281,12 +281,12 @@ function PhaseKeyReturn({ caseData }: { caseData: TerminationCaseDetail }) {
           />
           {vacateChangeReason ? (
             <div className="col-span-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-muted-foreground text-[10px] uppercase tracking-wider">
+              <p className="text-muted-foreground text-[11px] uppercase tracking-wider">
                 Vacate date change reason
               </p>
-              <p className="mt-1 text-[12.5px] leading-snug">{vacateChangeReason}</p>
+              <p className="mt-1 text-[13.5px] leading-snug">{vacateChangeReason}</p>
               {caseData.vacateDateChangedAt ? (
-                <p className="text-muted-foreground mt-1 text-[11px]">
+                <p className="text-muted-foreground mt-1 text-[12px]">
                   Updated {formatDateTime(caseData.vacateDateChangedAt)}
                   {caseData.vacateDateChangedBy
                     ? ` · ${caseData.vacateDateChangedBy === 'tenant' ? 'Tenant' : 'Agent'}`
@@ -609,7 +609,7 @@ export function TerminationPhaseTabs({
             key={stage}
             type="button"
             onClick={() => onStageChange(stage)}
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium ${
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-medium ${
               active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card'
             }`}
           >

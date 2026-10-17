@@ -57,11 +57,11 @@ export function LeasingOnboardingSummaryPanel({ detail }: { detail: LeasingPrope
             <UserCheck className="text-muted-foreground size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
               Confirmed tenant
             </p>
             <p className="mt-0.5 text-sm font-semibold">{tenant.applicant}</p>
-            <div className="text-muted-foreground mt-2 space-y-1 text-[11.5px]">
+            <div className="text-muted-foreground mt-2 space-y-1 text-[12.5px]">
               {tenant.email ? (
                 <p className="flex items-center gap-1.5">
                   <Mail className="size-3.5 shrink-0" />
@@ -80,19 +80,19 @@ export function LeasingOnboardingSummaryPanel({ detail }: { detail: LeasingPrope
 
         <dl className="mt-4 grid grid-cols-3 gap-3 text-sm">
           <div>
-            <dt className="text-muted-foreground text-[10px] uppercase tracking-wide">Rent / week</dt>
+            <dt className="text-muted-foreground text-[11px] uppercase tracking-wide">Rent / week</dt>
             <dd className="mt-0.5 font-medium tabular-nums">
               {lease.weeklyRent != null ? `${formatCurrency(lease.weeklyRent)}/wk` : '—'}
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] uppercase tracking-wide">Lease start</dt>
+            <dt className="text-muted-foreground text-[11px] uppercase tracking-wide">Lease start</dt>
             <dd className="mt-0.5 font-medium">
               {lease.startDate ? formatDate(lease.startDate) : '—'}
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] uppercase tracking-wide">Lease term</dt>
+            <dt className="text-muted-foreground text-[11px] uppercase tracking-wide">Lease term</dt>
             <dd className="mt-0.5 font-medium">{lease.leaseTerm ?? '—'}</dd>
           </div>
         </dl>
@@ -153,7 +153,7 @@ export function LeasingOnboardingEmailAuditPanel({ detail }: { detail: LeasingPr
           aria-expanded={auditExpanded}
         >
           <span className="text-sm font-medium">Audit</span>
-          <span className="text-muted-foreground flex items-center gap-2 text-[11px]">
+          <span className="text-muted-foreground flex items-center gap-2 text-[12px]">
             {auditEntries.length} event{auditEntries.length === 1 ? '' : 's'}
             <ChevronDown
               className={cn('size-4 transition-transform', auditExpanded && 'rotate-180')}
@@ -185,7 +185,7 @@ function StatusCard({ title, value }: { title: string; value: string }) {
   const paid = value.startsWith('Paid');
   return (
     <div className="rounded-xl border bg-card px-4 py-3">
-      <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">{title}</p>
+      <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">{title}</p>
       <p
         className={cn(
           'mt-1 text-sm font-medium',

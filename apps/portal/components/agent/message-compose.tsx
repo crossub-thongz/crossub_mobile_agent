@@ -121,7 +121,7 @@ export function MessageCompose({
   return (
     <div className="relative space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-muted-foreground text-[10px]">
+        <p className="text-muted-foreground text-[11px]">
           Type <span className="font-medium">@</span> to tag tenant, or
           CROSSUB
         </p>

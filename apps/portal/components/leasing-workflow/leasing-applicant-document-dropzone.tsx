@@ -101,15 +101,15 @@ export function LeasingApplicantDocumentDropzone({
         >
           <Upload className={cn('text-muted-foreground', compact ? 'size-3.5' : 'size-4')} />
         </div>
-        <p className={cn('mt-2 font-medium', compact ? 'text-[11px]' : 'text-sm')}>{label}</p>
-        <p className={cn('text-muted-foreground mt-0.5', compact ? 'text-[10px]' : 'text-xs')}>
+        <p className={cn('mt-2 font-medium', compact ? 'text-[12px]' : 'text-sm')}>{label}</p>
+        <p className={cn('text-muted-foreground mt-0.5', compact ? 'text-[11px]' : 'text-xs')}>
           {description}
         </p>
         <Button
           type="button"
           size="sm"
           variant="outline"
-          className={cn('pointer-events-none mt-3', compact ? 'h-7 text-[10px]' : 'h-8 text-xs')}
+          className={cn('pointer-events-none mt-3', compact ? 'h-7 text-[11px]' : 'h-8 text-xs')}
           tabIndex={-1}
         >
           Browse files
@@ -134,7 +134,7 @@ export function LeasingApplicantDocumentDropzone({
           {files.map((file, index) => (
             <li
               key={`${file.name}-${file.size}-${index}`}
-              className="bg-muted/30 flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[11px]"
+              className="bg-muted/30 flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[12px]"
             >
               <span className="flex min-w-0 items-center gap-1.5">
                 <FileUp className="text-muted-foreground size-3.5 shrink-0" />

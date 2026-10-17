@@ -104,7 +104,7 @@ export function LeasingApplicantOrderCard({
         <div className="min-w-0 flex-1 space-y-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <p className="truncate text-[13px] font-semibold">{applicantOrderTitle(app.applicant)}</p>
+              <p className="truncate text-[14px] font-semibold">{applicantOrderTitle(app.applicant)}</p>
               {app.aiScoreLevel ? (
                 <LeasingToneBadge
                   tone={AI_TONE[app.aiScoreLevel]}
@@ -123,7 +123,7 @@ export function LeasingApplicantOrderCard({
                 <LeasingToneBadge tone={LEASING_TONE.INFO} label="Sent for approval" size="xs" />
               ) : null}
             </div>
-            <p className="text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px]">
+            <p className="text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[12.5px]">
               {typeof app.annualIncome === 'number' ? (
                 <span className="tabular-nums">{formatCurrency(app.annualIncome)}/yr</span>
               ) : null}
@@ -135,7 +135,7 @@ export function LeasingApplicantOrderCard({
             {app.aiAdvice ? (
               <p
                 className={cn(
-                  'mt-1.5 flex items-start gap-1.5 rounded-md px-2.5 py-1.5 text-[11.5px]',
+                  'mt-1.5 flex items-start gap-1.5 rounded-md px-2.5 py-1.5 text-[12.5px]',
                   LEASING_UI.callout,
                 )}
               >
@@ -147,7 +147,7 @@ export function LeasingApplicantOrderCard({
 
           <div className="rounded-lg border bg-muted/10 p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Documents ({documents.length})
               </p>
               {!readOnly ? (
@@ -155,7 +155,7 @@ export function LeasingApplicantOrderCard({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  className="h-7 px-2 text-[10px]"
+                  className="h-7 px-2 text-[11px]"
                   onClick={() => setShowSupplementary((value) => !value)}
                 >
                   {showSupplementary ? 'Cancel' : 'Add supplementary'}
@@ -164,7 +164,7 @@ export function LeasingApplicantOrderCard({
             </div>
 
             {documents.length === 0 ? (
-              <p className="text-muted-foreground mt-2 text-[11px]">No documents on this order yet.</p>
+              <p className="text-muted-foreground mt-2 text-[12px]">No documents on this order yet.</p>
             ) : (
               <ul className="mt-2 space-y-1.5">
                 {documents.map((doc) => (
@@ -173,7 +173,7 @@ export function LeasingApplicantOrderCard({
                       href={doc.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="hover:bg-muted/40 flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 text-[11px]"
+                      className="hover:bg-muted/40 flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 text-[12px]"
                     >
                       <FileText className="text-muted-foreground size-3.5 shrink-0" />
                       <span className="min-w-0 flex-1 truncate">{doc.fileName}</span>

@@ -57,7 +57,7 @@ export function AgentPaymentHistoryList({
                     <p className="text-sm font-semibold">{formatDateTime(payment.paidAt)}</p>
                     <span
                       className={cn(
-                        'inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                        'inline-flex rounded-full border px-2 py-0.5 text-[12px] font-medium',
                         STATUS_TONE[payment.status] ?? 'border-border text-muted-foreground',
                       )}
                     >

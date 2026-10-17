@@ -112,9 +112,9 @@ export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
     <>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button type="button" className="rounded-xl" data-tour="tasks-new">
+          <Button type="button" className="rounded-full px-4" data-tour="tasks-new">
             <Plus className="size-4" />
-            New task
+            New Task
             <ChevronDown className="size-4" />
           </Button>
         </PopoverTrigger>
@@ -125,7 +125,7 @@ export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
                 key={group.tab}
                 className={cn(groupIndex > 0 && 'border-border/60 mt-2 border-t pt-2')}
               >
-                <p className="text-muted-foreground px-2 py-1 text-[10px] font-semibold uppercase tracking-wide">
+                <p className="text-muted-foreground px-2 py-1 text-[11px] font-semibold uppercase tracking-wide">
                   {group.title}
                 </p>
                 <ul className="space-y-0.5">

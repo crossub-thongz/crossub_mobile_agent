@@ -560,7 +560,7 @@ export function PropertyTenancyEditDialog({
                 </p>
               ) : null}
 
-              <p className="text-muted-foreground pt-1 text-[11px] font-semibold uppercase tracking-wide">
+              <p className="text-muted-foreground pt-1 text-[12px] font-semibold uppercase tracking-wide">
                 {activeIsPrimary
                   ? 'Primary tenant'
                   : `Tenant ${editIndex + 1} of ${pageCount}`}

@@ -118,7 +118,7 @@ export function MaintenanceReviewEvidencePanel({
   return (
     <div className="space-y-3">
       <section className="rounded-xl border bg-card p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Problem description
         </p>
         {issueType ? <p className="mt-2 text-sm font-semibold">{issueType}</p> : null}
@@ -134,7 +134,7 @@ export function MaintenanceReviewEvidencePanel({
           onClick={() => setExpanded((open) => !open)}
         >
           <span className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Photo / video uploaded
             </p>
             <p className="text-muted-foreground mt-1 text-xs tabular-nums">
@@ -152,10 +152,10 @@ export function MaintenanceReviewEvidencePanel({
         {expanded ? (
           <div className="mt-3 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Attachments
               </p>
-              <span className="text-muted-foreground text-[10px] tabular-nums">
+              <span className="text-muted-foreground text-[11px] tabular-nums">
                 {evidenceAttachments.length}/{MAINTENANCE_MAX_INITIAL_EVIDENCE_UPLOADS}
               </span>
             </div>
@@ -220,14 +220,14 @@ export function MaintenanceReviewEvidencePanel({
                         ) : isVideo ? (
                           <div className="flex size-full flex-col items-center justify-center gap-1 px-1">
                             <Play className="text-muted-foreground size-5" />
-                            <span className="text-muted-foreground max-w-full truncate text-[9px]">
+                            <span className="text-muted-foreground max-w-full truncate text-[10px]">
                               {att.fileName}
                             </span>
                           </div>
                         ) : (
                           <div className="flex size-full flex-col items-center justify-center gap-1 px-1">
                             <FileText className="text-muted-foreground/50 size-5" />
-                            <span className="text-muted-foreground max-w-full truncate text-[9px]">
+                            <span className="text-muted-foreground max-w-full truncate text-[10px]">
                               {att.fileName}
                             </span>
                           </div>

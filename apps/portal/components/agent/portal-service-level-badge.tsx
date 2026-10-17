@@ -41,8 +41,8 @@ export function PortalServiceLevelBadge({
     <span
       className={cn(
         'inline-flex items-center rounded-full border font-semibold tracking-wide',
-        size === 'xs' && 'px-2 py-0.5 text-[10px]',
-        size === 'sm' && 'px-2.5 py-0.5 text-[11px]',
+        size === 'xs' && 'px-2 py-0.5 text-[11px]',
+        size === 'sm' && 'px-2.5 py-0.5 text-[12px]',
         size === 'md' && 'px-3 py-1 text-xs',
         LEVEL_STYLES[resolved],
         className,

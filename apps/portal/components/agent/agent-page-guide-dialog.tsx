@@ -58,7 +58,7 @@ export function AgentPageGuideDialog({
           <div className="flex items-start gap-3">
             <CrosAssistantLogoBadge size="lg" className="mt-0.5 shrink-0" />
             <DialogHeader className="min-w-0 flex-1 gap-1 text-left">
-              <p className="text-primary text-[10px] font-semibold uppercase tracking-[0.2em]">
+              <p className="text-primary text-[11px] font-semibold uppercase tracking-[0.2em]">
                 {CROS_ASSISTANT_NAME} · {guide.eyebrow}
               </p>
               <DialogTitle className="text-xl">{guide.pageName}</DialogTitle>
@@ -71,7 +71,7 @@ export function AgentPageGuideDialog({
             <div className="mt-3 flex gap-2">
               <span
                 className={cn(
-                  'rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                  'rounded-full px-2.5 py-1 text-[12px] font-semibold',
                   pane === 'steps' ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground',
                 )}
               >
@@ -79,7 +79,7 @@ export function AgentPageGuideDialog({
               </span>
               <span
                 className={cn(
-                  'rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                  'rounded-full px-2.5 py-1 text-[12px] font-semibold',
                   pane === 'functions' ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground',
                 )}
               >

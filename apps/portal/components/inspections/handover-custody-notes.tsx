@@ -25,7 +25,7 @@ export function HandoverPartyBadge({
   return (
     <span
       className={cn(
-        'inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+        'inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
         party === 'agent'
           ? 'border-sky-400/40 bg-sky-500/10 text-sky-800 dark:text-sky-300'
           : 'border-emerald-400/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300',

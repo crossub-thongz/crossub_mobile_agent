@@ -405,7 +405,7 @@ export function PropertyProfileDocumentsTab({
               <col className="w-[18%]" />
               <col className="w-[20%]" />
             </colgroup>
-            <thead className="bg-muted/30 text-muted-foreground text-left text-[11px]">
+            <thead className="bg-muted/30 text-muted-foreground text-left text-[12px]">
               <tr>
                 <th className="px-4 py-3 font-semibold">Document</th>
                 <th className="px-4 py-3 font-semibold">Category</th>
@@ -429,7 +429,7 @@ export function PropertyProfileDocumentsTab({
                         >
                           <TruncatedText text={row.title} className="font-medium" />
                         </button>
-                        <span className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase">
+                        <span className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase">
                           {row.fileTypeLabel}
                         </span>
                       </div>

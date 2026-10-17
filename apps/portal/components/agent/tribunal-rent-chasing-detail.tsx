@@ -113,7 +113,7 @@ function DaysSince({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 text-[11px] font-medium',
+        'inline-flex items-center gap-1 text-[12px] font-medium',
         days > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-muted-foreground',
       )}
       title={
@@ -200,7 +200,7 @@ function ArrearsSection({
             <Icon className="text-primary mt-0.5 size-4 shrink-0" aria-hidden />
             <div className="min-w-0">
               <p className="text-sm font-semibold leading-tight">{title}</p>
-              <p className="text-muted-foreground mt-0.5 text-[11px] tabular-nums">
+              <p className="text-muted-foreground mt-0.5 text-[12px] tabular-nums">
                 {rows.length > 0
                   ? `${rows.length} item${rows.length === 1 ? '' : 's'}`
                   : 'No items'}
@@ -319,7 +319,7 @@ function ArrearsSection({
                 onChange={(e) => setDraftDate(e.target.value)}
                 disabled={saving}
               />
-              <p className="text-muted-foreground text-[11px]">
+              <p className="text-muted-foreground text-[12px]">
                 {kind === 'rent'
                   ? 'Days overdue = today minus last rent paid to.'
                   : kind === 'bond'
@@ -362,7 +362,7 @@ function ArrearsSection({
       ) : (
         <div className="max-h-[min(70vh,640px)] flex-1 overflow-x-auto overflow-y-auto">
           <table className="w-full min-w-[220px] border-collapse text-left text-sm">
-            <thead className="bg-muted/40 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <thead className="bg-muted/40 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-3 py-2">Name</th>
                 <th className="px-3 py-2 text-right">Amount</th>
@@ -543,7 +543,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
       <section className="rounded-xl border bg-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
               Rent Chasing
             </p>
             <h2 className="mt-1 text-base font-semibold leading-snug">
@@ -556,7 +556,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
           {detail.evictionRequired ? (
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-2.5 py-1 text-[11px] font-semibold text-rose-700 dark:text-rose-300"
+              className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-2.5 py-1 text-[12px] font-semibold text-rose-700 dark:text-rose-300"
               onClick={() => setEvictionDialogOpen(true)}
             >
               <CheckCircle2 className="size-3.5" />
@@ -586,18 +586,18 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
       />
 
       <section className="rounded-xl border bg-card p-4">
-        <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground mb-3 text-[11px] font-semibold uppercase tracking-wide">
           Tribunal details
         </p>
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Case number
             </dt>
             <dd className="mt-1 text-sm font-medium">{detail.caseNumber || '—'}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Status
             </dt>
             <dd className="mt-1 text-sm font-medium">
@@ -605,13 +605,13 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Matter
             </dt>
             <dd className="mt-1 text-sm font-medium">{detail.matter || '—'}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Eviction required
             </dt>
             <dd className="mt-1 text-sm font-medium">
@@ -619,7 +619,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Lodgement date
             </dt>
             <dd className="mt-1 text-sm font-medium">
@@ -627,7 +627,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Hearing date
             </dt>
             <dd className="mt-1 text-sm font-medium">
@@ -638,30 +638,30 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
       </section>
 
       <section className="rounded-xl border bg-card p-4">
-        <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground mb-3 text-[11px] font-semibold uppercase tracking-wide">
           Tenancy details
         </p>
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Tenant
             </dt>
             <dd className="mt-1 text-sm font-medium">{tenantName || '—'}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Contact
             </dt>
             <dd className="mt-1 text-sm font-medium">{tenantPhone || '—'}</dd>
           </div>
           <div className="sm:col-span-2">
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Email
             </dt>
             <dd className="mt-1 text-sm font-medium break-all">{tenantEmail || '—'}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Lease start
             </dt>
             <dd className="mt-1 text-sm font-medium">
@@ -669,7 +669,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Agreement end
             </dt>
             <dd className="mt-1 text-sm font-medium">
@@ -677,7 +677,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Current rent
             </dt>
             <dd className="mt-1 text-sm font-medium">
@@ -685,13 +685,13 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Payment cycle
             </dt>
             <dd className="mt-1 text-sm font-medium">{cycleLabel(detail.paymentCycle)}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Rent paid to
             </dt>
             <dd className="mt-1 text-sm font-medium">
@@ -737,7 +737,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
       {detail.evictionRequired ? (
         <section className="rounded-xl border bg-card p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
               Eviction details
             </p>
             <Button
@@ -751,7 +751,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
           </div>
           <dl className="grid gap-3 sm:grid-cols-2">
             <div>
-              <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
                 Lodgement date
               </dt>
               <dd className="mt-1 text-sm font-medium">
@@ -759,7 +759,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
                 Hearing date
               </dt>
               <dd className="mt-1 text-sm font-medium">
@@ -767,7 +767,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
                 Hearing notice
               </dt>
               <dd className="mt-1 text-sm font-medium">
@@ -786,7 +786,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
                 Member&apos;s order
               </dt>
               <dd className="mt-1 text-sm font-medium">

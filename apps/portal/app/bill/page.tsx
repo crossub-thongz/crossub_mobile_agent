@@ -151,7 +151,7 @@ function PrepaidChargeRow({
           </p>
           <span
             className={cn(
-              'inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize',
+              'inline-flex rounded-full border px-2 py-0.5 text-[12px] font-medium capitalize',
               STATUS_TONE[row.status] ?? 'border-border text-muted-foreground',
             )}
           >
@@ -734,7 +734,7 @@ export default function BillPage() {
           <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Default payment method
                 </p>
                 {summary?.defaultPaymentMethod ? (
@@ -815,7 +815,7 @@ export default function BillPage() {
               className={
                 usesMonthlyInvoice && billingTab !== 'bills'
                   ? 'text-base font-semibold text-amber-950 dark:text-amber-100'
-                  : 'text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground'
+                  : 'text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground'
               }
             >
               {billingTab === 'bills'

@@ -47,7 +47,7 @@ export function PropertyVacateDateField({
             value={reason}
             onChange={(e) => onReasonChange(e.target.value)}
           />
-          <p className="text-muted-foreground text-[11px]">
+          <p className="text-muted-foreground text-[12px]">
             A reason is required whenever the vacate date changes.
           </p>
         </div>

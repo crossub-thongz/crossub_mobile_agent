@@ -62,7 +62,7 @@ export function MaintenanceSchedulePanel({
           </div>
 
           <div className="rounded-lg border bg-muted/20 p-3 text-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
               Proposed visit times
             </p>
             <p className="mt-2 whitespace-pre-wrap">{proposal.availableTimes}</p>

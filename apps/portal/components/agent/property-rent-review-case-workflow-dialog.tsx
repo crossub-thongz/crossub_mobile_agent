@@ -17,7 +17,7 @@ function RentReviewCaseDialogSummary({ review }: { review: RentReviewCase }) {
 
   return (
     <section className="bg-card mb-4 rounded-xl border p-3 md:mb-3 md:p-4">
-      <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+      <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
         {workflowCaseReferenceLabel(review.id, 'rent_review')}
       </p>
       <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug">{review.propertyAddress}</p>

@@ -35,7 +35,7 @@ export function RentReviewLeaseAgreementAudit({
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 gap-1.5 px-2 text-[11px]"
+              className="h-7 gap-1.5 px-2 text-[12px]"
               disabled={viewingAgreement}
               onClick={() => onViewAgreement?.()}
             >
@@ -43,7 +43,7 @@ export function RentReviewLeaseAgreementAudit({
               {viewingAgreement ? 'Opening…' : viewLabel}
             </Button>
           ) : null}
-          <p className="text-muted-foreground text-[10px] tabular-nums">
+          <p className="text-muted-foreground text-[11px] tabular-nums">
             {doneCount}/{steps.length}
           </p>
         </div>
@@ -54,8 +54,8 @@ export function RentReviewLeaseAgreementAudit({
             <span
               className={
                 step.done
-                  ? 'bg-primary/15 text-primary mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold'
-                  : 'bg-muted text-muted-foreground mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px]'
+                  ? 'bg-primary/15 text-primary mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold'
+                  : 'bg-muted text-muted-foreground mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[11px]'
               }
             >
               {step.done ? '✓' : '·'}
@@ -63,9 +63,9 @@ export function RentReviewLeaseAgreementAudit({
             <div className="min-w-0 flex-1">
               <p className={step.done ? 'font-medium' : 'text-muted-foreground'}>{step.label}</p>
               {step.at ? (
-                <p className="text-muted-foreground text-[10px]">{formatDateTime(step.at)}</p>
+                <p className="text-muted-foreground text-[11px]">{formatDateTime(step.at)}</p>
               ) : (
-                <p className="text-muted-foreground text-[10px]">Pending</p>
+                <p className="text-muted-foreground text-[11px]">Pending</p>
               )}
             </div>
           </li>

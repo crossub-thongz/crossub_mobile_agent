@@ -70,7 +70,7 @@ export function MaintenanceInlineActions({ item }: { item: MaintenanceRequest })
           Decline
         </Button>
         {item.quoteAmount != null && (
-          <span className="text-muted-foreground self-center text-[10px]">
+          <span className="text-muted-foreground self-center text-[11px]">
             {formatCurrency(item.quoteAmount)}
           </span>
         )}

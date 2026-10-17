@@ -45,7 +45,7 @@ export function CrossubLogo({
       {showWordmark ? (
         <span
           className={cn(
-            'text-foreground truncate text-[15px] font-bold tracking-[0.14em] uppercase',
+            'text-foreground truncate text-[16px] font-bold tracking-[0.14em] uppercase',
             wordmarkClassName,
           )}
         >
@@ -53,7 +53,7 @@ export function CrossubLogo({
         </span>
       ) : null}
       {showTagline ? (
-        <p className="text-muted-foreground mt-1.5 text-[9px] font-medium tracking-[0.2em] uppercase">
+        <p className="text-muted-foreground mt-1.5 text-[10px] font-medium tracking-[0.2em] uppercase">
           Your property partner
         </p>
       ) : null}

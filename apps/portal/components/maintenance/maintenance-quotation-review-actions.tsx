@@ -38,7 +38,7 @@ function CounterOfferHistory({
     <div className="rounded-xl border bg-card">
       <div className="flex items-center justify-between gap-2 px-4 py-3">
         <span className="text-sm font-medium">Counter offers</span>
-        <span className="text-muted-foreground text-[11px]">
+        <span className="text-muted-foreground text-[12px]">
           {sorted.length} event{sorted.length === 1 ? '' : 's'}
         </span>
       </div>

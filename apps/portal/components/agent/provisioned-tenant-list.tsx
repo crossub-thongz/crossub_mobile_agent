@@ -77,7 +77,7 @@ export function ProvisionedTenantList({
                       Application: {record.applicationLabel}
                     </p>
                   ) : null}
-                  <p className="text-muted-foreground mt-1 text-[10px]">
+                  <p className="text-muted-foreground mt-1 text-[11px]">
                     Created {formatDateTime(record.provisionedAt)}
                   </p>
                 </div>
@@ -86,7 +86,7 @@ export function ProvisionedTenantList({
                     label={statusLabel(record.status)}
                     variant={statusVariant(record.status)}
                   />
-                  <span className="text-primary flex items-center gap-0.5 text-[10px] font-medium">
+                  <span className="text-primary flex items-center gap-0.5 text-[11px] font-medium">
                     View credentials
                     <ChevronRight className="size-3" />
                   </span>

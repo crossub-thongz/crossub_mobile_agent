@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
+import { LoggingInScreen } from '@/components/auth/logging-in-screen';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES, isPublicRoute } from '@/constants/routes';
 import { isFullManagementRoute } from '@/lib/portal-service-level';
@@ -24,8 +25,12 @@ export function PortalServiceLevelGate({ children }: { children: React.ReactNode
     router.replace(ROUTES.DASHBOARD);
   }, [blocked, router]);
 
-  if (loading && !isPublicRoute(pathname)) return null;
-  if (blocked) return null;
+  const waitingOnAccess =
+    loading &&
+    !portalAccessReady &&
+    !isPublicRoute(pathname) &&
+    isFullManagementRoute(pathname);
+  if (waitingOnAccess || blocked) return <LoggingInScreen />;
 
   return <>{children}</>;
 }

@@ -120,7 +120,7 @@ export function VacatingStepVacateNotice({ detail }: { detail: VacatingPropertyD
         description="Confirm the tenant vacate notice and expected move-out date."
       />
       <div className="rounded-xl border bg-card px-4 py-3">
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
           Vacate details
         </p>
         <p className="mt-1 text-sm font-semibold">{formatDate(detail.vacateDate)}</p>
@@ -128,7 +128,7 @@ export function VacatingStepVacateNotice({ detail }: { detail: VacatingPropertyD
       </div>
       {detail.timeline.length > 0 ? (
         <div className="rounded-xl border bg-card px-4 py-3">
-          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wide">
             Recent activity
           </p>
           <ul className="space-y-2">
@@ -155,7 +155,7 @@ export function VacatingStepBondClaim({ detail }: { detail: VacatingPropertyDeta
         description="Review deductions and approve the bond settlement."
       />
       <div className="rounded-xl border bg-card px-4 py-3">
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
           Bond status
         </p>
         <p className="mt-1 text-sm font-semibold">{detail.bondStatus}</p>
@@ -167,7 +167,7 @@ export function VacatingStepBondClaim({ detail }: { detail: VacatingPropertyDeta
       </div>
       {detail.bondBreakdown.length > 0 ? (
         <div className="rounded-xl border bg-card px-4 py-3">
-          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wide">
             Bond breakdown
           </p>
           <ul className="space-y-2">

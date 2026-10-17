@@ -53,19 +53,19 @@ function ApplicantRow({
         )}
       </div>
       {app?.aiAdvice ? (
-        <p className="border-primary/20 bg-primary/5 mt-2 flex items-start gap-1.5 rounded-lg border px-2 py-1.5 text-[11px]">
+        <p className="border-primary/20 bg-primary/5 mt-2 flex items-start gap-1.5 rounded-lg border px-2 py-1.5 text-[12px]">
           <Sparkles className="text-primary mt-0.5 size-3 shrink-0" />
           <span>{app.aiAdvice}</span>
         </p>
       ) : null}
       {app?.feedback ? (
-        <p className="text-muted-foreground mt-1.5 text-[11px]">
+        <p className="text-muted-foreground mt-1.5 text-[12px]">
           <span className="font-medium">Feedback: </span>
           {app.feedback}
         </p>
       ) : null}
       {app?.rejectReason ? (
-        <p className="mt-1.5 text-[11px] text-rose-600">Reason: {app.rejectReason}</p>
+        <p className="mt-1.5 text-[12px] text-rose-600">Reason: {app.rejectReason}</p>
       ) : null}
       {app && pending && !readOnly ? (
         <div className="mt-2 flex gap-1.5">
@@ -91,7 +91,7 @@ function ApplicantRow({
           </Button>
         </div>
       ) : app?.candidateNotified ? (
-        <p className="text-muted-foreground mt-1.5 text-[11px]">
+        <p className="text-muted-foreground mt-1.5 text-[12px]">
           {app.agentDecision === LEASING_AGENT_DECISION.APPROVED
             ? 'Candidate notified'
             : 'Reject email sent'}

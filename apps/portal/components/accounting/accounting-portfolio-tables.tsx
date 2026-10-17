@@ -56,7 +56,7 @@ export function RentReconciliationListTable({
                 </div>
                 <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                 <span className="text-muted-foreground">Paid {formatCurrency(item.rentPaidYtd)}</span>
                 <span className="font-medium tabular-nums">Bal {formatCurrency(item.currentBalance)}</span>
               </div>
@@ -68,7 +68,7 @@ export function RentReconciliationListTable({
       <div className="hidden md:block">
         <ModuleListTable minWidth={920}>
           <thead>
-            <tr className="border-b bg-muted/40 text-muted-foreground text-left text-[11px] uppercase tracking-wide">
+            <tr className="border-b bg-muted/40 text-muted-foreground text-left text-[12px] uppercase tracking-wide">
               <th className="px-3 py-2.5 font-medium">Property</th>
               <th className="px-3 py-2.5 font-medium">Tenant</th>
               <th className="px-3 py-2.5 font-medium">Paid YTD</th>
@@ -159,7 +159,7 @@ export function ArrearsListTable({
                 </div>
                 <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                 {item.arrearsAmount > 0 ? (
                   <span className="text-destructive font-medium tabular-nums">
                     Rent {formatCurrency(item.arrearsAmount)} · {item.daysInArrears}d
@@ -179,7 +179,7 @@ export function ArrearsListTable({
       <div className="hidden md:block">
         <ModuleListTable minWidth={980}>
           <thead>
-            <tr className="border-b bg-muted/40 text-muted-foreground text-left text-[11px] uppercase tracking-wide">
+            <tr className="border-b bg-muted/40 text-muted-foreground text-left text-[12px] uppercase tracking-wide">
               <th className="px-3 py-2.5 font-medium">Property</th>
               <th className="px-3 py-2.5 font-medium">Tenant</th>
               <th className="px-3 py-2.5 font-medium">Rent arrears</th>
@@ -277,7 +277,7 @@ export function StatementsListTable({
                 </div>
                 <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                 <span className="text-muted-foreground">
                   {statements.length > 0 ? `${statements.length} statements` : 'No statements'}
                 </span>
@@ -295,7 +295,7 @@ export function StatementsListTable({
       <div className="hidden md:block">
         <ModuleListTable minWidth={760}>
           <thead>
-            <tr className="border-b bg-muted/40 text-muted-foreground text-left text-[11px] uppercase tracking-wide">
+            <tr className="border-b bg-muted/40 text-muted-foreground text-left text-[12px] uppercase tracking-wide">
               <th className="px-3 py-2.5 font-medium">Property</th>
               <th className="px-3 py-2.5 font-medium">Tenant</th>
               <th className="px-3 py-2.5 font-medium">Statements</th>

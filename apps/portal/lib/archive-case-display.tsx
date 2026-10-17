@@ -13,7 +13,7 @@ export const ARCHIVE_OUTCOME_LABEL: Record<ArchiveOutcome, string> = {
 export const ARCHIVE_OUTCOME_BADGE: Record<ArchiveOutcome, string> = {
   deleted: TERMINATION_UI.deletedBadge,
   tenancy_ended:
-    'inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-200',
+    'inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 text-[12px] font-medium text-emerald-800 dark:text-emerald-200',
 };
 
 export interface ArchiveEndLeasingRow {

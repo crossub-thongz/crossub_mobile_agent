@@ -173,7 +173,7 @@ export function AgentNotificationLiveAlert() {
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-primary text-[10px] font-semibold tracking-wider uppercase">
+                <p className="text-primary text-[11px] font-semibold tracking-wider uppercase">
                   New notification
                 </p>
                 <p className="mt-0.5 text-sm font-semibold leading-snug">{display.title}</p>
@@ -207,7 +207,7 @@ export function AgentNotificationLiveAlert() {
                 <p className="text-primary mt-1 text-xs font-medium">{current.actionRequired}</p>
               )
             ) : null}
-            <p className="text-muted-foreground mt-1 text-[10px]">{formatRelative(current.at)}</p>
+            <p className="text-muted-foreground mt-1 text-[11px]">{formatRelative(current.at)}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Button size="sm" className="h-8 text-xs" onClick={openCurrent}>
                 Open
@@ -223,7 +223,7 @@ export function AgentNotificationLiveAlert() {
               <button
                 type="button"
                 onClick={dismissAll}
-                className="text-muted-foreground hover:text-foreground text-[11px] font-medium transition-colors"
+                className="text-muted-foreground hover:text-foreground text-[12px] font-medium transition-colors"
               >
                 Dismiss all
               </button>
@@ -234,7 +234,7 @@ export function AgentNotificationLiveAlert() {
                   markNotificationRead(current.id);
                   setQueue((prev) => prev.filter((n) => n.id !== current.id));
                 }}
-                className="text-primary ml-auto text-[11px] font-medium hover:underline"
+                className="text-primary ml-auto text-[12px] font-medium hover:underline"
               >
                 All notifications
               </Link>
@@ -243,13 +243,13 @@ export function AgentNotificationLiveAlert() {
         </div>
         {queue.length > 1 ? (
           <div className="agent-notification-live-alert__footer mt-3 flex items-center justify-between gap-3 border-t pt-2">
-            <p className="text-muted-foreground text-[10px]">
+            <p className="text-muted-foreground text-[11px]">
               +{queue.length - 1} more in queue
             </p>
             <button
               type="button"
               onClick={dismissAll}
-              className="text-primary text-[10px] font-semibold hover:underline"
+              className="text-primary text-[11px] font-semibold hover:underline"
             >
               Dismiss all ({queue.length})
             </button>

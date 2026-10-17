@@ -43,7 +43,7 @@ export function FieldInspectionReportReviewSection({
       <section className="space-y-2 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-semibold">{kindLabel} report review</p>
-          <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">
+          <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-destructive">
             Rejected
           </span>
         </div>
@@ -78,7 +78,7 @@ export function FieldInspectionReportReviewSection({
             : `${kindLabel} report review`}
         </p>
         {pending ? null : (
-          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
+          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
             Approved
           </span>
         )}
@@ -92,7 +92,7 @@ export function FieldInspectionReportReviewSection({
       {pending ? null : (
         <div className="grid gap-2">
           <div>
-            <p className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground mb-1 text-[11px] font-semibold uppercase tracking-wide">
               Inspector copy
             </p>
             <InspectionReportDownloadActions
@@ -107,7 +107,7 @@ export function FieldInspectionReportReviewSection({
           {inspectionType === 'ingoing' ? (
             record?.tenantReturnedReportUrl ? (
               <div>
-                <p className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase tracking-wide">
+                <p className="text-muted-foreground mb-1 text-[11px] font-semibold uppercase tracking-wide">
                   Tenant returned copy
                 </p>
                 <a

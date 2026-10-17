@@ -46,15 +46,15 @@ function CheckInRow({
             <span className="truncate">{visitor.name || 'Unnamed visitor'}</span>
           </p>
           {email ? (
-            <p className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+            <p className="text-muted-foreground flex items-center gap-1.5 text-[12px]">
               <Mail className="size-3 shrink-0" />
               <span className="truncate">{email}</span>
             </p>
           ) : (
-            <p className="text-muted-foreground text-[11px]">No email on file</p>
+            <p className="text-muted-foreground text-[12px]">No email on file</p>
           )}
           {visitor.phone ? (
-            <p className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+            <p className="text-muted-foreground flex items-center gap-1.5 text-[12px]">
               <Phone className="size-3 shrink-0" />
               {visitor.phone}
             </p>
@@ -65,16 +65,16 @@ function CheckInRow({
           />
         </div>
         {hasApplication ? (
-          <span className="text-muted-foreground shrink-0 text-[10px] font-medium">
+          <span className="text-muted-foreground shrink-0 text-[11px] font-medium">
             Application received
           </span>
         ) : alreadySent ? (
-          <span className="flex shrink-0 items-center gap-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+          <span className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
             <Check className="size-3" />
             Sent
           </span>
         ) : !email ? (
-          <span className="text-muted-foreground shrink-0 text-[10px]">No email</span>
+          <span className="text-muted-foreground shrink-0 text-[11px]">No email</span>
         ) : null}
       </div>
     </li>
@@ -130,14 +130,14 @@ export function OpenInspectionCheckInList({
         <div className="flex items-center gap-2">
           <Users className="size-3.5 text-emerald-600 dark:text-emerald-300" />
           <p className="text-xs font-semibold uppercase tracking-wide">Check-ins</p>
-          <span className="text-muted-foreground text-[11px] tabular-nums">{checkIns.length}</span>
+          <span className="text-muted-foreground text-[12px] tabular-nums">{checkIns.length}</span>
         </div>
         {checkIns.length > 0 ? (
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="h-8 gap-1.5 text-[11px]"
+            className="h-8 gap-1.5 text-[12px]"
             disabled={sending || pendingEmails.length === 0}
             onClick={() => void sendToAll()}
           >

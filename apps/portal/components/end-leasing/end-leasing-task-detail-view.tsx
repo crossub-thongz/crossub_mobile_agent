@@ -238,8 +238,8 @@ export function EndLeasingTaskDetailView({
                     data-tour="workflow-case-badge"
                     className={
                       banner.needsAction
-                        ? 'rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
-                        : 'rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                        ? 'rounded-full bg-rose-100 px-2 py-0.5 text-[12px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                        : 'rounded-full bg-emerald-100 px-2 py-0.5 text-[12px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
                     }
                   >
                     {banner.needsAction ? 'Need your action' : 'CROS handling'}
@@ -383,7 +383,7 @@ export function EndLeasingTaskDetailView({
                         </div>
                         <span
                           className={cn(
-                            'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase',
+                            'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase',
                             card.status === 'in_progress' && 'bg-orange-100 text-orange-700',
                             card.status === 'upcoming' && 'bg-orange-50 text-orange-700',
                             card.status === 'pending' && 'bg-muted text-muted-foreground',
@@ -516,7 +516,7 @@ export function EndLeasingTaskDetailView({
               ) : null}
               <div className="p-3">
                 <p className="text-sm font-semibold">{displayAddress}</p>
-                <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                   {property?.leaseStatus === 'vacant' ? 'Vacant' : 'Occupied'}
                 </span>
                 <dl className="mt-3 space-y-2 text-xs">
@@ -572,7 +572,7 @@ export function EndLeasingTaskDetailView({
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold">{caseData.tenant.name}</p>
-                <span className="mt-1 inline-flex rounded-full border border-emerald-500/30 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                <span className="mt-1 inline-flex rounded-full border border-emerald-500/30 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                   Current tenant
                 </span>
                 <p className="text-muted-foreground mt-2 text-xs">{caseData.tenant.phone || '—'}</p>

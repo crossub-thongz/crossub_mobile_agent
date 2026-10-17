@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { LoggingInScreen } from '@/components/auth/logging-in-screen';
 import { useAuth } from '@/components/providers/auth-provider';
 import { ROUTES, isPublicRoute } from '@/constants/routes';
 import {
@@ -62,11 +63,8 @@ export function BillingBlockedGate({ children }: { children: React.ReactNode }) 
     router.replace(ROUTES.BILL);
   }, [blocked, checked, onExemptPage, pathname, router]);
 
-  if (status === 'loading' && !isPublicRoute(pathname)) return null;
-  if (!checked && status === 'authed' && !isPublicRoute(pathname) && !onExemptPage) {
-    return null;
-  }
-  if (blocked && !onExemptPage && !isPublicRoute(pathname)) return null;
+  if (status === 'loading' && !isPublicRoute(pathname)) return <LoggingInScreen />;
+  if (blocked && !onExemptPage && !isPublicRoute(pathname)) return <LoggingInScreen />;
 
   return <>{children}</>;
 }

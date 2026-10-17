@@ -84,7 +84,7 @@ export function LeasingKeyCollectionSchedule({
 
   if (tenantProofSubmitted) {
     return (
-      <p className="text-muted-foreground rounded-lg border border-border/60 bg-secondary/10 p-3 text-[10px] leading-relaxed">
+      <p className="text-muted-foreground rounded-lg border border-border/60 bg-secondary/10 p-3 text-[11px] leading-relaxed">
         The tenant has submitted key collection proof — pickup details are locked.
       </p>
     );
@@ -93,7 +93,7 @@ export function LeasingKeyCollectionSchedule({
   return (
     <div className="space-y-3 rounded-lg border border-border/60 bg-secondary/10 p-3">
       <p className="text-xs font-medium">Send key collection details to tenant</p>
-      <p className="text-muted-foreground text-[10px] leading-relaxed">
+      <p className="text-muted-foreground text-[11px] leading-relaxed">
         The tenant will see this date, time window, and location in their onboarding checklist.
       </p>
       <div className="space-y-2">

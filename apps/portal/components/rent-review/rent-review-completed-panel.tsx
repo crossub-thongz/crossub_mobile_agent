@@ -65,7 +65,7 @@ export function RentReviewCompletedPanel({
 
         {accepted && fixedRenewal ? (
           <div className="space-y-2 text-sm">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
               Situation 1 — tenant accepted
             </p>
             <p className="text-muted-foreground text-xs">
@@ -74,7 +74,7 @@ export function RentReviewCompletedPanel({
           </div>
         ) : accepted ? (
           <div className="space-y-2 text-sm">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
               Situation 1 — tenant accepted
             </p>
             <p className="font-medium">Periodic renewal — no residential tenancy agreement required.</p>
@@ -88,7 +88,7 @@ export function RentReviewCompletedPanel({
 
         {declined || vacateComplete ? (
           <div className={accepted ? 'mt-6 space-y-3 border-t pt-4' : 'space-y-3'}>
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
               Situation 2 — tenant declined
             </p>
             <div className="rounded-lg border border-dashed bg-muted/20 p-4">

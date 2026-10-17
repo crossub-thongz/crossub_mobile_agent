@@ -238,7 +238,7 @@ export function PropertyJobCasesTable({
       value={jobTypeFilter}
       onChange={(e) => setJobTypeFilter(e.target.value as PropertyJobTypeFilterId | 'all' | '')}
       aria-label="Filter by job type"
-      className="border-input bg-background h-8 w-full min-w-[8.5rem] max-w-[11rem] rounded-md border px-2 text-[11px] font-semibold uppercase tracking-wide outline-none"
+      className="border-input bg-background h-8 w-full min-w-[8.5rem] max-w-[11rem] rounded-md border px-2 text-[12px] font-semibold uppercase tracking-wide outline-none"
     >
       {requireJobTypeFilterSelection ? (
         <option value="">Select job type…</option>
@@ -357,7 +357,7 @@ export function PropertyJobCasesTable({
 
       {tableHidden ? (
         <div className="rounded-xl border border-dashed px-4 py-4">
-          <label className="text-muted-foreground mb-2 block text-[11px] font-semibold uppercase tracking-wide">
+          <label className="text-muted-foreground mb-2 block text-[12px] font-semibold uppercase tracking-wide">
             Job type
           </label>
           {jobTypeSelect}
@@ -374,7 +374,7 @@ export function PropertyJobCasesTable({
           <div className="space-y-2 md:hidden">
             {jobTypeFilterEnabled ? (
               <div className="mb-1">
-                <label className="text-muted-foreground mb-2 block text-[11px] font-semibold uppercase tracking-wide">
+                <label className="text-muted-foreground mb-2 block text-[12px] font-semibold uppercase tracking-wide">
                   Job type
                 </label>
                 {jobTypeSelect}
@@ -386,7 +386,7 @@ export function PropertyJobCasesTable({
               rowGroups.map((group, groupIndex) => (
                 <Fragment key={`mobile-${group.label || 'jobs'}-${groupIndex}`}>
                   {showGroupHeaders ? (
-                    <p className="text-muted-foreground px-1 pt-1 text-[10px] font-bold uppercase tracking-[0.16em]">
+                    <p className="text-muted-foreground px-1 pt-1 text-[11px] font-bold uppercase tracking-[0.16em]">
                       {group.label}
                       <span className="ml-1.5 font-semibold tabular-nums normal-case tracking-normal">
                         ({group.rows.length})
@@ -422,7 +422,7 @@ export function PropertyJobCasesTable({
                             </div>
                             <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                           </div>
-                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
                             {groupByJobType || jobTypeFilter !== 'all' ? (
                               <span className="text-muted-foreground">{row.jobType}</span>
                             ) : null}
@@ -484,7 +484,7 @@ export function PropertyJobCasesTable({
                       <th
                         key={col.label || 'action'}
                         className={cn(
-                          'px-3 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground',
+                          'px-3 py-3 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground',
                           col.align === 'right' ? 'text-right' : 'text-left',
                           col.label === '' && 'w-10',
                         )}
@@ -532,7 +532,7 @@ export function PropertyJobCasesTable({
                   <tr className="bg-muted/40">
                     <td
                       colSpan={tableColumns.length}
-                      className="text-muted-foreground px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em]"
+                      className="text-muted-foreground px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em]"
                     >
                       {group.label}
                       <span className="text-muted-foreground/80 ml-2 font-semibold tabular-nums normal-case tracking-normal">

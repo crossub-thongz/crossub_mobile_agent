@@ -119,7 +119,7 @@ export function LandlordPartyCards({
               Landlord {index + 1}
             </p>
             {party.isPrimary ? (
-              <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[11px] font-medium">
+              <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[12px] font-medium">
                 Primary contact
               </span>
             ) : null}

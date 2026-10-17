@@ -100,13 +100,13 @@ export function GiiJobCaseButtons({
               <Icon className="size-3.5" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="text-muted-foreground flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide">
+              <span className="text-muted-foreground flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide">
                 <Briefcase className="size-3 shrink-0" />
                 {PROPERTY_JOB_KIND_LABEL[link.kind]}
               </span>
               <span className="block truncate text-xs font-medium">{link.label}</span>
             </span>
-            <span className="text-primary flex shrink-0 items-center gap-0.5 text-[11px] font-semibold">
+            <span className="text-primary flex shrink-0 items-center gap-0.5 text-[12px] font-semibold">
               Open
               <ChevronRight className="size-3.5" />
             </span>

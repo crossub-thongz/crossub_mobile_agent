@@ -111,7 +111,7 @@ function ProofLine({
         target="_blank"
         rel="noopener noreferrer"
         download={fileName}
-        className="border-border bg-secondary/30 text-primary inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium underline"
+        className="border-border bg-secondary/30 text-primary inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] font-medium underline"
       >
         <Paperclip className="text-muted-foreground size-3" />
         {displayName}
@@ -119,7 +119,7 @@ function ProofLine({
     );
   }
   return (
-    <span className="border-border bg-secondary/30 inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px]">
+    <span className="border-border bg-secondary/30 inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px]">
       <Paperclip className="text-muted-foreground size-3" />
       {displayName}
       <span className="text-muted-foreground">· {label} pending</span>

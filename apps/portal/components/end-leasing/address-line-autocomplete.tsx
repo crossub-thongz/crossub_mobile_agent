@@ -153,10 +153,10 @@ export function AddressLineAutocomplete({
         />
       </div>
       {mapsEnabled && !mapsReady && !mapsFailed ? (
-        <p className="text-muted-foreground text-[11px]">Loading address search…</p>
+        <p className="text-muted-foreground text-[12px]">Loading address search…</p>
       ) : null}
       {mapsFailed ? (
-        <p className="text-amber-700 text-[11px] dark:text-amber-400">
+        <p className="text-amber-700 text-[12px] dark:text-amber-400">
           Map search unavailable — type the address manually.
         </p>
       ) : null}

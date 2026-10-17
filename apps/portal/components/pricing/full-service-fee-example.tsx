@@ -41,7 +41,7 @@ function FormulaTerm({
   return (
     <span className="inline-flex min-w-0 flex-col items-center text-center">
       <span className="font-semibold text-violet-700 dark:text-violet-300">{value}</span>
-      <span className="text-[10px] leading-tight text-muted-foreground">{label}</span>
+      <span className="text-[11px] leading-tight text-muted-foreground">{label}</span>
     </span>
   );
 }
@@ -116,7 +116,7 @@ export function FullServiceFeeExample({
                 <span className="font-semibold text-violet-700 dark:text-violet-300">
                   {formatCurrency(figures.feePerActiveDayAud)}
                 </span>
-                <span className="text-[10px] leading-tight text-muted-foreground">
+                <span className="text-[11px] leading-tight text-muted-foreground">
                   per active day
                 </span>
               </span>
@@ -135,7 +135,7 @@ export function FullServiceFeeExample({
               </p>
             </div>
           </div>
-          <p className="flex gap-2 text-[11px] leading-relaxed text-muted-foreground">
+          <p className="flex gap-2 text-[12px] leading-relaxed text-muted-foreground">
             <Info className="mt-0.5 size-3.5 shrink-0" />
             Calculated using your actual management rate, subject to a minimum rate of 4% incl.
             GST. Invoiced monthly.

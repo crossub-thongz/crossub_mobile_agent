@@ -96,10 +96,10 @@ export function LeasingViewerInvitePanel({
       />
 
       <div className="bg-background space-y-2 rounded-lg border p-3">
-        <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+        <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
           Add recipients
         </p>
-        <p className="text-muted-foreground text-[11px]">
+        <p className="text-muted-foreground text-[12px]">
           Type an email or phone number, then press Add. Separate multiple contacts with commas or
           new lines.
         </p>
@@ -134,7 +134,7 @@ export function LeasingViewerInvitePanel({
             {draftRecipients.map((r, index) => (
               <li
                 key={`${r.email ?? r.phone}-${index}`}
-                className="bg-secondary/40 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px]"
+                className="bg-secondary/40 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px]"
               >
                 {r.email ? (
                   <Mail className="text-muted-foreground size-3" />
@@ -172,10 +172,10 @@ export function LeasingViewerInvitePanel({
       {sentInvites.length > 0 && (
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+            <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
               Sent invites
             </p>
-            <Link href={ROUTES.MESSAGES} className="text-primary text-[11px] font-medium hover:underline">
+            <Link href={ROUTES.MESSAGES} className="text-primary text-[12px] font-medium hover:underline">
               View in Messages
             </Link>
           </div>
@@ -184,7 +184,7 @@ export function LeasingViewerInvitePanel({
               <SentInviteRow key={invite.id} invite={invite} />
             ))}
           </ul>
-          <p className="text-muted-foreground text-[10px]">{hubFilterHint}</p>
+          <p className="text-muted-foreground text-[11px]">{hubFilterHint}</p>
         </div>
       )}
     </div>
@@ -193,17 +193,17 @@ export function LeasingViewerInvitePanel({
 
 function SentInviteRow({ invite }: { invite: LeasingViewerInvite }) {
   return (
-    <li className="bg-card flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-[12px]">
+    <li className="bg-card flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-[13px]">
       <div className="min-w-0">
         <p className="truncate font-medium">{formatViewerInviteRecipient(invite)}</p>
-        <p className="text-muted-foreground text-[10px]">
+        <p className="text-muted-foreground text-[11px]">
           {viewerInviteChannelLabel(invite.channel)} · {formatDate(invite.sentAt)}
         </p>
       </div>
       {invite.commConversationId && (
         <Link
           href={ROUTES.MESSAGES}
-          className="text-primary shrink-0 text-[10px] font-medium hover:underline"
+          className="text-primary shrink-0 text-[11px] font-medium hover:underline"
         >
           Thread
         </Link>

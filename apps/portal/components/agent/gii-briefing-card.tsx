@@ -38,17 +38,17 @@ export function GiiBriefingCard({
   return (
     <div className="mr-auto w-[92%] overflow-hidden rounded-2xl border bg-card">
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-        <span className="flex items-center gap-1.5 text-[11px] font-semibold">
+        <span className="flex items-center gap-1.5 text-[12px] font-semibold">
           <ListTodo className="size-3.5 shrink-0 text-primary" />
           {title}
         </span>
-        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary tabular-nums">
+        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary tabular-nums">
           {briefing.total}
         </span>
       </div>
 
       {briefing.groupSummary ? (
-        <p className="text-muted-foreground border-b px-3 py-1.5 text-[10px]">
+        <p className="text-muted-foreground border-b px-3 py-1.5 text-[11px]">
           {briefing.groupSummary}
         </p>
       ) : null}
@@ -73,7 +73,7 @@ export function GiiBriefingCard({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs font-medium">{row.label}</span>
-                  <span className="text-muted-foreground block truncate text-[10px]">
+                  <span className="text-muted-foreground block truncate text-[11px]">
                     {row.propertyAddress}
                   </span>
                 </span>
@@ -83,7 +83,7 @@ export function GiiBriefingCard({
                   <button
                     type="button"
                     onClick={() => onAsk(row)}
-                    className="inline-flex h-7 items-center gap-1 rounded-md bg-primary/10 px-2.5 text-[11px] font-medium text-primary transition hover:bg-primary/15"
+                    className="inline-flex h-7 items-center gap-1 rounded-md bg-primary/10 px-2.5 text-[12px] font-medium text-primary transition hover:bg-primary/15"
                   >
                     <CrosAssistantLogo size="xs" className="size-3" />
                     Ask {CROS_ASSISTANT_NAME}
@@ -93,7 +93,7 @@ export function GiiBriefingCard({
                   <button
                     type="button"
                     onClick={() => onOpen(row)}
-                    className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium text-foreground/80 transition hover:bg-muted/40"
+                    className="inline-flex h-7 items-center rounded-md border px-2.5 text-[12px] font-medium text-foreground/80 transition hover:bg-muted/40"
                   >
                     Open
                   </button>
@@ -101,7 +101,7 @@ export function GiiBriefingCard({
                   <Link
                     href={row.href}
                     onClick={() => onNavigate?.()}
-                    className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium text-foreground/80 transition hover:bg-muted/40"
+                    className="inline-flex h-7 items-center rounded-md border px-2.5 text-[12px] font-medium text-foreground/80 transition hover:bg-muted/40"
                   >
                     Open
                   </Link>
@@ -116,7 +116,7 @@ export function GiiBriefingCard({
         <Link
           href={ROUTES.TASKS}
           onClick={() => onNavigate?.()}
-          className="text-muted-foreground hover:text-foreground flex items-center justify-center border-t px-3 py-2 text-[11px] font-medium transition"
+          className="text-muted-foreground hover:text-foreground flex items-center justify-center border-t px-3 py-2 text-[12px] font-medium transition"
         >
           View all {briefing.total} &rarr;
         </Link>

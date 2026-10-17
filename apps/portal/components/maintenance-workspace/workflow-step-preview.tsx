@@ -41,7 +41,7 @@ export function WorkflowStepPreview({
   return (
     <div className="space-y-3">
       <div className="rounded-xl border border-border bg-card space-y-2 p-3">
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
           {previewTitleForTarget(target, workspaceCase)} summary
         </p>
         <p className="text-muted-foreground text-xs">
@@ -53,7 +53,7 @@ export function WorkflowStepPreview({
             <span className="text-foreground font-semibold">Why:</span> {why}
           </p>
         )}
-        <p className="text-muted-foreground text-[11px]">
+        <p className="text-muted-foreground text-[12px]">
           Email and message content is in <span className="text-foreground font-semibold">Chat</span>;
           workflow events for this stage are listed below and in the{' '}
           <span className="text-foreground font-semibold">Timeline</span>.
@@ -62,7 +62,7 @@ export function WorkflowStepPreview({
 
       {target === 'approval' && workspaceCase.quotations.length > 0 && (
         <div className="rounded-lg border border-border bg-background p-3 text-xs">
-          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
             Quotation snapshot
           </p>
           {workspaceCase.quotations.map((q) => (
@@ -79,7 +79,7 @@ export function WorkflowStepPreview({
 
       {entries.length > 0 ? (
         <div className="rounded-lg border border-border bg-background p-3">
-          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wide">
             Stage events
           </p>
           <ol className="space-y-2">

@@ -83,7 +83,7 @@ export function PropertyProfilePhoto({
           ) : (
             <>
               <Camera className="size-5" />
-              <span className="text-[10px] font-semibold">Upload</span>
+              <span className="text-[11px] font-semibold">Upload</span>
             </>
           )}
         </span>

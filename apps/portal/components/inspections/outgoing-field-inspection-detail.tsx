@@ -105,7 +105,7 @@ function ProofPhotoGrid({ urls, label }: { urls: string[]; label: string }) {
   if (urls.length === 0) return null;
   return (
     <div className="space-y-1.5">
-      <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+      <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
         {label}
       </p>
       <div className="flex flex-wrap gap-1.5">
@@ -465,12 +465,12 @@ export function OutgoingFieldInspectionDetail({
             </span>
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-secondary rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                <span className="bg-secondary rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
                   {INSPECTION_TYPE_LABEL[inspection.type]}
                 </span>
                 <span
                   className={cn(
-                    'rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                    'rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
                     awaitingPayment
                       ? INSPECTION_AWAITING_PAYMENT_BADGE_CLASS
                       : gateStatusTone(gateStatus),
@@ -531,7 +531,7 @@ export function OutgoingFieldInspectionDetail({
       />
 
       <section className="rounded-2xl border bg-card p-3">
-        <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground px-1 text-[11px] font-semibold uppercase tracking-wide">
           Outgoing progress
         </p>
         <TaskWorkflowRailPortal>
@@ -582,30 +582,30 @@ export function OutgoingFieldInspectionDetail({
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
       <section className="rounded-2xl border bg-card p-4">
-        <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground mb-3 text-[11px] font-semibold uppercase tracking-wide">
           Vacating tenant
         </p>
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Name
             </dt>
             <dd className="mt-1 text-sm font-medium">{tenantName}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Phone
             </dt>
             <dd className="mt-1 text-sm font-medium">{tenantPhone}</dd>
           </div>
           <div className="sm:col-span-2">
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Email
             </dt>
             <dd className="mt-1 text-sm font-medium break-all">{tenantEmail}</dd>
           </div>
           <div className="sm:col-span-2">
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Tenant attend
             </dt>
             <dd className="mt-2">
@@ -645,12 +645,12 @@ export function OutgoingFieldInspectionDetail({
       </section>
 
       <section className="rounded-2xl border bg-card p-4">
-        <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground mb-3 text-[11px] font-semibold uppercase tracking-wide">
           Inspector details
         </p>
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Outgoing inspection date
             </dt>
             <dd className="mt-1 text-sm font-medium">
@@ -658,7 +658,7 @@ export function OutgoingFieldInspectionDetail({
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
               Inspector name
             </dt>
             <dd className="mt-1">
@@ -671,7 +671,7 @@ export function OutgoingFieldInspectionDetail({
           </div>
           {gateStatus !== 'pending' ? (
             <div className="sm:col-span-2">
-              <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              <dt className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
                 Inspector status
               </dt>
               <dd className="mt-1 text-sm font-medium">{inspectorStatus}</dd>
@@ -692,7 +692,7 @@ export function OutgoingFieldInspectionDetail({
 
       {!loading && viewingStep !== 'pending' && liveGateIndex >= 1 ? (
         <div className="space-y-3">
-          <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground px-1 text-[11px] font-semibold uppercase tracking-wide">
             {viewingStep === 'completed'
               ? 'Completion steps'
               : viewingStep === 'awaiting_approval'
@@ -830,7 +830,7 @@ export function OutgoingFieldInspectionDetail({
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{agentAck.label}</p>
                   {agentAcked && agentAcknowledgedAt ? (
-                    <p className="text-muted-foreground mt-0.5 text-[11px]">
+                    <p className="text-muted-foreground mt-0.5 text-[12px]">
                       Confirmed {formatDateTime(agentAcknowledgedAt)}
                     </p>
                   ) : null}
@@ -858,14 +858,14 @@ export function OutgoingFieldInspectionDetail({
                     )}
                   </Button>
                   {!reportReady ? (
-                    <p className="text-muted-foreground text-[11px]">
+                    <p className="text-muted-foreground text-[12px]">
                       Available after CROSSUB approves the report.
                     </p>
                   ) : null}
                 </>
               ) : null}
               {!agentAcked && reportReady && !terminationCaseId ? (
-                <p className="text-muted-foreground text-[11px]">
+                <p className="text-muted-foreground text-[12px]">
                   Link an end-leasing case to record agent acknowledgement.
                 </p>
               ) : null}
@@ -884,7 +884,7 @@ export function OutgoingFieldInspectionDetail({
           aria-expanded={auditExpanded}
         >
           <span className="text-sm font-medium">Audit</span>
-          <span className="text-muted-foreground flex items-center gap-2 text-[11px]">
+          <span className="text-muted-foreground flex items-center gap-2 text-[12px]">
             {auditEntries.length} event{auditEntries.length === 1 ? '' : 's'}
             <ChevronDown
               className={cn('size-4 transition-transform', auditExpanded && 'rotate-180')}

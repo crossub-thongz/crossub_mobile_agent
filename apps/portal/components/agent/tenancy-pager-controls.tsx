@@ -29,7 +29,7 @@ export function TenancyPagerControls({
       >
         <ChevronLeft className="size-4" />
       </button>
-      <span className="text-muted-foreground min-w-[2.75rem] text-center text-[11px] font-medium tabular-nums">
+      <span className="text-muted-foreground min-w-[2.75rem] text-center text-[12px] font-medium tabular-nums">
         {index + 1} / {count}
       </span>
       <button

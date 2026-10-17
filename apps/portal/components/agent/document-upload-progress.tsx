@@ -13,7 +13,7 @@ export function DocumentUploadProgress({
 
   return (
     <div className={className} role="progressbar" aria-valuenow={clamped} aria-valuemin={0} aria-valuemax={100}>
-      <div className="flex items-center justify-between gap-2 text-[11px]">
+      <div className="flex items-center justify-between gap-2 text-[12px]">
         <span className="text-muted-foreground truncate">{label}</span>
         <span className="text-primary shrink-0 font-semibold tabular-nums">{clamped}%</span>
       </div>

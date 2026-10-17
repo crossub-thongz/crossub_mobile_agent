@@ -72,7 +72,7 @@ export function PropertyDocumentFilesDialog({
                           <Eye className="text-primary size-4 shrink-0" />
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium">{file.fileName}</p>
-                            <p className="text-muted-foreground text-[11px] tabular-nums">
+                            <p className="text-muted-foreground text-[12px] tabular-nums">
                               {formatDateTime(file.uploadedAt)}
                               {index === 0 ? ' · Latest' : ''}
                             </p>
@@ -83,7 +83,7 @@ export function PropertyDocumentFilesDialog({
                           <FileText className="text-muted-foreground size-4 shrink-0" />
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium">{file.fileName}</p>
-                            <p className="text-muted-foreground text-[11px] tabular-nums">
+                            <p className="text-muted-foreground text-[12px] tabular-nums">
                               {formatDateTime(file.uploadedAt)}
                             </p>
                           </div>

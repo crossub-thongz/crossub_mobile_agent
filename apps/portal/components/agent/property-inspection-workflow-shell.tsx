@@ -26,7 +26,7 @@ function InspectionCaseDetail({
   return (
     <div className="space-y-3 rounded-xl border bg-card p-4">
       <div className="space-y-1">
-        <p className="text-primary text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-primary text-[11px] font-semibold uppercase tracking-wide">
           {INSPECTION_CATEGORY_LABEL[item.category]}
         </p>
         <p className="text-sm font-semibold">

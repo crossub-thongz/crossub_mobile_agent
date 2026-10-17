@@ -139,7 +139,7 @@ export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropert
     <div className="space-y-3 pt-1">
       <div className="flex items-center gap-2">
         <div className="bg-border/80 h-px flex-1" />
-        <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+        <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
           Next step
         </span>
         <div className="bg-border/80 h-px flex-1" />

@@ -381,14 +381,14 @@ function OverviewGrid({
                       <p className="text-sm font-semibold">
                         {propertyJobDisplayTitle(job)}
                       </p>
-                      <span className="bg-primary/12 text-primary rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                      <span className="bg-primary/12 text-primary rounded-full px-2 py-0.5 text-[11px] font-semibold">
                         {job.status}
                       </span>
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-xs">
                       {propertyJobDisplaySubtext(job)}
                     </p>
-                    <p className="text-muted-foreground mt-1 text-[10px]">No Action Required</p>
+                    <p className="text-muted-foreground mt-1 text-[11px]">No Action Required</p>
                   </div>
                 </div>
               </li>
@@ -419,7 +419,7 @@ function OverviewGrid({
                     <div className="min-w-0">
                       <p className="text-sm font-semibold">{item.label}</p>
                       <p className="text-muted-foreground mt-0.5 text-xs">{item.propertyAddress}</p>
-                      <span className="mt-2 inline-block rounded-full bg-amber-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                      <span className="mt-2 inline-block rounded-full bg-amber-600 px-2 py-0.5 text-[11px] font-semibold text-white">
                         Approval Required
                       </span>
                     </div>
@@ -602,7 +602,7 @@ export function PropertyProfileV2({
                 <p className="text-muted-foreground mt-0.5 text-sm">{suburbLine}</p>
                 <span
                   className={cn(
-                    'mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+                    'mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[12px] font-semibold',
                     isVacant
                       ? 'bg-muted text-muted-foreground'
                       : 'bg-primary/12 text-primary',
@@ -648,7 +648,7 @@ export function PropertyProfileV2({
             const clickable = 'onClick' in metric && typeof metric.onClick === 'function';
             const inner = (
               <>
-                <p className="text-muted-foreground text-[10px] font-medium">
+                <p className="text-muted-foreground text-[11px] font-medium">
                   {metric.label}
                 </p>
                 <p

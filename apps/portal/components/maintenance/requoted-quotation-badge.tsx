@@ -31,7 +31,7 @@ export function RequotedQuotationBadge({
     return (
       <span
         className={cn(
-          'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+          'rounded-full px-2 py-0.5 text-[11px] font-semibold',
           REQUOTED_STATUS_CLASS,
         )}
       >
@@ -45,7 +45,7 @@ export function RequotedQuotationBadge({
       <button
         type="button"
         className={cn(
-          'inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+          'inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold',
           REQUOTED_STATUS_CLASS,
         )}
         onClick={(event) => {
@@ -91,7 +91,7 @@ export function RequotedQuotationBadge({
             >
               {/* Newest-first, so index 0 is the highest previous version. Oldest = V1. */}
               <p className="font-medium">V{previousQuotes.length - index}</p>
-              <p className="text-muted-foreground mt-0.5 text-[10px] tabular-nums">
+              <p className="text-muted-foreground mt-0.5 text-[11px] tabular-nums">
                 {new Date(quote.submittedAt).toLocaleString('en-AU')} ·{' '}
                 {formatCurrency(quote.price)}
               </p>

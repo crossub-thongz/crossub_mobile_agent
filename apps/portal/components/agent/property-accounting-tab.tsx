@@ -40,7 +40,7 @@ function AccountingInfoGrid({
     <dl className="grid gap-2 sm:grid-cols-2">
       {items.map((item) => (
         <div key={item.label} className="rounded-lg border bg-muted/20 px-3 py-2.5">
-          <dt className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+          <dt className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
             {item.label}
           </dt>
           <dd className="mt-1 text-sm font-medium">{item.value ?? '—'}</dd>
@@ -62,7 +62,7 @@ function RentLedgerTable({
   return (
     <div className="overflow-hidden rounded-xl border">
       <table className="w-full text-sm">
-        <thead className="bg-muted/40 text-muted-foreground text-left text-[11px] uppercase tracking-wide">
+        <thead className="bg-muted/40 text-muted-foreground text-left text-[12px] uppercase tracking-wide">
           <tr>
             <th className="px-3 py-2">Due</th>
             <th className="px-3 py-2">Paid</th>
@@ -386,7 +386,7 @@ export function PropertyAccountingTab({
                   <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
                     {event.channel}
                   </span>
-                  <span className="text-muted-foreground text-[11px] tabular-nums">
+                  <span className="text-muted-foreground text-[12px] tabular-nums">
                     {formatDateTime(event.timestamp)}
                   </span>
                 </div>

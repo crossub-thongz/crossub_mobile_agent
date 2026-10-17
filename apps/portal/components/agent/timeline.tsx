@@ -36,7 +36,7 @@ export function Timeline({ entries }: { entries: TimelineEntry[] }) {
                 {entry.detail}
               </p>
             )}
-            <p className="text-muted-foreground text-[11px]">
+            <p className="text-muted-foreground text-[12px]">
               {formatDateTime(entry.at)} · {ROLE_LABEL[entry.actorRole]} ·{' '}
               {entry.actor}
               {entry.source !== 'system' && ` · via ${entry.source}`}

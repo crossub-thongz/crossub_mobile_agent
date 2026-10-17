@@ -55,7 +55,7 @@ export function MaintenanceContractorRfqEmailEditor({
   return (
     <div className="space-y-3 rounded-xl border bg-card p-3">
       <div>
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
           Email to contractor *
         </p>
         <p className="text-muted-foreground mt-1 text-xs">

@@ -273,7 +273,7 @@ export function MaintenanceReviewPanel({
 
               {showCcField ? (
                 <div className="space-y-1.5 rounded-xl border border-dashed p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Cc (optional)
                   </p>
                   <Input
@@ -283,7 +283,7 @@ export function MaintenanceReviewPanel({
                     className="h-9 text-xs"
                     disabled={busy}
                   />
-                  <p className="text-muted-foreground text-[10px]">
+                  <p className="text-muted-foreground text-[11px]">
                     Separate multiple addresses with commas. Included on the sent email.
                   </p>
                 </div>
@@ -303,7 +303,7 @@ export function MaintenanceReviewPanel({
           <div className="rounded-xl border border-dashed p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Request more evidence
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">

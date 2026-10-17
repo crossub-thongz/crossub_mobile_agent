@@ -23,6 +23,7 @@ import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { GlobalShellFabs, ShellHeaderQuickActions } from '@/components/agent/global-shell-fabs';
 import { AgentSidebar } from '@/components/layout/agent-sidebar';
 import { AgentShellV2Header } from '@/components/layout/agent-shell-v2-header';
+import { usePersistentAgentChrome } from '@/components/layout/persistent-agent-chrome';
 import { ShellBackButton } from '@/components/layout/shell-back-button';
 import { PortalNavigationTracker } from '@/components/layout/portal-navigation-tracker';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -89,6 +90,7 @@ export function AgentShell({
 }) {
   const pathname = usePathname();
   const isV2 = useIsAgentUiV2();
+  const persistentChrome = usePersistentAgentChrome();
   const isDashboardHome = pathname === ROUTES.DASHBOARD;
   useScrollbarReveal();
   const { user, logout } = useAuth();
@@ -100,10 +102,17 @@ export function AgentShell({
   const propertyNeedActionCount = needActionItems.length;
   const propertiesPageActive = useShellAsideStore((s) => s.propertiesPageActive);
   const propertyPreviewId = useShellAsideStore((s) => s.propertyPreviewId);
+  const setHeaderCrosLauncher = useShellAsideStore((s) => s.setHeaderCrosLauncher);
   const showPropertyShellPreview =
     isV2 && propertiesPageActive && Boolean(propertyPreviewId);
   const hideCrosRail =
     Boolean(hideNeedAction) || (isV2 && propertiesPageActive && !propertyPreviewId);
+  const showHeaderCrosLauncher = hideCrosRail || showPropertyShellPreview;
+
+  useEffect(() => {
+    if (!persistentChrome) return;
+    setHeaderCrosLauncher(showHeaderCrosLauncher);
+  }, [persistentChrome, setHeaderCrosLauncher, showHeaderCrosLauncher]);
   const billingLabel = agencyBillingNavLabel(hasFullManagementAccess);
   const primaryNav = filterNavByAccess(primaryNavForUi(isV2), hasFullManagementAccess, selfManagedAccess);
   const moreNav = filterHiddenBillingNav(
@@ -151,21 +160,23 @@ export function AgentShell({
   return (
     <div
       className={cn(
-        'flex h-[calc(100dvh-var(--env-banner-height,0px))] overflow-hidden',
-        isV2 && 'v2-dashboard-canvas',
+        persistentChrome
+          ? 'flex h-full min-h-0 min-w-0 flex-1 overflow-hidden'
+          : 'flex h-[calc(100dvh-var(--env-banner-height,0px))] overflow-hidden',
+        !persistentChrome && isV2 && 'v2-dashboard-canvas',
         !isV2 && 'bg-background',
       )}
     >
       <Suspense fallback={null}>
         <PortalNavigationTracker />
       </Suspense>
-      <AgentSidebar onLogout={() => void logout()} />
+      {persistentChrome ? null : <AgentSidebar onLogout={() => void logout()} />}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        {isV2 && !immersive ? (
+        {isV2 && !immersive && !persistentChrome ? (
           <AgentShellV2Header
             unreadNotificationCount={unreadNotificationCount}
-            showCrosLauncher={hideCrosRail || showPropertyShellPreview}
+            showCrosLauncher={showHeaderCrosLauncher}
           />
         ) : null}
 
@@ -479,9 +490,9 @@ export function AgentShell({
                           : undefined
                   }
                   className={cn(
-                    'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium',
+                    'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[10px] font-medium',
                     active ? 'text-primary' : 'text-muted-foreground',
-                    'ui-v2:rounded-xl ui-v2:text-[10px]',
+                    'ui-v2:rounded-xl ui-v2:text-[11px]',
                     active && isV2 && 'v2-frosted-nav text-foreground',
                     active && !isV2 && 'text-primary',
                   )}
@@ -505,7 +516,7 @@ export function AgentShell({
               onClick={() => setMoreOpen((v) => !v)}
               data-tour="contact-account-manager"
               className={cn(
-                'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium lg:hidden',
+                'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[10px] font-medium lg:hidden',
                 !isV2 && (moreOpen ? 'text-primary' : 'text-muted-foreground'),
                 'ui-v2:hidden',
               )}
@@ -518,7 +529,7 @@ export function AgentShell({
                 href={ROUTES.MORE}
                 data-tour="contact-account-manager"
                 className={cn(
-                  'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[10px] font-medium lg:hidden',
+                  'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] font-medium lg:hidden',
                   'ui-v2:rounded-xl',
                   isActive(pathname, ROUTES.MORE)
                     ? 'v2-frosted-nav text-foreground'

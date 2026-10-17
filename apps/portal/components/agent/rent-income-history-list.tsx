@@ -43,7 +43,7 @@ export function RentIncomeHistoryList({ entries }: { entries: RentIncomeEntry[] 
               Due {formatDate(entry.dueDate)}
               {entry.paidDate ? ` · Paid ${formatDate(entry.paidDate)}` : ''}
             </p>
-            <p className={cn('mt-1 text-[10px]', statusClass(entry.status))}>
+            <p className={cn('mt-1 text-[11px]', statusClass(entry.status))}>
               {statusLabel(entry.status)}
             </p>
           </div>

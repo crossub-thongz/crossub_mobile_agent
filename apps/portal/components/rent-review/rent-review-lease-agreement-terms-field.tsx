@@ -67,7 +67,7 @@ export function RentReviewLeaseAgreementTermsField({
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide">Lease agreement terms</p>
-          <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
+          <p className="text-muted-foreground mt-1 text-[12px] leading-relaxed">
             Optional. Leave blank to send the standard NSW agreement. Filled terms appear on page
             15 before the agreement is emailed to the tenant.
           </p>

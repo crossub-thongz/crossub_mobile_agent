@@ -56,11 +56,11 @@ export function WorkspaceAuditTimeline({
           )}
           <span className="bg-card border-muted-foreground/40 relative z-10 mt-1.5 size-[15px] shrink-0 rounded-full border-2" />
           <div className="min-w-0 flex-1 space-y-0.5">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
               {EVENT_LABEL[entry.action] ?? entry.action}
             </p>
             <p className="text-sm font-medium">{formatMaintenanceAuditMessage(entry.message)}</p>
-            <p className="text-muted-foreground text-[11px]">
+            <p className="text-muted-foreground text-[12px]">
               {formatDateTime(entry.timestamp)} · {entry.actor}
             </p>
           </div>

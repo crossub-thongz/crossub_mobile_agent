@@ -99,7 +99,7 @@ export default function NotificationsPage() {
                     {n.actionRequired && (
                       <p className="text-primary text-xs font-medium">{n.actionRequired}</p>
                     )}
-                    <p className="text-muted-foreground text-[11px]">
+                    <p className="text-muted-foreground text-[12px]">
                       {formatDateTime(n.at)}
                     </p>
                   </div>

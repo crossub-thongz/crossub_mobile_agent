@@ -79,7 +79,7 @@ export function ModuleCommunications({
           />
           <div className="min-w-0">
             <h3 className="text-sm font-semibold">{title}</h3>
-            <p className="text-muted-foreground mt-0.5 line-clamp-1 text-[11px]">
+            <p className="text-muted-foreground mt-0.5 line-clamp-1 text-[12px]">
               {open
                 ? `${items.length} message${items.length === 1 ? '' : 's'}`
                 : latestItem
@@ -90,7 +90,7 @@ export function ModuleCommunications({
         </button>
         <div className="flex shrink-0 items-center gap-2">
           {unreadTotal > 0 ? (
-            <span className="bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+            <span className="bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums">
               {unreadTotal}
             </span>
           ) : null}
@@ -126,13 +126,13 @@ export function ModuleCommunications({
                   )}
                   <span className="font-medium">{channelLabel(m.channel)}</span>
                   {m.unread > 0 && (
-                    <span className="bg-destructive ml-auto rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white">
+                    <span className="bg-destructive ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white">
                       {m.unread}
                     </span>
                   )}
                 </div>
                 <p className="font-medium">{m.subject}</p>
-                <p className="text-muted-foreground mt-1 text-[10px]">{formatDateTime(m.lastAt)}</p>
+                <p className="text-muted-foreground mt-1 text-[11px]">{formatDateTime(m.lastAt)}</p>
               </Link>
             ))}
           </div>

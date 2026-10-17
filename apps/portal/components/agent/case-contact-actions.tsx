@@ -26,7 +26,7 @@ export function CaseContactActions({
 
   return (
     <div className="space-y-2 rounded-xl border bg-card p-3">
-      <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+      <p className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
         {caseLabel ? `Messages · ${caseLabel}` : 'Messages'}
       </p>
       <Button
@@ -40,7 +40,7 @@ export function CaseContactActions({
       >
         <MessageSquare className="size-4" />
         <span className="text-xs font-medium">Message tenant</span>
-        <span className="text-muted-foreground line-clamp-2 w-full text-center text-[10px] font-normal leading-tight">
+        <span className="text-muted-foreground line-clamp-2 w-full text-center text-[11px] font-normal leading-tight">
           {tenantName}
         </span>
       </Button>

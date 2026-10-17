@@ -225,14 +225,14 @@ export function RentReviewEmailToLandlordDialog({
         <div className="space-y-3">
           {landlordContacts.length > 1 ? (
             <div className="space-y-1.5">
-              <p className="text-muted-foreground text-[11px] font-medium">Landlord contacts</p>
+              <p className="text-muted-foreground text-[12px] font-medium">Landlord contacts</p>
               <div className="flex flex-wrap gap-1.5">
                 {landlordContacts.map((contact) => (
                   <button
                     key={`${contact.role}-${contact.email}`}
                     type="button"
                     onClick={() => setToEmail(contact.email)}
-                    className="hover:bg-primary/10 rounded-full border bg-background px-2.5 py-1 text-[11px] font-medium transition-colors"
+                    className="hover:bg-primary/10 rounded-full border bg-background px-2.5 py-1 text-[12px] font-medium transition-colors"
                   >
                     {formatWorkflowEmailContact(contact)}
                   </button>
@@ -249,7 +249,7 @@ export function RentReviewEmailToLandlordDialog({
               onChange={(e) => setToEmail(e.target.value)}
               placeholder="landlord@example.com"
             />
-            <p className="text-muted-foreground text-[11px]">
+            <p className="text-muted-foreground text-[12px]">
               Auto-filled from the property landlord record. Edit if needed.
             </p>
           </div>
@@ -267,7 +267,7 @@ export function RentReviewEmailToLandlordDialog({
           <div className="space-y-1">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="landlord-body">Message</Label>
-              <span className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              <span className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
                 AI draft
               </span>
             </div>
@@ -279,19 +279,19 @@ export function RentReviewEmailToLandlordDialog({
               onChange={(e) => setBody(e.target.value)}
               className="text-sm leading-relaxed"
             />
-            <p className="text-muted-foreground text-[11px]">
+            <p className="text-muted-foreground text-[12px]">
               Review and edit the AI-drafted message before sending.
             </p>
           </div>
 
           <EmailAttachmentList attachments={attachments} title="Attachments" />
           {loadingAttachments ? (
-            <p className="text-muted-foreground flex items-center gap-2 text-[11px]">
+            <p className="text-muted-foreground flex items-center gap-2 text-[12px]">
               <Loader2 className="size-3.5 animate-spin" />
               Loading attachment sizes…
             </p>
           ) : (
-            <p className="text-muted-foreground text-[11px]">
+            <p className="text-muted-foreground text-[12px]">
               Includes the CROSSUB research report and NSW Fair Trading notice reference.
             </p>
           )}

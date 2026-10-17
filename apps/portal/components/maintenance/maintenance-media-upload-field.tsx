@@ -82,11 +82,11 @@ export function MaintenanceMediaUploadField({
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <Label className="text-xs">Photos & videos *</Label>
-        <span className="text-muted-foreground text-[10px] tabular-nums">
+        <span className="text-muted-foreground text-[11px] tabular-nums">
           {photos.length}/{MAX_FILES}
         </span>
       </div>
-      <p className="text-muted-foreground text-[11px]">
+      <p className="text-muted-foreground text-[12px]">
         Upload at least one photo or video before logging the job (up to {MAX_FILE_LABEL} each).
       </p>
 

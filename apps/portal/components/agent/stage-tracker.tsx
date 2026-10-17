@@ -30,7 +30,7 @@ export function MaintenanceStageTracker({ current }: { current: string }) {
         return (
           <div
             key={stage}
-            className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-medium ${
+            className={`shrink-0 rounded-md px-2 py-1 text-[11px] font-medium ${
               active
                 ? 'bg-primary/15 text-primary'
                 : done

@@ -109,7 +109,7 @@ export function LeasingApplicantAddPanel({
     <div className={cn('bg-card space-y-3 rounded-xl border px-4 py-4', className)}>
       <div>
         <p className="text-sm font-medium">Add applicant manually</p>
-        <p className="text-muted-foreground mt-0.5 text-[11px]">
+        <p className="text-muted-foreground mt-0.5 text-[12px]">
           Optional — enter contact details when you already know them. For document-only intake, use
           the drag-and-drop area above.
         </p>
@@ -169,7 +169,7 @@ export function LeasingApplicantAddPanel({
             {files.map((file, index) => (
               <li
                 key={`${file.name}-${file.size}-${index}`}
-                className="bg-muted/30 flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[11px]"
+                className="bg-muted/30 flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[12px]"
               >
                 <span className="flex min-w-0 items-center gap-1.5">
                   <FileUp className="text-muted-foreground size-3.5 shrink-0" />

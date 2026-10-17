@@ -127,7 +127,7 @@ export function RentReviewTenantNotifiedPanel({
             min={earliestIncreaseDate}
             onChange={(e) => setEffectiveDate(e.target.value)}
           />
-          <p className="text-muted-foreground text-[11px] leading-relaxed">
+          <p className="text-muted-foreground text-[12px] leading-relaxed">
             Earliest {earliestIncreaseDate} — {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days notice
             counted from the day after this notice is served. Re-sending serves a new notice, so
             the count starts again from today.

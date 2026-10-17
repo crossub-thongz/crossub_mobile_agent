@@ -9,9 +9,9 @@ import { LEASING_TONE, LEASING_UI, type LeasingTone } from '@/lib/leasing/consta
 export const TERMINATION_UI = {
   sectionLabel: LEASING_UI.sectionLabel,
   stageBadge:
-    "inline-flex items-center rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-[11px] font-medium text-violet-800 dark:text-violet-200",
+    "inline-flex items-center rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-[12px] font-medium text-violet-800 dark:text-violet-200",
   tribunalBadge:
-    "inline-flex items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/10 px-1.5 py-0.5 text-[10px] text-rose-800 dark:text-rose-200",
+    "inline-flex items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/10 px-1.5 py-0.5 text-[11px] text-rose-800 dark:text-rose-200",
   overdueText: "text-rose-700 dark:text-rose-300",
   countdownUrgent: "text-sky-700 dark:text-sky-300",
   countdownOnTrack: "text-emerald-700 dark:text-emerald-300",
@@ -31,7 +31,7 @@ export const TERMINATION_UI = {
   kpiDefault: LEASING_UI.kpiDefault,
   kpiDestructive: LEASING_UI.kpiDestructive,
   deletedBadge:
-    "inline-flex items-center rounded-full border border-rose-500/35 bg-rose-500/10 px-2 py-0.5 text-[11px] font-medium text-rose-800 dark:text-rose-200",
+    "inline-flex items-center rounded-full border border-rose-500/35 bg-rose-500/10 px-2 py-0.5 text-[12px] font-medium text-rose-800 dark:text-rose-200",
 } as const
 
 /** System-of-record status for a live-ops termination case. */

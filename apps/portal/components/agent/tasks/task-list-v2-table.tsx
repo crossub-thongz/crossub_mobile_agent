@@ -13,7 +13,7 @@ import {
 import type { TaskListV2Row } from '@/lib/task-list-v2';
 import { cn } from '@/lib/utils';
 
-function TaskIcon({ row }: { row: TaskListV2Row }) {
+export function TaskIcon({ row }: { row: TaskListV2Row }) {
   const className = 'size-4';
   const wrapClass = cn(
     'flex size-9 shrink-0 items-center justify-center rounded-xl',
@@ -54,7 +54,7 @@ function StatusBadge({
     <div className="min-w-0">
       <span
         className={cn(
-          'inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold',
+          'inline-flex rounded-full px-2 py-0.5 text-[12px] font-semibold',
           tone === 'action' && 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
           tone === 'handling' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
           tone === 'waiting' && 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
@@ -65,7 +65,7 @@ function StatusBadge({
         {label}
       </span>
       {sublabel ? (
-        <p className="text-muted-foreground mt-1 truncate text-[11px]">{sublabel}</p>
+        <p className="text-muted-foreground mt-1 truncate text-[12px]">{sublabel}</p>
       ) : null}
     </div>
   );
@@ -105,7 +105,7 @@ export function TaskListV2Table({
             <col style={{ width: hideProperty ? '16%' : '10%' }} />
           </colgroup>
           <thead>
-            <tr className="border-b bg-muted/30 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <tr className="border-b bg-muted/30 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
               <th className="px-3 py-3">Task</th>
               {hideProperty ? null : <th className="px-3 py-3">Property</th>}
               <th className="px-3 py-3">Type</th>
@@ -136,7 +136,7 @@ export function TaskListV2Table({
                   </td>
                   {hideProperty ? null : (
                     <td className="px-3 py-3 align-top">
-                      <p className="truncate font-medium">{row.property.address}</p>
+                      <p className="cursor-pointer truncate font-medium">{row.property.address}</p>
                       <p className="text-muted-foreground truncate text-xs">{row.property.suburb}</p>
                     </td>
                   )}

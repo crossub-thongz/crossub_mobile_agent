@@ -37,7 +37,7 @@ export function SortableTableHeader<T extends string>({
         type="button"
         onClick={() => onSort(sortKey)}
         className={cn(
-          'group inline-flex items-center gap-1.5 rounded text-[11px] uppercase tracking-wide transition-colors hover:text-foreground focus:outline-none',
+          'group inline-flex items-center gap-1.5 rounded text-[12px] uppercase tracking-wide transition-colors hover:text-foreground focus:outline-none',
           align === 'center' && 'mx-auto',
           align === 'right' && 'ml-auto',
           isActive ? 'text-foreground' : 'text-muted-foreground',

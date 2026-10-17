@@ -691,7 +691,7 @@ export function InspectionDetailView({
           </span>
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-secondary rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+              <span className="bg-secondary rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
                 {INSPECTION_TYPE_LABEL[insp.type]}
               </span>
               <StatusBadge
@@ -940,7 +940,7 @@ export function InspectionDetailView({
               )}
             />
           ) : null}
-          <p className="text-muted-foreground pt-2 text-[11px] leading-relaxed">
+          <p className="text-muted-foreground pt-2 text-[12px] leading-relaxed">
             {OPEN_TIME_PENDING_DESCRIPTION}
           </p>
         </InfoSection>
@@ -1183,7 +1183,7 @@ export function InspectionDetailView({
           aria-expanded={activityExpanded}
         >
           <span className="text-sm font-semibold">Activity</span>
-          <span className="text-muted-foreground flex items-center gap-2 text-[11px]">
+          <span className="text-muted-foreground flex items-center gap-2 text-[12px]">
             {insp.timeline.length} event{insp.timeline.length === 1 ? '' : 's'}
             <ChevronDown
               className={cn('size-4 transition-transform', activityExpanded && 'rotate-180')}
@@ -1256,7 +1256,7 @@ function FactTile({
 }) {
   return (
     <div className="bg-secondary/30 rounded-xl px-3 py-2.5">
-      <div className="text-muted-foreground flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide">
+      <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide">
         <Icon className="size-3" />
         {label}
       </div>

@@ -56,7 +56,7 @@ export function LeasingDefaultInspectorField({
           </option>
         ))}
       </select>
-      {hint ? <p className="text-muted-foreground text-[11px]">{hint}</p> : null}
+      {hint ? <p className="text-muted-foreground text-[12px]">{hint}</p> : null}
     </div>
   );
 }

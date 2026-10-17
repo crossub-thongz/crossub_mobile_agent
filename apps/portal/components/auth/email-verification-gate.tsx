@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
+import { LoggingInScreen } from '@/components/auth/logging-in-screen';
 import { useAuth } from '@/components/providers/auth-provider';
 import { ROUTES, isPublicRoute } from '@/constants/routes';
 import {
@@ -31,8 +32,8 @@ export function EmailVerificationGate({ children }: { children: React.ReactNode 
     router.replace(ROUTES.DASHBOARD);
   }, [onBlockedRoute, router]);
 
-  if (status === 'loading' && !isPublicRoute(pathname)) return null;
-  if (onBlockedRoute) return null;
+  if (status === 'loading' && !isPublicRoute(pathname)) return <LoggingInScreen />;
+  if (onBlockedRoute) return <LoggingInScreen />;
 
   return <>{children}</>;
 }

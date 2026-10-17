@@ -21,7 +21,7 @@ export function TaskStatusRow({
   const content = (
     <div className="flex items-start justify-between gap-2 p-4">
       <div className="min-w-0 flex-1 space-y-1">
-        <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+        <p className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
           {item.module}
         </p>
         <p className="line-clamp-2 text-sm font-semibold">{item.propertyAddress}</p>
@@ -35,7 +35,7 @@ export function TaskStatusRow({
           {item.status}
         </p>
         {item.requiresApproval && (
-          <p className="text-primary text-[10px] font-semibold uppercase">
+          <p className="text-primary text-[11px] font-semibold uppercase">
             Action needed
           </p>
         )}

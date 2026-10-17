@@ -25,6 +25,7 @@ import { AgentPageGuideHost } from '@/components/agent/agent-page-guide-host';
 import { AgentPageTourHost } from '@/components/agent/agent-page-tour-host';
 import { AgentWorkflowTourHost } from '@/components/agent/agent-workflow-tour-host';
 import { AgentPostLoginTasksTourRedirect } from '@/components/agent/agent-post-login-tasks-tour-redirect';
+import { PersistentAgentChrome } from '@/components/layout/persistent-agent-chrome';
 import { AgentPageGuideProvider } from '@/components/providers/agent-page-guide-provider';
 import { AgentUiProvider } from '@/components/providers/agent-ui-provider';
 import { ThemedToaster } from '@/components/ui/themed-toaster';
@@ -110,7 +111,7 @@ export default function RootLayout({
                         <AgentPageGuideProvider>
                           <AgentNotificationLiveAlert />
                           <AddToHomeScreenPrompt />
-                          {children}
+                          <PersistentAgentChrome>{children}</PersistentAgentChrome>
                           <WelcomeOnboarding />
                           {agentUi === AGENT_UI.V2 ? (
                             <Suspense fallback={null}>

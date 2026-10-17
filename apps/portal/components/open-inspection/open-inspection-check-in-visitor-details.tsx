@@ -26,7 +26,7 @@ export function OpenInspectionCheckInVisitorDetails({
 
   if (variant === 'detailed') {
     return (
-      <dl className="text-muted-foreground mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+      <dl className="text-muted-foreground mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
         <div>
           <dt className="text-foreground/70 font-medium">Lease term</dt>
           <dd>{leaseTerm}</dd>
@@ -69,7 +69,7 @@ export function OpenInspectionCheckInVisitorDetails({
   if (lines.length === 0) return null;
 
   return (
-    <div className="text-muted-foreground space-y-0.5 text-[11px]">
+    <div className="text-muted-foreground space-y-0.5 text-[12px]">
       {lines.map((line) => (
         <p key={line}>{line}</p>
       ))}

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 type BadgeSize = 'xs' | 'sm';
 
 function sizeClasses(size: BadgeSize): string {
-  return size === 'xs' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-[11px]';
+  return size === 'xs' ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-0.5 text-[12px]';
 }
 
 export function LeasingToneBadge({

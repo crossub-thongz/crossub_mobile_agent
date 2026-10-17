@@ -133,11 +133,11 @@ export function PropertyMessageTab({
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
-                  <span className="text-muted-foreground text-[11px] tabular-nums">
+                  <span className="text-muted-foreground text-[12px] tabular-nums">
                     {formatRelative(thread.lastAt)}
                   </span>
                   {thread.unread > 0 ? (
-                    <span className="bg-primary flex size-5 items-center justify-center rounded-full text-[10px] font-bold text-primary-foreground">
+                    <span className="bg-primary flex size-5 items-center justify-center rounded-full text-[11px] font-bold text-primary-foreground">
                       {thread.unread > 99 ? '99+' : thread.unread}
                     </span>
                   ) : null}

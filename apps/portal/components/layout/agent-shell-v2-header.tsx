@@ -12,6 +12,7 @@ import { CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useShellAsideStore } from '@/lib/shell-aside-store';
 import { useShellDockStore } from '@/lib/shell-dock-store';
 import { ROUTES } from '@/constants/routes';
 import { displayName } from '@/lib/utils';
@@ -36,15 +37,18 @@ function userRoleLabel(user: { jobTitle?: string | null; role?: string }): strin
 
 export function AgentShellV2Header({
   unreadNotificationCount,
-  showCrosLauncher = false,
+  showCrosLauncher,
 }: {
-  unreadNotificationCount: number;
+  unreadNotificationCount?: number;
   /** Desktop header CROS when the Ask CROS rail is not on screen. */
   showCrosLauncher?: boolean;
-}) {
+} = {}) {
   const router = useRouter();
   const { user } = useAuth();
-  const { messages } = useAgentData();
+  const { messages, unreadNotificationCount: liveUnread } = useAgentData();
+  const headerCrosLauncher = useShellAsideStore((state) => state.headerCrosLauncher);
+  const unreadCount = unreadNotificationCount ?? liveUnread;
+  const showLauncher = showCrosLauncher ?? headerCrosLauncher;
   const openGii = useShellDockStore((s) => s.openGii);
   const activePanel = useShellDockStore((s) => s.activePanel);
   const giiExpanded = useShellDockStore((s) => s.giiExpanded);
@@ -81,13 +85,13 @@ export function AgentShellV2Header({
         <span className="text-muted-foreground min-w-0 flex-1 truncate text-sm">
           Search properties, tasks, tenants…
         </span>
-        <kbd className="text-muted-foreground hidden shrink-0 rounded-md border border-border/70 bg-background/80 px-1.5 py-0.5 text-[10px] font-medium sm:inline">
+        <kbd className="text-muted-foreground hidden shrink-0 rounded-md border border-border/70 bg-background/80 px-1.5 py-0.5 text-[11px] font-medium sm:inline">
           ⌘ K
         </kbd>
       </Link>
 
       <div className="ml-auto flex shrink-0 items-center gap-2">
-        {showCrosLauncher ? (
+        {showLauncher ? (
           <button
             type="button"
             onClick={() => openGii()}
@@ -115,7 +119,7 @@ export function AgentShellV2Header({
         </Link>
 
         <AgentNotificationBell
-          unreadCount={unreadNotificationCount}
+          unreadCount={unreadCount}
           className="size-10 rounded-xl hover:bg-card/70"
           iconClassName="size-5"
           badgeClassName="bg-rose-500 ring-background"

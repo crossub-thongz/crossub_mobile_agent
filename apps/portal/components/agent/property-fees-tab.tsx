@@ -82,7 +82,7 @@ function FormField({
 }) {
   return (
     <div className={cn('space-y-1.5', className)}>
-      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</Label>
+      <Label className="text-[12px] uppercase tracking-wider text-muted-foreground">{label}</Label>
       {children}
     </div>
   );
@@ -243,7 +243,7 @@ function FeeRowMobileCard({
     return (
       <div className="rounded-xl border bg-card p-3 shadow-sm">
         <p className="text-sm font-semibold">{feeLabel(row.feeType)}</p>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
           <span className="font-medium tabular-nums">{formatFeeRowDisplay(row)}</span>
           <span className="text-muted-foreground">{formatGstLabel(row.gst)}</span>
         </div>
@@ -479,7 +479,7 @@ export function PropertyFeesTab({
 
           <div className="hidden overflow-x-auto rounded-xl border border-border/70 bg-card md:block">
           <table className="w-full min-w-[32rem] text-left text-sm">
-            <thead className="border-b bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
+            <thead className="border-b bg-muted/40 text-[12px] uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="px-3 py-2.5 font-medium">Fee type</th>
                 <th className="px-3 py-2.5 font-medium">Rate</th>

@@ -46,7 +46,7 @@ export function SectionStatusGrid({ sections }: { sections: SectionStatus[] }) {
               {s.count != null && s.count > 0 && (
                 <span
                   className={cn(
-                    'flex size-6 items-center justify-center rounded-full text-[11px] font-bold text-white',
+                    'flex size-6 items-center justify-center rounded-full text-[12px] font-bold text-white',
                     TONE_DOT[s.tone],
                   )}
                 >

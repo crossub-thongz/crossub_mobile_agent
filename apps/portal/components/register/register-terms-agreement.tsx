@@ -68,7 +68,7 @@ export function RegisterTermsAgreementCard({ className }: { className?: string }
             Terms &amp; system access agreement
           </p>
           <ExternalLink className="text-primary size-3.5 shrink-0 opacity-80" aria-hidden />
-          <span className="text-[11px] font-medium">Open to read</span>
+          <span className="text-[12px] font-medium">Open to read</span>
         </div>
         <p className="mt-2">
           By registering you agree to the CROSSUB terms and conditions and privacy policy. Tap

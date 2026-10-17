@@ -495,7 +495,7 @@ export function RentReviewTaskDetailView({
               ) : null}
               <div className="p-3">
                 <p className="text-sm font-semibold">{address}</p>
-                <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                   {property?.leaseStatus === 'vacant' ? 'Vacant' : 'Occupied'}
                 </span>
                 <dl className="mt-3 space-y-2 text-xs">
@@ -535,7 +535,7 @@ export function RentReviewTaskDetailView({
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold">{detail.tenantName}</p>
-                <span className="mt-1 inline-flex rounded-full border border-emerald-500/30 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                <span className="mt-1 inline-flex rounded-full border border-emerald-500/30 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                   Current tenant
                 </span>
                 <dl className="mt-3 space-y-2 text-xs">

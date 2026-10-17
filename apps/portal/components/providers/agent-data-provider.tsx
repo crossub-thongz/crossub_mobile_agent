@@ -420,9 +420,10 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const [propsRes, portRes] = await Promise.allSettled([
+      const [propsRes, portRes, agenciesRes] = await Promise.allSettled([
         fetchProperties(),
         fetchPortfolio(),
+        fetchAgencies(),
       ]);
 
       if (propsRes.status === 'rejected' && portRes.status === 'rejected') {
@@ -440,6 +441,9 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       if (portRes.status === 'fulfilled') {
         setPortfolio(portRes.value);
       }
+      if (agenciesRes.status === 'fulfilled') {
+        setApiAgencies(mapAgentAgencies(agenciesRes.value));
+      }
 
       setApiConnected(true);
       setApiError(
@@ -447,15 +451,14 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           ? 'Some property data could not be refreshed'
           : null,
       );
+      // The book is usable now. Messages, documents, and inspections fill in after.
+      if (showBlockingLoad) setLoading(false);
 
       const propsForMessages = mappedProps ?? [];
-      // Messages + notifications + documents + agencies load after the portfolio; each
-      // domain degrades independently (one hiccup never blanks the others).
-      const [threadsRes, notifsRes, docsRes, agenciesRes, billingRes] = await Promise.allSettled([
+      const [threadsRes, notifsRes, docsRes, billingRes] = await Promise.allSettled([
         fetchMessageThreads(),
         fetchNotifications(),
         fetchDocuments(),
-        fetchAgencies(),
         fetchAgentBillingSummary(),
       ]);
       setApiMessages(
@@ -470,11 +473,6 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       );
       setApiDocuments(
         docsRes.status === 'fulfilled' ? mapAgentDocuments(docsRes.value) : null,
-      );
-      setApiAgencies(
-        agenciesRes.status === 'fulfilled'
-          ? mapAgentAgencies(agenciesRes.value)
-          : null,
       );
       setPlatformBillingDisabled(
         billingRes.status === 'fulfilled' &&

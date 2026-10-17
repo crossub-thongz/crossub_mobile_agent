@@ -35,11 +35,11 @@ export function AgentInputHint({
   return (
     <div className="space-y-0.5">
       {notices.map((notice) => (
-        <p key={notice} className="text-destructive text-[11px] leading-snug">
+        <p key={notice} className="text-destructive text-[12px] leading-snug">
           {notice}
         </p>
       ))}
-      <p className="text-muted-foreground flex items-start justify-between gap-2 text-[11px] leading-snug">
+      <p className="text-muted-foreground flex items-start justify-between gap-2 text-[12px] leading-snug">
         <span>{agentInputRequirementText(kind)}</span>
         {focused ? (
           <span

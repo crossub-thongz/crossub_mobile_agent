@@ -38,7 +38,7 @@ export function LeasingLifecyclePhaseNav({
 
   return (
     <section className="rounded-xl border border-violet-500/25 bg-violet-500/[0.04] px-3 py-2 md:py-2">
-      <p className="text-violet-700/80 dark:text-violet-300/80 mb-1 text-[9px] font-semibold uppercase tracking-wide">
+      <p className="text-violet-700/80 dark:text-violet-300/80 mb-1 text-[10px] font-semibold uppercase tracking-wide">
         Letting phases
       </p>
       <WorkflowMobileStepChips

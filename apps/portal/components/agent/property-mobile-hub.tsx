@@ -107,7 +107,7 @@ export function PropertyMobileHub({
             key={item.id}
             type="button"
             onClick={() => openGiiForProperty(item.prompt)}
-            className="rounded-full border border-border/80 bg-card px-2.5 py-1 text-[11px] font-medium transition hover:border-primary/30 hover:bg-primary/5"
+            className="rounded-full border border-border/80 bg-card px-2.5 py-1 text-[12px] font-medium transition hover:border-primary/30 hover:bg-primary/5"
           >
             {item.label}
           </button>
@@ -116,7 +116,7 @@ export function PropertyMobileHub({
       */}
 
       <div>
-        <p className="text-muted-foreground mb-2 text-[11px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground mb-2 text-[12px] font-semibold uppercase tracking-wide">
           Create a case
         </p>
         <div className="grid grid-cols-3 gap-2">
