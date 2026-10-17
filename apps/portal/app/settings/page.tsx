@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronRight, Moon, Sun } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { PlanSettingsCard } from '@/components/agent/plan-settings-card';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentPageGuides } from '@/components/providers/agent-page-guide-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -43,6 +44,8 @@ export default function SettingsPage() {
   return (
     <AgentShell title="Settings" backHref={ROUTES.PROFILE}>
       <div className="space-y-5">
+        <PlanSettingsCard />
+
         <section className="space-y-2">
           <h2 className="text-sm font-semibold">Appearance</h2>
           <div className="grid grid-cols-2 gap-2">

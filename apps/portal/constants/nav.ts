@@ -5,14 +5,16 @@ import {
   FileText,
   FolderArchive,
   HelpCircle,
+  Landmark,
   LayoutDashboard,
   ListTodo,
+  MessagesSquare,
   Settings,
   Tags,
   Wrench,
 } from 'lucide-react';
 
-import type { PortalNavAccess } from '@/lib/portal-service-level';
+import { PORTAL_NAV_ACCESS, type PortalNavAccess } from '@/lib/portal-service-level';
 import { ROUTES } from '@/constants/routes';
 import { ACCOUNTING_MODULE_LAUNCHED } from '@/constants/accounting-sections';
 
@@ -29,10 +31,55 @@ export const V1_PRIMARY_NAV: NavItem[] = [
   { href: ROUTES.PROPERTIES, label: 'Properties', icon: Building2 },
 ];
 
+/** Self-Manage inbox — threads, conversation and job context. */
+const CONVERSATIONS_NAV_ITEM: NavItem = {
+  href: ROUTES.CONVERSATIONS,
+  label: 'Conversations',
+  icon: MessagesSquare,
+  portalAccess: PORTAL_NAV_ACCESS.SELF_MANAGED,
+};
+
+/** Self-Manage trust accounting — principals only. */
+const TRUST_NAV_ITEM: NavItem = {
+  href: ROUTES.TRUST,
+  label: 'Trust',
+  icon: Landmark,
+  portalAccess: PORTAL_NAV_ACCESS.SELF_MANAGED_PRINCIPAL,
+};
+
+/**
+ * Self-Manage desktop module pages on the redesign, where the job hubs otherwise live on
+ * Tasks. V1 already lists Leasing, Maintenance and Inspections, so it only adds the last two.
+ */
+const V2_SELF_MANAGED_NAV: NavItem[] = [
+  {
+    href: ROUTES.MAINTENANCE,
+    label: 'Maintenance',
+    icon: Wrench,
+    portalAccess: PORTAL_NAV_ACCESS.SELF_MANAGED,
+  },
+  {
+    href: ROUTES.INSPECTIONS,
+    label: 'Inspections',
+    icon: ClipboardList,
+    portalAccess: PORTAL_NAV_ACCESS.SELF_MANAGED,
+  },
+  {
+    href: ROUTES.LEASING,
+    label: 'Leasing',
+    icon: FileText,
+    portalAccess: PORTAL_NAV_ACCESS.SELF_MANAGED,
+  },
+  CONVERSATIONS_NAV_ITEM,
+  TRUST_NAV_ITEM,
+];
+
 export const V1_MORE_NAV: NavItem[] = [
   { href: ROUTES.LEASING, label: 'Leasing', icon: FileText, portalAccess: 'full' },
   { href: ROUTES.MAINTENANCE, label: 'Maintenance', icon: Wrench, portalAccess: 'full' },
   { href: ROUTES.INSPECTIONS, label: 'Inspections', icon: ClipboardList },
+  CONVERSATIONS_NAV_ITEM,
+  TRUST_NAV_ITEM,
   { href: ROUTES.ACCOUNTING, label: 'Accounting', icon: FileText, portalAccess: 'full' },
   { href: ROUTES.TRIBUNAL, label: 'Tribunal', icon: FileText },
   { href: ROUTES.ARCHIVE, label: 'History', icon: FolderArchive, portalAccess: 'full' },
@@ -52,6 +99,7 @@ export const V2_PRIMARY_NAV: NavItem[] = [
 ];
 
 export const V2_MORE_NAV: NavItem[] = [
+  ...V2_SELF_MANAGED_NAV,
   ...(ACCOUNTING_MODULE_LAUNCHED
     ? [
         {

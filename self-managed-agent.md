@@ -22,9 +22,11 @@ Scope from Daniel: Maintenance, Inspection, Leasing, Conversations, Trust accoun
 2. **Owner email is a record only.** No approve links and no owner portal. Every confirmation becomes a manual action on the platform. The agent makes or records the decision, and the owner gets an emailed copy.
 3. **The agency's own accountant runs trust.** This needs a new role.
 4. **Agency staff use the existing inspector app.** Feasibility confirmed (see Phase 1).
+5. **Everything moved to the agent is for Self-Manage agents only.** Inspection Only and Full Service users keep exactly what they have today (Daniel, 17 Oct 2026).
 
 ## Rules that apply to every phase
 
+- **Self-Manage only.** New agent actions, pages, owner emails and the plan switch apply only to Self-Manage agencies and properties; the backend refuses them for other tiers. An agent who also works for an Inspection Only or Full Service agency sees that agency's jobs exactly as today.
 - **Everything depends on the resolved service level**: `Management.serviceLevel` overrides `Agency.portalServiceLevel`. No separate Self-Manage code path; an agency that switches tiers gets the matching behaviour.
 - **Three flips in Self-Manage**:
   - A step a CROSSUB AM does becomes a step the agent does.
@@ -43,36 +45,36 @@ Owner: Chan
 
 ### Backend (`crossub_web/apps/api`)
 
-- [ ] Add `SELF_MANAGED` to `enum AgentPortalServiceLevel` (Prisma migration). Add helpers next to `isInspectionOnlyPortalLevel` / `isFullManagementPortalLevel` in `src/constants/agent-portal.constants.ts`.
-- [ ] Make Self-Manage the default for **new** agencies only. Existing Level 1 and Level 2 agencies are unchanged, so no data migration.
-- [ ] Review `agent-portal-access.util.ts` and `assertAgencyFullManagementAccess` so Self-Manage gets full module access (it is not Inspection Only).
-- [ ] Remove the prepay gate and platform charges for Self-Manage (`billing-inspection.service.ts`, `ensureLevel2InspectionChargeAccrued`, `assertInspectionPrepaidSettled`).
-- [ ] **Landlord mail guard by tier.**
+- [x] Add `SELF_MANAGED` to `enum AgentPortalServiceLevel` (Prisma migration). Add helpers next to `isInspectionOnlyPortalLevel` / `isFullManagementPortalLevel` in `src/constants/agent-portal.constants.ts`.
+- [x] Make Self-Manage the default for **new** agencies only. Existing Level 1 and Level 2 agencies are unchanged, so no data migration.
+- [x] Review `agent-portal-access.util.ts` and `assertAgencyFullManagementAccess` so Self-Manage gets full module access (it is not Inspection Only).
+- [x] Remove the prepay gate and platform charges for Self-Manage (`billing-inspection.service.ts`, `ensureLevel2InspectionChargeAccrued`, `assertInspectionPrepaidSettled`).
+- [x] **Landlord mail guard by tier.**
   - `LandlordMailGuardService.isLandlordAddress` / `partitionCc` take a send context (`propertyId` or `agencyId`).
   - Allow a landlord recipient when that property's resolved level is `SELF_MANAGED`.
   - Keep failing closed when the level cannot be resolved.
   - Thread the context through `mail.service.ts` call sites.
-- [ ] **Agency sender.** Send owner email as `"Agency name" <inboundEmailSlug@CROSSUB domain>` so replies land in the agency's inbox (`agency-inbound-email-assign.util.ts`, `formatAgencyInboundAddress`). Confirm SPF/DKIM for that domain.
-- [ ] **Shared decision record.** One service that records "decision + emailed owner copy" on a job's timeline. Every module reuses it.
-- [ ] Agent route to change the agency's tier, for the plan switch. Principal only.
+- [ ] **Agency sender.** (Code done; SPF/DKIM for the inbound domain still to confirm with ops.) Send owner email as `"Agency name" <inboundEmailSlug@CROSSUB domain>` so replies land in the agency's inbox (`agency-inbound-email-assign.util.ts`, `formatAgencyInboundAddress`). Confirm SPF/DKIM for that domain.
+- [x] **Shared decision record.** One service that records "decision + emailed owner copy" on a job's timeline. Every module reuses it.
+- [x] Agent route to change the agency's tier, for the plan switch. Principal only.
 
 ### Contract
 
-- [ ] Publish a new `@crossub-thongz/api-contract` version with the enum value and new routes. Bump `apps/portal/package.json`.
+- [x] Publish a new `@crossub-thongz/api-contract` version (0.26.0) with the enum value and new routes. Bump `apps/portal/package.json`.
 
 ### Agent app (`apps/portal`)
 
-- [ ] Add `SELF_MANAGED` to `lib/portal-service-level.ts` (labels "Self-Manage" / "Free"). Update `portal-service-level-gate.tsx` and the `portalAccess` filter in `constants/nav.ts`.
-- [ ] Registration: Self-Manage is the default. Inspection Only and Full Service are optional (`components/register/register-pricing-panel.tsx`).
-- [ ] Copy and task buckets by tier:
+- [x] Add `SELF_MANAGED` to `lib/portal-service-level.ts` (labels "Self-Manage" / "Free"). Update `portal-service-level-gate.tsx` and the `portalAccess` filter in `constants/nav.ts`.
+- [x] Registration: Self-Manage is the default. Inspection Only and Full Service are optional (`components/register/register-pricing-panel.tsx`).
+- [x] Copy and task buckets by tier:
   - `constants/agent-page-tour.ts`
   - `constants/agent-module-tutorial.ts`
   - `lib/task-list-v2.ts` (the CROS-handling default bucket)
   - Gii's "your Account Manager" intro in `components/agent/gii-assistant.tsx`
   - Property approval banner
-- [ ] Desktop module shell: sidebar entries and pages for Maintenance, Inspections, Leasing, Conversations, Trust. These replace today's redirects to `/tasks`.
-- [ ] Shared `DecisionWithOwnerEmail` component: decision buttons, an owner email preview, and the sent-copy record on the timeline.
-- [ ] Settings → Plan card: compare the three tiers and switch with confirmation.
+- [x] Desktop module shell: sidebar entries and pages for Maintenance, Inspections, Leasing, Conversations, Trust. These replace today's redirects to `/tasks`.
+- [x] Shared `DecisionWithOwnerEmail` component: decision buttons, an owner email preview, and the sent-copy record on the timeline.
+- [x] Settings → Plan card: compare the three tiers and switch with confirmation.
 
 **Done when:** a new agency registers as Self-Manage and sees all module pages on desktop with Self-Manage copy. A test email to the landlord on a Self-Manage property is delivered from the agency address. The same email on a Level 2 property is still blocked.
 

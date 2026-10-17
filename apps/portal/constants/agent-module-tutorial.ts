@@ -1,3 +1,5 @@
+import { AGENT_COPY_VARIANT, type AgentCopyVariant } from '@/constants/agent-copy-variant';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { ROUTES } from '@/constants/routes';
 
 export type AgentTutorialModuleId = 'properties' | 'tasks' | 'history';
@@ -331,6 +333,108 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
       'Restore does not resurrect closed tasks. Raise a New task if the work is needed again.',
       'Live Properties still has an Archived filter; History is the dedicated module for the same records plus closed jobs.',
     ],
+  },
+};
+
+/** Replacement copy for one module: items keyed by title; `null` drops that item. */
+type AgentTutorialOverride = {
+  overview?: string;
+  steps?: Record<string, string>;
+  functions?: Record<string, string | null>;
+  tips?: string[];
+};
+
+function applyTutorialItemOverrides(
+  items: AgentTutorialItem[],
+  overrides: Record<string, string | null> | undefined,
+): AgentTutorialItem[] {
+  if (!overrides) return items;
+  return items.flatMap((item) => {
+    if (!(item.title in overrides)) return [item];
+    const description = overrides[item.title];
+    return description == null ? [] : [{ ...item, description }];
+  });
+}
+
+function withTutorialOverride(
+  module: AgentTutorialModule,
+  override: AgentTutorialOverride,
+): AgentTutorialModule {
+  return {
+    ...module,
+    overview: override.overview ?? module.overview,
+    steps: applyTutorialItemOverrides(module.steps, override.steps),
+    functions: applyTutorialItemOverrides(module.functions, override.functions),
+    tips: override.tips ?? module.tips,
+  };
+}
+
+/**
+ * Self-Manage: the agency runs the work, so nothing is "CROS handling" and CROS assists the
+ * agent instead of carrying jobs. Only the items that mention CROSSUB doing the work change.
+ */
+const SELF_MANAGED_TUTORIAL_OVERRIDES: Record<AgentTutorialModuleId, AgentTutorialOverride> = {
+  properties: {
+    steps: {
+      'Preview, then open':
+        'On desktop, click a row once to load the preview panel on the right (overview, jobs in progress, upcoming items). Click the selected row again, double-click, or use Open profile to enter the full property hub.',
+    },
+    functions: {
+      'Preview panel':
+        'Desktop only. After you select a row, the right-hand panel shows current tenancy, rent, lease, jobs in progress, and shortcuts into the property. It does not replace the full profile.',
+    },
+    tips: [
+      'Click once to preview, again (or Open profile) to work the property.',
+      'Needs attention is the fastest way to see which addresses are waiting on you.',
+      'Archive is reversible. Delete draft is not. End management keeps the property on the live list.',
+      'Replay this walkthrough anytime from How to use on this page, or from Support → How to use.',
+    ],
+  },
+  tasks: {
+    overview: `Tasks is the job board for your portfolio. Every live maintenance, inspection, leasing, rent review, and tribunal case appears here, grouped by whether it is your next step, you are waiting on someone else, or it recently finished. You run the work; ${CROS_ASSISTANT_NAME} drafts messages, summarises jobs and suggests next steps.`,
+    steps: {
+      'Pick a status card':
+        'Need my action, Waiting, and Completed (last 30 days) filter the table. Tap the same card again to return to all statuses.',
+      'Open the job':
+        'Click a row to open that case and take the next step — approve a quote, pick a tenant, book an inspection, and so on. Owners get an emailed copy of the decisions you make.',
+    },
+    functions: {
+      'Need my action': `Your work. Decisions such as quote approval, tenant applications and rent review recommendations, plus every job you are running yourself. Open a row and ask ${CROS_ASSISTANT_NAME} to draft the next step.`,
+      'CROS handling': null,
+      Waiting:
+        'The next step sits with a tenant, owner, contractor, or another party. The job moves back to Need my action when they respond.',
+      'Task table':
+        'Each row shows the job name, property, type, status, and last update. A rose highlight and Review button mean a decision is waiting on you.',
+      'Open / Review':
+        'Opens the case workspace for that job — messages, documents, quotes, schedules, and the next step to take. Back returns you to Tasks.',
+      'New task — Maintenance': `Creates a repair request. You then invite contractors, compare quotes and approve the work, with ${CROS_ASSISTANT_NAME} drafting messages and summarising quotes.`,
+    },
+    tips: [
+      'Clear Need my action daily — those rows are your open work.',
+      `Ask ${CROS_ASSISTANT_NAME} to draft a message or summarise a job when you open it.`,
+      'Create work with New task when you already know the job type.',
+      'Owners get an emailed copy of every decision you record.',
+    ],
+  },
+  history: {},
+};
+
+/** Module tutorials keyed by copy set, so the agency's tier picks the wording. */
+export const AGENT_MODULE_TUTORIALS_BY_VARIANT: Record<
+  AgentCopyVariant,
+  Record<AgentTutorialModuleId, AgentTutorialModule>
+> = {
+  [AGENT_COPY_VARIANT.SERVICED]: AGENT_MODULE_TUTORIALS,
+  [AGENT_COPY_VARIANT.SELF_MANAGED]: {
+    properties: withTutorialOverride(
+      AGENT_MODULE_TUTORIALS.properties,
+      SELF_MANAGED_TUTORIAL_OVERRIDES.properties,
+    ),
+    tasks: withTutorialOverride(AGENT_MODULE_TUTORIALS.tasks, SELF_MANAGED_TUTORIAL_OVERRIDES.tasks),
+    history: withTutorialOverride(
+      AGENT_MODULE_TUTORIALS.history,
+      SELF_MANAGED_TUTORIAL_OVERRIDES.history,
+    ),
   },
 };
 

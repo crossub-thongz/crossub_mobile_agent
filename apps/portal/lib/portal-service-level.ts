@@ -1,32 +1,58 @@
 import type { BuiltinQuickActionId } from '@/lib/quick-actions';
 import type { Agency } from '@/lib/types';
 import { ROUTES } from '@/constants/routes';
+import { AGENCY_MEMBERSHIP_TIER } from '@/constants/api-enums';
+import { AGENT_COPY_VARIANT, type AgentCopyVariant } from '@/constants/agent-copy-variant';
 
 export type AgentPortalServiceLevel =
   | 'LEVEL_1_INSPECTION_ONLY'
   | 'LEVEL_2_FULL_MANAGEMENT'
-  | 'LEVEL_3_LEGACY';
+  | 'LEVEL_3_LEGACY'
+  | 'SELF_MANAGED';
+
+export const PORTAL_SERVICE_LEVEL = {
+  INSPECTION_ONLY: 'LEVEL_1_INSPECTION_ONLY',
+  FULL_MANAGEMENT: 'LEVEL_2_FULL_MANAGEMENT',
+  LEGACY: 'LEVEL_3_LEGACY',
+  SELF_MANAGED: 'SELF_MANAGED',
+} as const satisfies Record<string, AgentPortalServiceLevel>;
 
 export const PORTAL_SERVICE_LEVEL_LABEL: Record<AgentPortalServiceLevel, string> = {
   LEVEL_1_INSPECTION_ONLY: 'Inspection & tribunal',
   LEVEL_2_FULL_MANAGEMENT: 'Full management',
   LEVEL_3_LEGACY: 'Legacy clients',
+  SELF_MANAGED: 'Self-Manage',
 };
 
+/** The plans an agency can pick at signup or switch between in Settings. Legacy is staff-set. */
 export type RegisterablePortalServiceLevel =
+  | 'SELF_MANAGED'
   | 'LEVEL_1_INSPECTION_ONLY'
   | 'LEVEL_2_FULL_MANAGEMENT';
 
 /** User-facing labels on the registration flow. */
 export const REGISTER_SERVICE_LEVEL_LABEL: Record<RegisterablePortalServiceLevel, string> = {
+  SELF_MANAGED: 'Self-Manage',
   LEVEL_1_INSPECTION_ONLY: 'Inspection Only Service',
   LEVEL_2_FULL_MANAGEMENT: 'Full Service',
 };
+
+/** Price tag beside each plan: Self-Manage is the free core (Daniel, 17 Oct 2026). */
+export const REGISTER_SERVICE_LEVEL_PRICE_TAG: Record<RegisterablePortalServiceLevel, string> = {
+  SELF_MANAGED: 'Free',
+  LEVEL_1_INSPECTION_ONLY: 'Optional, paid',
+  LEVEL_2_FULL_MANAGEMENT: 'Optional, paid',
+};
+
+/** Where a new agency starts. Inspection Only and Full Service are optional paid layers. */
+export const DEFAULT_REGISTER_SERVICE_LEVEL: RegisterablePortalServiceLevel = 'SELF_MANAGED';
 
 export const REGISTER_SERVICE_LEVEL_DESCRIPTION: Record<
   RegisterablePortalServiceLevel,
   string
 > = {
+  SELF_MANAGED:
+    'Run your whole portfolio yourself with free software and Cros AI — maintenance, inspections, leasing, conversations and trust accounting. Owners get a copy of your decisions by email.',
   LEVEL_1_INSPECTION_ONLY:
     'Add properties and order inspections and tribunal support. Pay when you place the order. Inspection module only — upgrade anytime for leasing, maintenance, and accounting.',
   LEVEL_2_FULL_MANAGEMENT:
@@ -34,6 +60,7 @@ export const REGISTER_SERVICE_LEVEL_DESCRIPTION: Record<
 };
 
 export const PORTAL_SERVICE_LEVEL_ORDER: RegisterablePortalServiceLevel[] = [
+  'SELF_MANAGED',
   'LEVEL_1_INSPECTION_ONLY',
   'LEVEL_2_FULL_MANAGEMENT',
 ];
@@ -42,7 +69,14 @@ export const PORTAL_SERVICE_LEVEL_TAG: Record<AgentPortalServiceLevel, string> =
   LEVEL_1_INSPECTION_ONLY: 'Level 1',
   LEVEL_2_FULL_MANAGEMENT: 'Level 2',
   LEVEL_3_LEGACY: 'Level 3',
+  SELF_MANAGED: 'Free',
 };
+
+export function isRegisterablePortalServiceLevel(
+  level: AgentPortalServiceLevel,
+): level is RegisterablePortalServiceLevel {
+  return (PORTAL_SERVICE_LEVEL_ORDER as readonly string[]).includes(level);
+}
 
 export const DEFAULT_PORTAL_SERVICE_LEVEL: AgentPortalServiceLevel =
   'LEVEL_2_FULL_MANAGEMENT';
@@ -54,7 +88,30 @@ export function resolvePortalServiceLevel(
 }
 
 export function isInspectionOnlyLevel(level: AgentPortalServiceLevel): boolean {
-  return level === 'LEVEL_1_INSPECTION_ONLY';
+  return level === PORTAL_SERVICE_LEVEL.INSPECTION_ONLY;
+}
+
+/** Self-Manage: the agency does the work CROSSUB staff do on the other tiers. */
+export function isSelfManagedLevel(level: AgentPortalServiceLevel): boolean {
+  return level === PORTAL_SERVICE_LEVEL.SELF_MANAGED;
+}
+
+/** True when any assigned agency is Self-Manage — the desktop module pages and "you" copy switch on. */
+export function hasSelfManagedAgency(agencies: Agency[]): boolean {
+  return agencies.some((a) => isSelfManagedLevel(resolvePortalServiceLevel(a.portalServiceLevel)));
+}
+
+export function isPropertySelfManaged(agencies: Agency[], propertyAgencyId?: string): boolean {
+  return isSelfManagedLevel(getAgencyPortalLevel(agencies, propertyAgencyId));
+}
+
+/** True when the agent is a principal of a Self-Manage agency — Trust is theirs (Phase 3). */
+export function hasSelfManagedPrincipalAccess(agencies: Agency[]): boolean {
+  return agencies.some(
+    (a) =>
+      isSelfManagedLevel(resolvePortalServiceLevel(a.portalServiceLevel)) &&
+      a.membershipTier === AGENCY_MEMBERSHIP_TIER.PRINCIPAL,
+  );
 }
 
 export function hasFullManagementAccess(agencies: Agency[]): boolean {
@@ -79,14 +136,58 @@ export function getAgencyPortalLevel(
 }
 
 export function isLegacyLevel(level: AgentPortalServiceLevel): boolean {
-  return level === 'LEVEL_3_LEGACY';
+  return level === PORTAL_SERVICE_LEVEL.LEGACY;
 }
 
-/** Level 1 and 2 see an add-card prompt until a card is saved or dismissed (Level 2: once per day). */
+/**
+ * Level 1 and 2 see an add-card prompt until a card is saved or dismissed (Level 2: once per day).
+ * Self-Manage is free, so there is nothing to pay with a card.
+ */
 export function usesGlobalPaymentMethodPrompt(
   level: AgentPortalServiceLevel | string | undefined,
 ): boolean {
-  return !isLegacyLevel(resolvePortalServiceLevel(level as AgentPortalServiceLevel | undefined));
+  const resolved = resolvePortalServiceLevel(level as AgentPortalServiceLevel | undefined);
+  return !isLegacyLevel(resolved) && !isSelfManagedLevel(resolved);
+}
+
+/** Narrow an untyped API value (billing summary, pricing catalog) to a known tier. */
+export function isAgentPortalServiceLevel(value: unknown): value is AgentPortalServiceLevel {
+  return (Object.values(PORTAL_SERVICE_LEVEL) as readonly unknown[]).includes(value);
+}
+
+/** Level 2 and Level 3 accrue to a monthly platform invoice. Self-Manage and Level 1 do not. */
+export function usesMonthlyPlatformInvoice(level: unknown): boolean {
+  return (
+    level === PORTAL_SERVICE_LEVEL.FULL_MANAGEMENT || level === PORTAL_SERVICE_LEVEL.LEGACY
+  );
+}
+
+/**
+ * True when every assigned agency is Self-Manage — portfolio-wide copy (tours, Tasks buckets,
+ * CROS's role) speaks to the agent as "you". A mixed book keeps the CROSSUB-serviced copy.
+ */
+export function isSelfManagedAgent(agencies: Agency[]): boolean {
+  if (agencies.length === 0) return false;
+  return agencies.every((a) => isSelfManagedLevel(resolvePortalServiceLevel(a.portalServiceLevel)));
+}
+
+/**
+ * Properties whose agency is Self-Manage. The Self-Manage screens (module pages, Conversations)
+ * show only these, so an agent who also works for an Inspection Only or Full Service agency
+ * keeps that agency's jobs where they are today (Daniel, 17 Oct 2026).
+ */
+export function selfManagedPropertyIds(
+  agencies: Agency[],
+  properties: ReadonlyArray<{ id: string; agencyId?: string }>,
+): Set<string> {
+  return new Set(
+    properties.filter((p) => isPropertySelfManaged(agencies, p.agencyId)).map((p) => p.id),
+  );
+}
+
+/** Which copy set a screen shows: Self-Manage speaks to the agent; every other tier to CROSSUB's work. */
+export function agentCopyVariant(selfManaged: boolean): AgentCopyVariant {
+  return selfManaged ? AGENT_COPY_VARIANT.SELF_MANAGED : AGENT_COPY_VARIANT.SERVICED;
 }
 
 export function isPropertyInspectionOnly(
@@ -116,6 +217,8 @@ export const FULL_MANAGEMENT_ROUTE_PREFIXES = [
   ROUTES.REPORTS,
   ROUTES.MESSAGES,
   ROUTES.COMMUNICATIONS,
+  ROUTES.CONVERSATIONS,
+  ROUTES.TRUST,
   ROUTES.AGREEMENTS,
   ROUTES.ACCOUNTING,
 ] as const;
@@ -166,13 +269,40 @@ export function isFullManagementRoute(pathname: string): boolean {
   );
 }
 
-export type PortalNavAccess = 'any' | 'full';
+/**
+ * `self` — only agents with a Self-Manage agency (the desktop module pages).
+ * `self-principal` — only principals of a Self-Manage agency (Trust).
+ */
+export type PortalNavAccess = 'any' | 'full' | 'self' | 'self-principal';
+
+export const PORTAL_NAV_ACCESS = {
+  ANY: 'any',
+  FULL: 'full',
+  SELF_MANAGED: 'self',
+  SELF_MANAGED_PRINCIPAL: 'self-principal',
+} as const satisfies Record<string, PortalNavAccess>;
+
+/** Self-Manage flags for {@link filterNavByAccess}. Omitted, Self-Manage-only entries stay hidden. */
+export type SelfManagedNavAccess = {
+  selfManaged: boolean;
+  selfManagedPrincipal: boolean;
+};
 
 export function filterNavByAccess<T extends { portalAccess?: PortalNavAccess }>(
   items: readonly T[],
   hasFullAccess: boolean,
+  selfManagedAccess?: SelfManagedNavAccess,
 ): T[] {
-  return items.filter((item) => item.portalAccess !== 'full' || hasFullAccess);
+  return items.filter((item) => {
+    if (item.portalAccess === PORTAL_NAV_ACCESS.FULL) return hasFullAccess;
+    if (item.portalAccess === PORTAL_NAV_ACCESS.SELF_MANAGED) {
+      return selfManagedAccess?.selfManaged === true;
+    }
+    if (item.portalAccess === PORTAL_NAV_ACCESS.SELF_MANAGED_PRINCIPAL) {
+      return selfManagedAccess?.selfManagedPrincipal === true;
+    }
+    return true;
+  });
 }
 
 export const INSPECTION_ONLY_HIDDEN_QUICK_ACTIONS: BuiltinQuickActionId[] = [

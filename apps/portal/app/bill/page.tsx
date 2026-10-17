@@ -39,6 +39,14 @@ import { resolvePaymentFlow } from '@/lib/billing/resolve-payment-flow';
 import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-payment';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { AccountLockedBanner } from '@/components/billing/account-locked-banner';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import { SELF_MANAGED_BILLING_NOTE } from '@/constants/service-plan';
+import {
+  isSelfManagedLevel,
+  PORTAL_SERVICE_LEVEL,
+  resolvePortalServiceLevel,
+  usesMonthlyPlatformInvoice,
+} from '@/lib/portal-service-level';
 import { Button } from '@/components/ui/button';
 import {
   confirmAgentPaymentMethodSetup,
@@ -334,6 +342,7 @@ function PrepaidMonthlyBillingList({
 }
 
 export default function BillPage() {
+  const { primaryAgency } = useAgentData();
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
   const [invoices, setInvoices] = useState<AgentBillingMonthlyInvoice[]>([]);
@@ -355,9 +364,11 @@ export default function BillPage() {
   const autoPayOpened = useRef(false);
 
   const stripeConfigured = Boolean(getStripePublishableKey());
-  const usesMonthlyInvoice =
-    summary?.portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT' ||
-    summary?.portalServiceLevel === 'LEVEL_3_LEGACY';
+  const usesMonthlyInvoice = usesMonthlyPlatformInvoice(summary?.portalServiceLevel);
+  // Self-Manage is free: no card, charges or invoices, even before the summary loads.
+  const selfManaged =
+    summary?.portalServiceLevel === PORTAL_SERVICE_LEVEL.SELF_MANAGED ||
+    isSelfManagedLevel(resolvePortalServiceLevel(primaryAgency?.portalServiceLevel));
 
   const payableInvoices = useMemo(() => invoices.filter(isPayableInvoice), [invoices]);
 
@@ -688,12 +699,16 @@ export default function BillPage() {
     }
   };
 
-  if (summary?.platformBillingDisabled) {
+  if (selfManaged || summary?.platformBillingDisabled) {
     return (
       <AgentShell title="Invoice">
         <PageIntro
           title="Invoice"
-          description="Platform billing is paused for your service plan. There is nothing to pay."
+          description={
+            selfManaged
+              ? SELF_MANAGED_BILLING_NOTE
+              : 'Platform billing is paused for your service plan. There is nothing to pay.'
+          }
         />
       </AgentShell>
     );
@@ -706,7 +721,7 @@ export default function BillPage() {
           title="Payment Method"
           description={
             usesMonthlyInvoice
-              ? summary?.portalServiceLevel === 'LEVEL_3_LEGACY'
+              ? summary?.portalServiceLevel === PORTAL_SERVICE_LEVEL.LEGACY
                 ? 'Monthly invoice is letting fee and management fee. Extra inspections after included usage are prepaid on Bills. Open inspections are not charged.'
                 : 'Monthly invoice is management fee. Extra open, routine, ingoing and outgoing inspections after included usage are prepaid on Bills.'
               : 'Prepaid inspection charges for your agency. Unaccepted jobs are refunded after 48 hours.'

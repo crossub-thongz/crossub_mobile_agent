@@ -1,25 +1,24 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-
-import { ROUTES } from '@/constants/routes';
+import { MaintenanceModule } from '@/components/agent/module-workspace/maintenance-module';
+import { TasksFilterRedirect } from '@/components/agent/module-workspace/tasks-filter-redirect';
+import { AgentShell } from '@/components/layout/agent-shell';
+import { MAINTENANCE_WORKSPACE_COPY } from '@/constants/module-workspace';
+import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 
 /**
- * Maintenance list hub is retired. View and create maintenance jobs on Tasks.
- * Previous filter/table UI lived in this file.
+ * Maintenance list hub is retired for every other tier: they view and create jobs on Tasks.
+ * Self-Manage agents get the desktop maintenance page instead (list-and-detail split pane).
  */
 export default function MaintenancePage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { ready, selfManaged } = useSelfManagedAccess();
 
-  useEffect(() => {
-    const next = new URLSearchParams();
-    next.set('filter', 'Maintenance');
-    const property = searchParams.get('property');
-    if (property) next.set('property', property);
-    router.replace(`${ROUTES.TASKS}?${next.toString()}`);
-  }, [router, searchParams]);
+  if (!ready) return null;
+  if (!selfManaged) return <TasksFilterRedirect filter="Maintenance" />;
 
-  return null;
+  return (
+    <AgentShell title={MAINTENANCE_WORKSPACE_COPY.title} wide fillMain hideNeedAction>
+      <MaintenanceModule />
+    </AgentShell>
+  );
 }

@@ -23,12 +23,16 @@ import {
   fetchAgentInvitePreview,
   inviteToServiceAgreementPreview,
   registerAgentErrorMessage,
+  registerRequiresServiceAgreement,
   type AgentInvitePreview,
 } from '@/lib/agent-registration';
 import { postAuthDestination } from '@/lib/system-access-agreement';
 import { ApiError } from '@/lib/api';
 import type { AuthUser } from '@/lib/auth-types';
-import type { AgentPortalServiceLevel } from '@/lib/portal-service-level';
+import {
+  DEFAULT_REGISTER_SERVICE_LEVEL,
+  type RegisterablePortalServiceLevel,
+} from '@/lib/portal-service-level';
 
 function EmailCopyRow({ email }: { email: string }) {
   const [copied, setCopied] = useState(false);
@@ -69,8 +73,11 @@ export default function AgentInviteRegisterPage() {
   const [loading, setLoading] = useState(true);
   const [acceptServiceAgreement, setAcceptServiceAgreement] = useState(false);
   const [acceptPrivacyAgreement, setAcceptPrivacyAgreement] = useState(false);
-  const [portalServiceLevel, setPortalServiceLevel] =
-    useState<AgentPortalServiceLevel | null>(null);
+  // Self-Manage is preselected; Inspection Only and Full Service are optional paid plans.
+  const [portalServiceLevel, setPortalServiceLevel] = useState<RegisterablePortalServiceLevel>(
+    DEFAULT_REGISTER_SERVICE_LEVEL,
+  );
+  const requiresServiceAgreement = registerRequiresServiceAgreement(portalServiceLevel);
   const [submitting, setSubmitting] = useState(false);
   const [registeredUser, setRegisteredUser] = useState<AuthUser | null>(null);
 
@@ -92,13 +99,13 @@ export default function AgentInviteRegisterPage() {
   async function onComplete() {
     if (
       !token ||
-      !registerAgreementsReady(acceptServiceAgreement, acceptPrivacyAgreement)
+      !registerAgreementsReady(
+        acceptServiceAgreement,
+        acceptPrivacyAgreement,
+        requiresServiceAgreement,
+      )
     ) {
       toast.error('Please accept the required agreements to continue.');
-      return;
-    }
-    if (!portalServiceLevel) {
-      toast.error('Please select Inspection Only Service or Full Service.');
       return;
     }
     setSubmitting(true);
@@ -191,6 +198,7 @@ export default function AgentInviteRegisterPage() {
   const agreementsReady = registerAgreementsReady(
     acceptServiceAgreement,
     acceptPrivacyAgreement,
+    requiresServiceAgreement,
   );
 
   return (
@@ -230,13 +238,14 @@ export default function AgentInviteRegisterPage() {
               onAcceptPrivacyAgreementChange={setAcceptPrivacyAgreement}
               serviceAgreementHelpText="Checking this box pre-fills the Service Agreement with your invite and agency details from the sales onboarding record."
               showIntermediarySummary={false}
+              showServiceAgreement={requiresServiceAgreement}
             />
           </div>
         ) : null}
 
         <Button
           className="mt-6 w-full"
-          disabled={!agreementsReady || !portalServiceLevel || submitting}
+          disabled={!agreementsReady || submitting}
           onClick={() => void onComplete()}
         >
           {submitting ? (

@@ -90,6 +90,16 @@
   );
 }
 
+.pricing-account-banner[data-level='self-managed'] {
+  border-color: color-mix(in oklab, #10b981 35%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, #10b981 12%, var(--card)) 0%,
+    var(--card) 45%,
+    color-mix(in oklab, var(--primary) 6%, var(--card)) 100%
+  );
+}
+
 .pricing-account-banner[data-level='level-2'] {
   border-color: color-mix(in oklab, var(--primary) 35%, var(--border));
 }

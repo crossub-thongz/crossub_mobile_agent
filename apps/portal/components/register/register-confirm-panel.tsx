@@ -12,16 +12,21 @@ import {
   FullServiceFeeExample,
   FullServicePricingDetails,
 } from '@/components/register/register-full-service-details';
-import { fetchRegisterAgentPricing } from '@/lib/agent-registration';
+import {
+  fetchRegisterAgentPricing,
+  registerRequiresServiceAgreement,
+} from '@/lib/agent-registration';
 import {
   openInspectionRateLabel,
   type AgentBillingPricingCatalog,
 } from '@/lib/crossub-api/agent-billing-client';
 import {
   isInspectionOnlyLevel,
+  isSelfManagedLevel,
   REGISTER_SERVICE_LEVEL_DESCRIPTION,
   REGISTER_SERVICE_LEVEL_LABEL,
-  type AgentPortalServiceLevel,
+  REGISTER_SERVICE_LEVEL_PRICE_TAG,
+  type RegisterablePortalServiceLevel,
 } from '@/lib/portal-service-level';
 import { formatCurrency } from '@/lib/utils';
 
@@ -48,13 +53,14 @@ export function RegisterConfirmPanel({
   onAcceptPrivacyAgreementChange,
 }: {
   summary: AgentRegistrationSummary;
-  portalServiceLevel: AgentPortalServiceLevel;
+  portalServiceLevel: RegisterablePortalServiceLevel;
   acceptServiceAgreement: boolean;
   acceptPrivacyAgreement: boolean;
   onAcceptServiceAgreementChange: (value: boolean) => void;
   onAcceptPrivacyAgreementChange: (value: boolean) => void;
 }) {
   const isInspectionOnly = isInspectionOnlyLevel(portalServiceLevel);
+  const isSelfManaged = isSelfManagedLevel(portalServiceLevel);
 
   const [catalog, setCatalog] = useState<RegistrationPricingCatalog | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -95,19 +101,32 @@ export function RegisterConfirmPanel({
           <p className="text-sm font-semibold">
             {REGISTER_SERVICE_LEVEL_LABEL[portalServiceLevel]}
           </p>
+          {isSelfManaged ? null : (
+            <span className="text-muted-foreground text-xs font-medium">
+              {REGISTER_SERVICE_LEVEL_PRICE_TAG[portalServiceLevel]}
+            </span>
+          )}
         </div>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
           {REGISTER_SERVICE_LEVEL_DESCRIPTION[portalServiceLevel]}
         </p>
 
-        {catalogLoading ? (
+        {isSelfManaged ? (
+          <ul className="text-muted-foreground mt-4 space-y-1.5 text-xs leading-relaxed">
+            <li>No platform fees and no card needed</li>
+            <li>Owners get an emailed copy of your decisions</li>
+            <li>Add Inspection Only or Full Service later from Settings</li>
+          </ul>
+        ) : null}
+
+        {!isSelfManaged && catalogLoading ? (
           <div className="text-muted-foreground mt-4 flex items-center gap-2 text-sm">
             <Loader2 className="size-4 animate-spin" />
             Loading service details…
           </div>
         ) : null}
 
-        {catalog && !isInspectionOnly ? (
+        {catalog && !isInspectionOnly && !isSelfManaged ? (
           <div className="mt-4 space-y-3">
             <p className="text-sm">
               <span className="font-semibold text-foreground">
@@ -153,18 +172,24 @@ export function RegisterConfirmPanel({
         acceptPrivacyAgreement={acceptPrivacyAgreement}
         onAcceptServiceAgreementChange={onAcceptServiceAgreementChange}
         onAcceptPrivacyAgreementChange={onAcceptPrivacyAgreementChange}
+        showServiceAgreement={registerRequiresServiceAgreement(portalServiceLevel)}
       />
     </div>
   );
 }
 
 export function registerConfirmReady({
+  portalServiceLevel,
   acceptServiceAgreement,
   acceptPrivacyAgreement,
 }: {
-  portalServiceLevel?: AgentPortalServiceLevel;
+  portalServiceLevel: RegisterablePortalServiceLevel;
   acceptServiceAgreement: boolean;
   acceptPrivacyAgreement: boolean;
 }): boolean {
-  return registerAgreementsReady(acceptServiceAgreement, acceptPrivacyAgreement);
+  return registerAgreementsReady(
+    acceptServiceAgreement,
+    acceptPrivacyAgreement,
+    registerRequiresServiceAgreement(portalServiceLevel),
+  );
 }

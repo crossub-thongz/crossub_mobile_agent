@@ -11,6 +11,7 @@ import { isPublicRoute } from '@/constants/routes';
 import { subscribeAgentPageTour } from '@/lib/agent-page-tour';
 import { PORTAL_WELCOME_DISMISSED_EVENT } from '@/lib/agent-page-guide-events';
 import { fetchPortalWelcomeStatus } from '@/lib/crossub-api/agent-client';
+import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 
 export function AgentPageTourHost() {
   const pathname = usePathname();
@@ -24,6 +25,7 @@ export function AgentPageTourHost() {
     setPageGuideBlocking,
     paymentMethodGateBlocking,
   } = useAgentPageGuides();
+  const copyVariant = useAgentCopyVariant();
   const [welcomeBlocking, setWelcomeBlocking] = useState(true);
   const [open, setOpen] = useState(false);
   const pendingTourParamRef = useRef(false);
@@ -128,7 +130,7 @@ export function AgentPageTourHost() {
 
   return (
     <AgentPageTourOverlay
-      steps={AGENT_PAGE_TOURS[module]}
+      steps={AGENT_PAGE_TOURS[copyVariant][module]}
       onClose={(closeStatus) => {
         setOpen(false);
         setPageGuideBlocking(false);

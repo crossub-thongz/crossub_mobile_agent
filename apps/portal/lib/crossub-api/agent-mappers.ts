@@ -854,6 +854,7 @@ const MESSAGE_CATEGORY_BY_DEPARTMENT: Record<
   // way back through `messageCategoryToDepartment`, which is why that stays a separate switch.
   [COMM_DEPARTMENT.RENT_REVIEW]: 'Leasing',
   [COMM_DEPARTMENT.COMPLAINT]: 'Others',
+  [COMM_DEPARTMENT.SALES]: 'Others',
 };
 
 /** The inverse: an app MessageCategory → the CommDepartment to route a new thread to. */

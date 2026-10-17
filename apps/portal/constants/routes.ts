@@ -21,6 +21,10 @@ export const ROUTES = {
   VACATING: '/vacating',
   MESSAGES: '/messages',
   COMMUNICATIONS: '/communications',
+  /** Self-Manage three-pane inbox (threads, conversation, job context). */
+  CONVERSATIONS: '/conversations',
+  /** Self-Manage trust accounting (principals only; shell until the trust routes land). */
+  TRUST: '/trust',
   NOTIFICATIONS: '/notifications',
   REPORTS: '/reports',
   SEARCH: '/search',
@@ -127,6 +131,9 @@ export const vacatingDetail = (id: string, ctx?: DetailNavContext) =>
   appendDetailNavContext(`/vacating/${id}`, ctx);
 export const leasingDetail = (id: string, ctx?: DetailNavContext) =>
   appendDetailNavContext(`/leasing/${id}`, ctx);
+/** `/leasing/[id]` is the V2 task page (V1 sends it to Tasks), so V1 opens the property's workflow. */
+export const leasingCycleHref = (cycle: { id: string; propertyId: string }, isV2: boolean) =>
+  isV2 ? leasingDetail(cycle.id) : propertyLeasingWorkflow(cycle.propertyId);
 export const messagesNew = (query?: { property?: string }) => {
   if (!query?.property) return '/messages/new';
   return `/messages/new?property=${encodeURIComponent(query.property)}`;

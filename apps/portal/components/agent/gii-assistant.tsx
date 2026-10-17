@@ -28,6 +28,8 @@ import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import { GII_ROLE_COPY, type AgentCopyVariant } from '@/constants/agent-copy-variant';
+import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 import { AGENT_INPUT_KIND, sanitizeAgentInput } from '@/lib/agent-input-rules';
 import { stripEmojis } from '@/lib/strip-emojis';
 import { ROUTES } from '@/constants/routes';
@@ -89,17 +91,16 @@ import { propertyIdFromPath } from '@/lib/property-path';
 import { useShellDockStore, type GiiScope } from '@/lib/shell-dock-store';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
-function buildAccountManagerGreeting(
+/** Property greeting: "your Account Manager" on serviced tiers, CROS assisting on Self-Manage. */
+function buildPropertyGreeting(
+  variant: AgentCopyVariant,
   address: string,
   jobCount: number,
   agentName?: string | null,
 ): string {
   const name = agentName?.trim();
   const lead = name ? `Hi ${name}` : 'Hi';
-  if (jobCount > 0) {
-    return `${lead} — I'm your Account Manager for ${address}. ${jobCount} job${jobCount === 1 ? '' : 's'} in progress here — tap any to open, or ask me about this property.`;
-  }
-  return `${lead} — I'm your Account Manager for ${address}. No jobs in progress right now. Ask me to add a repair, schedule an inspection, start leasing, or check status.`;
+  return GII_ROLE_COPY[variant].propertyGreeting(lead, address, jobCount);
 }
 
 type ChatLine = {
@@ -357,6 +358,10 @@ export function GiiAssistant({
     );
   }, [data.archivedProperties, data.properties, effectiveLaunch.propertyId, pathPropertyId]);
 
+  /** The scoped property's agency tier picks CROS's role; otherwise the whole portfolio does. */
+  const copyVariant = useAgentCopyVariant(scopedProperty?.agencyId);
+  const roleCopy = GII_ROLE_COPY[copyVariant];
+
   const scopedAddress = useMemo(() => {
     if (effectiveLaunch.propertyAddress?.trim()) return effectiveLaunch.propertyAddress.trim();
     if (!scopedProperty) return null;
@@ -426,7 +431,8 @@ export function GiiAssistant({
       return `${lead} — I have this message thread and the property details for ${scopedAddress}. Ask me about the message, draft a reply, or clarify next steps — you don't need to paste any context.`;
     }
     if (scopedProperty && scopedAddress) {
-      return buildAccountManagerGreeting(
+      return buildPropertyGreeting(
+        copyVariant,
         scopedAddress,
         propertyJobs.length,
         user?.firstName,
@@ -436,6 +442,7 @@ export function GiiAssistant({
       ? `${liveBriefing.greeting}\n\n${liveBriefing.subtitle}`
       : liveBriefing.greeting;
   }, [
+    copyVariant,
     messageScoped,
     propertyJobs.length,
     liveBriefing,
@@ -1175,10 +1182,10 @@ export function GiiAssistant({
               {messageScoped
                 ? 'Message assistant · context loaded'
                 : isEmbedded || isPanel
-                  ? 'Your Account Manager'
+                  ? roleCopy.headerRole
                   : scopedAddress
-                    ? `Account Manager · ${scopedAddress}`
-                    : `Your Account Manager · ${multilingualHint()}`}
+                    ? `${roleCopy.headerScopedRole} · ${scopedAddress}`
+                    : `${roleCopy.headerRole} · ${multilingualHint()}`}
             </p>
           </div>
         </div>
@@ -1294,7 +1301,7 @@ export function GiiAssistant({
         {lines.length === 0 && data.loading ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <CrosAssistantLogoBadge size="2xl" className="mb-4" />
-            <p className="text-sm font-semibold">Ask {CROS_ASSISTANT_NAME}, your Account Manager</p>
+            <p className="text-sm font-semibold">{roleCopy.askTitle}</p>
             <p className="text-muted-foreground mt-1.5 max-w-[260px] text-xs leading-relaxed">
               {scopedProperty
                 ? 'Jobs in progress appear above. Tap any to open, or ask me about this property.'

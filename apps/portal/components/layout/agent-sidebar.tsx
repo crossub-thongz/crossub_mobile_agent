@@ -18,6 +18,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { filterNavByAccess, agencyBillingNavLabel } from '@/lib/portal-service-level';
 import { filterHiddenBillingNav } from '@/lib/platform-billing-ui';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
+import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 import { cn } from '@/lib/utils';
 
 const V2_SIDEBAR_PINNED_HREFS = new Set([
@@ -358,10 +359,11 @@ export function AgentSidebar({
   const pathname = usePathname();
   const isV2 = useIsAgentUiV2();
   const { hasFullManagementAccess, needActionItems, platformBillingDisabled } = useAgentData();
+  const selfManagedAccess = useSelfManagedAccess();
   const propertyNeedActionCount = needActionItems.length;
   const billingLabel = agencyBillingNavLabel(hasFullManagementAccess);
   const menuNav = filterHiddenBillingNav(
-    filterNavByAccess(menuNavForUi(isV2), hasFullManagementAccess).map((item) =>
+    filterNavByAccess(menuNavForUi(isV2), hasFullManagementAccess, selfManagedAccess).map((item) =>
       item.href === ROUTES.BILL ? { ...item, label: billingLabel } : item,
     ),
     platformBillingDisabled,

@@ -1,25 +1,24 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-
-import { ROUTES } from '@/constants/routes';
+import { LeasingModule } from '@/components/agent/module-workspace/leasing-module';
+import { TasksFilterRedirect } from '@/components/agent/module-workspace/tasks-filter-redirect';
+import { AgentShell } from '@/components/layout/agent-shell';
+import { LEASING_WORKSPACE_COPY } from '@/constants/module-workspace';
+import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 
 /**
- * Leasing list hub is retired. View and create leasing jobs on Tasks.
- * Previous table UI lived in this file (new leasing / transfer / rent review / end leasing).
+ * Leasing list hub is retired for every other tier: they view and create jobs on Tasks.
+ * Self-Manage agents get the desktop leasing page instead (list-and-detail split pane).
  */
 export default function LeasingPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { ready, selfManaged } = useSelfManagedAccess();
 
-  useEffect(() => {
-    const next = new URLSearchParams();
-    next.set('filter', 'Leasing');
-    const property = searchParams.get('property');
-    if (property) next.set('property', property);
-    router.replace(`${ROUTES.TASKS}?${next.toString()}`);
-  }, [router, searchParams]);
+  if (!ready) return null;
+  if (!selfManaged) return <TasksFilterRedirect filter="Leasing" />;
 
-  return null;
+  return (
+    <AgentShell title={LEASING_WORKSPACE_COPY.title} wide fillMain hideNeedAction>
+      <LeasingModule />
+    </AgentShell>
+  );
 }

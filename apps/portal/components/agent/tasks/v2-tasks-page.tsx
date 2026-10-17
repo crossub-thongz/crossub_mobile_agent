@@ -18,6 +18,8 @@ import { TaskListV2Table } from '@/components/agent/tasks/task-list-v2-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { TASK_LIST_COPY } from '@/constants/agent-copy-variant';
+import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 import { useAgentStore } from '@/lib/store';
 import {
   buildPortfolioTaskList,
@@ -25,8 +27,8 @@ import {
   countTaskListV2Categories,
   filterTaskListV2Rows,
   filterTaskListV2RowsForAgencies,
+  taskListV2BucketFilters,
   taskListV2CategoryFiltersForAccess,
-  TASK_LIST_V2_BUCKET_FILTERS,
   type TaskListV2Bucket,
   type TaskListV2Category,
 } from '@/lib/task-list-v2';
@@ -93,6 +95,8 @@ export function V2TasksPage() {
     getPropertyActions,
   } = useAgentData();
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
+  const copyVariant = useAgentCopyVariant();
+  const bucketFilters = useMemo(() => taskListV2BucketFilters(copyVariant), [copyVariant]);
 
   const [bucket, setBucket] = useState<TaskListV2Bucket>('all');
   const [category, setCategory] = useState<TaskListV2Category>(() => {
@@ -125,6 +129,7 @@ export function V2TasksPage() {
           tribunalCases,
           accounting,
           getPropertyActions,
+          agencies,
         }),
         agencies,
       ),
@@ -190,7 +195,7 @@ export function V2TasksPage() {
             </span>
           </div>
           <p className="text-muted-foreground mt-0.5 text-sm">
-            Track all work being handled by CROSSUB
+            {TASK_LIST_COPY[copyVariant].pageSubtitle}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -199,8 +204,13 @@ export function V2TasksPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {TASK_LIST_V2_BUCKET_FILTERS.map((option) => {
+      <div
+        className={cn(
+          'grid gap-3 sm:grid-cols-2',
+          bucketFilters.length > 3 ? 'xl:grid-cols-4' : 'xl:grid-cols-3',
+        )}
+      >
+        {bucketFilters.map((option) => {
           const Icon = BUCKET_ICON[option.id];
           const active = bucket === option.id;
           return (

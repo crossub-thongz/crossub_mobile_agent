@@ -30,3 +30,16 @@ Talk to the backend through the **published contract**, never hand-written types
 
 - Cookie session (`csb_at`) via `/auth/login`; every call goes through the BFF proxy
   `apps/portal/app/api/[...path]/route.ts` → `API_INTERNAL_URL`.
+
+## Testing: staging only, never local (Chan, 17 Oct 2026)
+
+- **Do not use a local database.** Don't connect to, migrate, reset, `db push` or create scratch
+  databases on the local Postgres (`crossub_web/apps/api/.env` → `localhost:5432/crossub`). It is
+  months behind the schema and is not a test target.
+- **Don't run a local API or local dev servers for QA.** Test directly on the staging Render
+  services: `crossub-api-staging` (API) with `crossub-db-staging` (Postgres), and the staging web
+  apps. Render project: https://dashboard.render.com/project/prj-d7sm5fpj2pic73apfuc0
+- Schema changes reach staging through deploy: `crossub-api-staging` runs `prisma:deploy` as its
+  pre-deploy command. Pushing `main` in `crossub_web` also releases to production (auto-deploy is on).
+- Local gates are still fine and expected before a push: `tsc --noEmit`, unit tests, contract build.
+- Never paste staging credentials or connection strings into code, docs or chat.

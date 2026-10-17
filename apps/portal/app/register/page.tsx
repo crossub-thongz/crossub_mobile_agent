@@ -41,8 +41,8 @@ import {
 import { registerLocalAccount } from '@/lib/local-auth';
 import { postAuthDestination } from '@/lib/system-access-agreement';
 import {
-  DEFAULT_PORTAL_SERVICE_LEVEL,
-  type AgentPortalServiceLevel,
+  DEFAULT_REGISTER_SERVICE_LEVEL,
+  type RegisterablePortalServiceLevel,
 } from '@/lib/portal-service-level';
 import { ApiError } from '@/lib/api';
 import { AuthScreen, authPanelClass } from '@/lib/auth-page';
@@ -108,8 +108,10 @@ export default function RegisterPage() {
   const isV2 = useIsAgentUiV2();
   const [step, setStep] = useState<RegisterStep>('Your details');
   const [showPassword, setShowPassword] = useState(false);
-  const [portalServiceLevel, setPortalServiceLevel] =
-    useState<AgentPortalServiceLevel | null>(null);
+  // Self-Manage is preselected; Inspection Only and Full Service are optional paid plans.
+  const [portalServiceLevel, setPortalServiceLevel] = useState<RegisterablePortalServiceLevel>(
+    DEFAULT_REGISTER_SERVICE_LEVEL,
+  );
   const [acceptServiceAgreement, setAcceptServiceAgreement] = useState(false);
   const [acceptPrivacyAgreement, setAcceptPrivacyAgreement] = useState(false);
 
@@ -143,21 +145,12 @@ export default function RegisterPage() {
   };
 
   const goToConfirmStep = () => {
-    if (!portalServiceLevel) {
-      toast.error('Please select Inspection Only Service or Full Service.');
-      return;
-    }
     setAcceptServiceAgreement(false);
     setAcceptPrivacyAgreement(false);
     setStep('Confirm');
   };
 
   const onAgentRegister = async (values: AgentValues) => {
-    if (!portalServiceLevel) {
-      toast.error('Please select a service plan.');
-      setStep('Service & pricing');
-      return;
-    }
     if (
       !registerConfirmReady({
         portalServiceLevel,
@@ -242,9 +235,8 @@ export default function RegisterPage() {
   };
 
   const isSubmitting = agentForm.formState.isSubmitting;
-  const selectedLevel = portalServiceLevel ?? DEFAULT_PORTAL_SERVICE_LEVEL;
   const confirmReady = registerConfirmReady({
-    portalServiceLevel: selectedLevel,
+    portalServiceLevel,
     acceptServiceAgreement,
     acceptPrivacyAgreement,
   });
@@ -469,7 +461,7 @@ export default function RegisterPage() {
                 licenceNumber: agentForm.watch('licenceNumber'),
                 officeAddress: agentForm.watch('officeAddress'),
               }}
-              portalServiceLevel={selectedLevel}
+              portalServiceLevel={portalServiceLevel}
               acceptServiceAgreement={acceptServiceAgreement}
               acceptPrivacyAgreement={acceptPrivacyAgreement}
               onAcceptServiceAgreementChange={setAcceptServiceAgreement}

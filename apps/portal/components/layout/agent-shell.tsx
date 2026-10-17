@@ -28,6 +28,7 @@ import { PortalNavigationTracker } from '@/components/layout/portal-navigation-t
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
+import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { moreNavFooterForUi, moreNavForUi, primaryNavForUi } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
@@ -95,6 +96,7 @@ export function AgentShell({
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(56);
   const { hasFullManagementAccess, unreadNotificationCount, needActionItems, platformBillingDisabled } = useAgentData();
+  const selfManagedAccess = useSelfManagedAccess();
   const propertyNeedActionCount = needActionItems.length;
   const propertiesPageActive = useShellAsideStore((s) => s.propertiesPageActive);
   const propertyPreviewId = useShellAsideStore((s) => s.propertyPreviewId);
@@ -103,11 +105,11 @@ export function AgentShell({
   const hideCrosRail =
     Boolean(hideNeedAction) || (isV2 && propertiesPageActive && !propertyPreviewId);
   const billingLabel = agencyBillingNavLabel(hasFullManagementAccess);
-  const primaryNav = filterNavByAccess(primaryNavForUi(isV2), hasFullManagementAccess);
+  const primaryNav = filterNavByAccess(primaryNavForUi(isV2), hasFullManagementAccess, selfManagedAccess);
   const moreNav = filterHiddenBillingNav(
     [
-      ...filterNavByAccess(moreNavForUi(isV2), hasFullManagementAccess),
-      ...filterNavByAccess(moreNavFooterForUi(isV2), hasFullManagementAccess),
+      ...filterNavByAccess(moreNavForUi(isV2), hasFullManagementAccess, selfManagedAccess),
+      ...filterNavByAccess(moreNavFooterForUi(isV2), hasFullManagementAccess, selfManagedAccess),
     ].map((item) => (item.href === ROUTES.BILL ? { ...item, label: billingLabel } : item)),
     platformBillingDisabled,
   );

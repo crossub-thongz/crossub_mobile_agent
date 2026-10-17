@@ -389,13 +389,21 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const hasLoadedOnceRef = useRef(false);
   const refreshInFlightRef = useRef(false);
+  /** Callers that asked while a load was in flight; resolved after one more load. */
+  const refreshWaitersRef = useRef<Array<() => void> | null>(null);
 
-  const refresh = useCallback(async (options?: { force?: boolean }) => {
+  const refresh = useCallback(async (options?: { force?: boolean }): Promise<void> => {
     if (status !== 'authed') {
       setLoading(false);
       return;
     }
-    if (refreshInFlightRef.current) return;
+    if (refreshInFlightRef.current) {
+      // The in-flight load may have started before the caller's change (a plan switch), so
+      // run once more when it finishes and resolve the caller after that one.
+      return new Promise<void>((resolve) => {
+        (refreshWaitersRef.current ??= []).push(resolve);
+      });
+    }
     refreshInFlightRef.current = true;
 
     const isInitialLoad = !hasLoadedOnceRef.current;
@@ -513,6 +521,11 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       refreshInFlightRef.current = false;
       if (showBlockingLoad) setLoading(false);
       else setRefreshing(false);
+      const waiters = refreshWaitersRef.current;
+      if (waiters) {
+        refreshWaitersRef.current = null;
+        void refresh().finally(() => waiters.forEach((resolve) => resolve()));
+      }
     }
   }, [status, agentPortfolioId]);
 

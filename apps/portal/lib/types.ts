@@ -173,7 +173,8 @@ export type AgencyMembershipTier = 'PRINCIPAL' | 'AGENT';
 export type AgentPortalServiceLevel =
   | 'LEVEL_1_INSPECTION_ONLY'
   | 'LEVEL_2_FULL_MANAGEMENT'
-  | 'LEVEL_3_LEGACY';
+  | 'LEVEL_3_LEGACY'
+  | 'SELF_MANAGED';
 
 /** A client agency (the AM's "client") the signed-in agent is assigned to manage. */
 export interface Agency {
@@ -189,7 +190,7 @@ export interface Agency {
    * (registry contact) as the default primary.
    */
   primaryContactUserId?: string | null;
-  /** Agent portal service tier — Level 1 is inspection and tribunal; Level 2 is full management. */
+  /** Agent portal service tier — Level 1 is inspection and tribunal; Level 2 is full management; Self-Manage is run by the agency itself. */
   portalServiceLevel?: AgentPortalServiceLevel;
   /** Principal can manage team; agent sees assigned properties only. */
   membershipTier?: AgencyMembershipTier;

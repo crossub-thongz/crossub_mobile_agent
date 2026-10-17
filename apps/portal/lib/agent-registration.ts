@@ -1,6 +1,10 @@
 import { api, ApiError } from '@/lib/api';
 import type { AuthUser } from '@/lib/auth-types';
-import type { AgentPortalServiceLevel } from '@/lib/portal-service-level';
+import {
+  isSelfManagedLevel,
+  type AgentPortalServiceLevel,
+  type RegisterablePortalServiceLevel,
+} from '@/lib/portal-service-level';
 import type { AgentBillingPricingCatalog } from '@/lib/crossub-api/agent-billing-client';
 
 export interface RegisterAgentInput {
@@ -14,8 +18,19 @@ export interface RegisterAgentInput {
   abn?: string;
   licenceNumber: string;
   officeAddress?: string;
-  portalServiceLevel: AgentPortalServiceLevel;
+  /** Self-Manage, Inspection Only or Full Service — the API rejects Legacy at signup. */
+  portalServiceLevel: RegisterablePortalServiceLevel;
   acceptTerms: boolean;
+}
+
+/**
+ * The NSW CROSSUB Service Agreement covers work CROSSUB does for the agency. Self-Manage is
+ * the free software only, so that signup accepts the Terms and Conditions alone.
+ */
+export function registerRequiresServiceAgreement(
+  portalServiceLevel: RegisterablePortalServiceLevel,
+): boolean {
+  return !isSelfManagedLevel(portalServiceLevel);
 }
 
 /** Default NSW service agreement template for Full Service registration. */
@@ -193,7 +208,7 @@ export async function fetchAgentInvitePreview(token: string): Promise<AgentInvit
 export async function completeAgentInviteRegistration(
   token: string,
   acceptTerms: boolean,
-  portalServiceLevel: AgentPortalServiceLevel,
+  portalServiceLevel: RegisterablePortalServiceLevel,
 ): Promise<{ user: AuthUser; credentialsSent: boolean }> {
   return api.post(`/auth/register-agent-invite/${encodeURIComponent(token)}`, {
     acceptTerms,

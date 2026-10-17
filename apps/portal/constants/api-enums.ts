@@ -138,6 +138,8 @@ export const COMM_DEPARTMENT = {
   // these arrived here with no category at all until they were listed.
   RENT_REVIEW: 'RENT_REVIEW',
   COMPLAINT: 'COMPLAINT',
+  // Added on the API in contract 0.25.0.
+  SALES: 'SALES',
 } as const;
 
 /** CommChannel — the medium a single message was sent on. */
@@ -156,6 +158,12 @@ export const AGENT_NOTIFICATION_TYPE = {
   UPDATE: 'UPDATE',
   REPORT: 'REPORT',
   REMINDER: 'REMINDER',
+} as const;
+
+/** AgencyMembershipTier — the signed-in user's role inside an agency. */
+export const AGENCY_MEMBERSHIP_TIER = {
+  PRINCIPAL: 'PRINCIPAL',
+  AGENT: 'AGENT',
 } as const;
 
 /** AgencyStatus — the client-agency lifecycle. */

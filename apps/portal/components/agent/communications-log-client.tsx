@@ -57,7 +57,8 @@ function providerLabel(provider: AgentLinkedMailbox['provider']): string {
   return provider === 'GMAIL' ? 'Gmail' : 'Yahoo';
 }
 
-function ThreadListItem({
+/** Thread row in the Message Center list — reused by the Self-Manage Conversations page. */
+export function ThreadListItem({
   thread,
   active,
   onSelect,
@@ -102,7 +103,8 @@ function ThreadListItem({
   );
 }
 
-function ThreadDetailPanel({
+/** Thread header, history and reply dock — reused by the Self-Manage Conversations page. */
+export function ThreadDetailPanel({
   thread,
   onReply,
   canReply,

@@ -1,11 +1,18 @@
 import { fromTasks } from '@/lib/detail-navigation';
 import { ROUTES } from '@/constants/routes';
 import { isAgentArchivedReason } from '@/constants/agent-archived-case';
+import {
+  AGENT_COPY_VARIANT,
+  TASK_LIST_COPY,
+  type AgentCopyVariant,
+} from '@/constants/agent-copy-variant';
 import { propertyJobKindHref } from '@/lib/property-job-href';
 import {
+  agentCopyVariant,
   isInspectionOnlyAgent,
   isInspectionOnlyTaskCategory,
   isPropertyInspectionOnly,
+  isPropertySelfManaged,
   isTaskCategoryAllowedForAgent,
 } from '@/lib/portal-service-level';
 import { buildPropertyProfileTasks, type PropertyProfileTask } from '@/lib/property-profile-tasks';
@@ -48,6 +55,23 @@ export const TASK_LIST_V2_BUCKET_FILTERS: {
   { id: 'waiting', label: 'Waiting', sublabel: 'Waiting for others' },
   { id: 'completed', label: 'Completed', sublabel: 'In last 30 days' },
 ];
+
+/**
+ * Bucket cards for the copy set. Self-Manage relabels Need my action as the agent's own work
+ * and drops CROS handling, since nothing on a Self-Manage book is handled by CROSSUB.
+ */
+export function taskListV2BucketFilters(
+  variant: AgentCopyVariant,
+): typeof TASK_LIST_V2_BUCKET_FILTERS {
+  const copy = TASK_LIST_COPY[variant];
+  return TASK_LIST_V2_BUCKET_FILTERS.filter(
+    (option) => option.id !== 'cros_handling' || copy.showCrosHandlingBucket,
+  ).map((option) =>
+    option.id === 'need_action'
+      ? { ...option, label: copy.needActionLabel, sublabel: copy.needActionSublabel }
+      : option,
+  );
+}
 
 export const TASK_LIST_V2_CATEGORY_FILTERS: {
   id: TaskListV2Category;
@@ -133,19 +157,35 @@ function isWaitingTask(task: PropertyProfileTask): boolean {
   return /wait|schedul|pending|tenant|owner|landlord|quote|confirm/i.test(haystack);
 }
 
-function classifyBucket(task: PropertyProfileTask): Exclude<TaskListV2Bucket, 'all'> {
+/**
+ * Work nobody else is waiting on defaults to CROS handling on a serviced tier. On Self-Manage
+ * the agency runs that work itself, so it lands in the agent's own action bucket.
+ */
+function classifyBucket(
+  task: PropertyProfileTask,
+  variant: AgentCopyVariant,
+): Exclude<TaskListV2Bucket, 'all'> {
   if (task.lifecycle === 'completed' || task.phase === 'completed') return 'completed';
   if (task.status === 'approval_required') return 'need_action';
   if (isWaitingTask(task)) return 'waiting';
-  return 'cros_handling';
+  return variant === AGENT_COPY_VARIANT.SELF_MANAGED ? 'need_action' : 'cros_handling';
 }
 
 function statusPresentation(
   task: PropertyProfileTask,
   bucket: Exclude<TaskListV2Bucket, 'all'>,
+  variant: AgentCopyVariant,
 ): { label: string; sublabel?: string; tone: TaskListV2Row['statusTone'] } {
   if (bucket === 'completed') {
     return { label: 'Completed', sublabel: 'No further action required', tone: 'completed' };
+  }
+  if (bucket === 'need_action' && task.status !== 'approval_required') {
+    const copy = TASK_LIST_COPY[variant];
+    return {
+      label: copy.ownWorkStatusLabel,
+      sublabel: task.jobRow?.status ?? copy.ownWorkStatusFallback,
+      tone: 'action',
+    };
   }
   if (bucket === 'need_action') {
     return {
@@ -203,6 +243,8 @@ type PortfolioTaskListInput = {
   tribunalCases: TribunalCase[];
   accounting: PropertyAccounting[];
   getPropertyActions: (propertyId: string) => PropertyNeedAction[];
+  /** Resolves each property's tier; Self-Manage moves CROS-handling work to the agent. */
+  agencies?: Agency[];
 };
 
 function closedStatusSublabel(task: PropertyProfileTask): string {
@@ -218,9 +260,10 @@ function closedStatusSublabel(task: PropertyProfileTask): string {
 function toTaskListV2Row(
   property: Property,
   task: PropertyProfileTask,
-  options?: { presentAsClosed?: boolean },
+  options?: { presentAsClosed?: boolean; variant?: AgentCopyVariant },
 ): TaskListV2Row {
-  const bucket = options?.presentAsClosed ? 'completed' : classifyBucket(task);
+  const variant = options?.variant ?? AGENT_COPY_VARIANT.SERVICED;
+  const bucket = options?.presentAsClosed ? 'completed' : classifyBucket(task, variant);
   const category = taskCategory(task);
   const status = options?.presentAsClosed
     ? {
@@ -228,7 +271,7 @@ function toTaskListV2Row(
         sublabel: closedStatusSublabel(task),
         tone: 'completed' as const,
       }
-    : statusPresentation(task, bucket);
+    : statusPresentation(task, bucket, variant);
   const propertyAddress = task.needAction?.propertyAddress ?? formatPropertyAddress(property);
 
   return {
@@ -293,10 +336,13 @@ export function buildPortfolioTaskList(input: PortfolioTaskListInput): TaskListV
 
   for (const property of input.properties) {
     const tasks = tasksForProperty(property, input);
+    const variant = agentCopyVariant(
+      isPropertySelfManaged(input.agencies ?? [], property.agencyId),
+    );
 
     for (const task of tasks) {
       if (task.lifecycle === 'deleted' || task.lifecycle === 'archived') continue;
-      rows.push(toTaskListV2Row(property, task));
+      rows.push(toTaskListV2Row(property, task, { variant }));
     }
   }
 

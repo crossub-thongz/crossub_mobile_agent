@@ -6,6 +6,7 @@ import {
   DoorOpen,
   FileText,
   Home,
+  Leaf,
   Loader2,
   Sparkles,
   UserSearch,
@@ -25,7 +26,12 @@ import {
   openInspectionRateLabel,
   type AgentBillingPricingCatalog,
 } from '@/lib/crossub-api/agent-billing-client';
-import { PORTAL_SERVICE_LEVEL_LABEL, type AgentPortalServiceLevel } from '@/lib/portal-service-level';
+import { SELF_MANAGED_PRICING_COPY } from '@/constants/service-plan';
+import {
+  isAgentPortalServiceLevel,
+  PORTAL_SERVICE_LEVEL,
+  PORTAL_SERVICE_LEVEL_LABEL,
+} from '@/lib/portal-service-level';
 import { cn, formatAgreementPeriod } from '@/lib/utils';
 
 import './pricing.css';
@@ -124,12 +130,15 @@ export default function PricingPage() {
     };
   }, []);
 
-  const portalLevel = catalog?.portalServiceLevel as AgentPortalServiceLevel | undefined;
+  const portalLevel = isAgentPortalServiceLevel(catalog?.portalServiceLevel)
+    ? catalog.portalServiceLevel
+    : undefined;
   const levelLabel =
     portalLevel != null ? PORTAL_SERVICE_LEVEL_LABEL[portalLevel] : null;
 
-  const isLevel2 = portalLevel === 'LEVEL_2_FULL_MANAGEMENT';
-  const isLevel3 = portalLevel === 'LEVEL_3_LEGACY';
+  const isLevel2 = portalLevel === PORTAL_SERVICE_LEVEL.FULL_MANAGEMENT;
+  const isLevel3 = portalLevel === PORTAL_SERVICE_LEVEL.LEGACY;
+  const isSelfManaged = portalLevel === PORTAL_SERVICE_LEVEL.SELF_MANAGED;
   const hasIncludedInspections = isLevel2 || isLevel3;
   const example = catalog?.level2.serviceFeeExample;
   const included = catalog?.level2.includedPerPropertyPerYear;
@@ -162,7 +171,15 @@ export default function PricingPage() {
             {portalLevel ? (
               <div
                 className="pricing-account-banner pricing-animate-in relative px-4 py-4 sm:px-5 sm:py-5"
-                data-level={isLevel3 ? 'level-3' : isLevel2 ? 'level-2' : 'level-1'}
+                data-level={
+                  isSelfManaged
+                    ? 'self-managed'
+                    : isLevel3
+                      ? 'level-3'
+                      : isLevel2
+                        ? 'level-2'
+                        : 'level-1'
+                }
               >
                 <div className="relative flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -190,7 +207,9 @@ export default function PricingPage() {
                     <p className="text-sm font-semibold text-foreground">
                       {catalog.platformBilling?.complimentaryAllServices
                         ? 'Complimentary · no payment'
-                        : isLevel3
+                        : isSelfManaged
+                          ? SELF_MANAGED_PRICING_COPY.howYouPay
+                          : isLevel3
                           ? 'Invoice + prepaid extras'
                           : isLevel2
                             ? 'Invoice + prepaid extras'
@@ -212,6 +231,20 @@ export default function PricingPage() {
                 follow the rates below.
               </p>
             ) : null}
+
+            <PricingSection
+              accent="emerald"
+              icon={Leaf}
+              badge={SELF_MANAGED_PRICING_COPY.badge}
+              title={SELF_MANAGED_PRICING_COPY.title}
+              subtitle={SELF_MANAGED_PRICING_COPY.subtitle}
+            >
+              <ul className="pricing-check-list">
+                {SELF_MANAGED_PRICING_COPY.points.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            </PricingSection>
 
             <PricingSection
               accent="cyan"

@@ -26,6 +26,7 @@ import {
 } from '@/lib/crossub-api/agent-billing-client';
 import {
   isLegacyLevel,
+  isSelfManagedLevel,
   resolvePortalServiceLevel,
 } from '@/lib/portal-service-level';
 import { needsPasswordChange, needsSystemAccessAgreement } from '@/lib/system-access-agreement';
@@ -122,11 +123,10 @@ export function AgentPaymentReminderBanner() {
   if (platformBillingDisabled) return null;
 
   // Level 3 with billing on (BILLING_LEVEL_3_DISABLED=false) pays on the task, not here.
-  if (
-    primaryAgency &&
-    isLegacyLevel(resolvePortalServiceLevel(primaryAgency.portalServiceLevel))
-  ) {
-    return null;
+  // Self-Manage is free, so it never owes a platform fee.
+  if (primaryAgency) {
+    const level = resolvePortalServiceLevel(primaryAgency.portalServiceLevel);
+    if (isLegacyLevel(level) || isSelfManagedLevel(level)) return null;
   }
 
   if (isHiddenRoute(pathname)) return null;

@@ -12,6 +12,7 @@ import {
   fetchAgentBillingSummary,
   type AgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
+import { usesMonthlyPlatformInvoice } from '@/lib/portal-service-level';
 import { needsPasswordChange, needsSystemAccessAgreement } from '@/lib/system-access-agreement';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
@@ -25,10 +26,6 @@ const HIDDEN_ROUTES = [
   ROUTES.RESET_PASSWORD,
   ROUTES.BILLING_OVERDUE,
 ] as const;
-
-function usesMonthlyInvoice(level: string | undefined): boolean {
-  return level === 'LEVEL_2_FULL_MANAGEMENT' || level === 'LEVEL_3_LEGACY';
-}
 
 function isHiddenRoute(pathname: string): boolean {
   if (isPublicRoute(pathname)) return true;
@@ -65,7 +62,8 @@ export function PlatformInvoiceReadyBanner() {
   if (isHiddenRoute(pathname) || pathname === ROUTES.BILL) return null;
   if (needsPasswordChange(user) || needsSystemAccessAgreement(user)) return null;
   if (!summary || summary.platformBillingDisabled) return null;
-  if (!usesMonthlyInvoice(summary.portalServiceLevel)) return null;
+  // Level 1 prepays and Self-Manage is free: neither ever gets a monthly invoice.
+  if (!usesMonthlyPlatformInvoice(summary.portalServiceLevel)) return null;
   if (!summary.openInvoiceId || !(summary.outstandingInvoiceAmount > 0)) return null;
 
   const overdue = summary.billingBlocked;

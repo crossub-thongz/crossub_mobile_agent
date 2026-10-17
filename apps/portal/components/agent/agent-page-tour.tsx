@@ -6,11 +6,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 
 import { Button } from '@/components/ui/button';
 import {
-  AGENT_PAGE_TOURS,
-  AGENT_TOUR_ACCOUNT_MANAGER_NOTE,
+  AGENT_TOUR_SUPPORT_NOTE,
   tourHref,
   type AgentTourStep,
 } from '@/constants/agent-page-tour';
+import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 import type { AgentTutorialModuleId } from '@/constants/agent-module-tutorial';
 import { findTourTarget, startAgentPageTour } from '@/lib/agent-page-tour';
 import {
@@ -102,6 +102,8 @@ export function AgentPageTourOverlay({
   steps: AgentTourStep[];
   onClose: (status: 'completed' | 'skipped') => void;
 }) {
+  const copyVariant = useAgentCopyVariant();
+  const supportNote = AGENT_TOUR_SUPPORT_NOTE[copyVariant].note;
   const [ready, setReady] = useState(false);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setReady(true));
@@ -228,7 +230,7 @@ export function AgentPageTourOverlay({
         ) : null}
         <div className="border-primary/15 bg-primary/[0.04] mt-3 flex shrink-0 gap-2.5 rounded-xl border p-2.5">
           <Headphones className="text-primary mt-0.5 size-4 shrink-0" aria-hidden />
-          <p className="text-muted-foreground text-xs leading-relaxed">{AGENT_TOUR_ACCOUNT_MANAGER_NOTE}</p>
+          <p className="text-muted-foreground text-xs leading-relaxed">{supportNote}</p>
         </div>
         <div className="mt-4 flex shrink-0 items-center justify-between gap-2">
           <div className="flex items-center gap-1">

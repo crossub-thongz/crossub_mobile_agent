@@ -15,8 +15,12 @@ import {
   dismissL2PaymentMethodPromptForToday,
   isL2PaymentMethodPromptDismissedToday,
 } from '@/lib/add-payment-method-prompt-state';
-import type { AgentPortalServiceLevel } from '@/lib/portal-service-level';
-import { usesGlobalPaymentMethodPrompt } from '@/lib/portal-service-level';
+import {
+  isAgentPortalServiceLevel,
+  PORTAL_SERVICE_LEVEL,
+  usesGlobalPaymentMethodPrompt,
+  type AgentPortalServiceLevel,
+} from '@/lib/portal-service-level';
 import { getStripePublishableKey } from '@/lib/stripe-client';
 
 const EXEMPT_ROUTES = [
@@ -30,6 +34,7 @@ const EXEMPT_ROUTES = [
 /**
  * Level 1/2 payment-method prompt until the agent saves a card or dismisses it.
  * Level 1: once per login session. Level 2: at most once per Sydney calendar day.
+ * Self-Manage and Legacy never see it (`usesGlobalPaymentMethodPrompt`).
  * Page guides and spotlight tours wait until this is resolved.
  */
 export function AddPaymentMethodGate() {
@@ -47,7 +52,7 @@ export function AddPaymentMethodGate() {
   const [dismissedThisLogin, setDismissedThisLogin] = useState(false);
   const [dismissedToday, setDismissedToday] = useState(false);
 
-  const isLevel2 = portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT';
+  const isLevel2 = portalServiceLevel === PORTAL_SERVICE_LEVEL.FULL_MANAGEMENT;
   const promptDismissed = isLevel2 ? dismissedToday : dismissedThisLogin;
 
   const onExemptPage =
@@ -89,14 +94,16 @@ export function AddPaymentMethodGate() {
 
   const refreshNeed = useCallback(async () => {
     const summary = await fetchAgentBillingSummary();
-    setPortalServiceLevel(summary.portalServiceLevel);
+    setPortalServiceLevel(
+      isAgentPortalServiceLevel(summary.portalServiceLevel) ? summary.portalServiceLevel : null,
+    );
     setUsesGlobalPrompt(
       usesGlobalPaymentMethodPrompt(summary.portalServiceLevel) &&
         !summary.platformBillingDisabled,
     );
     setNeedsPaymentMethod(!summary.hasDefaultPaymentMethod);
     if (
-      summary.portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT' &&
+      summary.portalServiceLevel === PORTAL_SERVICE_LEVEL.FULL_MANAGEMENT &&
       user?.id &&
       isL2PaymentMethodPromptDismissedToday(user.id)
     ) {

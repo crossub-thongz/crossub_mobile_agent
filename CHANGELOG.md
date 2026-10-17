@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-10-17
+
+### Added
+- `@crossub-thongz/api-contract` bumped to ^0.26.0 (was ^0.24.0).
+- Settings → Plan card compares Self-Manage, Inspection Only and Full Service; a principal switches plan with a confirmation dialog, agents and Legacy agencies see it read-only.
+- Self-Manage copy variants for page tours, module tutorials, Tasks buckets, CROS's role line and the property approval banner (`constants/agent-copy-variant.ts`).
+- Self-Manage section on the Platform pricing page.
+- Self-Manage desktop module pages for Maintenance, Inspections and Leasing: lane chips, search, sortable table and a detail pane with owner decisions.
+- Self-Manage Conversations page (`/conversations`) with threads, conversation and job context panes.
+- Self-Manage Trust page shell (`/trust`) for principals.
+- Sidebar and More entries for Maintenance, Inspections, Leasing, Conversations and Trust, shown only to Self-Manage agents (Trust to principals).
+- `DecisionWithOwnerEmail` component with an owner email preview, and `OwnerDecisionTimeline` with email status labels.
+- `SELF_MANAGED` tier in `lib/portal-service-level.ts` with `isSelfManagedLevel`, `hasSelfManagedAgency` and `isPropertySelfManaged`.
+- Agent client calls `updateAgencyServiceLevel`, `fetchOwnerDecisions` and `createOwnerDecision` (contract 0.26.0).
+
+### Changed
+- Self-Manage module pages and Conversations list only Self-Manage properties; Settings → Plan shows only Self-Manage agencies.
+- Registration lists Self-Manage first, preselected and free; Inspection Only and Full Service are optional paid services.
+- Self-Manage signup and invite registration skip the CROSSUB Service Agreement and only require the Terms and Conditions.
+- On Self-Manage, work that would be CROS handling lands in Need my action and the CROS handling bucket is hidden.
+- Invoice page, payment reminder banner and invoice-ready banner never show billing for Self-Manage.
+- `/maintenance`, `/inspections` and `/leasing` still redirect to Tasks for every tier except Self-Manage.
+
+### Fixed
+- Type errors in `register-confirm-panel.tsx` and `add-payment-method-gate.tsx`.
+- A portfolio refresh requested while another is in flight now runs once more instead of being dropped, so a plan switch shows straight away.
+- Message threads in the new `SALES` department map to Others.
+
 ## 2026-09-29
 
 ### Changed

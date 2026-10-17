@@ -562,6 +562,50 @@ export async function updateAgencyPrimaryContact(
   });
 }
 
+export type AgentUpdateAgencyServiceLevelInput =
+  components['schemas']['AgentUpdateAgencyServiceLevelDto'];
+
+/** Settings → Plan switch, principal only (`PATCH /api/v1/agent/agencies/:id/service-level`). */
+export async function updateAgencyServiceLevel(
+  agencyId: string,
+  portalServiceLevel: AgentUpdateAgencyServiceLevelInput['portalServiceLevel'],
+): Promise<AgentAgency> {
+  return agentFetch<AgentAgency>(`/agent/agencies/${agencyId}/service-level`, {
+    method: 'PATCH',
+    body: JSON.stringify({ portalServiceLevel } satisfies AgentUpdateAgencyServiceLevelInput),
+  });
+}
+
+export type AgentOwnerDecision = components['schemas']['AgentOwnerDecisionDto'];
+export type AgentCreateOwnerDecisionInput = components['schemas']['AgentCreateOwnerDecisionDto'];
+export type AgentOwnerDecisionCaseType = AgentOwnerDecision['caseType'];
+
+/** Decisions recorded on a property, newest first (`GET /api/v1/agent/properties/:id/owner-decisions`). */
+export async function fetchOwnerDecisions(
+  propertyId: string,
+  filter: { caseType?: AgentOwnerDecisionCaseType; caseId?: string } = {},
+): Promise<AgentOwnerDecision[]> {
+  const params = new URLSearchParams();
+  if (filter.caseType) params.set('caseType', filter.caseType);
+  if (filter.caseId) params.set('caseId', filter.caseId);
+  const query = params.toString();
+  const res = await agentFetch<components['schemas']['AgentOwnerDecisionListDto']>(
+    `/agent/properties/${propertyId}/owner-decisions${query ? `?${query}` : ''}`,
+  );
+  return res.items;
+}
+
+/** Record a decision; a Self-Manage property also emails the owner a copy from the agency address. */
+export async function createOwnerDecision(
+  propertyId: string,
+  body: AgentCreateOwnerDecisionInput,
+): Promise<AgentOwnerDecision> {
+  return agentFetch<AgentOwnerDecision>(`/agent/properties/${propertyId}/owner-decisions`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 /** Tax invoices for assigned agencies (`GET /api/v1/agent/invoices`). */
 export async function fetchInvoices(): Promise<AgentInvoiceListItem[]> {
   return fetchAllPages<AgentInvoiceListItem>('/agent/invoices');

@@ -13,6 +13,8 @@ const LEVEL_STYLES: Record<AgentPortalServiceLevel, string> = {
     'border-primary/25 bg-primary/10 text-primary',
   LEVEL_3_LEGACY:
     'border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200',
+  SELF_MANAGED:
+    'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
 };
 
 export function PortalServiceLevelBadge({

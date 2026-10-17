@@ -5,6 +5,11 @@ import { useState } from 'react';
 
 import { PricingRateCatalog } from '@/components/pricing/pricing-rate-catalog';
 import type { AgentBillingPricingCatalog } from '@/lib/crossub-api/agent-billing-client';
+import {
+  PORTAL_SERVICE_LEVEL,
+  usesMonthlyPlatformInvoice,
+} from '@/lib/portal-service-level';
+import { SELF_MANAGED_BILLING_NOTE } from '@/constants/service-plan';
 import { cn } from '@/lib/utils';
 
 import '@/app/pricing/pricing.css';
@@ -15,9 +20,7 @@ type BillPricingSectionProps = {
 
 export function BillPricingSection({ catalog }: BillPricingSectionProps) {
   const [expanded, setExpanded] = useState(false);
-  const isLevel2 = catalog.portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT';
-  const showServiceFeeCard =
-    isLevel2 || catalog.portalServiceLevel === 'LEVEL_3_LEGACY';
+  const showServiceFeeCard = usesMonthlyPlatformInvoice(catalog.portalServiceLevel);
 
   return (
     <section className="rounded-xl border bg-card">
@@ -36,11 +39,13 @@ export function BillPricingSection({ catalog }: BillPricingSectionProps) {
             <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
               {catalog.platformBilling?.complimentaryAllServices
                 ? 'Complimentary account — inspections, tribunal, letting fee, and Full Service are not charged.'
-                : catalog.portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT'
-                  ? 'Extra inspections after included usage, and Opens, are prepaid. The monthly invoice is management fee, tribunal, and insurance.'
-                  : catalog.portalServiceLevel === 'LEVEL_3_LEGACY'
-                    ? 'Open inspections are free. Extra routine, ingoing and outgoing after included usage are prepaid. The monthly invoice is letting fee, management fee, tribunal, and insurance.'
-                    : 'Prepaid inspection and tribunal rates — pay when you place the order (or at tribunal create).'}
+                : catalog.portalServiceLevel === PORTAL_SERVICE_LEVEL.SELF_MANAGED
+                  ? SELF_MANAGED_BILLING_NOTE
+                  : catalog.portalServiceLevel === PORTAL_SERVICE_LEVEL.FULL_MANAGEMENT
+                    ? 'Extra inspections after included usage, and Opens, are prepaid. The monthly invoice is management fee, tribunal, and insurance.'
+                    : catalog.portalServiceLevel === PORTAL_SERVICE_LEVEL.LEGACY
+                      ? 'Open inspections are free. Extra routine, ingoing and outgoing after included usage are prepaid. The monthly invoice is letting fee, management fee, tribunal, and insurance.'
+                      : 'Prepaid inspection and tribunal rates — pay when you place the order (or at tribunal create).'}
             </p>
           </div>
         </div>
