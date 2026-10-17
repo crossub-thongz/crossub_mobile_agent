@@ -37,6 +37,33 @@ export function composeStreetAddress(
 }
 
 let loaderPromise: Promise<typeof google> | null = null;
+let mapsAuthFailed = false;
+const authFailureListeners = new Set<() => void>();
+
+/**
+ * A rejected key (e.g. the site is not in the key's allowed referrers) still loads the
+ * script; Google reports it through `window.gm_authFailure` instead. Listeners hear it once,
+ * and a listener added after the failure is called straight away.
+ */
+export function onGoogleMapsAuthFailure(listener: () => void): () => void {
+  if (mapsAuthFailed) {
+    listener();
+    return () => {};
+  }
+  authFailureListeners.add(listener);
+  return () => {
+    authFailureListeners.delete(listener);
+  };
+}
+
+function watchGoogleMapsAuthFailure(): void {
+  if (typeof window === 'undefined') return;
+  (window as Window & { gm_authFailure?: () => void }).gm_authFailure = () => {
+    mapsAuthFailed = true;
+    authFailureListeners.forEach((listener) => listener());
+    authFailureListeners.clear();
+  };
+}
 
 export function getGoogleMapsApiKey(): string | undefined {
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
@@ -54,6 +81,7 @@ export function loadGoogleMaps(): Promise<typeof google> {
       version: 'weekly',
       libraries: ['places'],
     });
+    watchGoogleMapsAuthFailure();
     loaderPromise = loader.load();
   }
   return loaderPromise;

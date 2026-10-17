@@ -9,6 +9,7 @@ import {
   composeStreetAddress,
   getGoogleMapsApiKey,
   loadGoogleMaps,
+  onGoogleMapsAuthFailure,
   parsePlaceResult,
   recoverStreetNumber,
   type ParsedAustralianAddress,
@@ -76,6 +77,13 @@ export function PropertyAddressAutocomplete({
       searchInputRef.current.value = '';
     }
   }, []);
+
+  // A rejected key loads fine but leaves search dead; treat it as failed so the address
+  // fields unlock for manual entry.
+  useEffect(() => {
+    if (!mapsEnabled) return;
+    return onGoogleMapsAuthFailure(() => setMapsFailed(true));
+  }, [mapsEnabled]);
 
   useEffect(() => {
     if (!mapsEnabled || !searchInputRef.current) return;
