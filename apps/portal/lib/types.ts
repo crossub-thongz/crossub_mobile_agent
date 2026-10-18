@@ -506,12 +506,15 @@ export interface MaintenanceRequest {
   };
   scheduleStepStartedAt?: string;
   scheduleProposal?: {
-    contractorId: string;
+    /** Absent on agent-facade rows, which name the tradie on the job instead. */
+    contractorId?: string;
     availableTimes: string;
     submittedAt: string;
     tenantDecision?: 'approved' | 'declined';
     tenantDecidedAt?: string;
     tenantDeclineReason?: string;
+    /** The tradie and tenant settled the time themselves and it was recorded. */
+    arrangedDirectly?: boolean;
   };
   scheduleEscalated?: boolean;
   /** End of Lease landlord-responsibility — visit times go to agent for approval. */

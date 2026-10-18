@@ -6,15 +6,20 @@ import { FieldLabel, SELECT_CLASS, StepCard } from '@/components/agent/maintenan
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { SELF_MANAGED_MAINTENANCE_COPY as COPY } from '@/constants/self-managed-maintenance';
+import {
+  SELF_MANAGED_MAINTENANCE_COPY as COPY,
+  VISIT_PROPOSAL_STATE,
+} from '@/constants/self-managed-maintenance';
 import type { SelfManagedMaintenanceRun } from '@/hooks/use-self-managed-maintenance';
 import {
   createSelfManagedMaintenanceQuote,
   recordMaintenanceVisitArranged,
   submitMaintenanceVisitTimes,
   type AgentMaintenanceContractorRef,
+  type AgentMaintenanceDetail,
 } from '@/lib/crossub-api/maintenance-client';
-import { formatVisitAnchor } from '@/lib/maintenance/self-managed-steps';
+import { formatVisitAnchor, visitProposalState } from '@/lib/maintenance/self-managed-steps';
+import { formatDateTime } from '@/lib/utils';
 
 /** Enter a quote an invited tradie phoned or emailed in. */
 export function EnterQuoteStep({
@@ -138,18 +143,28 @@ export function EnterQuoteStep({
 
 /**
  * Book the visit for the approved tradie: send the times they offered for the tenant to pick, or
- * record a time the two arranged between themselves.
+ * record a time the two arranged between themselves. Once times are out it says so, and what the
+ * tenant said if they turned them down; new times can still be sent.
  */
 export function VisitBookingStep({
   requestId,
+  proposal,
   busy,
   run,
 }: {
   requestId: string;
+  proposal: AgentMaintenanceDetail['scheduleProposal'];
   busy: boolean;
   run: SelfManagedMaintenanceRun;
 }) {
   const id = useId();
+  const state = visitProposalState(proposal);
+  const hint =
+    proposal && state === VISIT_PROPOSAL_STATE.AWAITING_TENANT
+      ? COPY.visitAwaitingTenant(formatDateTime(proposal.submittedAt), proposal.availableTimes)
+      : proposal && state === VISIT_PROPOSAL_STATE.TENANT_DECLINED
+        ? COPY.visitTenantDeclined(proposal.availableTimes, proposal.tenantDeclineReason)
+        : undefined;
   const [times, setTimes] = useState('');
   const [arrangedAt, setArrangedAt] = useState('');
   const [note, setNote] = useState('');
@@ -177,7 +192,11 @@ export function VisitBookingStep({
   };
 
   return (
-    <StepCard title={COPY.scheduleTitle}>
+    <StepCard
+      title={COPY.scheduleTitle}
+      hint={hint}
+      tone={state === VISIT_PROPOSAL_STATE.TENANT_DECLINED ? 'attention' : 'default'}
+    >
       <div>
         <FieldLabel htmlFor={`${id}-times`}>{COPY.visitTimesLabel}</FieldLabel>
         <Input
@@ -189,7 +208,7 @@ export function VisitBookingStep({
         />
       </div>
       <Button size="sm" disabled={busy || !times.trim()} onClick={() => void sendTimes()}>
-        {COPY.sendVisitTimes}
+        {state === VISIT_PROPOSAL_STATE.NONE ? COPY.sendVisitTimes : COPY.sendNewVisitTimes}
       </Button>
 
       <div className="border-border/60 space-y-2 border-t pt-2.5">

@@ -5,6 +5,9 @@ import {
   MAINTENANCE_ISSUE_LIVE,
   MAINTENANCE_QUOTE_STATUS,
   URGENT_AUTHORISATION_STATUS,
+  VISIT_PROPOSAL_STATE,
+  VISIT_TENANT_DECISION,
+  type VisitProposalState,
 } from '@/constants/self-managed-maintenance';
 import type { AgentMaintenanceDetail } from '@/lib/crossub-api/maintenance-client';
 import { MAINTENANCE_PAYMENT_STATUS } from '@/constants/maintenance-v2';
@@ -100,6 +103,21 @@ export function formatVisitAnchor(dateTimeLocal: string): string | null {
     weekday: 'short',
   });
   return `${weekday} ${d}/${mo}/${y} ${h}:${mi} (${y}-${mo}-${d} ${h}:${mi})`;
+}
+
+/**
+ * Where the visit times offered for the approved tradie stand: none sent (or a time already
+ * recorded as arranged directly), waiting on the tenant, or turned down by the tenant.
+ */
+export function visitProposalState(
+  proposal: AgentMaintenanceDetail['scheduleProposal'],
+): VisitProposalState {
+  if (!proposal || proposal.arrangedDirectly) return VISIT_PROPOSAL_STATE.NONE;
+  if (proposal.tenantDecision === VISIT_TENANT_DECISION.DECLINED) {
+    return VISIT_PROPOSAL_STATE.TENANT_DECLINED;
+  }
+  if (proposal.tenantDecision === null) return VISIT_PROPOSAL_STATE.AWAITING_TENANT;
+  return VISIT_PROPOSAL_STATE.NONE;
 }
 
 /**

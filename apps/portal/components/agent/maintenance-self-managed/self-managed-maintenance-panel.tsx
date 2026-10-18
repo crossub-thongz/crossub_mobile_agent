@@ -86,7 +86,14 @@ export function SelfManagedMaintenancePanel({
       {steps.completion ? (
         <CompletionStep detail={detail} busy={busy} run={run} />
       ) : null}
-      {steps.schedule ? <VisitBookingStep requestId={requestId} busy={busy} run={run} /> : null}
+      {steps.schedule ? (
+        <VisitBookingStep
+          requestId={requestId}
+          proposal={detail.scheduleProposal}
+          busy={busy}
+          run={run}
+        />
+      ) : null}
       {steps.compareQuotes ? <QuoteCompareStep detail={detail} busy={busy} run={run} /> : null}
       {steps.triage ? (
         <IssueTriageStep requestId={requestId} issues={steps.issues} busy={busy} run={run} />

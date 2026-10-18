@@ -47,6 +47,7 @@ import { agentDocumentFileHref } from '@/lib/document-preview';
 import { toPlainTextBody } from '@/lib/message-body';
 import { maintenanceReferenceLabel } from '@/lib/workflow-case-reference';
 import { TENANT_REJECTED_LABEL } from '@/lib/maintenance/tenant-rejected';
+import { MAINTENANCE_QUOTE_STATUS } from '@/constants/self-managed-maintenance';
 import { formatPropertyFullAddress } from '@/lib/utils';
 import { hasLeftTaskPool } from '@/lib/inspection-approval';
 import { AGENT_INGOING_GATE_LABEL, deriveAgentIngoingGateStatus } from '@/lib/ingoing-inspection-display';
@@ -463,6 +464,19 @@ function isOpenTenantRejectedCase(m: AgentMaintenance): boolean {
   );
 }
 
+/**
+ * Whether an APPROVED job is waiting on the agent's quote decision. The stored status is APPROVED
+ * both while quotes wait for a decision and after one is approved, so the quotes decide; rows
+ * without parsed quotes keep the old quote-total signal.
+ */
+function awaitsQuoteDecision(m: AgentMaintenance): boolean {
+  if (m.quotes.length === 0) return m.quoteTotal != null || m.ourPrice != null;
+  return (
+    m.quotes.some((q) => q.status === MAINTENANCE_QUOTE_STATUS.SUBMITTED) &&
+    !m.quotes.some((q) => q.status === MAINTENANCE_QUOTE_STATUS.APPROVED)
+  );
+}
+
 const MAINTENANCE_STATUS_LABEL: Record<AgentMaintenance['status'], string> = {
   [MAINTENANCE_STATUS.OPEN]: 'Open',
   [MAINTENANCE_STATUS.APPROVED]: 'Approved',
@@ -521,8 +535,25 @@ export function mapAgentMaintenance(
       })(),
       requiresApproval:
         m.status === MAINTENANCE_STATUS.QUOTING ||
-        (m.status === MAINTENANCE_STATUS.APPROVED &&
-          (m.quoteTotal != null || m.ourPrice != null)),
+        (m.status === MAINTENANCE_STATUS.APPROVED && awaitsQuoteDecision(m)),
+      ...(m.scheduleProposal
+        ? {
+            scheduleProposal: {
+              availableTimes: m.scheduleProposal.availableTimes,
+              submittedAt: m.scheduleProposal.submittedAt,
+              ...(m.scheduleProposal.tenantDecision
+                ? { tenantDecision: m.scheduleProposal.tenantDecision }
+                : {}),
+              ...(m.scheduleProposal.tenantDecidedAt
+                ? { tenantDecidedAt: m.scheduleProposal.tenantDecidedAt }
+                : {}),
+              ...(m.scheduleProposal.tenantDeclineReason
+                ? { tenantDeclineReason: m.scheduleProposal.tenantDeclineReason }
+                : {}),
+              ...(m.scheduleProposal.arrangedDirectly ? { arrangedDirectly: true } : {}),
+            },
+          }
+        : {}),
       ...(m.tenantResponsibilityResponse
         ? {
             tenantResponsibilityResponse: {

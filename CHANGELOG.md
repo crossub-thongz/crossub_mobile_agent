@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-18
+
+### Added
+- Maintenance pane shows the visit times sent and that the job is waiting on the tenant, or the tenant's reason when they turned the times down, with Send new times.
+- `@crossub-thongz/api-contract` bumped to ^0.30.0.
+
+### Fixed
+- Maintenance jobs with sent visit times move to Awaiting tenant.
+- An approved quote no longer keeps the job in Needs action while the visit is booked.
+
 ## 2026-10-17
 
 ### Added

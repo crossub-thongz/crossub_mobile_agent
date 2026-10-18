@@ -30,6 +30,23 @@ export const MAINTENANCE_QUOTE_STATUS = {
   DECLINED: 'declined',
 } as const satisfies Record<string, MaintenanceQuoteStatus>;
 
+export type VisitTenantDecision = NonNullable<
+  Schemas['AgentMaintenanceScheduleProposalDto']['tenantDecision']
+>;
+
+export const VISIT_TENANT_DECISION = {
+  APPROVED: 'approved',
+  DECLINED: 'declined',
+} as const satisfies Record<string, VisitTenantDecision>;
+
+/** Where the offered visit times stand, read off the job's schedule proposal. */
+export const VISIT_PROPOSAL_STATE = {
+  NONE: 'none',
+  AWAITING_TENANT: 'awaiting_tenant',
+  TENANT_DECLINED: 'tenant_declined',
+} as const;
+export type VisitProposalState = (typeof VISIT_PROPOSAL_STATE)[keyof typeof VISIT_PROPOSAL_STATE];
+
 export const URGENT_DECISION = {
   CONFIRM_URGENT: 'CONFIRM_URGENT',
   EMERGENCY_MAKE_SAFE: 'EMERGENCY_MAKE_SAFE',
@@ -200,6 +217,11 @@ export const SELF_MANAGED_MAINTENANCE_COPY = {
   visitTimesPlaceholder: 'e.g. Tue 21 Oct 9–11am or Wed 22 Oct 1–3pm',
   sendVisitTimes: 'Send times to tenant',
   visitTimesSent: 'Times sent to the tenant to confirm',
+  visitAwaitingTenant: (when: string, times: string) =>
+    `Sent to the tenant ${when}: ${times}. Waiting for them to pick a time.`,
+  visitTenantDeclined: (times: string, reason: string | null) =>
+    `The tenant can't do ${times}${reason ? ` (${reason})` : ''}. Send new times or record one arranged directly.`,
+  sendNewVisitTimes: 'Send new times',
   arrangedLabel: 'Or record a visit they arranged directly',
   arrangedNote: 'How it was arranged (optional)',
   recordVisit: 'Record visit',
