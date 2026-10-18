@@ -164,7 +164,8 @@ New agent actions:
 - [x] **Bug:** tenant-selection approve and decline are local only (`app/tenant-selection/[id]/page.tsx:39-55`). Wire them to the API.
 - [ ] Desktop Leasing page: cycles table with status pills and the cycle workspace in a split pane.
 
-- Built 18 Oct 2026 (crossub_web 39dc2b0a7, 17ae46c27; contract 0.33.0, 0.34.0; agent app 7d42cc3). Not yet run on staging.
+- Built 18 Oct 2026 (crossub_web 39dc2b0a7, 17ae46c27; contract 0.33.0, 0.34.0; agent app 7d42cc3).
+- Staging QA 19 Oct 2026 (QA Self-Manage agency): letting created with a self-run open, manual applicant, propose terms and accept, request info, approve (owner copy recorded), agreement condition, confirm and send, bond link; vacating case, deductions edit and confirm settlement (owner copy recorded with the right figures). Owner emails fail until `email.crossub.com.au` is verified. Fixed during QA: owner copy now uses the agreed rent; settlement note no longer claims the owner was emailed. Not yet run: rent review tenant response, contract upload, open report, ingoing order, tenant-selection page.
 
 ### Conversations
 
@@ -175,7 +176,8 @@ Today the agent has messages and the message center with linked Gmail or Yahoo a
 - [x] Assign a thread to a team member, link it to a job, set status.
 - [x] Desktop Conversations page: three panes (threads, conversation, job context).
 - Note: there is no SMS or WhatsApp gateway. Those channels stay record-only.
-- Built 18 Oct 2026 (crossub_web 13ecd773b, contract 0.35.0; agent app 5cf3779). Not yet run on staging.
+- Built 18 Oct 2026 (crossub_web 13ecd773b, contract 0.35.0; agent app 5cf3779).
+- Staging QA 19 Oct 2026: list, thread, job context, assign, resolve and reopen, Cros draft, reply from the agency address (blocked by the staging allowlist for example.com, as expected). Fixed during QA: reply has a To field so it sends when the property has no contact email. Not yet run: compose, file under property, link job, templates.
 
 **Done when:** a Self-Manage agent can let a property end to end and handle the tenancy's end without CROSSUB involvement. Owner emails and replies thread in the agency inbox.
 
