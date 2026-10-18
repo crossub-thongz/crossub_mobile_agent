@@ -283,6 +283,18 @@ export async function recordMaintenanceAnswers(
   return unwrapAgentMaintenance(result, "Couldn't save the answers");
 }
 
+/** Email the RFQ to the agency's chosen preferred tradies (adds to anyone already invited). */
+export async function inviteMaintenanceContractors(
+  requestId: string,
+  preferredContractorIds: string[],
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/invite-contractors', {
+    params: { path: { requestId } },
+    body: { preferredContractorIds },
+  });
+  return unwrapAgentMaintenance(result, "Couldn't send the quote requests");
+}
+
 export async function createSelfManagedMaintenanceQuote(
   requestId: string,
   body: SelfManagedQuoteInput,

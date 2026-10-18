@@ -7,6 +7,7 @@ import {
   InvoiceDecisionStep,
   PaymentStep,
 } from '@/components/agent/maintenance-self-managed/invoice-completion-steps';
+import { InviteTradiesStep } from '@/components/agent/maintenance-self-managed/invite-tradies-step';
 import { IssueTriageStep } from '@/components/agent/maintenance-self-managed/issue-triage-step';
 import { QuoteCompareStep } from '@/components/agent/maintenance-self-managed/quote-compare-step';
 import {
@@ -94,6 +95,15 @@ export function SelfManagedMaintenancePanel({
       {steps.compareQuotes ? <QuoteCompareStep detail={detail} busy={busy} run={run} /> : null}
       {steps.triage ? (
         <IssueTriageStep requestId={requestId} issues={steps.issues} busy={busy} run={run} />
+      ) : null}
+      {steps.enterQuote ? (
+        <InviteTradiesStep
+          requestId={requestId}
+          agencyId={agencyId}
+          invited={detail.invitedContractors}
+          busy={busy}
+          run={run}
+        />
       ) : null}
       {steps.enterQuote ? (
         <EnterQuoteStep

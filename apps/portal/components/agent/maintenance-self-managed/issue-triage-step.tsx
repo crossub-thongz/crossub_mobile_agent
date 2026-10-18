@@ -40,13 +40,14 @@ export function IssueTriageStep({
   const [dismissing, setDismissing] = useState<string | null>(null);
   const [dismissReason, setDismissReason] = useState('');
 
-  const unanswered = useMemo(
-    () => issues.some((i) => i.questions.some((q) => !q.answer?.trim())),
+  // Answers are recorded against a round that was emailed, so only a sent question takes one.
+  const awaitingAnswers = useMemo(
+    () => issues.some((i) => i.questionsSentAt && i.questions.some((q) => !q.answer?.trim())),
     [issues],
   );
   const neverAsked = issues.some((i) => !i.questionsSentAt && i.questions.length > 0);
   const typedAnswers = issues.flatMap((issue) =>
-    issue.questions
+    (issue.questionsSentAt ? issue.questions : [])
       .map((q) => ({
         issueId: issue.id,
         questionKey: q.key,
@@ -143,7 +144,7 @@ export function IssueTriageStep({
                         <span className="text-muted-foreground">{COPY.answered}: </span>
                         {q.answer}
                       </p>
-                    ) : (
+                    ) : !issue.questionsSentAt ? null : (
                       <Input
                         id={`${id}-${issue.id}-${q.key}`}
                         aria-label={q.question}
@@ -172,15 +173,17 @@ export function IssueTriageStep({
         ))}
       </ol>
 
-      {unanswered ? (
+      {awaitingAnswers || neverAsked ? (
         <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            disabled={busy || typedAnswers.length === 0}
-            onClick={() => void saveAnswers()}
-          >
-            {COPY.saveAnswers}
-          </Button>
+          {awaitingAnswers ? (
+            <Button
+              size="sm"
+              disabled={busy || typedAnswers.length === 0}
+              onClick={() => void saveAnswers()}
+            >
+              {COPY.saveAnswers}
+            </Button>
+          ) : null}
           {neverAsked ? (
             <Button
               size="sm"

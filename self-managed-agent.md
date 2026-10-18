@@ -92,6 +92,7 @@ New agent actions (backend route, contract, then screen):
 
 - [x] Urgent triage: confirm urgent, convert to normal, make-safe or escalate, and set the spending limit (`MaintenanceUrgentAuthorisation`).
 - [x] Issue triage: split, combine, dismiss, send questions to the tenant, record answers.
+- [x] Invite the agency's preferred tradies to quote (added in testing: an AI-set responsibility moves the job to quoting with nobody invited).
 - [x] Enter a quote for a tradie (invited tradies only). The unused legacy `createMaintenanceQuotation` is removed.
 - [x] Quote comparison view (submitted quotes side by side, lowest flagged, approve or decline).
 - [x] Book visit times on the contractor's behalf, or record a visit they arranged directly.

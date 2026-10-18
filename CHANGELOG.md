@@ -6,7 +6,8 @@
 - Self-Manage Maintenance page detail pane runs the job: urgent decision with spending limit, reported issues with dismiss and tenant answers, email questions, compare and decide submitted quotes, enter a quote for an invited tradie, split, combine, book the visit, accept or dispute the invoice, record the agency's own payment and sign the work off.
 - Maintenance pane notes when the owner gets an emailed copy (quote decisions above the repair limit, and the sign-off).
 - Agent client calls for the Self-Manage maintenance routes (contract 0.27.0).
-- `@crossub-thongz/api-contract` bumped to ^0.27.0.
+- Maintenance pane asks the agency's preferred tradies to quote, with an inline add-a-tradie for an agency that has none.
+- `@crossub-thongz/api-contract` bumped to ^0.28.0.
 - `@crossub-thongz/api-contract` bumped to ^0.26.0 (was ^0.24.0).
 - Settings → Plan card compares Self-Manage, Inspection Only and Full Service; a principal switches plan with a confirmation dialog, agents and Legacy agencies see it read-only.
 - Self-Manage copy variants for page tours, module tutorials, Tasks buckets, CROS's role line and the property approval banner (`constants/agent-copy-variant.ts`).
@@ -29,6 +30,7 @@
 - `/maintenance`, `/inspections` and `/leasing` still redirect to Tasks for every tier except Self-Manage.
 
 ### Fixed
+- Maintenance pane only offers answer boxes for questions already emailed to the tenant.
 - Add Property postcode is always editable; it no longer locks while Google Maps address search is available.
 - Add Property swaps the dead map and search box for the manual-entry hint when Google rejects the Maps key.
 - Self-Manage plan description says CROS AI, matching the assistant name elsewhere.

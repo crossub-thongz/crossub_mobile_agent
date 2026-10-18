@@ -29,7 +29,9 @@ export function EnterQuoteStep({
   run: SelfManagedMaintenanceRun;
 }) {
   const id = useId();
-  const [contractorId, setContractorId] = useState(contractors[0]?.id ?? '');
+  const [pickedContractorId, setContractorId] = useState('');
+  // Invites can arrive after mount, so the first invited tradie is the default until one is picked.
+  const contractorId = pickedContractorId || contractors[0]?.id || '';
   const [price, setPrice] = useState('');
   const [scope, setScope] = useState('');
   const [availability, setAvailability] = useState('');
