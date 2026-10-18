@@ -129,6 +129,15 @@ export function selfManagedTrustAgencies(agencies: Agency[]): Agency[] {
   );
 }
 
+/**
+ * True when the agent may record a letting's deposit or bond as received on this property: its
+ * agency is Self-Manage and the agent is the principal or accountant (the API refuses others).
+ */
+export function canRecordLettingMoney(agencies: Agency[], propertyAgencyId?: string): boolean {
+  if (!propertyAgencyId) return false;
+  return selfManagedTrustAgencies(agencies).some((a) => a.id === propertyAgencyId);
+}
+
 /** True when the agent runs the trust account of a Self-Manage agency — Trust is theirs. */
 export function hasSelfManagedTrustAccess(agencies: Agency[]): boolean {
   return selfManagedTrustAgencies(agencies).length > 0;

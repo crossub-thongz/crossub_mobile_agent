@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
+  canRecordLettingMoney,
   hasSelfManagedAgency,
   hasSelfManagedPrincipalAccess,
   hasSelfManagedTrustAccess,
@@ -40,6 +41,16 @@ export function useSelfManagedPropertyIds(): Set<string> {
     () => selfManagedPropertyIds(agencies, [...properties, ...archivedProperties]),
     [agencies, archivedProperties, properties],
   );
+}
+
+/** True when the agent may record this property's letting deposit or bond as received (principal or accountant). */
+export function useCanRecordLettingMoney(propertyId: string | null | undefined): boolean {
+  const { agencies, properties, archivedProperties } = useAgentData();
+  return useMemo(() => {
+    if (!propertyId) return false;
+    const property = [...properties, ...archivedProperties].find((p) => p.id === propertyId);
+    return canRecordLettingMoney(agencies, property?.agencyId);
+  }, [agencies, archivedProperties, properties, propertyId]);
 }
 
 /** True when this property's agency is Self-Manage — the agent runs the steps CROSSUB runs elsewhere. */

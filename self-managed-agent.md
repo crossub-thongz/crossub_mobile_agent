@@ -154,7 +154,7 @@ New agent actions:
 - [x] Application screening, with Cros scoring visible, and reference checks. (Screening panel on the applicant card: Cros score, referees with phone numbers, notes, recommendation and Cros summary on agent routes. Skip screening for a tenant already found.)
 - [x] Applicant negotiation and request-info.
 - [x] Prepare the contract, send it to the tenant, upload the signed copy.
-- [x] Mark deposit paid, set the bond link, mark bond paid, record bond lodgement and refund. (Agent routes for deposit and bond paid and for approving or rejecting their proofs; buttons in the onboarding step. Mark paid posts the legacy ledger receipt as the agent with the ledger key for that request only. Lodgement is the bond link plus bond paid; refund is the end-leasing settlement.)
+- [x] Mark deposit paid, set the bond link, mark bond paid, record bond lodgement and refund. (Agent routes for deposit and bond paid and for approving or rejecting their proofs; buttons in the onboarding step. Mark paid posts the legacy ledger receipt as the agent with the ledger key for that request only. Lodgement is the bond link plus bond paid; refund is the end-leasing settlement. Recording the deposit or bond as received, by mark paid or proof approval, is the principal or accountant only; field agents can reject a proof.)
 - [x] Generate the open report and order the ingoing inspection (reuses Phase 1).
 - [x] Rent review: key in landlord offers and record tenant responses as the agent (today the ACCOUNT_MANAGER channel).
 - [x] End leasing (settlement panel with the settlement method; the agent edits the report comparison: responsibility items, moves between tenant and landlord, quotes and contractors. Gap: the quote step's Send quotation to tenant still waits on the CROSSUB bond deduction proposal and landlord quotation emails, which have no agent route):
@@ -165,7 +165,7 @@ New agent actions:
 - [x] Desktop Leasing page: cycles table with status pills and the cycle workspace in a split pane. (The selected letting's step workspace sits in a wider detail pane under its summary.)
 
 - Built 18 Oct 2026 (crossub_web 39dc2b0a7, 17ae46c27; contract 0.33.0, 0.34.0; agent app 7d42cc3).
-- Built 19 Oct 2026: screening and reference check, skip screening, deposit and bond paid and proofs, desktop Leasing workspace pane, end-of-lease report comparison editing and settlement method (not yet committed or released; staging QA pending).
+- Built 19 Oct 2026: screening and reference check, skip screening, deposit and bond paid and proofs, desktop Leasing workspace pane, end-of-lease report comparison editing and settlement method (crossub_web 4e32d9fd0, contract 0.37.0, agent app 55c63be; staging QA pending).
 - Staging QA 19 Oct 2026 (QA Self-Manage agency): letting created with a self-run open, manual applicant, propose terms and accept, request info, approve (owner copy recorded), agreement condition, confirm and send, bond link; vacating case, deductions edit and confirm settlement (owner copy recorded with the right figures). Owner emails fail until `email.crossub.com.au` is verified. Fixed during QA: owner copy now uses the agreed rent; settlement note no longer claims the owner was emailed. Not yet run: rent review tenant response, contract upload, open report, ingoing order, tenant-selection page.
 
 ### Conversations

@@ -12,6 +12,7 @@ import {
   SELF_MANAGED_MONEY_COPY as COPY,
   type OnboardingMoneyItem,
 } from '@/constants/self-managed-leasing';
+import { useCanRecordLettingMoney } from '@/hooks/use-self-managed-access';
 import { useSelfManagedLettingAction } from '@/hooks/use-self-managed-letting';
 import {
   approveSelfManagedBondProof,
@@ -53,7 +54,8 @@ const MONEY_CALLS: Record<OnboardingMoneyItem, MoneyCalls> = {
 /**
  * Self-Manage money step for the holding deposit or the bond: approve or reject the proof the
  * tenant uploaded, or mark it received when it was paid outside the app (posts the receipt to
- * the property ledger). Nothing once the item is done.
+ * the property ledger). Nothing once the item is done. Recording it as received is the
+ * principal or accountant only; a field agent can still reject a proof.
  */
 export function LeasingSelfManagedMoneyActions({
   item,
@@ -72,6 +74,7 @@ export function LeasingSelfManagedMoneyActions({
   const { pending, run } = useSelfManagedLettingAction(propertyId, cycleId);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
+  const canRecord = useCanRecordLettingMoney(propertyId);
 
   if (status === LEASING_ITEM_STATUS.DONE) return null;
 
@@ -91,6 +94,10 @@ export function LeasingSelfManagedMoneyActions({
       setRejecting(false);
     }
   };
+
+  if (!proofPending && !canRecord) {
+    return <p className="text-muted-foreground text-[12px]">{COPY.principalOrAccountantOnly}</p>;
+  }
 
   if (!proofPending) {
     return (
@@ -115,18 +122,23 @@ export function LeasingSelfManagedMoneyActions({
 
   return (
     <div className="space-y-2">
+      {canRecord ? null : (
+        <p className="text-muted-foreground text-[12px]">{COPY.principalOrAccountantOnly}</p>
+      )}
       <div className="flex gap-2">
-        <Button
-          type="button"
-          size="sm"
-          className="h-8 flex-1 text-xs"
-          disabled={busy}
-          onClick={() =>
-            void run(ACTION.APPROVE, (id) => calls.approve(propertyId, id), copy.approved)
-          }
-        >
-          {pending === ACTION.APPROVE ? LETTING_COPY.saving : copy.approve}
-        </Button>
+        {canRecord ? (
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 flex-1 text-xs"
+            disabled={busy}
+            onClick={() =>
+              void run(ACTION.APPROVE, (id) => calls.approve(propertyId, id), copy.approved)
+            }
+          >
+            {pending === ACTION.APPROVE ? LETTING_COPY.saving : copy.approve}
+          </Button>
+        ) : null}
         <Button
           type="button"
           size="sm"

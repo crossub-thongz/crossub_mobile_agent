@@ -28,6 +28,7 @@
 - Leasing workflow timestamps show in Sydney time whatever the browser's time zone.
 
 ### Changed
+- Self-Manage onboarding: only the agency principal or accountant sees Mark received and Approve for the deposit and bond; field agents can still reject a proof.
 - Self-Manage task detail badges and status cards read In progress, CROS assisting instead of CROS handling, with agent-voiced recommendations and strata notes.
 - Self-Manage end-of-lease report comparison and repair-quote step speak to the agent instead of waiting on CROSSUB.
 - Self-Manage workflow demo tours and training copy speak to the agent, with CROS assisting instead of an Account Manager.

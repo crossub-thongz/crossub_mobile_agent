@@ -239,6 +239,7 @@ export const SELF_MANAGED_MONEY_COPY = {
   rejectReason: 'Reason for the tenant (optional)',
   rejectReasonPlaceholder: 'The receipt is unreadable',
   confirmReject: 'Reject proof',
+  principalOrAccountantOnly: 'Only the agency principal or accountant can record this as received.',
 } as const;
 
 /** Tenant-selection queue copy (all tiers). */
