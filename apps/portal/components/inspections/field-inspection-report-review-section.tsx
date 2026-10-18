@@ -1,6 +1,11 @@
 'use client';
 
+import { SelfManagedInspectionPanel } from '@/components/agent/inspection-self-managed/self-managed-inspection-panel';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
+import {
+  AGENCY_FIELD_REPORT_REVIEW_COPY as AGENCY_COPY,
+  AGENT_AWAITING_AGENCY_SIGN_OFF_LABEL,
+} from '@/constants/inspection-approval';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import { deriveFieldInspectionReportReviewState } from '@/lib/inspections/agent-field-inspection-status';
 import { cn } from '@/lib/utils';
@@ -13,6 +18,8 @@ export function FieldInspectionReportReviewSection({
   reportUrl,
   approvedAt,
   reportDeclineReason,
+  onUpdated,
+  agencyConducted = false,
 }: {
   inspectionId: string;
   record: InspectionRecord | null;
@@ -25,6 +32,8 @@ export function FieldInspectionReportReviewSection({
   agentAcknowledged?: boolean;
   approvedAt?: string | null;
   reportDeclineReason?: string | null;
+  /** Self-Manage: the agency's own inspector conducts it and the principal signs it off. */
+  agencyConducted?: boolean;
 }) {
   const kindLabel = inspectionType === 'ingoing' ? 'Ingoing' : 'Outgoing';
   const declineReason =
@@ -35,6 +44,42 @@ export function FieldInspectionReportReviewSection({
     approvedAt: approvedAt ?? record?.approvedAt,
     reportDeclineReason: declineReason,
   });
+
+  const agencyJob = agencyConducted || record?.conductedByAgency === true;
+
+  // Agency job, not yet signed off: the sign-off panel replaces the "CROSSUB is reviewing" copy.
+  if (agencyJob && state !== 'approved') {
+    const pendingSignOff = state === 'pending_crossub';
+    return (
+      <section
+        className={cn(
+          'space-y-3 rounded-2xl border p-4',
+          pendingSignOff ? 'border-amber-500/25 bg-amber-500/5' : 'bg-card',
+        )}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold">{AGENCY_COPY.title(kindLabel)}</p>
+          {pendingSignOff ? (
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+              {AGENT_AWAITING_AGENCY_SIGN_OFF_LABEL}
+            </span>
+          ) : null}
+        </div>
+        <p className="text-muted-foreground text-xs">
+          {pendingSignOff
+            ? AGENCY_COPY.pending
+            : state === 'rejected'
+              ? AGENCY_COPY.rejected
+              : AGENCY_COPY.notSubmitted}
+        </p>
+        <SelfManagedInspectionPanel
+          key={inspectionId}
+          inspectionId={inspectionId}
+          onChanged={() => void onUpdated?.()}
+        />
+      </section>
+    );
+  }
 
   if (state === 'hidden') return null;
 
@@ -86,7 +131,9 @@ export function FieldInspectionReportReviewSection({
       <p className="text-muted-foreground text-xs">
         {pending
           ? 'CROSSUB is reviewing this report. View and download appear here after approval.'
-          : 'CROSSUB has approved this report. You can view or download it.'}
+          : agencyJob
+            ? AGENCY_COPY.approved
+            : 'CROSSUB has approved this report. You can view or download it.'}
       </p>
 
       {pending ? null : (

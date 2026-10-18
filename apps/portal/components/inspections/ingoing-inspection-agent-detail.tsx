@@ -481,6 +481,7 @@ export function IngoingInspectionAgentDetail({
         tenantReportSigned={record?.tenantReportSigned}
         leasingTenantApproved={leasingTenantApproved}
         onUpdated={refreshSnapshot}
+        agencyConducted={inspection.conductedByAgency === true}
       />
 
       <section className="rounded-2xl border bg-card p-3">

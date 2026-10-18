@@ -528,6 +528,7 @@ export function OutgoingFieldInspectionDetail({
         }
         agentAcknowledged={agentAcknowledged}
         onUpdated={refresh}
+        agencyConducted={inspection.conductedByAgency === true}
       />
 
       <section className="rounded-2xl border bg-card p-3">

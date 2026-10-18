@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { AgencyBookingFields } from '@/components/agent/inspection-self-managed/agency-booking-fields';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +20,21 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionDetail, propertyDetail, propertyLeasingWorkflow, ROUTES } from '@/constants/routes';
 import { LEASING_CREATE_RELET_DECISION } from '@/constants/leasing-relet-decision';
+import {
+  AGENCY_BOOKING_COPY,
+  AGENCY_INSPECTION_TYPE,
+  type AgencyInspectionType,
+} from '@/constants/self-managed-inspections';
+import {
+  createAgencyInspection,
+  type CreateAgencyInspectionInput,
+} from '@/lib/crossub-api/agent-inspection-client';
+import { mapAgentInspections } from '@/lib/crossub-api/agent-mappers';
+import {
+  agencyScheduledTimeIso,
+  resolveAgencyBookingType,
+} from '@/lib/inspections/agency-inspection-booking';
+import { isPropertySelfManaged } from '@/lib/portal-service-level';
 import {
   createAgentIngoingInspection,
   createAgentLeasingCycle,
@@ -211,6 +227,7 @@ export function CreateInspectionWizard({
     vacating,
     tenantSelections,
     primaryAgency,
+    agencies,
     apiConnected,
     refresh,
     addOpenInspection,
@@ -353,6 +370,20 @@ export function CreateInspectionWizard({
   const [vacatingCaseId, setVacatingCaseId] = useState('');
   const [outgoingInspector, setOutgoingInspector] = useState('Pending assignment');
   const [outgoingScheduledLocal, setOutgoingScheduledLocal] = useState('');
+
+  /**
+   * Self-Manage: ingoing, outgoing and in-person routine go to one of the agency's own
+   * inspectors at a time the agent sets — CRS-0068's "the agent names no time and no inspector"
+   * is intentionally reversed here, because the agency (not CROSSUB) runs the job. No order,
+   * no payment step. Every other plan keeps the CROSSUB request path below unchanged.
+   */
+  const [agencyConductedByUserId, setAgencyConductedByUserId] = useState('');
+  const [agencyScheduledLocal, setAgencyScheduledLocal] = useState('');
+  const agencyBookingType = resolveAgencyBookingType({
+    selfManaged: property ? isPropertySelfManaged(agencies, property.agencyId) : false,
+    type: inspectionType,
+    routineFlow: routine.flow,
+  });
 
   const agentDisplayName = useMemo(() => {
     const parts = [user?.firstName, user?.lastName].filter(Boolean);
@@ -588,6 +619,51 @@ export function CreateInspectionWizard({
     }
   };
 
+  /** Self-Manage booking with an agency inspector — no CROSSUB order and no payment. */
+  const submitAgencyBooking = async (target: Property, type: AgencyInspectionType) => {
+    if (!agencyConductedByUserId) throw new Error(AGENCY_BOOKING_COPY.needInspector);
+    const base = {
+      type,
+      conductedByUserId: agencyConductedByUserId,
+      scheduledTime: agencyScheduledTimeIso(agencyScheduledLocal),
+    };
+    let body: CreateAgencyInspectionInput;
+    if (type === AGENCY_INSPECTION_TYPE.INGOING) {
+      if (!ingoing.tenantName.trim()) throw new Error('Tenant name is required');
+      if (!ingoing.moveInDate) throw new Error('Move-in date is required');
+      body = {
+        ...base,
+        tenantName: ingoing.tenantName.trim(),
+        tenantEmail: ingoing.tenantEmail.trim() || undefined,
+        tenantPhone: ingoing.tenantPhone.trim() || undefined,
+        moveInDate: ingoing.moveInDate,
+        accessInstructions: ingoing.accessInstructions.trim() || undefined,
+        notes: ingoing.notes?.trim() || undefined,
+      };
+    } else if (type === AGENCY_INSPECTION_TYPE.OUTGOING) {
+      body = {
+        ...base,
+        tenantName: target.tenantName?.trim() || undefined,
+        tenantEmail: target.tenantContact?.email?.trim() || undefined,
+        tenantPhone: target.tenantContact?.phone?.trim() || undefined,
+        notes: vacatingCaseId
+          ? `${VACATING_CASE_NOTE_PREFIX} ${workflowCaseReferenceLabel(vacatingCaseId, 'end_leasing')}`
+          : undefined,
+      };
+    } else {
+      body = {
+        ...base,
+        tenantName: routine.tenantName.trim() || undefined,
+        tenantEmail: routine.tenantEmail.trim() || undefined,
+        notes: routine.note?.trim() || undefined,
+      };
+    }
+    const created = await createAgencyInspection(target.id, body);
+    toast.success(AGENCY_BOOKING_COPY.booked);
+    const [view] = mapAgentInspections([created]);
+    finalizeInspectionCreate(view);
+  };
+
   const submit = async () => {
     if (!property || !inspectionType) return;
     if (!apiConnected) {
@@ -597,6 +673,11 @@ export function CreateInspectionWizard({
 
     setSubmitting(true);
     try {
+      if (agencyBookingType) {
+        await submitAgencyBooking(property, agencyBookingType);
+        return;
+      }
+
       if (inspectionType === 'OPEN') {
         if (!openConductedBy) throw new Error('Choose who conducts the open inspection');
 
@@ -1145,6 +1226,7 @@ export function CreateInspectionWizard({
                   onChange={setIngoing}
                   scheduledLocal={ingoingScheduledLocal}
                   onScheduledLocalChange={setIngoingScheduledLocal}
+                  agencyBooking={agencyBookingType !== null}
                 />
               ) : null}
 
@@ -1184,6 +1266,7 @@ export function CreateInspectionWizard({
                     routine={routine}
                     onChange={setRoutine}
                     isExistingSchedule={Boolean(existingRoutineSchedule)}
+                    agencyBooking={agencyBookingType !== null}
                   />
                 </>
               ) : null}
@@ -1198,6 +1281,19 @@ export function CreateInspectionWizard({
                   scheduledLocal={outgoingScheduledLocal}
                   onScheduledLocalChange={setOutgoingScheduledLocal}
                   propertyId={property.id}
+                  agencyBooking={agencyBookingType !== null}
+                />
+              ) : null}
+
+              {agencyBookingType && property ? (
+                <AgencyBookingFields
+                  type={agencyBookingType}
+                  agencyId={property.agencyId}
+                  conductedByUserId={agencyConductedByUserId}
+                  onConductedByChange={setAgencyConductedByUserId}
+                  scheduledLocal={agencyScheduledLocal}
+                  onScheduledLocalChange={setAgencyScheduledLocal}
+                  disabled={submitting}
                 />
               ) : null}
 
@@ -1214,7 +1310,9 @@ export function CreateInspectionWizard({
                 {submitting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    {inspectionType === 'ROUTINE' && existingRoutineSchedule
+                    {agencyBookingType
+                      ? AGENCY_BOOKING_COPY.submitting
+                      : inspectionType === 'ROUTINE' && existingRoutineSchedule
                       ? routineScheduleNeedsNewInstance(
                           existingRoutineSchedule.currentInspectionStatus,
                         )
@@ -1222,6 +1320,8 @@ export function CreateInspectionWizard({
                         : 'Updating…'
                       : 'Creating…'}
                   </>
+                ) : agencyBookingType ? (
+                  AGENCY_BOOKING_COPY.submit
                 ) : inspectionType === 'OPEN' ? (
                   'Create'
                 ) : inspectionType === 'ROUTINE' && existingRoutineSchedule ? (
@@ -1525,11 +1625,14 @@ function IngoingInspectionForm({
   onChange,
   scheduledLocal,
   onScheduledLocalChange,
+  agencyBooking = false,
 }: {
   ingoing: IngoingInspectionPrefill;
   onChange: (v: IngoingInspectionPrefill) => void;
   scheduledLocal: string;
   onScheduledLocalChange: (v: string) => void;
+  /** Self-Manage: the agency sets the time below, so the CROSSUB request hint is wrong here. */
+  agencyBooking?: boolean;
 }) {
   return (
     <div className="space-y-3">
@@ -1591,9 +1694,11 @@ function IngoingInspectionForm({
         account manager — the move-in date above stays, because it is a fact about the
         tenancy the agent arranged rather than a slot in our diary.
       */}
-      <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[12px] leading-relaxed">
-        {INSPECTION_TIME_REQUEST_HINT}
-      </p>
+      {agencyBooking ? null : (
+        <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[12px] leading-relaxed">
+          {INSPECTION_TIME_REQUEST_HINT}
+        </p>
+      )}
       <Field label="Access instructions">
         <Textarea
           value={ingoing.accessInstructions}
@@ -1618,10 +1723,13 @@ function RoutineInspectionForm({
   routine,
   onChange,
   isExistingSchedule = false,
+  agencyBooking = false,
 }: {
   routine: ReturnType<typeof buildRoutineInspectionPrefill>;
   onChange: (v: ReturnType<typeof buildRoutineInspectionPrefill>) => void;
   isExistingSchedule?: boolean;
+  /** Self-Manage in-person: the agency sets the time and inspector below. */
+  agencyBooking?: boolean;
 }) {
   return (
     <div className="space-y-3">
@@ -1648,9 +1756,11 @@ function RoutineInspectionForm({
         already chosen. The date and the inspector are CROSSUB's for the same reason they
         are on every other type.
       */}
-      <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[12px] leading-relaxed">
-        {INSPECTION_TIME_REQUEST_HINT}
-      </p>
+      {agencyBooking ? null : (
+        <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[12px] leading-relaxed">
+          {INSPECTION_TIME_REQUEST_HINT}
+        </p>
+      )}
       <Field label={INSPECTION_TIME_REQUEST_NOTE_LABEL}>
         <Textarea
           value={routine.note}
@@ -1686,6 +1796,7 @@ function OutgoingInspectionForm({
   onInspectorChange,
   scheduledLocal,
   onScheduledLocalChange,
+  agencyBooking = false,
 }: {
   vacatingCases: import('@/lib/types').VacatingCase[];
   vacatingCaseId: string;
@@ -1695,8 +1806,11 @@ function OutgoingInspectionForm({
   scheduledLocal: string;
   onScheduledLocalChange: (v: string) => void;
   propertyId: string;
+  /** Self-Manage: the agency sets the time and inspector below. */
+  agencyBooking?: boolean;
 }) {
   if (vacatingCases.length === 0) {
+    if (agencyBooking) return null;
     return (
       <div className="space-y-3">
         <p className="text-muted-foreground text-xs leading-relaxed">
@@ -1738,9 +1852,11 @@ function OutgoingInspectionForm({
         than choosing one, and CROSSUB inherited a booking nobody had actually weighed
         against the inspector's week.
       */}
-      <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[12px] leading-relaxed">
-        {INSPECTION_TIME_REQUEST_HINT}
-      </p>
+      {agencyBooking ? null : (
+        <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[12px] leading-relaxed">
+          {INSPECTION_TIME_REQUEST_HINT}
+        </p>
+      )}
     </div>
   );
 }

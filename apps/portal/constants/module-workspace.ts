@@ -117,7 +117,10 @@ export const INSPECTION_LANES: readonly ModuleLaneDefinition<InspectionLane>[] =
 
 export type InspectionApiStatus = (typeof INSPECTION_STATUS)[keyof typeof INSPECTION_STATUS];
 
-/** A COMPLETED job that has also been approved moves on to Published (see the lane helper). */
+/**
+ * A COMPLETED job that has also been approved moves on to Published (see the lane helper). An
+ * agency-conducted Self-Manage job reads the agency principal's sign-off the same way.
+ */
 export const INSPECTION_STATUS_LANE: Record<InspectionApiStatus, InspectionLane> = {
   [INSPECTION_STATUS.DRAFT]: INSPECTION_LANE.UPCOMING,
   [INSPECTION_STATUS.IN_PROGRESS]: INSPECTION_LANE.IN_PROGRESS,
@@ -247,6 +250,7 @@ export const MODULE_FIELD_LABELS = {
   stage: 'Stage',
   tradie: 'Tradie',
   inspector: 'Inspector',
+  conductedBy: 'Conducted by',
   quote: 'Quote',
   rent: 'Rent/wk',
   priority: 'Priority',

@@ -3,6 +3,7 @@
 import { ClipboardList } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 
+import { SelfManagedInspectionPanel } from '@/components/agent/inspection-self-managed/self-managed-inspection-panel';
 import { ModuleCaseDetail } from '@/components/agent/module-workspace/module-case-detail';
 import {
   ModuleCellText,
@@ -21,6 +22,7 @@ import {
 } from '@/constants/module-workspace';
 import { OWNER_DECISION_MODULE } from '@/constants/owner-decision';
 import { inspectionDetail } from '@/constants/routes';
+import { SELF_MANAGED_INSPECTION_COPY } from '@/constants/self-managed-inspections';
 import { compareNumbers, compareSortTime, compareStrings } from '@/lib/client-table-sort';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
 import { findLaneDefinition, inspectionLane } from '@/lib/module-workspace-lanes';
@@ -118,10 +120,16 @@ function MobileRow({ i }: { i: Inspection }) {
 }
 
 function Detail({ i }: { i: Inspection }) {
+  const { refresh } = useAgentData();
+  // Lanes come from the portfolio list, so a step that moves the job re-reads it.
+  const onChanged = useCallback(() => void refresh({ force: true }), [refresh]);
+  // Open-viewing rows key on the session id; the agent facade wants the inspection record id.
+  const inspectionId = inspectionRefSourceId(i);
+  const agencyJob = i.conductedByAgency === true;
   return (
     <ModuleCaseDetail
       module={OWNER_DECISION_MODULE.INSPECTIONS}
-      caseId={inspectionRefSourceId(i)}
+      caseId={inspectionId}
       propertyId={i.propertyId}
       propertyAddress={i.propertyAddress}
       reference={i.trackingNumber}
@@ -129,9 +137,26 @@ function Detail({ i }: { i: Inspection }) {
       lane={laneOf(i)}
       statusLabel={i.status}
       detailHref={inspectionDetail(i.id)}
+      actions={
+        agencyJob
+          ? {
+              title: SELF_MANAGED_INSPECTION_COPY.sectionTitle,
+              content: (
+                <SelfManagedInspectionPanel
+                  key={inspectionId}
+                  inspectionId={inspectionId}
+                  onChanged={onChanged}
+                />
+              ),
+            }
+          : undefined
+      }
       fields={[
         { label: MODULE_FIELD_LABELS.status, value: i.status },
-        { label: MODULE_FIELD_LABELS.inspector, value: i.inspector ?? MODULE_WORKSPACE_LABELS.noValue },
+        {
+          label: agencyJob ? MODULE_FIELD_LABELS.conductedBy : MODULE_FIELD_LABELS.inspector,
+          value: i.inspector ?? MODULE_WORKSPACE_LABELS.noValue,
+        },
         { label: MODULE_FIELD_LABELS.scheduled, value: formatModuleDate(scheduledOf(i)) },
         { label: MODULE_FIELD_LABELS.completed, value: formatModuleDate(i.completedAt) },
         { label: MODULE_FIELD_LABELS.created, value: formatModuleDate(i.createdAt) },

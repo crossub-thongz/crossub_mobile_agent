@@ -132,6 +132,7 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
     inspectorConfirmDeadlineAt: record.inspectorConfirmDeadlineAt ?? undefined,
     awaitingAgentPayment: record.awaitingAgentPayment === true,
     unacceptedRefunded: record.unacceptedRefunded === true,
+    conductedByAgency: record.conductedByAgency === true,
     routineMode: record.routineFlow ?? undefined,
     cancelReason: record.cancelReason ?? undefined,
     timeline,

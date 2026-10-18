@@ -76,6 +76,8 @@ export interface InspectionRecord {
   awaitingAgentPayment?: boolean
   /** Case closed and prepaid fee refunded — no inspector confirmed in 48 hours. */
   unacceptedRefunded?: boolean
+  /** Self-Manage: the agency's own inspector conducts this job and the principal signs it off. */
+  conductedByAgency?: boolean
 }
 
 export interface InspectionListResult {

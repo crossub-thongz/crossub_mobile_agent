@@ -1,5 +1,8 @@
 import { createCrossubClient } from '@crossub-thongz/api-contract';
 
+/** Same-origin `/api/v1` base; also builds link URLs (report PDFs) through the BFF proxy. */
+export const CROSSUB_API_V1_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/v1`;
+
 /**
  * Typed CROSSUB mobile-contract client for the agent (Account Manager) app.
  *
@@ -8,9 +11,7 @@ import { createCrossubClient } from '@crossub-thongz/api-contract';
  * authenticate with the existing cookie session, no bearer token needed. Every path,
  * param, body and response is typed from `@crossub-thongz/api-contract`.
  */
-const API_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/v1`;
-
 export const crossub = createCrossubClient({
-  baseUrl: API_BASE,
+  baseUrl: CROSSUB_API_V1_BASE,
   credentials: 'include',
 });

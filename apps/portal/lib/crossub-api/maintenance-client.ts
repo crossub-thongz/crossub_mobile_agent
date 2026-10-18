@@ -1,12 +1,13 @@
 import type { components } from '@crossub-thongz/api-contract';
 
-import { ApiError, api } from '@/lib/api';
+import { api } from '@/lib/api';
 import type { MaintenanceCloseReason } from '@/constants/maintenance-close';
 import type {
   ApiMaintenanceState,
   ApiMaintenanceUserRole,
   ApiQuotation,
 } from '@/lib/crossub-api/types';
+import { unwrapCrossubResult } from '@/lib/utils/unwrap-crossub-result';
 
 import { crossub } from './client';
 
@@ -27,20 +28,8 @@ export type AgentMaintenanceInvoiceMatch =
 export type AgentMaintenanceUrgentAuthorisation =
   components['schemas']['AgentMaintenanceUrgentAuthorisationDto'];
 
-/**
- * openapi-fetch resolves rather than throws — but the app's callers (and the close dialog's 409
- * "commitments" flow in particular) expect a thrown `ApiError` carrying the server's message.
- * Re-raise so the existing try/catch + message parsing keeps working unchanged.
- */
-function unwrapAgentMaintenance<T>(
-  result: { data?: T; error?: unknown; response: Response },
-  fallback: string,
-): T {
-  if (result.error !== undefined || result.data === undefined) {
-    throw new ApiError(result.response?.status ?? 500, result.error ?? fallback);
-  }
-  return result.data;
-}
+/** The close dialog's 409 "commitments" flow reads the thrown `ApiError`'s server message. */
+const unwrapAgentMaintenance = unwrapCrossubResult;
 
 export type MaintenanceWorkflowResponsibility = 'tenant' | 'landlord' | 'strata';
 

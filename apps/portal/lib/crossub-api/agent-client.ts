@@ -6,6 +6,7 @@ import type {
   ServerLeasingMainStatus,
   ServerLeasingReletDecision,
 } from '@/lib/leasing-cycle-types';
+import { unwrapCrossubResult } from '@/lib/utils/unwrap-crossub-result';
 
 import { crossub } from './client';
 
@@ -155,43 +156,38 @@ export async function fetchAgency(agencyId: string): Promise<AgentAgency> {
   return data;
 }
 
-export type AgencyTeamMember = {
-  userId: string;
-  email: string;
-  firstName: string | null;
-  lastName: string | null;
-  tier: 'PRINCIPAL' | 'AGENT';
-  assignedAt: string;
-  assignedPropertyCount: number;
-};
-
-export type AgencyTeamResponse = {
-  callerTier: 'PRINCIPAL' | 'AGENT';
-  members: AgencyTeamMember[];
-};
+/** Agency team (`/api/v1/agent/agencies/{agencyId}/team`), with Self-Manage agency inspectors. */
+export type AgencyTeamMember = components['schemas']['AgentTeamMemberDto'];
+export type AgencyTeamResponse = components['schemas']['AgentTeamResponseDto'];
+export type InviteAgencyTeamMemberInput = components['schemas']['InviteAgencyAgentDto'];
+export type InviteAgencyTeamMemberResult = components['schemas']['InviteAgencyAgentResponseDto'];
 
 export async function fetchAgencyTeam(agencyId: string): Promise<AgencyTeamResponse> {
-  return agentFetch<AgencyTeamResponse>(`/agent/agencies/${agencyId}/team`);
+  const result = await crossub.GET('/agent/agencies/{agencyId}/team', {
+    params: { path: { agencyId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't load the agency team");
 }
 
 export async function inviteAgencyTeamMember(
   agencyId: string,
-  body: { email: string; contactName?: string },
-): Promise<{ inviteSent: boolean; registrationUrl: string | null; alreadyRegistered: boolean | null }> {
-  return agentFetch(`/agent/agencies/${agencyId}/team/invite`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+  body: InviteAgencyTeamMemberInput,
+): Promise<InviteAgencyTeamMemberResult> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/team/invite', {
+    params: { path: { agencyId } },
+    body,
   });
+  return unwrapCrossubResult(result, "Couldn't send the invite");
 }
 
 export async function removeAgencyTeamMember(
   agencyId: string,
   userId: string,
 ): Promise<AgencyTeamResponse> {
-  return agentFetch<AgencyTeamResponse>(`/agent/agencies/${agencyId}/team/${userId}`, {
-    method: 'DELETE',
+  const result = await crossub.DELETE('/agent/agencies/{agencyId}/team/{userId}', {
+    params: { path: { agencyId, userId } },
   });
+  return unwrapCrossubResult(result, "Couldn't remove the team member");
 }
 
 export async function assignPropertyAgent(

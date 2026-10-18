@@ -5,10 +5,21 @@
 ### Added
 - Maintenance pane shows the visit times sent and that the job is waiting on the tenant, or the tenant's reason when they turned the times down, with Send new times.
 - `@crossub-thongz/api-contract` bumped to ^0.30.0.
+- Self-Manage Inspections pane: agency inspector, report review with sign-off or send back, and tenant and owner copy status.
+- Self-Manage Inspections page: Book inspection button.
+- Self-Manage create-inspection form books ingoing, outgoing and in-person routine with an agency inspector and a set time, with no payment step.
+- Team page: Inspector badge, and Make inspector / Remove inspector for principals of a Self-Manage agency.
+- Ingoing and outgoing detail pages show Waiting for your sign-off and the sign-off panel on agency-conducted jobs.
+- `@crossub-thongz/api-contract` bumped to ^0.31.0.
+
+### Changed
+- Agency team calls use the typed contract client.
+- Inspections pane labels the inspector Conducted by on agency-conducted jobs.
 
 ### Fixed
 - Maintenance jobs with sent visit times move to Awaiting tenant.
 - An approved quote no longer keeps the job in Needs action while the visit is booked.
+- Agency-conducted inspections move to Published once the agency signs the report off.
 
 ## 2026-10-17
 

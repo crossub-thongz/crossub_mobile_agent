@@ -593,6 +593,14 @@ export interface Inspection {
   awaitingAgentPayment?: boolean;
   /** Case closed and prepaid fee refunded — no inspector confirmed in 48 hours. */
   unacceptedRefunded?: boolean;
+  /** Self-Manage: the agency's own inspector conducts this job (no CROSSUB charge). */
+  conductedByAgency?: boolean;
+  /** The team member conducting an agency job. */
+  conductedByUserId?: string | null;
+  /** When the agency principal signed off an agency job's report. */
+  approvedByAgencyAt?: string | null;
+  /** When the approved report was emailed to the tenant. */
+  tenantReportSentAt?: string | null;
 }
 
 export type RentReviewWorkflowState =

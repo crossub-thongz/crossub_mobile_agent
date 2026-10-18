@@ -1,13 +1,23 @@
 'use client';
 
-import { Loader2, Mail, Trash2, UserPlus, Users } from 'lucide-react';
+import { ClipboardCheck, Loader2, Mail, Trash2, UserPlus, Users } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { InfoPanel } from '@/components/agent/info-panel';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AGENCY_MEMBERSHIP_TIER } from '@/constants/api-enums';
+import { AGENCY_INSPECTOR_TEAM_COPY as INSPECTOR_COPY } from '@/constants/self-managed-inspections';
 import {
   fetchAgencyTeam,
   inviteAgencyTeamMember,
@@ -15,7 +25,12 @@ import {
   type AgencyTeamMember,
   type AgencyTeamResponse,
 } from '@/lib/crossub-api/agent-client';
+import {
+  grantAgencyInspector,
+  revokeAgencyInspector,
+} from '@/lib/crossub-api/agent-inspection-client';
 import { cn } from '@/lib/utils';
+import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
 function memberName(member: AgencyTeamMember): string {
   const parts = [member.firstName, member.lastName].filter(Boolean);
@@ -30,6 +45,7 @@ export function AgencyTeamPanel({
   selectedMemberId,
   onSelectMember,
   showPropertyCounts = true,
+  selfManaged = false,
 }: {
   agencyId: string;
   canManage: boolean;
@@ -38,12 +54,17 @@ export function AgencyTeamPanel({
   selectedMemberId?: string | null;
   onSelectMember?: (userId: string | null) => void;
   showPropertyCounts?: boolean;
+  /** Self-Manage agency: show agency inspectors, and let a principal add or remove them. */
+  selfManaged?: boolean;
 }) {
   const [team, setTeam] = useState<AgencyTeamResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
   const [inviting, setInviting] = useState(false);
+  const [inspectorBusyId, setInspectorBusyId] = useState<string | null>(null);
+  const [removeInspector, setRemoveInspector] = useState<AgencyTeamMember | null>(null);
+  const canManageInspectors = selfManaged && canManage;
 
   const loadTeam = useCallback(async () => {
     setLoading(true);
@@ -97,6 +118,33 @@ export function AgencyTeamPanel({
     }
   }
 
+  async function onGrantInspector(userId: string) {
+    setInspectorBusyId(userId);
+    try {
+      setTeam(await grantAgencyInspector(agencyId, userId));
+      toast.success(INSPECTOR_COPY.granted);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setInspectorBusyId(null);
+    }
+  }
+
+  async function onConfirmRemoveInspector() {
+    if (!removeInspector) return;
+    const userId = removeInspector.userId;
+    setInspectorBusyId(userId);
+    try {
+      setTeam(await revokeAgencyInspector(agencyId, userId));
+      toast.success(INSPECTOR_COPY.revoked);
+      setRemoveInspector(null);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setInspectorBusyId(null);
+    }
+  }
+
   return (
     <InfoPanel title={title} icon={Users}>
       {onSelectMember ? (
@@ -114,7 +162,9 @@ export function AgencyTeamPanel({
           {team.members.map((member) => {
             const isSelf = currentUserId != null && member.userId === currentUserId;
             const selected = selectedMemberId === member.userId;
-            const canRemove = canManage && member.tier !== 'PRINCIPAL';
+            const isPrincipalMember = member.tier === AGENCY_MEMBERSHIP_TIER.PRINCIPAL;
+            const canRemove = canManage && !isPrincipalMember;
+            const showInspector = selfManaged && member.isAgencyInspector;
             const identity = (
               <div className="min-w-0">
                 <p className="font-medium leading-tight">
@@ -122,13 +172,19 @@ export function AgencyTeamPanel({
                   {isSelf ? (
                     <span className="text-muted-foreground ml-1.5 text-xs font-normal">(You)</span>
                   ) : null}
+                  {showInspector ? (
+                    <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-2 py-0.5 align-middle text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+                      <ClipboardCheck className="size-3" />
+                      {INSPECTOR_COPY.badge}
+                    </span>
+                  ) : null}
                 </p>
                 <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs break-all">
                   <Mail className="size-3 shrink-0" />
                   {member.email}
                 </p>
                 <p className="text-muted-foreground mt-1 text-[11px]">
-                  {member.tier === 'PRINCIPAL' ? 'Principal' : 'Agent'}
+                  {isPrincipalMember ? 'Principal' : 'Agent'}
                   {showPropertyCounts
                     ? ` · ${member.assignedPropertyCount} propert${member.assignedPropertyCount === 1 ? 'y' : 'ies'}`
                     : ''}
@@ -143,17 +199,42 @@ export function AgencyTeamPanel({
                   selected && 'bg-primary/10',
                 )}
               >
-                {onSelectMember ? (
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 text-left"
-                    onClick={() => onSelectMember(selected ? null : member.userId)}
-                  >
-                    {identity}
-                  </button>
-                ) : (
-                  identity
-                )}
+                <div className="min-w-0 flex-1">
+                  {onSelectMember ? (
+                    <button
+                      type="button"
+                      className="min-w-0 w-full text-left"
+                      onClick={() => onSelectMember(selected ? null : member.userId)}
+                    >
+                      {identity}
+                    </button>
+                  ) : (
+                    identity
+                  )}
+                  {canManageInspectors ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 h-7 text-xs"
+                      disabled={inspectorBusyId === member.userId}
+                      onClick={() =>
+                        member.isAgencyInspector
+                          ? setRemoveInspector(member)
+                          : void onGrantInspector(member.userId)
+                      }
+                    >
+                      {inspectorBusyId === member.userId ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <ClipboardCheck className="size-3.5" />
+                      )}
+                      {member.isAgencyInspector
+                        ? INSPECTOR_COPY.removeInspector
+                        : INSPECTOR_COPY.makeInspector}
+                    </Button>
+                  ) : null}
+                </div>
                 {canRemove ? (
                   <Button
                     type="button"
@@ -169,12 +250,12 @@ export function AgencyTeamPanel({
                   <span
                     className={cn(
                       'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                      member.tier === 'PRINCIPAL'
+                      isPrincipalMember
                         ? 'bg-primary/15 text-primary'
                         : 'bg-muted text-muted-foreground',
                     )}
                   >
-                    {member.tier === 'PRINCIPAL' ? 'Principal' : 'Agent'}
+                    {isPrincipalMember ? 'Principal' : 'Agent'}
                   </span>
                 )}
               </li>
@@ -184,6 +265,41 @@ export function AgencyTeamPanel({
       ) : (
         <p className="text-muted-foreground text-sm">No team members yet.</p>
       )}
+
+      <Dialog
+        open={removeInspector !== null}
+        onOpenChange={(open) => {
+          if (!open && inspectorBusyId === null) setRemoveInspector(null);
+        }}
+      >
+        <DialogContent elevated className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{INSPECTOR_COPY.removeConfirmTitle}</DialogTitle>
+            <DialogDescription>
+              {removeInspector ? INSPECTOR_COPY.removeConfirmBody(memberName(removeInspector)) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={inspectorBusyId !== null}
+              onClick={() => setRemoveInspector(null)}
+            >
+              {INSPECTOR_COPY.cancel}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={inspectorBusyId !== null}
+              onClick={() => void onConfirmRemoveInspector()}
+            >
+              {inspectorBusyId !== null ? <Loader2 className="size-4 animate-spin" /> : null}
+              {INSPECTOR_COPY.removeConfirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {canManage && (
         <div className="mt-4 space-y-3 rounded-xl border border-dashed p-3">
