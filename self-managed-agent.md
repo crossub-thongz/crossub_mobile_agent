@@ -107,33 +107,37 @@ What already works: the API lets an agency login into the inspector app when it 
 
 Backend:
 
-- [ ] Add `Inspector.agencyId` (nullable).
-- [ ] Principal adds a team member as an agency inspector (reuse `inspector-registry.service.ts` `createInspector`), with `receivingPoolJobs=false`.
-- [ ] Refuse agency inspectors in `listPoolInspections`, `claimInspection` and open-batch, outright rather than only by flag.
-- [ ] `assignInspector`: an agency inspector can only be assigned their own agency's inspections.
-- [ ] Agent routes to create ingoing, outgoing and routine inspections "conducted by" a team member, mirroring `defaultInspectorId`.
-- [ ] Mark agency-conducted jobs (`workflowMeta.conductedByAgency`, generalising `oiAgentConducted`).
+- [x] Add `Inspector.agencyId` (nullable).
+- [x] Principal adds a team member as an agency inspector (reuse `inspector-registry.service.ts` `createInspector`), with `receivingPoolJobs=false`.
+- [x] Refuse agency inspectors in `listPoolInspections`, `claimInspection` and open-batch, outright rather than only by flag.
+- [x] `assignInspector`: an agency inspector can only be assigned their own agency's inspections.
+- [x] Agent routes to create ingoing, outgoing and routine inspections "conducted by" a team member, mirroring `defaultInspectorId`.
+- [x] Mark agency-conducted jobs (`workflowMeta.conductedByAgency`, generalising `oiAgentConducted`).
   - Skip the platform charge, the allowance count and `submitAttendance` (payout).
   - Keep these jobs out of pool sweeps (`escalateUnclaimedPoolJobs`, routine repair, prepaid refund).
-- [ ] Agency sign-off: an agent route (Principal) that reuses `InspectionReportsService.approve` and records "approved by agency". Exclude these jobs from the officer task pool.
-- [ ] Inspector agreement: add an agency-inspector branch so signing does **not** create a CROSSUB HR `Employee` record (`system-access-agreement.service.ts` `ensureEmployeeForUser`).
-- [ ] Disable the email-fallback linking for agency inspectors (`resolveInspectorScope`). Link by `userId` only.
+- [x] Agency sign-off: an agent route (Principal) that reuses `InspectionReportsService.approve` and records "approved by agency". Exclude these jobs from the officer task pool.
+- [x] Inspector agreement: add an agency-inspector branch so signing does **not** create a CROSSUB HR `Employee` record (`system-access-agreement.service.ts` `ensureEmployeeForUser`).
+- [x] Disable the email-fallback linking for agency inspectors (`resolveInspectorScope`). Link by `userId` only.
 
 Inspector app (`crossub_mobile_inspector/apps/inspector`):
 
-- [ ] Agency mode from `/inspector/profile`. Hide Job Pool, Open Batch, Earnings, Weekly Availability, Tribunal and Register (`inspector-shell.tsx`, `app/more/page.tsx`, `app/profile/page.tsx`, `registration-gate.tsx`).
-- [ ] Stop location sync (`lib/use-inspector-location-sync.ts`).
-- [ ] Relabel "Pending officer approval" as agency approval (`constants/inspection-approval.ts`).
-- [ ] Re-sync the vendored contract.
+- [x] Agency mode from `/inspector/profile`. Hide Job Pool, Open Batch, Earnings, Weekly Availability, Tribunal and Register (`inspector-shell.tsx`, `app/more/page.tsx`, `app/profile/page.tsx`, `registration-gate.tsx`).
+- [x] Stop location sync (`lib/use-inspector-location-sync.ts`).
+- [x] Relabel "Pending officer approval" as agency approval (`constants/inspection-approval.ts`).
+- [x] Re-sync the vendored contract.
 
 Agent app:
 
-- [ ] Team page: add or remove agency inspectors.
-- [ ] Create-inspection wizard: "Conducted by" a team member for Self-Manage.
-- [ ] Report review and sign-off, then send to the tenant and owner.
-- [ ] Desktop Inspections page: upcoming, in progress, awaiting sign-off, published.
+- [x] Team page: add or remove agency inspectors.
+- [x] Create-inspection wizard: "Conducted by" a team member for Self-Manage.
+- [x] Report review and sign-off, then send to the tenant and owner.
+- [x] Desktop Inspections page: upcoming, in progress, awaiting sign-off, published.
 
 **Done when:** a Self-Manage principal adds a staff member as inspector and creates a routine inspection for them. The staff member does it in the inspector app, the principal signs it off in the agent app, and the report goes to the tenant and owner. There is no CROSSUB charge, no payout, no HR record, and the job never appears in the CROSSUB pool.
+
+Staging QA (18 Oct 2026): ingoing booked, done in the inspector app in agency mode and signed off in the agent app; no charge, kept out of the pool. Still open:
+- Owner copy is blocked until `email.crossub.com.au` is verified in Resend (403 "Domain not verified"). After that, confirm the PDF arrives attached.
+- Not yet run on staging: the tenant copy (the test job had no tenant email), a routine job and sending a report back.
 
 ---
 
