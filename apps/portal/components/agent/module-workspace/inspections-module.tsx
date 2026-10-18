@@ -137,6 +137,7 @@ function Detail({ i }: { i: Inspection }) {
       lane={laneOf(i)}
       statusLabel={i.status}
       detailHref={inspectionDetail(i.id)}
+      recordDecision={!agencyJob}
       actions={
         agencyJob
           ? {

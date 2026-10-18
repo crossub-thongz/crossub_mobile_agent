@@ -13,6 +13,9 @@ type Schemas = components['schemas'];
 
 export type AgencyInspectionType = Schemas['AgentCreateAgencyInspectionDto']['type'];
 export type AgencyInspectionOwnerCopyStatus = Schemas['AgentInspectionOwnerCopyDto']['status'];
+export type AgencyInspectionTenantCopyStatus = NonNullable<
+  Schemas['AgentInspectionDetailDto']['tenantCopyStatus']
+>;
 export type AgentInspectionDetailType = Schemas['AgentInspectionDetailDto']['type'];
 
 /** The types an agency inspector can be booked for. */
@@ -53,6 +56,12 @@ export const AGENCY_INSPECTION_OWNER_COPY_STATUS = {
   FAILED: 'FAILED',
   SKIPPED: 'SKIPPED',
 } as const satisfies Record<string, AgencyInspectionOwnerCopyStatus>;
+
+export const AGENCY_INSPECTION_TENANT_COPY_STATUS = {
+  SENT: 'SENT',
+  FAILED: 'FAILED',
+  SKIPPED: 'SKIPPED',
+} as const satisfies Record<string, AgencyInspectionTenantCopyStatus>;
 
 /** Routine in-person is booked with an agency inspector; tenant self-inspection is not. */
 export const ROUTINE_FLOW = {
@@ -117,6 +126,8 @@ export const SELF_MANAGED_INSPECTION_COPY = {
   signedOffAt: (when: string) => `You signed this report off on ${when}.`,
   tenantCopySent: (when: string) => `Tenant copy emailed ${when}.`,
   tenantCopyPending: 'Tenant copy not emailed yet.',
+  tenantCopyFailed: "The tenant copy didn't send. Email the tenant the report yourself.",
+  tenantCopySkipped: 'No tenant email on file, so no tenant copy was sent.',
   ownerCopySent: (when: string) => `Owner copy emailed ${when}.`,
   ownerCopyFailed: "The owner copy didn't send. Email the owner the report yourself.",
   ownerCopySkipped: 'No owner email on file, so no owner copy was sent.',

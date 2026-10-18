@@ -1,5 +1,8 @@
 import { INSPECTION_STATUS } from '@/constants/api-enums';
-import { AGENCY_REPORT_TENANT_TYPES } from '@/constants/self-managed-inspections';
+import {
+  AGENCY_REPORT_TENANT_TYPES,
+  type AgencyInspectionTenantCopyStatus,
+} from '@/constants/self-managed-inspections';
 import type {
   AgentInspectionDetail,
   AgentInspectionOwnerCopy,
@@ -29,6 +32,8 @@ export interface SelfManagedInspectionSteps {
   tenantCopyApplies: boolean;
   /** When the tenant copy was emailed. */
   tenantSentAt: string | null;
+  /** The tenant copy outcome on sign-off; null before sign-off and on jobs signed off before it was recorded. */
+  tenantCopyStatus: AgencyInspectionTenantCopyStatus | null;
   /** The owner copy sent on sign-off. */
   ownerCopy: AgentInspectionOwnerCopy | null;
 }
@@ -55,6 +60,7 @@ export function selfManagedInspectionSteps(
     signedOffAt: agencyJob ? signedOffAt : null,
     tenantCopyApplies,
     tenantSentAt: detail.tenantReportSentAt ?? null,
+    tenantCopyStatus: detail.tenantCopyStatus ?? null,
     ownerCopy: detail.ownerCopy,
   };
 }

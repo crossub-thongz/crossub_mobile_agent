@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
   AGENCY_INSPECTION_OWNER_COPY_STATUS,
+  AGENCY_INSPECTION_TENANT_COPY_STATUS,
   INSPECTION_REPORT_FILENAME_KIND,
   SELF_MANAGED_INSPECTION_COPY as COPY,
   SELF_MANAGED_INSPECTION_LIMITS,
@@ -183,6 +184,18 @@ function ownerCopyLine(ownerCopy: SelfManagedInspectionSteps['ownerCopy']): stri
   return COPY.ownerCopySkipped;
 }
 
+function tenantCopyLine(steps: SelfManagedInspectionSteps): string {
+  if (steps.tenantCopyStatus === AGENCY_INSPECTION_TENANT_COPY_STATUS.FAILED) {
+    return COPY.tenantCopyFailed;
+  }
+  if (steps.tenantCopyStatus === AGENCY_INSPECTION_TENANT_COPY_STATUS.SKIPPED) {
+    return COPY.tenantCopySkipped;
+  }
+  return steps.tenantSentAt
+    ? COPY.tenantCopySent(formatDateTime(steps.tenantSentAt))
+    : COPY.tenantCopyPending;
+}
+
 /** After sign-off: when it was signed, and where the tenant and owner copies stand. */
 export function SignedOffStep({
   detail,
@@ -194,15 +207,14 @@ export function SignedOffStep({
   if (!steps.signedOffAt) return null;
   const owner = ownerCopyLine(steps.ownerCopy);
   const ownerFailed = steps.ownerCopy?.status === AGENCY_INSPECTION_OWNER_COPY_STATUS.FAILED;
+  const tenantFailed = steps.tenantCopyStatus === AGENCY_INSPECTION_TENANT_COPY_STATUS.FAILED;
   return (
     <StepCard title={COPY.sentTitle}>
       <ul className="space-y-1 text-xs">
         <li>{COPY.signedOffAt(formatDateTime(steps.signedOffAt))}</li>
         {steps.tenantCopyApplies ? (
-          <li className="text-muted-foreground">
-            {steps.tenantSentAt
-              ? COPY.tenantCopySent(formatDateTime(steps.tenantSentAt))
-              : COPY.tenantCopyPending}
+          <li className={tenantFailed ? 'text-destructive' : 'text-muted-foreground'}>
+            {tenantCopyLine(steps)}
           </li>
         ) : null}
         {owner ? (

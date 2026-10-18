@@ -11,16 +11,19 @@
 - Team page: Inspector badge, and Make inspector / Remove inspector for principals of a Self-Manage agency.
 - Ingoing and outgoing detail pages show Waiting for your sign-off and the sign-off panel on agency-conducted jobs.
 - `@crossub-thongz/api-contract` bumped to ^0.31.0.
+- `@crossub-thongz/api-contract` bumped to ^0.32.0.
 
 ### Changed
 - Agency team calls use the typed contract client.
 - Inspections pane labels the inspector Conducted by on agency-conducted jobs.
+- Inspections pane drops Record a decision on agency-conducted jobs; sign-off is the decision.
 
 ### Fixed
 - Maintenance jobs with sent visit times move to Awaiting tenant.
 - An approved quote no longer keeps the job in Needs action while the visit is booked.
 - Agency-conducted inspections move to Published once the agency signs the report off.
 - Self-Manage inspection booking reads the date and time as Sydney time, whatever zone the browser is in.
+- Signed-off agency inspections say when no tenant email is on file, or the tenant copy failed, instead of "not emailed yet".
 
 ## 2026-10-17
 

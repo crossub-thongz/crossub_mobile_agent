@@ -39,7 +39,8 @@ function DetailSection({ title, children }: { title: string; children: ReactNode
 /**
  * Right-hand pane on the Self-Manage module pages: job summary, a link to the existing full
  * detail page, the module's own actions when it has them (Maintenance, Phase 1), a generic
- * "Record a decision" and the owner decision history for this job.
+ * "Record a decision" (left out where the module's actions already make the decision) and the
+ * owner decision history for this job.
  */
 export function ModuleCaseDetail({
   module,
@@ -53,6 +54,7 @@ export function ModuleCaseDetail({
   fields,
   detailHref,
   actions,
+  recordDecision = true,
 }: {
   module: OwnerDecisionModule;
   /** The job's UUID — decisions are filed against it. */
@@ -69,6 +71,8 @@ export function ModuleCaseDetail({
   detailHref: string;
   /** The module's workflow actions for this job, above the generic decision record. */
   actions?: { title: string; content: ReactNode };
+  /** Show the generic "Record a decision"; off where `actions` already decide (agency sign-off). */
+  recordDecision?: boolean;
 }) {
   const { properties, archivedProperties, agencies } = useAgentData();
   const [decisionToken, setDecisionToken] = useState(0);
@@ -121,20 +125,22 @@ export function ModuleCaseDetail({
 
       {property ? (
         <>
-          <DetailSection title={MODULE_WORKSPACE_LABELS.recordDecision}>
-            <DecisionWithOwnerEmail
-              propertyId={property.id}
-              propertyAddress={address}
-              caseType={caseType}
-              caseId={caseId}
-              ownerEmail={property.homeOwnerContact.email}
-              ownerName={property.homeOwnerName}
-              agencyName={agency?.name ?? MODULE_WORKSPACE_LABELS.yourAgency}
-              selfManaged={isPropertySelfManaged(agencies, property.agencyId)}
-              options={OWNER_DECISION_MODULE_OPTIONS[module]}
-              onRecorded={() => setDecisionToken((n) => n + 1)}
-            />
-          </DetailSection>
+          {recordDecision ? (
+            <DetailSection title={MODULE_WORKSPACE_LABELS.recordDecision}>
+              <DecisionWithOwnerEmail
+                propertyId={property.id}
+                propertyAddress={address}
+                caseType={caseType}
+                caseId={caseId}
+                ownerEmail={property.homeOwnerContact.email}
+                ownerName={property.homeOwnerName}
+                agencyName={agency?.name ?? MODULE_WORKSPACE_LABELS.yourAgency}
+                selfManaged={isPropertySelfManaged(agencies, property.agencyId)}
+                options={OWNER_DECISION_MODULE_OPTIONS[module]}
+                onRecorded={() => setDecisionToken((n) => n + 1)}
+              />
+            </DetailSection>
+          ) : null}
 
           <DetailSection title={MODULE_WORKSPACE_LABELS.decisions}>
             <OwnerDecisionTimeline
