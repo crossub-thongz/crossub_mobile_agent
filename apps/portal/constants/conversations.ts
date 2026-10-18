@@ -150,6 +150,8 @@ export const CONVERSATIONS_COPY = {
   toLabel: 'To',
   replyPlaceholder: 'Write an email reply…',
   replySubjectLabel: 'Subject',
+  replyToLabel: 'To',
+  replyToPlaceholder: 'To — leave blank to write to the thread’s contact',
   send: 'Send email',
   sent: 'Email sent',
   notSent: (delivery: string) => `Saved, but the email was not sent (${delivery.replace(/_/g, ' ')}).`,

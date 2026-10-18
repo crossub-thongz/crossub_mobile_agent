@@ -33,6 +33,7 @@ import {
 import { useConversationAction } from '@/hooks/use-agent-conversations';
 import {
   conversationHeadline,
+  defaultReplyToEmail,
   latestInboundMessageId,
   teamMemberName,
 } from '@/lib/agent-conversations';
@@ -164,6 +165,7 @@ export function ConversationThread({
   const { pending, run } = useConversationAction();
   const [subject, setSubject] = useState(detail.subject);
   const [body, setBody] = useState('');
+  const [toEmail, setToEmail] = useState(() => defaultReplyToEmail(detail));
   const [instruction, setInstruction] = useState('');
   const busy = pending !== null;
   const replyToMessageId = useMemo(() => latestInboundMessageId(detail), [detail]);
@@ -213,12 +215,14 @@ export function ConversationThread({
     const text = body.trim();
     if (!text) return;
     const trimmedSubject = subject.trim();
+    const to = toEmail.trim();
     const result = await run(CONVERSATION_ACTION.SEND, () =>
       replyToAgentConversation(detail.id, {
         channel: CONVERSATION_REPLY_CHANNEL.EMAIL,
         body: text,
         ...(trimmedSubject && trimmedSubject !== detail.subject ? { subject: trimmedSubject } : {}),
         ...(replyToMessageId ? { replyToMessageId } : {}),
+        ...(to ? { toEmails: [to] } : {}),
       }),
     );
     if (!result) return;
@@ -327,6 +331,15 @@ export function ConversationThread({
             {CONVERSATIONS_COPY.crosDraft}
           </Button>
         </div>
+        <Input
+          aria-label={CONVERSATIONS_COPY.replyToLabel}
+          type="email"
+          className="h-8 text-xs"
+          placeholder={CONVERSATIONS_COPY.replyToPlaceholder}
+          value={toEmail}
+          disabled={busy}
+          onChange={(e) => setToEmail(e.target.value)}
+        />
         <Input
           aria-label={CONVERSATIONS_COPY.replySubjectLabel}
           className="h-8 text-xs"

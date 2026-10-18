@@ -45,6 +45,7 @@
 - Trust nav and page open to the principal or accountant of a Self-Manage agency.
 
 ### Fixed
+- Conversations reply has a To field, prefilled with the address the thread last used, so a reply still sends when the property has no contact email on file.
 - Self-Manage settlement confirmed note no longer claims the owner was emailed; it points to Owner decisions for the send status.
 - Trust New bill offers the trust account's expense categories instead of only categories from earlier bills.
 - Maintenance jobs with sent visit times move to Awaiting tenant.

@@ -47,6 +47,27 @@ export function latestInboundMessageId(detail: AgentConversationDetail): string 
   return undefined;
 }
 
+/**
+ * Who a reply goes to by default: the sender of the latest inbound email, else whoever the
+ * thread last emailed. The thread's contact may have no address on file (a vacant property),
+ * so the composer starts from the address the thread actually used; blank lets the server pick.
+ */
+export function defaultReplyToEmail(detail: AgentConversationDetail): string {
+  for (let i = detail.messages.length - 1; i >= 0; i -= 1) {
+    const message = detail.messages[i];
+    if (message.direction === CONVERSATION_MESSAGE_DIRECTION.INBOUND && message.fromEmail) {
+      return message.fromEmail;
+    }
+  }
+  for (let i = detail.messages.length - 1; i >= 0; i -= 1) {
+    const message = detail.messages[i];
+    if (message.direction === CONVERSATION_MESSAGE_DIRECTION.OUTBOUND && message.toEmail) {
+      return message.toEmail;
+    }
+  }
+  return '';
+}
+
 export type LinkableConversationJob = AgentConversationWorkflowOption & {
   workflowType: ConversationLinkableWorkflowType;
 };
