@@ -1,5 +1,8 @@
+import type { components } from '@crossub-thongz/api-contract';
+
 import type {
   PropertyRecoveryStatus,
+  SettlementMethod,
   TerminationAgentDecision,
   TerminationOutcome,
   TerminationSlaRisk,
@@ -91,10 +94,11 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
     keyReturnPhotoUrls: string[]
     tenantKeyReturnSubmittedAt: string | null
   }
-  /** Vacating task facts (27 Sep 2026) — only the deductions ask is read by the Agent app. */
+  /** Vacating task facts (27 Sep 2026) — the Agent app reads the deductions ask and the settlement method. */
   vacatingTask?: {
     agentDeductionRequest?: AgentDeductionRequest | null
     agentDeductionSubmission?: AgentDeductionSubmission | null
+    settlementMethod?: SettlementMethod
   }
   overviewEmail: {
     commConversationId: string | null
@@ -134,6 +138,8 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
   landlordWaivable?: boolean | null
       bondDeductionStaffComment?: string | null
       bondDeductionAgentComment?: string | null
+      resolutionStatus?: components['schemas']['ReportComparisonRepairItemDto']['resolutionStatus']
+      fairWearAndTear?: boolean
     }[]
     landlordResponsibility: {
       area: string
@@ -146,6 +152,8 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
   landlordWaivable?: boolean | null
       bondDeductionStaffComment?: string | null
       bondDeductionAgentComment?: string | null
+      resolutionStatus?: components['schemas']['ReportComparisonRepairItemDto']['resolutionStatus']
+      fairWearAndTear?: boolean
     }[]
     tenantResponsibilityStaffComment?: string | null
     tenantResponsibilityStaffCommentAt?: string | null

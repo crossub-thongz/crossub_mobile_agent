@@ -1,4 +1,6 @@
+import { AGENT_COPY_VARIANT, type AgentCopyVariant } from '@/constants/agent-copy-variant';
 import type { AgentWorkflowTourId } from '@/constants/agent-workflow-tour';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import {
   END_LEASING_AGENT_STEP,
   END_LEASING_AGENT_STEP_ORDER,
@@ -241,6 +243,54 @@ export const WORKFLOW_TOUR_STAGES: Record<AgentWorkflowTourId, WorkflowTourStage
     { id: 'closed', title: 'Closed', ...TRIBUNAL_STAGE_COPY.closed },
   ],
 };
+
+/** Self-Manage: nothing is "CROS handling" — the agent waits on their own next step. */
+const SELF_MANAGED_WAIT = `Nothing to decide right now — the job moves to Need my action on Tasks when your next step is due. Ask ${CROS_ASSISTANT_NAME} to draft any follow-up.`;
+
+type WorkflowTourStageOverride = Partial<Pick<WorkflowTourStage, 'description' | 'agentAction'>>;
+
+/** Self-Manage replacements for stage copy that says CROSSUB does the work, by tour and stage id. */
+const SELF_MANAGED_STAGE_OVERRIDES: Partial<
+  Record<AgentWorkflowTourId, Record<string, WorkflowTourStageOverride>>
+> = {
+  maintenance: {
+    [MAINTENANCE_AGENT_STEP.JOB_CREATED]: {
+      description:
+        'Tenant or agent reports the issue, with intake photos, issue type, and property context.',
+    },
+    [MAINTENANCE_AGENT_STEP.GET_QUOTE]: {
+      description:
+        "You invite the agency's preferred contractors and enter their quotes. Quotes appear on the Quotes tab and in the workflow panel.",
+    },
+    [MAINTENANCE_AGENT_STEP.SCHEDULE]: {
+      description:
+        'After quote approval, you coordinate visit times with the contractor and tenant for access.',
+    },
+  },
+  new_leasing: {
+    scheduling: { agentAction: 'Set viewing times or update scheduling notes.' },
+    reference_check: {
+      description: 'You run reference and background checks on the preferred applicant.',
+    },
+  },
+  tribunal: {
+    submitted: { description: 'Application is filed with the tribunal. Track correspondence on the job.' },
+  },
+};
+
+/** Stage steps for the copy set. Inspection Only and Full Service keep today's copy. */
+export function workflowTourStages(
+  id: AgentWorkflowTourId,
+  variant: AgentCopyVariant,
+): WorkflowTourStage[] {
+  if (variant === AGENT_COPY_VARIANT.SERVICED) return WORKFLOW_TOUR_STAGES[id];
+  const overrides = SELF_MANAGED_STAGE_OVERRIDES[id] ?? {};
+  return WORKFLOW_TOUR_STAGES[id].map((stage) => ({
+    ...stage,
+    ...(stage.agentAction === CROS_WAIT ? { agentAction: SELF_MANAGED_WAIT } : {}),
+    ...overrides[stage.id],
+  }));
+}
 
 export function workflowStepTourTarget(stageId: string): string {
   return `workflow-step-${stageId}`;

@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-10-19
+
+### Added
+- Agent client calls for the Self-Manage reference check, skip screening, and deposit and bond routes.
+- Self-Manage applicant orders: Screening panel with the Cros score, referees with phone numbers, notes, recommendation and Cros summary.
+- Self-Manage application step: Skip screening when the agent already has a tenant.
+- Self-Manage onboarding: Mark deposit received and Mark bond received, and approve or reject deposit and bond proofs with a reason.
+- Leasing page: the selected letting's workspace in a wider split pane beside the cycles table.
+- Self-Manage lease agreement panel lists the special conditions already added.
+- Trust page Transactions tab: filter by money in, money out or journals, open a transaction's entries and reverse it with a reason.
+- Trust page Bank files tab: payments waiting for a bank file, create an ABA or BPAY file, and download each file and its payment report.
+- Trust page Bank statement tab: import a QIF statement, accept suggested matches, match a line to a posted transaction, and unmatch a reconciled line.
+- Trust page Reports tab: receipts, withdrawals, ledger balances and unpresented payments, each with a CSV download.
+- Trust page Settings tab and Accounting settings for Self-Manage principals and accountants: read-only trust bank accounts and account codes.
+- Owner ledger Fees panel: charge a one-off fee, post pending fees and waive a pending fee.
+- Ledger detail downloads the ledger as CSV or PDF.
+- Self-Manage report comparison: add, edit, remove and move tenant and landlord responsibility items, and key in quotes and contractors, saved through the agent facade.
+- Self-Manage bond settlement: choose deduct from bond or tenant pays separately, with the refund and amount owed following the method.
+
+### Fixed
+- Self-Manage bond settlement shows the refund from the bond minus the existing deductions before the first edit.
+- Conversations job context shows the property's tenant instead of "—".
+- Conversations assignee picker shows the assignee's name, or Someone outside your team, instead of a raw id.
+- Conversations thread list refreshes after Resolve, Reopen or an assignee change.
+- Starting a letting closes the Create dialog instead of leaving an empty one open.
+- Leasing workflow timestamps show in Sydney time whatever the browser's time zone.
+
+### Changed
+- Self-Manage task detail badges and status cards read In progress, CROS assisting instead of CROS handling, with agent-voiced recommendations and strata notes.
+- Self-Manage end-of-lease report comparison and repair-quote step speak to the agent instead of waiting on CROSSUB.
+- Self-Manage workflow demo tours and training copy speak to the agent, with CROS assisting instead of an Account Manager.
+- Self-Manage property overview and preview show Jobs In Progress instead of CROS Is Handling.
+- Self-Manage mobile property hub card reads Ask CROS, your assistant.
+
 ## 2026-10-18
 
 ### Added

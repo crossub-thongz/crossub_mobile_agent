@@ -20,6 +20,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
 import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
+import { TASK_DETAIL_COPY } from '@/constants/agent-copy-variant';
 import { inspectionDetail, propertyDetail } from '@/constants/routes';
 import { CASE_ASSIGNED_TO_LABEL, resolveCaseAssignedToFromProperty } from '@/lib/case-assigned-to';
 import { fromProperty } from '@/lib/detail-navigation';
@@ -39,6 +40,7 @@ import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workfl
 import { endLeasingVacateDate } from '@/lib/end-leasing/agent-workflow-model';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
+import { agentCopyVariant } from '@/lib/portal-service-level';
 import { resolvePropertyDisplayAddress } from '@/lib/property-address';
 import {
   cn,
@@ -137,12 +139,17 @@ export function EndLeasingTaskDetailView({
 
   const propertyId = caseData.propertyId ?? '';
   const selfManaged = useIsPropertySelfManaged(caseData.propertyId);
+  const copyVariant = agentCopyVariant(selfManaged);
+  const detailCopy = TASK_DETAIL_COPY[copyVariant];
   const property = properties.find((row) => row.id === propertyId) ?? null;
   const currentLease = leasingRecords.find(
     (row) => row.propertyId === propertyId && row.status === 'current',
   );
 
-  const workflow = useMemo(() => buildEndLeasingWorkflowModel(caseData), [caseData]);
+  const workflow = useMemo(
+    () => buildEndLeasingWorkflowModel(caseData, copyVariant),
+    [caseData, copyVariant],
+  );
   const banner = useMemo(
     () => resolveEndLeasingStatusBanner(caseData, workflow),
     [caseData, workflow],
@@ -245,7 +252,7 @@ export function EndLeasingTaskDetailView({
                         : 'rounded-full bg-emerald-100 px-2 py-0.5 text-[12px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
                     }
                   >
-                    {banner.needsAction ? 'Need your action' : 'CROS handling'}
+                    {banner.needsAction ? detailCopy.needsActionBadge : detailCopy.inProgressBadge}
                   </span>
                 ) : null}
               </div>

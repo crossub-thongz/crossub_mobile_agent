@@ -15,6 +15,8 @@ import { PropertyProfileIncludedUsage } from '@/components/agent/property-profil
 import { PropertyProfilePhoto } from '@/components/agent/property-profile/property-profile-photo';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { PROPERTY_JOBS_COPY } from '@/constants/agent-copy-variant';
+import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 import {
   buildCrosHandlingJobs,
   buildPropertyProfileMetrics,
@@ -165,6 +167,7 @@ function OverviewGrid({
   onViewTasks: () => void;
   onNeedActionClick: (href: string) => void;
 }) {
+  const jobsCopy = PROPERTY_JOBS_COPY[useAgentCopyVariant(property.agencyId)];
   const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
   const { start: leaseStart, end: leaseEnd } = resolveLeaseDates(property, currentLease);
   const currentRent = resolveCurrentRent(property, currentLease);
@@ -341,7 +344,7 @@ function OverviewGrid({
       </ProfileCard>
 
       <ProfileCard
-        title="CROS Is Handling"
+        title={jobsCopy.heading}
         icon={Briefcase}
         count={crosJobs.length}
         bodyClassName="p-0"
@@ -359,9 +362,7 @@ function OverviewGrid({
         }
       >
         {crosJobs.length === 0 ? (
-          <p className="text-muted-foreground px-4 py-4 text-sm">
-            No active CROSSUB jobs for this property.
-          </p>
+          <p className="text-muted-foreground px-4 py-4 text-sm">{jobsCopy.empty}</p>
         ) : (
           <ul className="divide-y divide-border/50">
             {crosJobs.map((job) => (

@@ -15,6 +15,7 @@ import {
 } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { TASK_DETAIL_COPY } from '@/constants/agent-copy-variant';
 import { propertyDetail } from '@/constants/routes';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
@@ -32,6 +33,7 @@ import {
 } from '@/lib/inspection-task-detail';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
+import { agentCopyVariant } from '@/lib/portal-service-level';
 import { usePrimaryTenantName } from '@/lib/use-primary-tenant-name';
 import { useResolvedInspection } from '@/lib/use-resolved-inspection';
 import {
@@ -42,6 +44,7 @@ import {
   formatTime,
 } from '@/lib/utils';
 
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
 import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
 
@@ -121,10 +124,12 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
     (row) => row.propertyId === propertyId && row.status === 'current',
   );
   const tenantName = usePrimaryTenantName(property);
+  const copyVariant = agentCopyVariant(useIsPropertySelfManaged(propertyId));
+  const detailCopy = TASK_DETAIL_COPY[copyVariant];
 
   const banner = useMemo(
-    () => (inspection ? resolveInspectionStatusBanner(inspection) : null),
-    [inspection],
+    () => (inspection ? resolveInspectionStatusBanner(inspection, copyVariant) : null),
+    [copyVariant, inspection],
   );
   const detailRows = useMemo(
     () => (inspection ? buildInspectionDetailRows(inspection) : []),
@@ -232,10 +237,10 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
                   )}
                 >
                   {banner.needsAction
-                    ? 'Need your action'
+                    ? detailCopy.needsActionBadge
                     : banner.statusLabel === 'Completed'
                       ? banner.statusLabel
-                      : 'CROS handling'}
+                      : detailCopy.inProgressBadge}
                 </span>
               </div>
               <p className="text-muted-foreground mt-1 text-sm">{address}</p>

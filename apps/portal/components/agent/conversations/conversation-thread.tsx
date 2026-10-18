@@ -130,7 +130,9 @@ function AssigneeSelect({
     >
       <option value={CONVERSATION_UNASSIGNED_VALUE}>{CONVERSATIONS_COPY.unassigned}</option>
       {assigneeMissing && detail.assignedToId ? (
-        <option value={detail.assignedToId}>{detail.assignedToName ?? detail.assignedToId}</option>
+        <option value={detail.assignedToId}>
+          {detail.assignedToName?.trim() || CONVERSATIONS_COPY.assigneeOutsideTeam}
+        </option>
       ) : null}
       {team.map((m) => (
         <option key={m.userId} value={m.userId}>

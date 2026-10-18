@@ -41,6 +41,31 @@ export type TrustReconciliationFigures = components['schemas']['TrustReconciliat
 export type RecordBankBalanceInput = components['schemas']['RecordBankBalanceDto'];
 export type TrustBankBalance = components['schemas']['TrustBankBalanceDto'];
 export type LockReconciliationInput = components['schemas']['LockReconciliationDto'];
+export type TrustTransactionList = components['schemas']['TrustTransactionListDto'];
+export type ReverseTrustTransactionInput = components['schemas']['ReverseTransactionDto'];
+export type TrustFeeCharge = components['schemas']['TrustFeeChargeDto'];
+export type TrustFeeChargeList = components['schemas']['TrustFeeChargeListDto'];
+export type CreateTrustFeeChargeInput = components['schemas']['CreateManualFeeDto'];
+export type WaiveTrustFeeChargeInput = components['schemas']['WaiveFeeChargeDto'];
+export type TrustPostPendingFeesResult = components['schemas']['TrustPostPendingFeesResultDto'];
+export type TrustPaymentsSummary = components['schemas']['TrustPaymentsSummaryDto'];
+export type TrustPaymentBatch = components['schemas']['TrustPaymentBatchDto'];
+export type TrustPaymentBatchList = components['schemas']['TrustPaymentBatchListDto'];
+export type TrustPaymentBatchDetail = components['schemas']['TrustPaymentBatchDetailDto'];
+export type CreateTrustPaymentBatchInput = components['schemas']['CreatePaymentBatchDto'];
+export type TrustPayment = components['schemas']['TrustPaymentDto'];
+export type ReadTrustBankFileInput = components['schemas']['ReadBankFileDto'];
+export type TrustBankFile = components['schemas']['TrustBankFileDto'];
+export type TrustBankFileLine = components['schemas']['TrustBankFileLineDto'];
+export type TrustBankLineInput = components['schemas']['TrustBankLineInputDto'];
+export type LinkTrustBankLineInput = components['schemas']['LinkBankLineDto'];
+export type ProcessMatchedBankLinesInput = components['schemas']['ProcessMatchedDto'];
+export type TrustProcessMatchedResult = components['schemas']['TrustProcessMatchedResultDto'];
+export type TrustBankLineReconciled = components['schemas']['TrustBankLineReconciledDto'];
+export type TrustBankLineUnlinked = components['schemas']['TrustBankLineUnlinkedDto'];
+export type TrustCashReport = components['schemas']['TrustCashReportDto'];
+export type TrustFolioBalanceReport = components['schemas']['TrustFolioBalanceReportDto'];
+export type TrustUnpresentedReport = components['schemas']['TrustUnpresentedReportDto'];
 
 export type ListTrustLedgersQuery = NonNullable<
   operations['AgentTrustController_listLedgers']['parameters']['query']
@@ -60,6 +85,19 @@ export type TrustDisbursementCandidatesQuery = NonNullable<
 export type TrustReconciliationFiguresQuery = NonNullable<
   operations['AgentTrustController_reconciliationFigures']['parameters']['query']
 >;
+export type ListTrustTransactionsQuery = NonNullable<
+  operations['AgentTrustController_listTransactions']['parameters']['query']
+>;
+export type ListTrustFeeChargesQuery = NonNullable<
+  operations['AgentTrustController_listFeeCharges']['parameters']['query']
+>;
+export type TrustReportQuery = NonNullable<
+  operations['AgentTrustController_receiptsReport']['parameters']['query']
+>;
+export type TrustReportKind =
+  operations['AgentTrustController_reportCsv']['parameters']['path']['kind'];
+export type TrustLedgerFileFormat =
+  operations['AgentTrustController_ledgerFile']['parameters']['path']['format'];
 
 export async function fetchTrustWorkspace(agencyId: string): Promise<AgentTrustWorkspace> {
   const result = await crossub.GET('/agent/agencies/{agencyId}/trust/workspace', {
@@ -280,4 +318,287 @@ export async function lockTrustReconciliationMonth(
     { params: { path: { agencyId, bankAccountId, month } }, body },
   );
   return unwrapCrossubResult(result, "Couldn't lock the month");
+}
+
+/** `format` is csv or pdf: the ledger with its running balance. */
+export async function downloadTrustLedgerFile(
+  agencyId: string,
+  ledgerId: string,
+  format: TrustLedgerFileFormat,
+): Promise<Blob> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/ledger/{format}',
+    { params: { path: { agencyId, ledgerId, format } }, parseAs: 'blob' },
+  );
+  return unwrapCrossubResult(result, "Couldn't download the ledger");
+}
+
+// --------------------------------------------------------------------------- Transactions
+
+export async function fetchTrustTransactions(
+  agencyId: string,
+  bankAccountId: string,
+  query: ListTrustTransactionsQuery = {},
+): Promise<TrustTransactionList> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/transactions',
+    { params: { path: { agencyId, bankAccountId }, query } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the transactions");
+}
+
+export async function fetchTrustTransaction(
+  agencyId: string,
+  transactionId: string,
+): Promise<TrustTransaction> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/transactions/{transactionId}',
+    { params: { path: { agencyId, transactionId } } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the transaction");
+}
+
+export async function reverseTrustTransaction(
+  agencyId: string,
+  transactionId: string,
+  body: ReverseTrustTransactionInput,
+): Promise<TrustTransaction> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/transactions/{transactionId}/reverse',
+    { params: { path: { agencyId, transactionId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't reverse the transaction");
+}
+
+// --------------------------------------------------------------------------- Fee charges
+
+export async function fetchTrustFeeCharges(
+  agencyId: string,
+  ledgerId: string,
+  query: ListTrustFeeChargesQuery = {},
+): Promise<TrustFeeChargeList> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/fee-charges',
+    { params: { path: { agencyId, ledgerId }, query } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the fees");
+}
+
+export async function createTrustFeeCharge(
+  agencyId: string,
+  ledgerId: string,
+  body: CreateTrustFeeChargeInput,
+): Promise<TrustFeeCharge> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/fee-charges',
+    { params: { path: { agencyId, ledgerId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't charge the fee");
+}
+
+export async function postPendingTrustFees(
+  agencyId: string,
+  ledgerId: string,
+): Promise<TrustPostPendingFeesResult> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/fee-charges/post-pending',
+    { params: { path: { agencyId, ledgerId } } },
+  );
+  return unwrapCrossubResult(result, "Couldn't post the pending fees");
+}
+
+export async function waiveTrustFeeCharge(
+  agencyId: string,
+  chargeId: string,
+  body: WaiveTrustFeeChargeInput,
+): Promise<TrustFeeCharge> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/fee-charges/{chargeId}/waive',
+    { params: { path: { agencyId, chargeId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't waive the fee");
+}
+
+// --------------------------------------------------------------------------- Payment batches (ABA)
+
+export async function fetchTrustPaymentsSummary(
+  agencyId: string,
+  bankAccountId: string,
+): Promise<TrustPaymentsSummary> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/payments-summary',
+    { params: { path: { agencyId, bankAccountId } } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the payments waiting for a bank file");
+}
+
+export async function fetchTrustPaymentBatches(
+  agencyId: string,
+  bankAccountId: string,
+  query: TrustPageQuery = {},
+): Promise<TrustPaymentBatchList> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/payment-batches',
+    { params: { path: { agencyId, bankAccountId }, query } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the bank files");
+}
+
+export async function createTrustPaymentBatch(
+  agencyId: string,
+  bankAccountId: string,
+  body: CreateTrustPaymentBatchInput,
+): Promise<TrustPaymentBatchDetail> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/payment-batches',
+    { params: { path: { agencyId, bankAccountId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't create the bank file");
+}
+
+export async function fetchTrustPaymentBatch(
+  agencyId: string,
+  batchId: string,
+): Promise<TrustPaymentBatchDetail> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/payment-batches/{batchId}', {
+    params: { path: { agencyId, batchId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't load the bank file");
+}
+
+/** The ABA (or BPAY CSV) file exactly as generated. */
+export async function downloadTrustPaymentBatchFile(
+  agencyId: string,
+  batchId: string,
+): Promise<Blob> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/payment-batches/{batchId}/file',
+    { params: { path: { agencyId, batchId } }, parseAs: 'blob' },
+  );
+  return unwrapCrossubResult(result, "Couldn't download the bank file");
+}
+
+export async function downloadTrustPaymentBatchReport(
+  agencyId: string,
+  batchId: string,
+): Promise<Blob> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/payment-batches/{batchId}/report',
+    { params: { path: { agencyId, batchId } }, parseAs: 'blob' },
+  );
+  return unwrapCrossubResult(result, "Couldn't download the payment report");
+}
+
+// --------------------------------------------------------------------------- Bank statement
+
+/** Reads a QIF statement and suggests a match per line; the API saves nothing from the file. */
+export async function readTrustBankStatement(
+  agencyId: string,
+  bankAccountId: string,
+  body: ReadTrustBankFileInput,
+): Promise<TrustBankFile> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/bank-statement/read',
+    { params: { path: { agencyId, bankAccountId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't read the bank statement");
+}
+
+export async function linkTrustBankLine(
+  agencyId: string,
+  bankAccountId: string,
+  body: LinkTrustBankLineInput,
+): Promise<TrustBankLineReconciled> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/bank-statement/link',
+    { params: { path: { agencyId, bankAccountId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't match the bank line");
+}
+
+export async function processMatchedTrustBankLines(
+  agencyId: string,
+  bankAccountId: string,
+  body: ProcessMatchedBankLinesInput,
+): Promise<TrustProcessMatchedResult> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/bank-statement/process-matched',
+    { params: { path: { agencyId, bankAccountId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't process the matched lines");
+}
+
+export async function unlinkTrustBankLine(
+  agencyId: string,
+  lineId: string,
+): Promise<TrustBankLineUnlinked> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/bank-statement/lines/{lineId}/unlink',
+    { params: { path: { agencyId, lineId } } },
+  );
+  return unwrapCrossubResult(result, "Couldn't unmatch the bank line");
+}
+
+// --------------------------------------------------------------------------- Reports
+
+export async function fetchTrustReceiptsReport(
+  agencyId: string,
+  bankAccountId: string,
+  query: TrustReportQuery = {},
+): Promise<TrustCashReport> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/reports/receipts',
+    { params: { path: { agencyId, bankAccountId }, query } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the receipts report");
+}
+
+export async function fetchTrustWithdrawalsReport(
+  agencyId: string,
+  bankAccountId: string,
+  query: TrustReportQuery = {},
+): Promise<TrustCashReport> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/reports/withdrawals',
+    { params: { path: { agencyId, bankAccountId }, query } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the withdrawals report");
+}
+
+export async function fetchTrustFolioBalancesReport(
+  agencyId: string,
+  bankAccountId: string,
+  query: TrustReportQuery = {},
+): Promise<TrustFolioBalanceReport> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/reports/folio-balances',
+    { params: { path: { agencyId, bankAccountId }, query } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the ledger balances report");
+}
+
+export async function fetchTrustUnpresentedReport(
+  agencyId: string,
+  bankAccountId: string,
+  query: TrustReportQuery = {},
+): Promise<TrustUnpresentedReport> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/reports/unpresented-payments',
+    { params: { path: { agencyId, bankAccountId }, query } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the unpresented payments report");
+}
+
+/** The report as CSV, the same rows as the screen. */
+export async function downloadTrustReportCsv(
+  agencyId: string,
+  bankAccountId: string,
+  kind: TrustReportKind,
+  query: TrustReportQuery = {},
+): Promise<Blob> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/reports/{kind}/csv',
+    { params: { path: { agencyId, bankAccountId, kind }, query }, parseAs: 'blob' },
+  );
+  return unwrapCrossubResult(result, "Couldn't download the report");
 }

@@ -50,6 +50,66 @@ export const TASK_LIST_COPY: Record<
   },
 };
 
+/**
+ * Task detail header badge and status card. Serviced tiers show "CROS handling" while the agent
+ * has nothing to decide; on Self-Manage the job is the agent's own, with CROS assisting.
+ */
+export const TASK_DETAIL_COPY: Record<
+  AgentCopyVariant,
+  {
+    needsActionBadge: string;
+    inProgressBadge: string;
+    maintenanceRecommendationFallback: string;
+    inspectionRecommendationFallback: string;
+    strataCoordinatingSubtitle: string;
+    strataResponsibleNote: string;
+  }
+> = {
+  serviced: {
+    needsActionBadge: 'Need your action',
+    inProgressBadge: 'CROS handling',
+    maintenanceRecommendationFallback:
+      'CROSSUB is handling this job and will notify you if a decision is needed.',
+    inspectionRecommendationFallback:
+      'CROSSUB is tracking this inspection and will surface anything that needs your review.',
+    strataCoordinatingSubtitle: 'CROSSUB is coordinating with the strata body',
+    strataResponsibleNote:
+      'Strata is responsible for this repair. CROSSUB will coordinate with the strata body.',
+  },
+  self_managed: {
+    needsActionBadge: 'Need your action',
+    inProgressBadge: `In progress, ${CROS_ASSISTANT_NAME} assisting`,
+    maintenanceRecommendationFallback: `You are running this job. Ask ${CROS_ASSISTANT_NAME} to draft your next message or summarise the quotes.`,
+    inspectionRecommendationFallback: `You are running this inspection. Ask ${CROS_ASSISTANT_NAME} to draft the next message or summarise the report.`,
+    strataCoordinatingSubtitle: 'You are coordinating with the strata body',
+    strataResponsibleNote: `Strata is responsible for this repair. Contact the strata body below; ${CROS_ASSISTANT_NAME} can draft the email.`,
+  },
+};
+
+/** The property's in-flight jobs card (profile overview and list preview). */
+export const PROPERTY_JOBS_COPY: Record<AgentCopyVariant, { heading: string; empty: string }> = {
+  serviced: {
+    heading: 'CROS Is Handling',
+    empty: 'No active CROSSUB jobs for this property.',
+  },
+  self_managed: {
+    heading: 'Jobs In Progress',
+    empty: 'No active jobs for this property.',
+  },
+};
+
+/** "Ask the assistant" card on the mobile property hub. */
+export const PROPERTY_ASSISTANT_CARD_COPY: Record<AgentCopyVariant, { title: string; body: string }> = {
+  serviced: {
+    title: 'Ask Gii, your Account Manager',
+    body: 'Tell Gii what you need — maintenance jobs, inspections, leasing, or a quick status check for this property.',
+  },
+  self_managed: {
+    title: `Ask ${CROS_ASSISTANT_NAME}, your assistant`,
+    body: `Tell ${CROS_ASSISTANT_NAME} what you need — help with maintenance jobs, inspections, leasing, or a quick status check for this property.`,
+  },
+};
+
 /** CROS's role line in the assistant header, empty state and property greeting. */
 export const GII_ROLE_COPY: Record<
   AgentCopyVariant,

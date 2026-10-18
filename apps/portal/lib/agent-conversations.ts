@@ -21,6 +21,20 @@ export function summaryFromDetail(detail: AgentConversationDetail): AgentConvers
   return summary;
 }
 
+/**
+ * True when an action moved the thread in or out of the list's filters (resolved state or
+ * assignee), so the list must be re-read rather than patched in place.
+ */
+export function conversationListMembershipChanged(
+  before: Pick<AgentConversationSummary, 'id' | 'resolved' | 'assignedToId'>,
+  after: Pick<AgentConversationSummary, 'id' | 'resolved' | 'assignedToId'>,
+): boolean {
+  return (
+    before.id === after.id &&
+    (before.resolved !== after.resolved || before.assignedToId !== after.assignedToId)
+  );
+}
+
 /** Append a further page, dropping rows already shown (a thread can move between pages). */
 export function mergeConversationPages(
   shown: readonly AgentConversationSummary[],

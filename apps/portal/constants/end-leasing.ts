@@ -3,6 +3,9 @@
  * Command center for all lease termination operations
  */
 
+import type { components } from '@crossub-thongz/api-contract';
+
+import type { AgentCopyVariant } from '@/constants/agent-copy-variant';
 import { LEASING_TONE, LEASING_UI, type LeasingTone } from '@/lib/leasing/constants';
 
 /** Termination module chrome — light-mode readable variants of the leasing palette. */
@@ -459,9 +462,45 @@ export const DEDUCTION_RESPONSIBILITY = {
   SHARED: "shared",
 } as const
 
+/** `PATCH /agent/end-leasing/:caseId/settlement/method` values, typed off the contract. */
+export type SettlementMethod = components['schemas']['SetVacatingSettlementMethodDto']['method']
+
+/**
+ * How the tenant's deductions are settled. Deduct from bond refunds what is left of the bond;
+ * tenant pays separately refunds the whole bond and the tenant owes the whole total. The API
+ * defaults a case to deduct from bond.
+ */
+export const SETTLEMENT_METHOD = {
+  BOND_DEDUCTION: "bond_deduction",
+  TENANT_PAYS: "tenant_pays",
+} as const satisfies Record<string, SettlementMethod>
+
+export const SETTLEMENT_METHOD_ORDER: SettlementMethod[] = [
+  SETTLEMENT_METHOD.BOND_DEDUCTION,
+  SETTLEMENT_METHOD.TENANT_PAYS,
+]
+
+export const SETTLEMENT_METHOD_LABEL: Record<SettlementMethod, string> = {
+  [SETTLEMENT_METHOD.BOND_DEDUCTION]: "Deduct from bond",
+  [SETTLEMENT_METHOD.TENANT_PAYS]: "Tenant pays separately",
+}
+
+export const SETTLEMENT_METHOD_HINT: Record<SettlementMethod, string> = {
+  [SETTLEMENT_METHOD.BOND_DEDUCTION]: "The deductions come out of the bond and the rest is refunded.",
+  [SETTLEMENT_METHOD.TENANT_PAYS]: "The whole bond is refunded and the tenant pays the deductions to you.",
+}
+
+/** The tenant's answer to the responsibility list or the repair quotation. */
+export const TENANT_REPAIR_RESPONSE = {
+  NONE: "none",
+  PENDING: "pending",
+  ACCEPTED: "accepted",
+  DECLINED: "declined",
+} as const
+
 export const SELF_MANAGED_SETTLEMENT_COPY = {
   title: "Bond settlement",
-  intro: "You set the bond held and the tenant's deductions, then confirm. The owner gets a copy by email.",
+  intro: "You set the bond held, the tenant's deductions and how they are paid, then confirm. The owner gets a copy by email.",
   confirmed: "Settlement confirmed. The tenant has been asked to accept it. The owner copy and whether it sent are under Owner decisions.",
   editTitle: "Bond and deductions",
   editHint: "Leave a row blank to keep it as it is. 0 clears it. Amounts ex. GST.",
@@ -471,4 +510,123 @@ export const SELF_MANAGED_SETTLEMENT_COPY = {
   saved: "Settlement updated",
   confirmedToast: "Settlement confirmed",
   noDeductions: "No deductions yet.",
+  methodTitle: "Settlement method",
+  methodSaved: "Settlement method updated",
+} as const
+
+/** The confirm dialog's summary line, by settlement method. Amounts come in formatted. */
+export const SELF_MANAGED_SETTLEMENT_CONFIRM_LINE: Record<
+  SettlementMethod,
+  (amounts: { deductions: string; bond: string }) => string
+> = {
+  [SETTLEMENT_METHOD.BOND_DEDUCTION]: ({ deductions, bond }) =>
+    `${deductions} in deductions from a ${bond} bond.`,
+  [SETTLEMENT_METHOD.TENANT_PAYS]: ({ deductions, bond }) =>
+    `The ${bond} bond is refunded in full and the tenant pays ${deductions} in deductions separately.`,
+}
+
+/**
+ * Report comparison and repair-quote step copy. Serviced tiers wait on CROSSUB staff for the
+ * responsibility lists, the bond deduction proposal and the landlord quotation. On Self-Manage the
+ * agent builds the responsibility lists and quotes themselves and sets the deductions in Bond
+ * settlement, so the copy speaks to them.
+ */
+export const END_LEASING_COMPARISON_COPY: Record<
+  AgentCopyVariant,
+  {
+    awaitBondStep: string
+    awaitLandlordQuoteStep: string
+    assigningContractor: string
+    landlordQuoteTitle: string
+    landlordQuoteDeclineHint: string
+    landlordQuoteAwaitingUpdate: string
+    landlordQuoteDeclineDialog: string
+    landlordQuoteDeclinedToast: string
+    bondSendDialogLead: string
+    staffCommentColumn: string
+    staffNotesLabel: string
+    compareViewOnly: string
+    quoteViewOnly: string
+    tenantResponsibilityDescription: string
+    landlordResponsibilityDescription: string
+    emptyResponsibility: string
+    tenantReviewAccepted: string
+    tenantReviewDisagreed: string
+    sendAwaitBond: string
+    sendAwaitLandlordQuote: string
+    lockAwaitBond: string
+    lockAwaitLandlordQuote: string
+    lockApproveLandlordQuote: string
+    lockLandlordQuoteDeclined: string
+  }
+> = {
+  serviced: {
+    awaitBondStep: "Await bond deduction from CROSSUB",
+    awaitLandlordQuoteStep: "Await landlord quotation from CROSSUB",
+    assigningContractor: "CROSSUB assigning contractor",
+    landlordQuoteTitle: "Landlord quotation from CROSSUB",
+    landlordQuoteDeclineHint: "or decline with a reason so CROSSUB can update and re-send.",
+    landlordQuoteAwaitingUpdate: "Awaiting an updated quotation from CROSSUB before you can approve again.",
+    landlordQuoteDeclineDialog: "Tell CROSSUB why this quotation cannot proceed. They will update and re-send.",
+    landlordQuoteDeclinedToast: "Landlord quotation declined — CROSSUB will re-send",
+    bondSendDialogLead: "Review CROSSUB's bond deduction proposal.",
+    staffCommentColumn: "CROSSUB comment",
+    staffNotesLabel: "CROSSUB staff notes",
+    compareViewOnly: "View only — maintained by CROSSUB staff",
+    quoteViewOnly: "View only — quotes maintained by CROSSUB staff",
+    tenantResponsibilityDescription:
+      "Recorded by CROSSUB staff. Email the tenant when ready — they acknowledge the comparison in the tenant app.",
+    landlordResponsibilityDescription:
+      "Recorded by CROSSUB staff. Acknowledge this list (Yes/No), add comments, then email the landlord property update when ready.",
+    emptyResponsibility: "No items recorded yet — CROSSUB staff will add these from the admin portal.",
+    tenantReviewAccepted: "Tenant acknowledged — CROSSUB can proceed to quotes.",
+    tenantReviewDisagreed: "Tenant disagreed — CROSSUB staff will send an updated list.",
+    sendAwaitBond: "Awaiting bond deduction from CROSSUB",
+    sendAwaitLandlordQuote: "Awaiting landlord quotation from CROSSUB",
+    lockAwaitBond: "Awaiting bond deduction proposal from CROSSUB",
+    lockAwaitLandlordQuote: "Awaiting landlord maintenance quotation from CROSSUB",
+    lockApproveLandlordQuote:
+      "Approve the landlord quotation from CROSSUB, then mark landlord-waivable items and send to tenant",
+    lockLandlordQuoteDeclined: "Landlord quotation declined — await an updated quotation from CROSSUB",
+  },
+  self_managed: {
+    awaitBondStep: "Set the tenant's deductions in Bond settlement",
+    awaitLandlordQuoteStep: "Get the landlord repair quotes",
+    assigningContractor: "No contractor chosen yet",
+    landlordQuoteTitle: "Landlord quotation",
+    landlordQuoteDeclineHint: "or decline with a reason that stays on the job record.",
+    landlordQuoteAwaitingUpdate: "Update the quotation before you approve it again.",
+    landlordQuoteDeclineDialog: "Note why this quotation cannot proceed. The reason stays on the job record.",
+    landlordQuoteDeclinedToast: "Landlord quotation declined",
+    bondSendDialogLead: "Review the bond deduction proposal.",
+    staffCommentColumn: "Proposal comment",
+    staffNotesLabel: "Internal notes",
+    compareViewOnly: "Locked: the case is closed, the settlement is confirmed, or the tenant is answering the quotation.",
+    quoteViewOnly: "Locked: the case is closed, the settlement is confirmed, or the tenant is answering the quotation.",
+    tenantResponsibilityDescription:
+      "Add what the tenant is responsible for, then save. Email the tenant when ready — they acknowledge the list in the tenant app.",
+    landlordResponsibilityDescription:
+      "Add what the landlord is responsible for, then save. Acknowledge this list (Yes/No), add comments, then email the landlord property update when ready.",
+    emptyResponsibility: "No items yet.",
+    tenantReviewAccepted: "Tenant acknowledged — you can move on to quotes.",
+    tenantReviewDisagreed: "Tenant disagreed — check their reason before you go on.",
+    sendAwaitBond: "Set the deductions in Bond settlement first",
+    sendAwaitLandlordQuote: "Get the landlord quotation first",
+    lockAwaitBond: "Set the tenant's deductions in Bond settlement",
+    lockAwaitLandlordQuote: "Get the landlord maintenance quotation",
+    lockApproveLandlordQuote:
+      "Approve the landlord quotation, then mark landlord-waivable items and send to tenant",
+    lockLandlordQuoteDeclined: "Landlord quotation declined — update it before you send to the tenant",
+  },
+}
+
+/** Self-Manage only: the agent edits the responsibility lists and quotes in the comparison panel. */
+export const SELF_MANAGED_COMPARISON_EDIT_COPY = {
+  save: "Save",
+  saved: "Responsibility items saved",
+  unsaved: "Unsaved changes",
+  moveToLandlord: "Move to landlord responsibility",
+  moveToTenant: "Move to tenant responsibility",
+  quoteEditHint:
+    "Key in the quote and contractor for each item, then save. The tenant's quotes add up to the outgoing maintenance line in Bond settlement.",
 } as const

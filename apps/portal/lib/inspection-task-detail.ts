@@ -1,4 +1,9 @@
 import {
+  AGENT_COPY_VARIANT,
+  TASK_DETAIL_COPY,
+  type AgentCopyVariant,
+} from '@/constants/agent-copy-variant';
+import {
   INSPECTION_TYPE_LABEL,
   inspectionNextAction,
   isInspectionCancelled,
@@ -69,7 +74,11 @@ export function buildInspectionTaskStages(inspection: Inspection): {
   });
 }
 
-export function resolveInspectionStatusBanner(inspection: Inspection): {
+/** `copyVariant` — Self-Manage speaks to the agent; defaults to the CROSSUB-serviced copy. */
+export function resolveInspectionStatusBanner(
+  inspection: Inspection,
+  copyVariant: AgentCopyVariant = AGENT_COPY_VARIANT.SERVICED,
+): {
   title: string;
   subtitle: string;
   crosSummary: string;
@@ -80,21 +89,20 @@ export function resolveInspectionStatusBanner(inspection: Inspection): {
   const needsAction = next?.tone === 'warning';
   const cancelled = isInspectionCancelled(inspection);
   const done = isInspectionDone(inspection);
+  const copy = TASK_DETAIL_COPY[copyVariant];
 
   return {
     title: next?.title ?? inspection.status,
     subtitle: next?.description ?? 'This inspection is in progress.',
-    crosSummary:
-      next?.description ||
-      'CROSSUB is tracking this inspection and will surface anything that needs your review.',
+    crosSummary: next?.description || copy.inspectionRecommendationFallback,
     needsAction,
     statusLabel: needsAction
-      ? 'Need your action'
+      ? copy.needsActionBadge
       : cancelled
         ? 'Cancelled'
         : done
           ? 'Completed'
-          : 'CROS handling',
+          : copy.inProgressBadge,
   };
 }
 

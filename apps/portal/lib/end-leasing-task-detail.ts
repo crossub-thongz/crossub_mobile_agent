@@ -1,3 +1,4 @@
+import type { AgentCopyVariant } from '@/constants/agent-copy-variant';
 import { TERMINATION_CASE_STATUS, TERMINATION_TYPE } from '@/constants/end-leasing';
 import {
   buildEndLeasingAgentWorkflow,
@@ -299,8 +300,11 @@ export function buildEndLeasingRelatedTasks(
     .slice(0, 4);
 }
 
-export function buildEndLeasingWorkflowModel(caseData: TerminationCaseDetail) {
-  return buildEndLeasingAgentWorkflow(caseData);
+export function buildEndLeasingWorkflowModel(
+  caseData: TerminationCaseDetail,
+  copyVariant?: AgentCopyVariant,
+) {
+  return buildEndLeasingAgentWorkflow(caseData, copyVariant);
 }
 
 export function formatEndLeasingActivityTime(iso: string): string {

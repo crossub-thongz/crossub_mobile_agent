@@ -131,6 +131,8 @@ export const CONVERSATIONS_COPY = {
   allProperties: 'All properties',
   noProperty: 'No property',
   unassigned: 'Unassigned',
+  /** The thread's assignee is not on this agency's team list and the server sent no name. */
+  assigneeOutsideTeam: 'Someone outside your team',
   unread: 'Unread',
   newConversation: 'New conversation',
   back: 'Back',

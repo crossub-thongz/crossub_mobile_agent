@@ -611,6 +611,9 @@ export function PropertyWorkflowCreateDialog({
             ? 'Letting cycle created — schedule the open inspection when ready'
             : 'Letting cycle created — you conduct the open inspection',
         );
+        // The letting exists now: close the form before syncing, so a slow sync or a parent that
+        // re-renders mid-refresh cannot leave an empty "Create" dialog on screen.
+        onOpenChange(false);
         if (apiConnected) {
           try {
             const view = crossubConductsOpen
@@ -860,7 +863,7 @@ export function PropertyWorkflowCreateDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && actionId != null} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
           'max-h-[90vh] overflow-y-auto',

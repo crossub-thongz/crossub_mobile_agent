@@ -2,6 +2,7 @@
 
 import { ArrowLeft } from 'lucide-react';
 
+import { TrustFeesPanel } from '@/components/agent/trust/trust-fees-panel';
 import {
   TRUST_TABLE_CELL_CLASS,
   TRUST_TABLE_HEAD_CLASS,
@@ -10,10 +11,12 @@ import {
   TrustLoading,
   TrustPanel,
   TrustPill,
+  TrustDownloadButton,
   TrustStatementPdfButton,
 } from '@/components/agent/trust/trust-ui';
 import { Button } from '@/components/ui/button';
 import {
+  TRUST_LEDGER_FILE_FORMAT,
   TRUST_LEDGER_KIND,
   TRUST_LEDGER_KIND_LABEL,
   TRUST_LEDGERS_COPY as COPY,
@@ -21,21 +24,30 @@ import {
 } from '@/constants/trust';
 import { useTrustResource } from '@/hooks/use-trust-resource';
 import {
+  downloadTrustLedgerFile,
   fetchTrustLedger,
   fetchTrustLedgerEntries,
   fetchTrustLedgerStatements,
+  type TrustAccountCode,
   type TrustLedger,
 } from '@/lib/crossub-api/agent-trust-client';
-import { formatCents, formatTrustDate, trustStatementFilename } from '@/lib/trust-accounting';
+import {
+  formatCents,
+  formatTrustDate,
+  trustLedgerFilename,
+  trustStatementFilename,
+} from '@/lib/trust-accounting';
 import { cn } from '@/lib/utils';
 
 export function TrustLedgerDetail({
   agencyId,
   ledgerId,
+  accountCodes,
   onBack,
 }: {
   agencyId: string;
   ledgerId: string;
+  accountCodes: readonly TrustAccountCode[];
   onBack: () => void;
 }) {
   const ledger = useTrustResource(`${agencyId}:${ledgerId}`, () =>
@@ -57,7 +69,7 @@ export function TrustLedgerDetail({
         )
       ) : (
         <>
-          <LedgerHeader ledger={ledger.data} />
+          <LedgerHeader agencyId={agencyId} ledger={ledger.data} />
           <div
             className={cn(
               'grid gap-4',
@@ -66,7 +78,15 @@ export function TrustLedgerDetail({
           >
             <LedgerEntries agencyId={agencyId} ledgerId={ledgerId} />
             {ledger.data.kind === TRUST_LEDGER_KIND.OWNER ? (
-              <OwnerStatements agencyId={agencyId} ledger={ledger.data} />
+              <div className="space-y-4">
+                <OwnerStatements agencyId={agencyId} ledger={ledger.data} />
+                <TrustFeesPanel
+                  agencyId={agencyId}
+                  ledgerId={ledgerId}
+                  accountCodes={accountCodes}
+                  onChanged={ledger.reload}
+                />
+              </div>
             ) : null}
           </div>
         </>
@@ -75,7 +95,7 @@ export function TrustLedgerDetail({
   );
 }
 
-function LedgerHeader({ ledger }: { ledger: TrustLedger }) {
+function LedgerHeader({ agencyId, ledger }: { agencyId: string; ledger: TrustLedger }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border bg-card p-4">
       <div className="min-w-0">
@@ -90,9 +110,25 @@ function LedgerHeader({ ledger }: { ledger: TrustLedger }) {
           <p className="text-muted-foreground mt-0.5 text-sm">{ledger.propertyAddress}</p>
         ) : null}
       </div>
-      <div className="text-right">
-        <p className="text-muted-foreground text-xs">{COPY.balance}</p>
-        <p className="text-xl font-semibold tabular-nums">{formatCents(ledger.balanceCents)}</p>
+      <div className="flex flex-col items-end gap-2">
+        <div className="text-right">
+          <p className="text-muted-foreground text-xs">{COPY.balance}</p>
+          <p className="text-xl font-semibold tabular-nums">{formatCents(ledger.balanceCents)}</p>
+        </div>
+        <div className="flex gap-2">
+          <TrustDownloadButton
+            label={COPY.downloadCsv}
+            filename={trustLedgerFilename(ledger.code, TRUST_LEDGER_FILE_FORMAT.CSV)}
+            fetchBlob={() => downloadTrustLedgerFile(agencyId, ledger.id, TRUST_LEDGER_FILE_FORMAT.CSV)}
+            failedMessage={COPY.downloadFailed}
+          />
+          <TrustDownloadButton
+            label={COPY.downloadLedgerPdf}
+            filename={trustLedgerFilename(ledger.code, TRUST_LEDGER_FILE_FORMAT.PDF)}
+            fetchBlob={() => downloadTrustLedgerFile(agencyId, ledger.id, TRUST_LEDGER_FILE_FORMAT.PDF)}
+            failedMessage={COPY.downloadFailed}
+          />
+        </div>
       </div>
     </div>
   );

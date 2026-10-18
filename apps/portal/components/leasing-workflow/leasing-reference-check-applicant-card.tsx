@@ -33,7 +33,8 @@ import type { LeasingApplicationDetail, LeasingPropertyDetail } from '@/lib/leas
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { resolveRentReviewAgentEmail } from '@/lib/rent-review/agent-email';
-import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
+import { formatPropertyDateTime } from '@/lib/format-datetime';
 
 function ChoiceButton({
   active,
@@ -219,7 +220,7 @@ export function LeasingReferenceCheckApplicantCard({
             ) : null}
           </div>
           <p className="text-muted-foreground mt-1 text-[12px]">
-            Applied {formatDateTime(app.submittedAt)}
+            Applied {formatPropertyDateTime(app.submittedAt)}
             {app.email ? ` · ${app.email}` : ''}
             {app.phone ? ` · ${app.phone}` : ''}
           </p>
@@ -327,7 +328,7 @@ export function LeasingReferenceCheckApplicantCard({
           {alreadySent ? (
             <p className="text-emerald-700 dark:text-emerald-400">
               Results sent
-              {app.feedbackSentAt ? ` · ${formatDateTime(app.feedbackSentAt)}` : ''}
+              {app.feedbackSentAt ? ` · ${formatPropertyDateTime(app.feedbackSentAt)}` : ''}
             </p>
           ) : (
             <p className="text-muted-foreground">Decision recorded.</p>
@@ -362,7 +363,7 @@ export function LeasingReferenceCheckApplicantCard({
                 <li key={entry.id} className="py-2.5 text-xs">
                   <p className="font-medium">{entry.label}</p>
                   <p className="text-muted-foreground mt-0.5">
-                    {formatOnboardingAuditActor(entry, detail)} · {formatDateTime(entry.at)}
+                    {formatOnboardingAuditActor(entry, detail)} · {formatPropertyDateTime(entry.at)}
                   </p>
                 </li>
               ))

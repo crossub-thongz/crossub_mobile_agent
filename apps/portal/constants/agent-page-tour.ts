@@ -48,7 +48,7 @@ export const AGENT_TOUR_SUPPORT_NOTE: Record<AgentCopyVariant, { title: string; 
   },
 };
 
-const AGENT_TOUR_ROLE_STEP: Record<AgentCopyVariant, AgentTourStep> = {
+export const AGENT_TOUR_ROLE_STEP: Record<AgentCopyVariant, AgentTourStep> = {
   [AGENT_COPY_VARIANT.SERVICED]: AGENT_TOUR_ACCOUNT_MANAGER_STEP,
   [AGENT_COPY_VARIANT.SELF_MANAGED]: AGENT_TOUR_SELF_MANAGED_STEP,
 };

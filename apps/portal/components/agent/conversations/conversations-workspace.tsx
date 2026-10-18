@@ -29,7 +29,7 @@ import {
 } from '@/hooks/use-agent-conversations';
 import { useDesktopViewport } from '@/hooks/use-desktop-viewport';
 import { useSelfManagedPropertyIds } from '@/hooks/use-self-managed-access';
-import { summaryFromDetail } from '@/lib/agent-conversations';
+import { conversationListMembershipChanged, summaryFromDetail } from '@/lib/agent-conversations';
 import type {
   AgentConversationDetail,
   AgentConversationListState,
@@ -63,7 +63,7 @@ export function ConversationsWorkspace() {
   }, [searchInput]);
 
   const list = useAgentConversations({ state, assignedToMe, propertyId, search });
-  const { updateRow } = list;
+  const { updateRow, reload: reloadList } = list;
 
   // Desktop always shows a thread: the chosen one, else the first in the list.
   const activeId = desktop ? (selectedId ?? list.items[0]?.id ?? null) : selectedId;
@@ -99,10 +99,17 @@ export function ConversationsWorkspace() {
 
   const handleChange = useCallback(
     (next: AgentConversationDetail) => {
+      const refetch = detail != null && conversationListMembershipChanged(detail, next);
       setDetail(next);
       updateRow(summaryFromDetail(next));
+      if (refetch) {
+        // Resolve, Reopen or a new assignee can move the thread out of (or into) the filtered
+        // list. Keep it open while the list re-reads, even if it no longer matches.
+        setSelectedId(next.id);
+        void reloadList();
+      }
     },
-    [setDetail, updateRow],
+    [detail, reloadList, setDetail, updateRow],
   );
 
   const select = (id: string) => {

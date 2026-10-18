@@ -5,8 +5,11 @@
 // (the underlying per-stage mocks are seeded independently), so we don't
 // cross-join — mirrors how LeasingPropertyDetail was built for New Leasing.
 
+import type { components } from '@crossub-thongz/api-contract';
+
 import type {
   PropertyRecoveryStatus,
+  SettlementMethod,
   TerminationAgentDecision,
   TerminationCaseStatus,
   TerminationOutcome,
@@ -105,6 +108,9 @@ export interface ReportComparisonRepairItem {
   landlordWaivable?: boolean
   bondDeductionStaffComment?: string
   bondDeductionAgentComment?: string
+  /** Carried through so a full-list save keeps them (they are set outside the Agent app). */
+  resolutionStatus?: components['schemas']['ReportComparisonRepairItemDto']['resolutionStatus']
+  fairWearAndTear?: boolean
   /** Client-only stable key for compare-step draft rows (not sent to API). */
   localKey?: string
 }
@@ -209,6 +215,8 @@ export interface SettlementStageState {
   managerApprovalRequired: boolean
   managerApprovalComplete: boolean
   deductions: SettlementDeductionLine[]
+  /** Deduct from bond, or the tenant pays separately — drives the refund and debt split. */
+  method: SettlementMethod
 }
 
 export interface AgentApprovalStageState {

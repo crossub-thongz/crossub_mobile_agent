@@ -1,13 +1,9 @@
-import {
-  AGENT_TOUR_ACCOUNT_MANAGER_STEP,
-  type AgentTourStep,
-} from '@/constants/agent-page-tour';
+import { AGENT_COPY_VARIANT, type AgentCopyVariant } from '@/constants/agent-copy-variant';
+import { AGENT_TOUR_ROLE_STEP, type AgentTourStep } from '@/constants/agent-page-tour';
 import type { AgentPageGuideId } from '@/constants/agent-page-guides';
-import { AGENT_WORKFLOW_TRAINING } from '@/constants/agent-workflow-tutorial';
-import {
-  WORKFLOW_TOUR_STAGES,
-  workflowStepTourTarget,
-} from '@/constants/workflow-tour-stages';
+import { AGENT_WORKFLOW_TRAINING_BY_VARIANT } from '@/constants/agent-workflow-tutorial';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import { workflowStepTourTarget, workflowTourStages } from '@/constants/workflow-tour-stages';
 import { ROUTES } from '@/constants/routes';
 import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
 
@@ -75,8 +71,8 @@ export function workflowTourFromDetailPath(pathname: string | null): AgentWorkfl
   return map[parts[0]!] ?? null;
 }
 
-function moduleCopy(id: AgentWorkflowTourId) {
-  const mod = AGENT_WORKFLOW_TRAINING[id];
+function moduleCopy(id: AgentWorkflowTourId, variant: AgentCopyVariant) {
+  const mod = AGENT_WORKFLOW_TRAINING_BY_VARIANT[variant][id];
   return { pageName: mod.pageName, overview: mod.overview, eyebrow: mod.eyebrow };
 }
 
@@ -245,8 +241,53 @@ const ENTRY_TASKS_STEPS: Record<AgentWorkflowTourId, AgentTourStep[]> = {
   ],
 };
 
-function detailRailStageSteps(id: AgentWorkflowTourId): AgentTourStep[] {
-  return WORKFLOW_TOUR_STAGES[id].map((stage) => ({
+/** Tour copy that names who carries the work: CROSSUB on serviced tiers, the agent on Self-Manage. */
+const WORKFLOW_TOUR_ROLE_COPY: Record<
+  AgentCopyVariant,
+  {
+    badgeTitle: string;
+    badgeDescription: string;
+    badgeActionNote: string;
+    statusDescription: string;
+    /** Replacement descriptions for Tasks entry steps, by step id. */
+    entryStepDescriptions: Readonly<Record<string, string>>;
+  }
+> = {
+  [AGENT_COPY_VARIANT.SERVICED]: {
+    badgeTitle: 'Need your action vs CROS handling',
+    badgeDescription:
+      'The case badge tells you at a glance whether you must decide something now or CROSSUB is carrying the work.',
+    badgeActionNote:
+      'Rose Need your action — open the job and act in the Workflow panel. Green CROS handling — monitor only until the badge changes.',
+    statusDescription:
+      'The status banner explains the live blocker, what CROSSUB recommends, and the next step in plain language.',
+    entryStepDescriptions: {},
+  },
+  [AGENT_COPY_VARIANT.SELF_MANAGED]: {
+    badgeTitle: 'Need your action vs in progress',
+    badgeDescription: `The case badge tells you at a glance whether a decision is waiting on you now or the job is moving, with ${CROS_ASSISTANT_NAME} assisting.`,
+    badgeActionNote: `Rose Need your action — open the job and act in the Workflow panel. Green In progress — the job is moving; ask ${CROS_ASSISTANT_NAME} to draft your next message.`,
+    statusDescription: `The status banner explains the live blocker, what ${CROS_ASSISTANT_NAME} recommends, and the next step in plain language.`,
+    entryStepDescriptions: {
+      'insp-entry-bucket':
+        'Inspections awaiting your sign-off show under Need my action before the report goes to the tenant and owner.',
+      'lease-entry-bucket':
+        'Applicant approvals and onboarding steps surface here when the next step is yours.',
+      'trib-entry-bucket':
+        'Evidence requests and hearing prep show under Need my action until the file can move on.',
+    },
+  },
+};
+
+function entryTasksSteps(id: AgentWorkflowTourId, variant: AgentCopyVariant): AgentTourStep[] {
+  const overrides = WORKFLOW_TOUR_ROLE_COPY[variant].entryStepDescriptions;
+  return ENTRY_TASKS_STEPS[id].map((step) =>
+    step.id in overrides ? { ...step, description: overrides[step.id]! } : step,
+  );
+}
+
+function detailRailStageSteps(id: AgentWorkflowTourId, variant: AgentCopyVariant): AgentTourStep[] {
+  return workflowTourStages(id, variant).map((stage) => ({
     id: `${id}-stage-${stage.id}`,
     target: workflowStepTourTarget(stage.id),
     title: stage.title,
@@ -369,8 +410,9 @@ function detailTabSteps(id: AgentWorkflowTourId): AgentTourStep[] {
   return tabs[id];
 }
 
-function buildDetailSteps(id: AgentWorkflowTourId): AgentTourStep[] {
-  const { pageName, overview } = moduleCopy(id);
+function buildDetailSteps(id: AgentWorkflowTourId, variant: AgentCopyVariant): AgentTourStep[] {
+  const { pageName, overview } = moduleCopy(id, variant);
+  const roleCopy = WORKFLOW_TOUR_ROLE_COPY[variant];
   return [
     {
       id: `${id}-detail-intro`,
@@ -379,22 +421,19 @@ function buildDetailSteps(id: AgentWorkflowTourId): AgentTourStep[] {
       actionNote:
         'You created the case — now walk each stage on the rail. Rose Need your action badges show where you must decide.',
     },
-    AGENT_TOUR_ACCOUNT_MANAGER_STEP,
+    AGENT_TOUR_ROLE_STEP[variant],
     {
       id: `${id}-detail-badge`,
       target: 'workflow-case-badge',
-      title: 'Need your action vs CROS handling',
-      description:
-        'The case badge tells you at a glance whether you must decide something now or CROSSUB is carrying the work.',
-      actionNote:
-        'Rose Need your action — open the job and act in the Workflow panel. Green CROS handling — monitor only until the badge changes.',
+      title: roleCopy.badgeTitle,
+      description: roleCopy.badgeDescription,
+      actionNote: roleCopy.badgeActionNote,
     },
     {
       id: `${id}-detail-status`,
       target: 'workflow-status',
       title: 'Current status',
-      description:
-        'The status banner explains the live blocker, what CROSSUB recommends, and the next step in plain language.',
+      description: roleCopy.statusDescription,
       actionNote:
         'Read the status title and subtitle first — they tell you exactly what decision or confirmation is waiting on you.',
     },
@@ -425,7 +464,7 @@ function buildDetailSteps(id: AgentWorkflowTourId): AgentTourStep[] {
       actionNote:
         'Buttons and forms in this panel are what unblock the job. Complete them, then check Tasks — the row should leave Need my action.',
     },
-    ...detailRailStageSteps(id),
+    ...detailRailStageSteps(id, variant),
     {
       id: `${id}-detail-tabs`,
       target: 'workflow-tabs',
@@ -437,13 +476,15 @@ function buildDetailSteps(id: AgentWorkflowTourId): AgentTourStep[] {
     {
       id: `${id}-detail-finish`,
       title: 'You are set',
-      description: AGENT_WORKFLOW_TRAINING[id].tips[0] ?? 'Replay this tour anytime from Support → Workflow demo tours.',
+      description:
+        AGENT_WORKFLOW_TRAINING_BY_VARIANT[variant][id].tips[0] ??
+        'Replay this tour anytime from Support → Workflow demo tours.',
     },
   ];
 }
 
-function buildEntrySteps(id: AgentWorkflowTourId): AgentTourStep[] {
-  const { pageName, overview, eyebrow } = moduleCopy(id);
+function buildEntrySteps(id: AgentWorkflowTourId, variant: AgentCopyVariant): AgentTourStep[] {
+  const { pageName, overview, eyebrow } = moduleCopy(id, variant);
   const intro: AgentTourStep = {
     id: `${id}-entry-intro`,
     title: `${pageName} demo tour`,
@@ -452,17 +493,19 @@ function buildEntrySteps(id: AgentWorkflowTourId): AgentTourStep[] {
 
   return [
     intro,
-    AGENT_TOUR_ACCOUNT_MANAGER_STEP,
-    ...ENTRY_TASKS_STEPS[id],
+    AGENT_TOUR_ROLE_STEP[variant],
+    ...entryTasksSteps(id, variant),
     ...buildCreateSteps(id),
   ];
 }
 
+/** `variant` — Self-Manage tours speak to the agent; Inspection Only and Full Service keep today's copy. */
 export function workflowTourSteps(
   id: AgentWorkflowTourId,
   phase: AgentWorkflowTourPhase,
+  variant: AgentCopyVariant = AGENT_COPY_VARIANT.SERVICED,
 ): AgentTourStep[] {
-  return phase === 'entry' ? buildEntrySteps(id) : buildDetailSteps(id);
+  return phase === 'entry' ? buildEntrySteps(id, variant) : buildDetailSteps(id, variant);
 }
 
 export function resolveWorkflowTourContext(

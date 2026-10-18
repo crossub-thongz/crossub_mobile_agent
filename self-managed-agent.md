@@ -151,20 +151,21 @@ Today the agent can make the re-let decision, add and shortlist applicants, hand
 
 New agent actions:
 
-- [ ] Application screening, with Cros scoring visible, and reference checks. (AI score already shows on the applicant card; reference check still on staff routes.)
+- [x] Application screening, with Cros scoring visible, and reference checks. (Screening panel on the applicant card: Cros score, referees with phone numbers, notes, recommendation and Cros summary on agent routes. Skip screening for a tenant already found.)
 - [x] Applicant negotiation and request-info.
 - [x] Prepare the contract, send it to the tenant, upload the signed copy.
-- [ ] Mark deposit paid, set the bond link, mark bond paid, record bond lodgement and refund. (Bond link done. Deposit/bond paid post to the trust ledger, so they move to Phase 3 with the accountant.)
+- [x] Mark deposit paid, set the bond link, mark bond paid, record bond lodgement and refund. (Agent routes for deposit and bond paid and for approving or rejecting their proofs; buttons in the onboarding step. Mark paid posts the legacy ledger receipt as the agent with the ledger key for that request only. Lodgement is the bond link plus bond paid; refund is the end-leasing settlement.)
 - [x] Generate the open report and order the ingoing inspection (reuses Phase 1).
 - [x] Rent review: key in landlord offers and record tenant responses as the agent (today the ACCOUNT_MANAGER channel).
-- [x] End leasing (settlement panel; responsibility items have a route, report-comparison UI still shows CROSSUB quote-step copy):
+- [x] End leasing (settlement panel with the settlement method; the agent edits the report comparison: responsibility items, moves between tenant and landlord, quotes and contractors. Gap: the quote step's Send quotation to tenant still waits on the CROSSUB bond deduction proposal and landlord quotation emails, which have no agent route):
   - The agent builds the report comparison and deductions themselves. Today they enter them only "when CROSSUB asks" (`lib/termination-case-api.ts`, `agent-deductions-window.tsx`).
   - The agent proposes bond deductions and confirms the settlement.
 - [x] Self-Manage owner copies: chosen applicant, rent increase, bond deductions.
 - [x] **Bug:** tenant-selection approve and decline are local only (`app/tenant-selection/[id]/page.tsx:39-55`). Wire them to the API.
-- [ ] Desktop Leasing page: cycles table with status pills and the cycle workspace in a split pane.
+- [x] Desktop Leasing page: cycles table with status pills and the cycle workspace in a split pane. (The selected letting's step workspace sits in a wider detail pane under its summary.)
 
 - Built 18 Oct 2026 (crossub_web 39dc2b0a7, 17ae46c27; contract 0.33.0, 0.34.0; agent app 7d42cc3).
+- Built 19 Oct 2026: screening and reference check, skip screening, deposit and bond paid and proofs, desktop Leasing workspace pane, end-of-lease report comparison editing and settlement method (not yet committed or released; staging QA pending).
 - Staging QA 19 Oct 2026 (QA Self-Manage agency): letting created with a self-run open, manual applicant, propose terms and accept, request info, approve (owner copy recorded), agreement condition, confirm and send, bond link; vacating case, deductions edit and confirm settlement (owner copy recorded with the right figures). Owner emails fail until `email.crossub.com.au` is verified. Fixed during QA: owner copy now uses the agreed rent; settlement note no longer claims the owner was emailed. Not yet run: rent review tenant response, contract upload, open report, ingoing order, tenant-selection page.
 
 ### Conversations
@@ -190,26 +191,34 @@ Owner: whoever frees up first. Can start earlier, since the decisions are made.
 ### Backend
 
 - [x] Add `ACCOUNTANT` to `enum AgencyMembershipTier`. The Principal invites an accountant like any team member.
-- [x] The accountant becomes a `TrustWorkspaceMember` of the agency's `TrustWorkspaceKind.AGENCY` workspace, with trust permissions (`POST_TRUST_TRANSACTIONS`, `APPROVE_TRUST_PAYMENTS`, `RECONCILE_TRUST_ACCOUNT`, `MANAGE_TRUST_SETTINGS`) scoped to that workspace only.
-- [x] Agent trust routes wrapping `src/modules/trust-accounting/*` (fee charges, ABA payment batches and bank statement import not exposed yet):
-  - ledgers
+- [x] The accountant becomes a `TrustWorkspaceMember` of the agency's `TrustWorkspaceKind.AGENCY` workspace, with trust permissions (`POST_TRUST_TRANSACTIONS`, `APPROVE_TRUST_PAYMENTS`, `RECONCILE_TRUST_ACCOUNT`) on a request-local actor, scoped to that workspace only. Never `MANAGE_TRUST_SETTINGS` (D132): settings stay with CROSSUB.
+- [x] Agent trust routes wrapping `src/modules/trust-accounting/*`:
+  - ledgers, with the ledger download as CSV or PDF
   - receipts and tenant receipts
+  - transactions: list, view, reverse
   - bills
-  - fee charges
-  - disbursements and payment batches (ABA)
+  - fee charges: list, charge a one-off fee, post pending, waive
+  - disbursements and payment batches (ABA): pool summary, create a batch, list, download the ABA or BPAY file and its report
   - owner statements
-  - bank statements
+  - bank statements: read a QIF file, accept suggested matches, match, unmatch
   - reconciliation locks
+  - reports: receipts, withdrawals, ledger balances, unpresented payments, each as CSV
+- Not exposed to the agency (staff only):
+  - Everything behind `MANAGE_TRUST_SETTINGS` (D132): bank accounts and ABA details, account codes, workspace members, change of ownership, rebuild ledger balance, take-on.
+  - Reconciliation revoke, fee settings, payout methods and schedule, withholds, manual withdrawals, manual receipts, withdrawals and journals: allowed by the agency's keys but not asked for yet.
+  - Bank statement import is QIF read only, base64 in JSON like the staff route; there is no CSV or OFX reader and no stored statement or statement line list (D98).
+  - The trust reports have no PDF; only the ledger download has one.
 - [x] Owner statements emailed to the owner for Self-Manage (Phase 0 guard).
 - [x] Update `crossub_web/docs/trustaccounting.md`: decisions D89 to D91 reversed, R24 answered (D132).
 
 ### Agent app
 
-- [ ] Turn on `ACCOUNTING_MODULE_LAUNCHED` for Self-Manage and replace the placeholder settings section (`components/accounting/accounting-settings-section.tsx`). (Not done: Trust has its own page.)
-- [x] Desktop Trust pages: overview, ledgers, bills, rent, disbursement, reconciliation. (Transactions, bank statements and reports not yet.)
+- [x] Replace the placeholder settings section (`components/accounting/accounting-settings-section.tsx`) for Self-Manage principals and accountants with a read-only summary of the trust bank accounts and account codes, linking to Trust. Everyone else keeps the placeholder. `ACCOUNTING_MODULE_LAUNCHED` stays off, so the same summary is also the Trust page Settings tab.
+- [x] Desktop Trust pages: overview, ledgers (with fees and CSV or PDF download), transactions, rent, bills, disbursement, bank files (ABA), bank statement, reconciliation, reports, settings.
 - [x] Only Principal and Accountant see Trust.
 
 - Built 18 Oct 2026 (crossub_web 13ecd773b, 8d01dc358; contract 0.35.0, 0.36.0; agent app a734708). CROSSUB staff must create each agency's AGENCY trust workspace and bank account first. Not yet run on staging.
+- Transactions, fees, bank files, bank statement, reports and settings built 19 Oct 2026; uncommitted, needs a contract release after 0.36.0. Not yet run on staging.
 
 **Done when:** an agency accountant receipts rent, pays a bill, runs an owner disbursement, issues the owner statement by email, and reconciles and locks the month, all inside their own agency workspace.
 

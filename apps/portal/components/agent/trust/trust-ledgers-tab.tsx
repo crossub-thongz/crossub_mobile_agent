@@ -21,16 +21,18 @@ import {
   type TrustLedgerKindFilter,
 } from '@/constants/trust';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
-import { fetchTrustLedgers } from '@/lib/crossub-api/agent-trust-client';
+import { fetchTrustLedgers, type TrustAccountCode } from '@/lib/crossub-api/agent-trust-client';
 import { formatCents } from '@/lib/trust-accounting';
 import { cn } from '@/lib/utils';
 
 export function TrustLedgersTab({
   agencyId,
   bankAccountId,
+  accountCodes,
 }: {
   agencyId: string;
   bankAccountId: string;
+  accountCodes: readonly TrustAccountCode[];
 }) {
   const [kind, setKind] = useState<TrustLedgerKindFilter>(TRUST_LEDGER_KIND_ALL);
   const [search, setSearch] = useState('');
@@ -52,6 +54,7 @@ export function TrustLedgersTab({
       <TrustLedgerDetail
         agencyId={agencyId}
         ledgerId={openLedgerId}
+        accountCodes={accountCodes}
         onBack={() => setOpenLedgerId(null)}
       />
     );

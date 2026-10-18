@@ -1,3 +1,8 @@
+import {
+  AGENT_COPY_VARIANT,
+  TASK_DETAIL_COPY,
+  type AgentCopyVariant,
+} from '@/constants/agent-copy-variant';
 import type { ApiMaintenanceAttachment, ApiQuotation } from '@/lib/crossub-api/types';
 import {
   buildMaintenanceAgentWorkflow,
@@ -105,6 +110,8 @@ export function resolveMaintenanceStatusBanner(input: {
   quoteAmount?: number;
   contractorName?: string;
   recommendation?: string;
+  /** Self-Manage speaks to the agent; defaults to the CROSSUB-serviced copy. */
+  copyVariant?: AgentCopyVariant;
 }): {
   title: string;
   subtitle: string;
@@ -112,6 +119,7 @@ export function resolveMaintenanceStatusBanner(input: {
   crosSummary: string[];
 } {
   const { workspaceCase, item, quoteAmount, contractorName, recommendation } = input;
+  const copy = TASK_DETAIL_COPY[input.copyVariant ?? AGENT_COPY_VARIANT.SERVICED];
   const ctx = { item, workspaceCase };
   const responsibility = resolveMaintenanceResponsibility(ctx);
   const contractorFlow = requiresContractorFlow(ctx);
@@ -174,7 +182,7 @@ export function resolveMaintenanceStatusBanner(input: {
   } else if (responsibility === 'strata') {
     if (workspaceCase.status === 'in_progress') {
       title = 'Strata coordinating';
-      subtitle = 'CROSSUB is coordinating with the strata body';
+      subtitle = copy.strataCoordinatingSubtitle;
     }
   } else if (workspaceCase.status === 'pending_approval' && quoteAmount != null) {
     title = 'Quote received';

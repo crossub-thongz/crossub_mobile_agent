@@ -201,6 +201,21 @@ export function LeasingSelfManagedAgreementPanel({
       ) : null}
 
       <div className="space-y-1">
+        <p className="text-xs font-medium">{COPY.conditionsHeading}</p>
+        {contract.specialConditions.length === 0 ? (
+          <p className="text-muted-foreground text-[12px]">{COPY.noConditions}</p>
+        ) : (
+          <ul className="space-y-1">
+            {contract.specialConditions.map((c) => (
+              <li key={c.id} className="bg-background rounded-md border px-2.5 py-1.5 text-[12px]">
+                {c.text}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="space-y-1">
         <Label htmlFor={`contract-condition-${propertyId}`} className="text-xs">
           {COPY.conditionLabel}
         </Label>

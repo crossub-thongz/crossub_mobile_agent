@@ -13,6 +13,8 @@ import {
 
 import { PropertyProfileIncludedUsage } from '@/components/agent/property-profile/property-profile-included-usage';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { PROPERTY_JOBS_COPY } from '@/constants/agent-copy-variant';
+import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { propertyDetail } from '@/constants/routes';
 import {
@@ -130,6 +132,7 @@ export function PropertyListPreviewPanel({
     (row) => row.propertyId === propertyId && row.status === 'current',
   );
   const includedUsage = usePropertyIncludedUsage(propertyId, property.agencyId);
+  const jobsCopy = PROPERTY_JOBS_COPY[useAgentCopyVariant(property.agencyId)];
   const acct = accounting.find((row) => row.propertyId === propertyId) ?? null;
   const sync = usePropertyOverviewSync(property, apiConnected);
 
@@ -545,7 +548,9 @@ export function PropertyListPreviewPanel({
 
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold">CROS Is Handling ({crosJobs.length})</h3>
+                  <h3 className="text-sm font-semibold">
+                    {jobsCopy.heading} ({crosJobs.length})
+                  </h3>
                   <Link
                     href={profileHref('tasks')}
                     className="text-primary text-xs font-semibold transition-colors hover:underline"
@@ -555,7 +560,7 @@ export function PropertyListPreviewPanel({
                 </div>
                 {crosJobs.length === 0 ? (
                   <p className={cn('text-muted-foreground rounded-xl border p-3 text-sm', nestedSurface)}>
-                    No active CROSSUB jobs for this property.
+                    {jobsCopy.empty}
                   </p>
                 ) : (
                   <ul className="space-y-2">
@@ -649,7 +654,9 @@ export function PropertyListPreviewPanel({
             <>
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold">CROS Is Handling ({crosJobs.length})</h3>
+                  <h3 className="text-sm font-semibold">
+                    {jobsCopy.heading} ({crosJobs.length})
+                  </h3>
                   <Link
                     href={profileHref('tasks')}
                     className="text-primary text-xs font-semibold transition-colors hover:underline"
@@ -659,7 +666,7 @@ export function PropertyListPreviewPanel({
                 </div>
                 {crosJobs.length === 0 ? (
                   <p className={cn('text-muted-foreground rounded-xl border p-3 text-sm', nestedSurface)}>
-                    No active CROSSUB jobs for this property.
+                    {jobsCopy.empty}
                   </p>
                 ) : (
                   <ul className="space-y-2">

@@ -20,7 +20,8 @@ import {
 } from '@/lib/leasing/onboarding-display';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { resolveRentReviewAgentEmail } from '@/lib/rent-review/agent-email';
-import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { formatPropertyDateTime } from '@/lib/format-datetime';
 
 export function LeasingOnboardingSummaryPanel({ detail }: { detail: LeasingPropertyDetail }) {
   const tenant = resolveOnboardingTenant(detail);
@@ -169,7 +170,7 @@ export function LeasingOnboardingEmailAuditPanel({ detail }: { detail: LeasingPr
                 <li key={entry.id} className="py-2.5 text-xs">
                   <p className="font-medium">{formatOnboardingAuditLabel(entry, detail)}</p>
                   <p className="text-muted-foreground mt-0.5">
-                    {formatOnboardingAuditActor(entry, detail)} · {formatDateTime(entry.at)}
+                    {formatOnboardingAuditActor(entry, detail)} · {formatPropertyDateTime(entry.at)}
                   </p>
                 </li>
               ))

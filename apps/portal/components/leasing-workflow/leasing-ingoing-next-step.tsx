@@ -30,7 +30,8 @@ import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { leasingCycleApprovalRef } from '@/lib/workflow-case-reference';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
-import { cn, formatDateTime } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { formatPropertyDateTime } from '@/lib/format-datetime';
 
 export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropertyDetail }) {
   const { leasingCycles, inspections, apiConnected, refresh } = useAgentData();
@@ -195,7 +196,7 @@ export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropert
               <p className="text-muted-foreground text-xs">
                 {pendingSchedule
                   ? 'Ingoing order created — schedule the inspection date and assign an inspector from the task pool.'
-                  : `Ingoing inspection scheduled${ing.scheduledTime ? ` for ${formatDateTime(ing.scheduledTime)}` : ''}${ing.assignee ? ` — ${ing.assignee}` : ''}. Open the job case to track progress.`}
+                  : `Ingoing inspection scheduled${ing.scheduledTime ? ` for ${formatPropertyDateTime(ing.scheduledTime)}` : ''}${ing.assignee ? ` — ${ing.assignee}` : ''}. Open the job case to track progress.`}
               </p>
             ) : (
               <p className="text-muted-foreground text-xs">

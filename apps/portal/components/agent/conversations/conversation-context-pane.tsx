@@ -38,6 +38,7 @@ import {
   unlinkAgentConversationJob,
   type AgentConversationDetail,
 } from '@/lib/crossub-api/agent-conversation-client';
+import { usePrimaryTenantName } from '@/lib/use-primary-tenant-name';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -296,6 +297,9 @@ export function ConversationContextPane({
       null
     );
   }, [archivedProperties, detail.propertyId, properties]);
+  // The portfolio row's `tenantName` is often empty; the household's Tenant 1 lives on the
+  // property contacts, as on the job pages.
+  const tenantName = usePrimaryTenantName(property);
 
   const job = useMemo(
     () => resolveConversationJob(detail.caseId, { maintenance: maintenanceAll, inspections, leasingCycles }, isV2),
@@ -337,7 +341,7 @@ export function ConversationContextPane({
               ) : null}
             </dd>
             <dt className="text-muted-foreground">{CONVERSATIONS_COPY.tenantLabel}</dt>
-            <dd className="min-w-0 truncate">{property.tenantName || MODULE_WORKSPACE_LABELS.noValue}</dd>
+            <dd className="min-w-0 truncate">{tenantName}</dd>
           </dl>
         ) : null}
         <Button asChild size="sm" variant="outline" className="mt-3 h-8 gap-1.5">

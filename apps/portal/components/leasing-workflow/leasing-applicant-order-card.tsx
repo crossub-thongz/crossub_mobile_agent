@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { LeasingApplicantDocumentDropzone } from '@/components/leasing-workflow/leasing-applicant-document-dropzone';
 import { LeasingSelfManagedApplicantActions } from '@/components/leasing-workflow/leasing-self-managed-applicant-actions';
+import { LeasingSelfManagedScreeningPanel } from '@/components/leasing-workflow/leasing-self-managed-screening-panel';
 import { LeasingToneBadge } from '@/components/leasing-workflow/leasing-status-badge';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -22,7 +23,8 @@ import { canSelectApplicantForApproval } from '@/lib/leasing/lifecycle';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingApplicationDetail } from '@/lib/leasing/types';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
-import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
+import { formatPropertyDateTime } from '@/lib/format-datetime';
 
 const AI_TONE = {
   strong: LEASING_TONE.SUCCESS,
@@ -134,7 +136,7 @@ export function LeasingApplicantOrderCard({
               {app.employmentStatus ? (
                 <span className="capitalize">{app.employmentStatus.replace('_', ' ')}</span>
               ) : null}
-              <span>Applied {formatDateTime(app.submittedAt)}</span>
+              <span>Applied {formatPropertyDateTime(app.submittedAt)}</span>
             </p>
             {app.aiAdvice ? (
               <p
@@ -213,6 +215,15 @@ export function LeasingApplicantOrderCard({
               </div>
             ) : null}
           </div>
+
+          {selfManaged ? (
+            <LeasingSelfManagedScreeningPanel
+              app={app}
+              propertyId={propertyId}
+              cycleId={cycleId}
+              readOnly={readOnly}
+            />
+          ) : null}
 
           {selfManaged && app.agentDecision !== LEASING_AGENT_DECISION.REJECTED ? (
             <LeasingSelfManagedApplicantActions app={app} propertyId={propertyId} cycleId={cycleId} />

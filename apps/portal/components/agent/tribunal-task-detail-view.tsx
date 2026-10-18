@@ -15,6 +15,8 @@ import { TribunalAwaitingAccountManagerPanel } from '@/components/agent/tribunal
 import { TribunalRentChasingDetail } from '@/components/agent/tribunal-rent-chasing-detail';
 import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { TASK_DETAIL_COPY } from '@/constants/agent-copy-variant';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
 import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
 import { propertyDetail } from '@/constants/routes';
@@ -23,6 +25,7 @@ import type { AgentTribunalRentChasingDetail } from '@/lib/crossub-api/agent-wor
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
+import { agentCopyVariant } from '@/lib/portal-service-level';
 import {
   buildTribunalActivityEntries,
   buildTribunalDetailRows,
@@ -138,6 +141,8 @@ export function TribunalTaskDetailView({
   );
 
   const propertyId = tribunalCase.propertyId;
+  const selfManaged = useIsPropertySelfManaged(propertyId);
+  const detailCopy = TASK_DETAIL_COPY[agentCopyVariant(selfManaged)];
   const property = properties.find((row) => row.id === propertyId) ?? null;
   const currentLease = leasingRecords.find(
     (row) => row.propertyId === propertyId && row.status === 'current',
@@ -265,7 +270,7 @@ export function TribunalTaskDetailView({
                       : 'rounded-full bg-emerald-100 px-2 py-0.5 text-[12px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
                   }
                 >
-                  {banner.needsAction ? 'Need your action' : 'CROS handling'}
+                  {banner.needsAction ? detailCopy.needsActionBadge : detailCopy.inProgressBadge}
                 </span>
               </div>
               <p className="text-muted-foreground mt-1 text-sm">{address}</p>

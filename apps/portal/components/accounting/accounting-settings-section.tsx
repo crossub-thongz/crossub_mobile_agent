@@ -5,10 +5,12 @@ import { Link2, Mail, MessageSquare, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { InfoPanel } from '@/components/agent/info-panel';
+import { TrustSettingsSummary } from '@/components/agent/trust/trust-settings-summary';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 
 const DEFAULT_RECEIPT_TEMPLATE = `Dear {{tenant_name}},
 
@@ -24,7 +26,16 @@ const DEFAULT_EMAIL_REMINDER = `Dear {{tenant_name}}, your rent of {{amount}} fo
 const DEFAULT_SMS_REMINDER =
   'CROSSUB: Rent {{amount}} for {{property_address}} is {{days}} days overdue. Reply or pay via tenant app.';
 
+/**
+ * A Self-Manage principal or accountant sees their trust workspace's settings read-only (CROSSUB
+ * manages them, D132); everyone else keeps the placeholder behind `ACCOUNTING_MODULE_LAUNCHED`.
+ */
 export function AccountingSettingsSection() {
+  const { selfManagedTrust } = useSelfManagedAccess();
+  return selfManagedTrust ? <TrustSettingsSummary /> : <AccountingSettingsPlaceholder />;
+}
+
+function AccountingSettingsPlaceholder() {
   const [bankFeedLinked] = useState(false);
   const [reminderDays, setReminderDays] = useState('3');
   const [reminderMethods, setReminderMethods] = useState({

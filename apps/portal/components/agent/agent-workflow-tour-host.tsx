@@ -14,6 +14,7 @@ import {
   type AgentWorkflowTourId,
 } from '@/constants/agent-workflow-tour';
 import { isPublicRoute } from '@/constants/routes';
+import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 import {
   clearPendingWorkflowTour,
   readPendingWorkflowTour,
@@ -45,6 +46,7 @@ export function AgentWorkflowTourHost() {
   } | null>(null);
   const [pendingId, setPendingId] = useState<AgentWorkflowTourId | null>(null);
   const pendingTourParamRef = useRef(false);
+  const copyVariant = useAgentCopyVariant();
 
   const workflowTourParam = searchParams.get('workflowTour');
   const context = resolveWorkflowTourContext(pathname, searchParams, pendingId);
@@ -172,7 +174,7 @@ export function AgentWorkflowTourHost() {
   if (!open || !activeTour || paymentMethodGateBlocking) return null;
 
   const guideId = workflowTourGuideId(activeTour.id);
-  const steps = workflowTourSteps(activeTour.id, activeTour.phase);
+  const steps = workflowTourSteps(activeTour.id, activeTour.phase, copyVariant);
 
   return (
     <AgentPageTourOverlay

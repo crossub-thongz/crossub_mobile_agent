@@ -26,6 +26,7 @@ import {
 } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { TASK_DETAIL_COPY } from '@/constants/agent-copy-variant';
 import { propertyDetail, vacatingDetail } from '@/constants/routes';
 import { fromTasks } from '@/lib/detail-navigation';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
@@ -50,6 +51,7 @@ import {
   tenantRejectionTitle,
 } from '@/lib/maintenance/tenant-rejected';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
+import { agentCopyVariant } from '@/lib/portal-service-level';
 import type {
   ApiMaintenanceAttachment,
   ApiMaintenanceRequest,
@@ -66,6 +68,7 @@ import {
   formatTime,
 } from '@/lib/utils';
 
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
 import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
 
@@ -193,6 +196,8 @@ export function MaintenanceTaskDetailView({
   }, [activeTab, item.id]);
 
   const propertyId = item.propertyId;
+  const selfManaged = useIsPropertySelfManaged(propertyId);
+  const detailCopy = TASK_DETAIL_COPY[agentCopyVariant(selfManaged)];
   const parentEndLeasing = useMemo(() => {
     if (!isEndLeasingSpawnedMaintenance(item)) return null;
     const forProperty = vacating.filter((row) => row.propertyId === propertyId);
@@ -250,8 +255,9 @@ export function MaintenanceTaskDetailView({
         quoteAmount,
         contractorName,
         recommendation,
+        copyVariant: agentCopyVariant(selfManaged),
       }),
-    [contractorName, item, quoteAmount, recommendation, workspaceCase],
+    [contractorName, item, quoteAmount, recommendation, selfManaged, workspaceCase],
   );
   const jobRows = useMemo(
     () =>
@@ -365,8 +371,8 @@ export function MaintenanceTaskDetailView({
                     : workspaceCase.status === 'completed' || workspaceCase.status === 'closed'
                       ? 'Completed'
                       : banner.needsAction
-                        ? 'Need your action'
-                        : 'CROS handling'}
+                        ? detailCopy.needsActionBadge
+                        : detailCopy.inProgressBadge}
                 </span>
               </div>
               <p className="text-muted-foreground mt-1 text-sm">{address}</p>
@@ -423,8 +429,7 @@ export function MaintenanceTaskDetailView({
               <p className="text-sm font-semibold">CROS recommendation</p>
             </div>
             <p className="mt-3 text-sm leading-relaxed text-rose-950/80 dark:text-rose-100/80">
-              {banner.crosSummary[0] ||
-                'CROSSUB is handling this job and will notify you if a decision is needed.'}
+              {banner.crosSummary[0] || detailCopy.maintenanceRecommendationFallback}
             </p>
           </div>
         </div>

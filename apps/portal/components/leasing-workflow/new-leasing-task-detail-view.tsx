@@ -22,6 +22,7 @@ import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { LeasingReletDecisionCard } from '@/components/leasing-workflow/leasing-relet-decision-card';
 import { LeasingWorkflowTimeline } from '@/components/leasing-workflow/leasing-workflow-timeline';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { TASK_DETAIL_COPY } from '@/constants/agent-copy-variant';
 import { PROPERTY_JOB_KIND_ICON } from '@/constants/property-jobs';
 import {
   inspectionDetail,
@@ -34,6 +35,8 @@ import { fromProperty } from '@/lib/detail-navigation';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import { resolveOnboardingTenant } from '@/lib/leasing/onboarding-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
+import { agentCopyVariant } from '@/lib/portal-service-level';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
 import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
 import {
@@ -58,10 +61,9 @@ import {
   cn,
   formatCurrency,
   formatDate,
-  formatDateTime,
   formatPropertyFullAddress,
-  formatTime,
 } from '@/lib/utils';
+import { formatPropertyDateTime, formatPropertyTime } from '@/lib/format-datetime';
 
 import './new-leasing-task-detail.css';
 
@@ -119,7 +121,7 @@ function ActivityTimeline({
           )}
         >
           <div className="w-16 shrink-0 pt-0.5 text-right text-sm font-medium tabular-nums">
-            {formatTime(entry.at)}
+            {formatPropertyTime(entry.at)}
           </div>
           <div className="relative flex w-4 shrink-0 justify-center">
             <span className="bg-violet-600 ring-card relative z-10 mt-1.5 size-2.5 rounded-full ring-[3px]" />
@@ -163,6 +165,8 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
   const { entries: auditEntries, reload: reloadAudit } = useTaskAuditLog('leasing', cycleId);
 
   const propertyId = cycle?.propertyId ?? '';
+  const selfManaged = useIsPropertySelfManaged(propertyId);
+  const detailCopy = TASK_DETAIL_COPY[agentCopyVariant(selfManaged)];
   const property = properties.find((row) => row.id === propertyId) ?? null;
   const currentLease = leasingRecords.find(
     (row) => row.propertyId === propertyId && row.status === 'current',
@@ -299,7 +303,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                             : 'rounded-full bg-emerald-100 px-2 py-0.5 text-[12px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
                         }
                       >
-                        {banner.needsAction ? 'Need your action' : 'CROS handling'}
+                        {banner.needsAction ? detailCopy.needsActionBadge : detailCopy.inProgressBadge}
                       </span>
                     ) : null}
                   </div>
@@ -461,7 +465,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                         <div>
                           <p className="text-sm font-semibold">{application.applicant}</p>
                           <p className="text-muted-foreground mt-1 text-xs">
-                            Submitted {formatDateTime(application.submittedAt)}
+                            Submitted {formatPropertyDateTime(application.submittedAt)}
                           </p>
                         </div>
                         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">

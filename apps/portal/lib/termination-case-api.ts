@@ -1,5 +1,6 @@
 import {
   PROPERTY_RECOVERY_STATUS,
+  SETTLEMENT_METHOD,
   TERMINATION_AGENT_DECISION,
   TERMINATION_CASE_STATUS,
   TERMINATION_OUTCOME,
@@ -118,6 +119,8 @@ function mapRepairItems(
     landlordWaivable: item.landlordWaivable === true ? true : undefined,
     bondDeductionStaffComment: item.bondDeductionStaffComment?.trim() || undefined,
     bondDeductionAgentComment: item.bondDeductionAgentComment?.trim() || undefined,
+    resolutionStatus: item.resolutionStatus ?? undefined,
+    fairWearAndTear: item.fairWearAndTear === true ? true : undefined,
   }));
 }
 
@@ -481,6 +484,8 @@ export function mapTerminationCase(
         amount: d.amount,
         responsibility: d.responsibility,
       })),
+      // The API's own default when the case has no method stored.
+      method: s.vacatingTask?.settlementMethod ?? SETTLEMENT_METHOD.BOND_DEDUCTION,
     },
     agentApproval: {
       status: agentApproval.status,

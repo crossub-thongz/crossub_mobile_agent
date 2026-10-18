@@ -96,6 +96,8 @@ export const SELF_MANAGED_LEASING_COPY = {
   conditionPlaceholder: 'No smoking inside the property',
   addCondition: 'Add condition',
   conditionAdded: 'Condition added',
+  conditionsHeading: 'Special conditions',
+  noConditions: 'No special conditions yet.',
   confirm: 'Confirm draft',
   confirmed: 'Draft confirmed',
   regenerate: 'Regenerate and resend',
@@ -128,6 +130,115 @@ export const SELF_MANAGED_LEASING_COPY = {
   saving: 'Saving…',
   uploading: 'Uploading…',
   cycleMissing: 'Leasing cycle not available — refresh and try again',
+} as const;
+
+// ---- Screening (Self-Manage): Cros score and the reference check on an applicant ----
+
+export type ReferenceRecommendation = NonNullable<
+  Schemas['SetApplicantFeedbackDto']['recommendation']
+>;
+export type ReferenceCheckStatus = Schemas['AgentReferenceCheckDto']['status'];
+export type ReferenceSupport = Schemas['AgentReferenceCheckSummaryDto']['supportsRecommendation'];
+
+export const REFERENCE_RECOMMENDATION = {
+  RECOMMEND: 'recommend',
+  REJECT: 'reject',
+} as const satisfies Record<string, ReferenceRecommendation>;
+
+export const REFERENCE_RECOMMENDATION_LABEL: Record<ReferenceRecommendation, string> = {
+  [REFERENCE_RECOMMENDATION.RECOMMEND]: 'Recommend',
+  [REFERENCE_RECOMMENDATION.REJECT]: 'Do not recommend',
+};
+
+export const REFERENCE_CHECK_STATUS = {
+  RECORDED: 'RECORDED',
+  NOT_STARTED: 'NOT_STARTED',
+  NO_REFEREES: 'NO_REFEREES',
+  UNVERIFIED: 'UNVERIFIED',
+} as const satisfies Record<string, ReferenceCheckStatus>;
+
+export const REFERENCE_CHECK_STATUS_LABEL: Record<ReferenceCheckStatus, string> = {
+  [REFERENCE_CHECK_STATUS.RECORDED]: 'Checked',
+  [REFERENCE_CHECK_STATUS.NOT_STARTED]: 'Not started',
+  [REFERENCE_CHECK_STATUS.NO_REFEREES]: 'No referees',
+  [REFERENCE_CHECK_STATUS.UNVERIFIED]: 'No application form',
+};
+
+export const REFERENCE_SUPPORT = {
+  YES: 'yes',
+  NO: 'no',
+  UNCLEAR: 'unclear',
+} as const satisfies Record<string, ReferenceSupport>;
+
+export const REFERENCE_SUPPORT_LABEL: Record<ReferenceSupport, string> = {
+  [REFERENCE_SUPPORT.YES]: 'Notes support your recommendation',
+  [REFERENCE_SUPPORT.NO]: 'Notes do not support your recommendation',
+  [REFERENCE_SUPPORT.UNCLEAR]: 'Notes are unclear on your recommendation',
+};
+
+/** Cros applicant score levels, as the cycle view sends them (`aiScoreLevel`). */
+export const CROS_SCORE_LEVEL_LABEL = {
+  strong: 'Strong',
+  medium: 'Medium',
+  risk: 'Risk',
+} as const;
+
+export const SELF_MANAGED_SCREENING_COPY = {
+  title: 'Screening',
+  crosScore: 'Cros score',
+  noScore: 'Not scored yet',
+  show: 'Reference check',
+  hide: 'Hide reference check',
+  loading: 'Loading reference check…',
+  referees: 'Referees',
+  noPhone: 'No phone number',
+  notes: 'Your notes from the calls',
+  notesPlaceholder: 'What each referee said: rent paid on time, condition, would rent again.',
+  recommendation: 'Your recommendation',
+  save: 'Save check',
+  saved: 'Reference check saved',
+  saveEmpty: 'Add notes or choose a recommendation.',
+  summarise: 'Summarise with Cros',
+  summarising: 'Summarising…',
+  summaryTitle: 'Cros summary',
+  concerns: 'Concerns',
+  feedbackSent: 'Result already emailed to the applicant. The check can no longer change.',
+  skipTitle: 'Already have a tenant?',
+  skipHint: 'Skip screening and go straight to onboarding. You cannot undo this.',
+  skip: 'Skip screening',
+  skipped: 'Screening skipped. Onboarding is next.',
+} as const;
+
+// ---- Money (Self-Manage): holding deposit and bond ----
+
+export const ONBOARDING_MONEY_ITEM = {
+  DEPOSIT: 'deposit',
+  BOND: 'bond',
+} as const;
+
+export type OnboardingMoneyItem = (typeof ONBOARDING_MONEY_ITEM)[keyof typeof ONBOARDING_MONEY_ITEM];
+
+export const SELF_MANAGED_MONEY_COPY = {
+  [ONBOARDING_MONEY_ITEM.DEPOSIT]: {
+    markPaid: 'Mark deposit received',
+    markedPaid: 'Deposit marked received',
+    markPaidHint: 'Received it outside the app? Mark it here. It posts to the property ledger.',
+    approve: 'Approve deposit',
+    approved: 'Deposit proof approved',
+    rejected: 'Deposit proof rejected. The tenant can upload it again.',
+  },
+  [ONBOARDING_MONEY_ITEM.BOND]: {
+    markPaid: 'Mark bond received',
+    markedPaid: 'Bond marked received',
+    markPaidHint: 'Bond lodged and paid? Mark it here. It posts to the property ledger.',
+    approve: 'Approve bond',
+    approved: 'Bond proof approved',
+    rejected: 'Bond proof rejected. The tenant can upload it again.',
+  },
+  reject: 'Reject',
+  rejectReason: 'Reason for the tenant (optional)',
+  rejectReasonPlaceholder: 'The receipt is unreadable',
+  confirmReject: 'Reject proof',
 } as const;
 
 /** Tenant-selection queue copy (all tiers). */

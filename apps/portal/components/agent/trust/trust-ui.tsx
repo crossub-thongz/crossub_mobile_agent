@@ -5,7 +5,17 @@ import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   TRUST_PAGE_COPY,
   TRUST_STATEMENT_EMAIL_COPY,
@@ -22,6 +32,7 @@ import {
 import { downloadInspectionReportFromApi } from '@/lib/inspection-report-pdf';
 import { cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { saveBlobAs } from '@/utils/save-blob';
 
 export const TRUST_TABLE_HEAD_CLASS =
   'text-muted-foreground px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide';
@@ -226,5 +237,131 @@ export function TrustStatementPdfButton({
       {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
       {label}
     </Button>
+  );
+}
+
+/** Downloads a trust file (ABA, report CSV, ledger CSV or PDF) through the BFF as a named file. */
+export function TrustDownloadButton({
+  label,
+  filename,
+  fetchBlob,
+  failedMessage,
+  variant = 'outline',
+}: {
+  label: string;
+  filename: string;
+  fetchBlob: () => Promise<Blob>;
+  failedMessage: string;
+  variant?: 'outline' | 'default';
+}) {
+  const [pending, setPending] = useState(false);
+
+  async function onClick() {
+    setPending(true);
+    try {
+      saveBlobAs(await fetchBlob(), filename);
+    } catch (err) {
+      toast.error(apiErrorMessage(err, failedMessage));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Button
+      type="button"
+      variant={variant}
+      size="sm"
+      className="h-7 text-xs"
+      disabled={pending}
+      onClick={() => void onClick()}
+    >
+      {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+      {label}
+    </Button>
+  );
+}
+
+/** A required-reason dialog (reverse a transaction, waive a fee). */
+export function TrustReasonDialog({
+  title,
+  description,
+  reasonLabel,
+  reasonRequired,
+  submitLabel,
+  cancelLabel,
+  destructive,
+  onSubmit,
+  onClose,
+}: {
+  title: string;
+  description: string;
+  reasonLabel: string;
+  reasonRequired: string;
+  submitLabel: string;
+  cancelLabel: string;
+  destructive?: boolean;
+  onSubmit: (reason: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [reason, setReason] = useState('');
+  const [pending, setPending] = useState(false);
+  const [touched, setTouched] = useState(false);
+  const trimmed = reason.trim();
+
+  async function submit() {
+    setTouched(true);
+    if (!trimmed) return;
+    setPending(true);
+    try {
+      await onSubmit(trimmed);
+      onClose();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !pending) onClose();
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5">
+          <Label htmlFor="trust-reason">{reasonLabel}</Label>
+          <Textarea
+            id="trust-reason"
+            inputKind="message"
+            className="min-h-20"
+            value={reason}
+            disabled={pending}
+            onChange={(e) => setReason(e.target.value)}
+          />
+          {touched && !trimmed ? <p className="text-destructive text-xs">{reasonRequired}</p> : null}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" disabled={pending} onClick={onClose}>
+            {cancelLabel}
+          </Button>
+          <Button
+            type="button"
+            variant={destructive ? 'destructive' : 'default'}
+            disabled={pending}
+            onClick={() => void submit()}
+          >
+            {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+            {submitLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

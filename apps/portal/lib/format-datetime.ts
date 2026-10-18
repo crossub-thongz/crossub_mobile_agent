@@ -8,6 +8,8 @@
  */
 import { format, isValid, parseISO } from 'date-fns';
 
+import { PROPERTY_TIME_ZONE } from '@/constants/time-zone';
+
 export function toDate(input: Date | string): Date {
   return typeof input === 'string' ? parseISO(input) : input;
 }
@@ -77,6 +79,45 @@ export function formatTimeShort(input: Date | string): string {
 }
 
 export const formatTime = formatTimeShort;
+
+/**
+ * Wall-clock parts at the property (Sydney), whatever zone the browser is in. en-US gives the
+ * same short month names date-fns prints ("Sep", not en-AU's "Sept").
+ */
+const PROPERTY_DATE_TIME_PARTS = new Intl.DateTimeFormat('en-US', {
+  timeZone: PROPERTY_TIME_ZONE,
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+
+function propertyDateTimeParts(d: Date) {
+  const parts = PROPERTY_DATE_TIME_PARTS.formatToParts(d);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  return {
+    date: `${part('day')} ${part('month')} ${part('year')}`,
+    time: `${part('hour')}:${part('minute')} ${part('dayPeriod').toLowerCase()}`,
+  };
+}
+
+/** Date with time at the property (Sydney). Example: "9 Jun 2026, 3:30 pm". */
+export function formatPropertyDateTime(input: Date | string): string {
+  const d = toValidDate(input);
+  if (!d) return fallbackDateLabel(input);
+  const { date, time } = propertyDateTimeParts(d);
+  return `${date}, ${time}`;
+}
+
+/** Time only at the property (Sydney). Example: "3:30 pm". */
+export function formatPropertyTime(input: Date | string): string {
+  const d = toValidDate(input);
+  if (!d) return fallbackDateLabel(input);
+  return propertyDateTimeParts(d).time;
+}
 
 export function dayKey(input: Date | string): string {
   const d = toValidDate(input);

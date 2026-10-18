@@ -306,6 +306,132 @@ export async function orderSelfManagedIngoingInspection(
   return unwrapCrossubResult(result, "Couldn't order the ingoing inspection");
 }
 
+// Screening: the reference check on one applicant, and skipping screening.
+
+export type AgentReferenceCheck = components['schemas']['AgentReferenceCheckDto'];
+export type AgentReferenceReferee = components['schemas']['AgentApplicationRefereeDto'];
+export type RecordReferenceCheckInput = components['schemas']['SetApplicantFeedbackDto'];
+export type RejectOnboardingProofInput = components['schemas']['RejectOnboardingProofDto'];
+
+export async function fetchSelfManagedReferenceCheck(
+  propertyId: string,
+  cycleId: string,
+  applicationId: string,
+): Promise<AgentReferenceCheck> {
+  const result = await crossub.GET(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/applications/{applicationId}/reference-check',
+    { params: { path: { ...lettingPath(propertyId, cycleId), applicationId } } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the reference check");
+}
+
+export async function recordSelfManagedReferenceCheck(
+  propertyId: string,
+  cycleId: string,
+  applicationId: string,
+  body: RecordReferenceCheckInput,
+): Promise<AgentReferenceCheck> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/applications/{applicationId}/reference-check',
+    { params: { path: { ...lettingPath(propertyId, cycleId), applicationId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't save the reference check");
+}
+
+/** Cros condenses the recorded notes. Stores nothing; `summaryNotice` says why when empty. */
+export async function summariseSelfManagedReferenceCheck(
+  propertyId: string,
+  cycleId: string,
+  applicationId: string,
+): Promise<AgentReferenceCheck> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/applications/{applicationId}/reference-check/summarise',
+    { params: { path: { ...lettingPath(propertyId, cycleId), applicationId } } },
+  );
+  return unwrapCrossubResult(result, "Couldn't summarise the notes");
+}
+
+export async function skipSelfManagedApplicationScreening(
+  propertyId: string,
+  cycleId: string,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/applications/skip-screening',
+    { params: { path: lettingPath(propertyId, cycleId) } },
+  );
+  return unwrapCrossubResult(result, "Couldn't skip screening");
+}
+
+// Money: holding deposit and bond. "Mark paid" posts the receipt to the property ledger.
+
+export async function markSelfManagedDepositPaid(
+  propertyId: string,
+  cycleId: string,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/onboarding/deposit-paid',
+    { params: { path: lettingPath(propertyId, cycleId) } },
+  );
+  return unwrapCrossubResult(result, "Couldn't mark the deposit paid");
+}
+
+export async function approveSelfManagedDepositProof(
+  propertyId: string,
+  cycleId: string,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/onboarding/deposit-proof/approve',
+    { params: { path: lettingPath(propertyId, cycleId) } },
+  );
+  return unwrapCrossubResult(result, "Couldn't approve the deposit proof");
+}
+
+export async function rejectSelfManagedDepositProof(
+  propertyId: string,
+  cycleId: string,
+  body: RejectOnboardingProofInput,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/onboarding/deposit-proof/reject',
+    { params: { path: lettingPath(propertyId, cycleId) }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't reject the deposit proof");
+}
+
+export async function markSelfManagedBondPaid(
+  propertyId: string,
+  cycleId: string,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/onboarding/bond-paid',
+    { params: { path: lettingPath(propertyId, cycleId) } },
+  );
+  return unwrapCrossubResult(result, "Couldn't mark the bond paid");
+}
+
+export async function approveSelfManagedBondProof(
+  propertyId: string,
+  cycleId: string,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/onboarding/bond-proof/approve',
+    { params: { path: lettingPath(propertyId, cycleId) } },
+  );
+  return unwrapCrossubResult(result, "Couldn't approve the bond proof");
+}
+
+export async function rejectSelfManagedBondProof(
+  propertyId: string,
+  cycleId: string,
+  body: RejectOnboardingProofInput,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/onboarding/bond-proof/reject',
+    { params: { path: lettingPath(propertyId, cycleId) }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't reject the bond proof");
+}
+
 /** The tenant's answer to a rent offer, keyed in by the agent (Self-Manage only). */
 export async function recordSelfManagedRentReviewTenantResponse(
   propertyId: string,

@@ -1,8 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import Link from 'next/link';
 import {
+  ArrowLeftRight,
   CheckCircle2,
   Download,
   ExternalLink,
@@ -34,7 +44,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { AGENT_COPY_VARIANT } from '@/constants/agent-copy-variant';
+import {
+  DEDUCTION_RESPONSIBILITY,
+  END_LEASING_COMPARISON_COPY,
+  SELF_MANAGED_COMPARISON_EDIT_COPY,
+  TERMINATION_CASE_STATUS,
+} from '@/constants/end-leasing';
 import { communicationsThread } from '@/constants/routes';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { inspectionsApi } from '@/lib/inspections-api';
 import type { InspectionDetail } from '@/lib/inspections-types';
 import type {
@@ -55,8 +73,14 @@ import {
   deriveAgentLandlordQuoteResponse,
   quoteStepHasLandlordItems,
   quoteStepLandlordQuoteSentToAgent,
+  tenantRepairItemsLocked,
   type AgentLandlordQuoteResponse,
 } from '@/lib/end-leasing/quote-step-gates.util';
+import {
+  hasRepairContent,
+  repairItemsChanged,
+  toReportComparisonItemsInput,
+} from '@/lib/end-leasing/report-comparison-input';
 import {
   endLeasingSendCtaClassName,
   endLeasingSendCtaVariant,
@@ -69,6 +93,12 @@ import {
   fetchPreferredContractors,
   type PreferredContractor,
 } from '@/lib/crossub-api/agent-client';
+import {
+  updateSelfManagedReportComparison,
+  type SelfManagedReportComparisonInput,
+} from '@/lib/crossub-api/agent-end-leasing-client';
+import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
+import { agentCopyVariant } from '@/lib/portal-service-level';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { fileToBase64, MAX_UPLOAD_BYTES } from '@/lib/file-upload';
@@ -84,8 +114,13 @@ const REPAIR_COL_AREA = 'w-28';
 const REPAIR_COL_QUOTE = 'w-28';
 const REPAIR_COL_COMPANY = 'w-44';
 const REPAIR_COL_ACTION = 'w-10';
+const REPAIR_COL_ACTIONS_WIDE = 'w-20';
 
 type MaintenanceColumnMode = 'hidden' | 'pending_ack' | 'actions';
+
+/** Tier copy for the panel and its sections: Self-Manage speaks to the agent, not CROSSUB staff. */
+const ComparisonCopyContext = createContext(END_LEASING_COMPARISON_COPY[AGENT_COPY_VARIANT.SERVICED]);
+const useComparisonCopy = () => useContext(ComparisonCopyContext);
 
 function MaintenanceReviewStatusCell({
   row,
@@ -94,6 +129,7 @@ function MaintenanceReviewStatusCell({
   row: ReportComparisonRepairItem;
   reviewPending: boolean;
 }) {
+  const copy = useComparisonCopy();
   return (
     <td className="px-2 py-2">
       <span className="text-muted-foreground text-[11px] leading-snug">
@@ -102,7 +138,7 @@ function MaintenanceReviewStatusCell({
           : row.handymanName
             ? `${row.handymanName} selected`
             : reviewPending
-              ? 'CROSSUB assigning contractor'
+              ? copy.assigningContractor
               : '—'}
       </span>
     </td>
@@ -517,17 +553,18 @@ function AgentLandlordQuoteReviewPanel({
   onApprove: () => void;
   onDecline: (reason: string) => void;
 }) {
+  const copy = useComparisonCopy();
   const [declineOpen, setDeclineOpen] = useState(false);
   const [declineDraft, setDeclineDraft] = useState('');
 
   return (
     <section className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
       <div>
-        <p className="text-sm font-semibold">Landlord quotation from CROSSUB</p>
+        <p className="text-sm font-semibold">{copy.landlordQuoteTitle}</p>
         <p className="text-muted-foreground mt-1 text-xs">
           Review the landlord-responsibility maintenance quotes
           {sentAt ? ` sent ${formatDateTime(sentAt)}` : ''}. Approve to unlock sending the tenant
-          quotation, or decline with a reason so CROSSUB can update and re-send.
+          quotation, {copy.landlordQuoteDeclineHint}
         </p>
         {response === 'approved' ? (
           <p className="mt-2 text-xs font-medium text-emerald-700">
@@ -544,7 +581,7 @@ function AgentLandlordQuoteReviewPanel({
               <p className="text-muted-foreground text-xs whitespace-pre-wrap">{declineReason}</p>
             ) : null}
             <p className="text-muted-foreground text-xs">
-              Awaiting an updated quotation from CROSSUB before you can approve again.
+              {copy.landlordQuoteAwaitingUpdate}
             </p>
           </div>
         ) : null}
@@ -606,7 +643,7 @@ function AgentLandlordQuoteReviewPanel({
           <DialogHeader>
             <DialogTitle>Decline landlord quotation</DialogTitle>
             <DialogDescription>
-              Tell CROSSUB why this quotation cannot proceed. They will update and re-send.
+              {copy.landlordQuoteDeclineDialog}
             </DialogDescription>
           </DialogHeader>
           <Textarea
@@ -655,6 +692,7 @@ function AgentTenantBondSendDialog({
   busy: boolean;
   onSend: (items: ReportComparisonRepairItem[]) => void | Promise<void>;
 }) {
+  const copy = useComparisonCopy();
   const [draftItems, setDraftItems] = useState<ReportComparisonRepairItem[]>(items);
 
   useEffect(() => {
@@ -689,7 +727,7 @@ function AgentTenantBondSendDialog({
         <DialogHeader>
           <DialogTitle>Send quotation to tenant</DialogTitle>
           <DialogDescription>
-            Review CROSSUB&apos;s bond deduction proposal. You may adjust bond deduction, mark any
+            {copy.bondSendDialogLead} You may adjust bond deduction, mark any
             line as landlord waivable (even when not bond deductible), and add agent comments before
             sending the final quotation to the tenant app and email.
           </DialogDescription>
@@ -704,7 +742,7 @@ function AgentTenantBondSendDialog({
                   <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
                   <th className="min-w-[120px] px-3 py-2 font-semibold">Description</th>
                   <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
-                  <th className="min-w-[140px] px-3 py-2 font-semibold">CROSSUB comment</th>
+                  <th className="min-w-[140px] px-3 py-2 font-semibold">{copy.staffCommentColumn}</th>
                   <th className="min-w-[140px] px-3 py-2 font-semibold">Agent comment</th>
                 </tr>
               </thead>
@@ -1538,6 +1576,7 @@ function ResponsibilityCommentsBlock({
   actionBusy?: boolean;
   agentCommentLabel?: string;
 }) {
+  const copy = useComparisonCopy();
   return (
     <div className="mt-4 space-y-3 rounded-xl border border-border/60 bg-muted/20 p-3.5">
       <div className="flex items-center gap-2 border-b border-border/50 pb-2">
@@ -1545,7 +1584,7 @@ function ResponsibilityCommentsBlock({
         <p className="text-xs font-semibold text-foreground/80">Comments</p>
       </div>
       <CommentField
-        label="CROSSUB staff notes"
+        label={copy.staffNotesLabel}
         savedComment={staffComment}
         emptyLabel="No staff notes yet."
         canEdit={canEditStaffComment}
@@ -1566,6 +1605,24 @@ function ResponsibilityCommentsBlock({
         tone="agent"
         inputKind="inspection_comment"
       />
+    </div>
+  );
+}
+
+type SelfManagedSaveState = { dirty: boolean; onSave: () => void };
+
+type ResponsibilitySide = typeof DEDUCTION_RESPONSIBILITY.TENANT | typeof DEDUCTION_RESPONSIBILITY.LANDLORD;
+
+function SelfManagedSaveBar({ save, busy }: { save: SelfManagedSaveState; busy: boolean }) {
+  return (
+    <div className="flex items-center gap-2">
+      {save.dirty ? (
+        <span className="text-muted-foreground text-[11px]">{SELF_MANAGED_COMPARISON_EDIT_COPY.unsaved}</span>
+      ) : null}
+      <Button type="button" size="sm" className="h-8 gap-1.5 text-xs" disabled={busy || !save.dirty} onClick={save.onSave}>
+        {busy ? <Loader2 className="size-3.5 animate-spin" /> : null}
+        {SELF_MANAGED_COMPARISON_EDIT_COPY.save}
+      </Button>
     </div>
   );
 }
@@ -1595,6 +1652,9 @@ function CompareResponsibilitySection({
   canAcknowledgeResponsibility = false,
   onAcknowledgeResponsibility,
   showResponsibilityAcknowledgment = true,
+  selfManagedSave,
+  onMoveRow,
+  moveRowLabel,
 }: {
   title: string;
   description?: string;
@@ -1620,7 +1680,13 @@ function CompareResponsibilitySection({
   canAcknowledgeResponsibility?: boolean;
   onAcknowledgeResponsibility?: (accepted: boolean) => void | Promise<void>;
   showResponsibilityAcknowledgment?: boolean;
+  /** Self-Manage: the agent edits this list and saves it through the agent facade. */
+  selfManagedSave?: SelfManagedSaveState;
+  /** Self-Manage: move a row to the other party's list. */
+  onMoveRow?: (index: number) => void;
+  moveRowLabel?: string;
 }) {
+  const copy = useComparisonCopy();
   const updateRow = (index: number, patch: Partial<ReportComparisonRepairItem>) => {
     onChange(items.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   };
@@ -1649,7 +1715,7 @@ function CompareResponsibilitySection({
                 <th className={`${REPAIR_COL_INDEX} px-3 py-2 font-semibold`}>#</th>
                 <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
                 <th className="px-3 py-2 font-semibold">Description</th>
-                <th className={REPAIR_COL_ACTION} />
+                <th className={onMoveRow && !readOnly ? REPAIR_COL_ACTIONS_WIDE : REPAIR_COL_ACTION} />
               </tr>
             </thead>
             <tbody>
@@ -1689,18 +1755,34 @@ function CompareResponsibilitySection({
                         onChange={(e) => updateRow(index, { description: e.target.value })}
                       />
                     </td>
-                    <td className={`${REPAIR_COL_ACTION} px-2 py-2`}>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="size-8"
-                        disabled={actionBusy}
-                        onClick={() => removeRow(index)}
-                        aria-label="Remove row"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                    <td className={`${onMoveRow ? REPAIR_COL_ACTIONS_WIDE : REPAIR_COL_ACTION} px-2 py-2`}>
+                      <div className="flex">
+                        {onMoveRow ? (
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="size-8"
+                            disabled={actionBusy}
+                            onClick={() => onMoveRow(index)}
+                            aria-label={moveRowLabel}
+                            title={moveRowLabel}
+                          >
+                            <ArrowLeftRight className="size-3.5" />
+                          </Button>
+                        ) : null}
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="size-8"
+                          disabled={actionBusy}
+                          onClick={() => removeRow(index)}
+                          aria-label="Remove row"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1709,7 +1791,7 @@ function CompareResponsibilitySection({
           </table>
         </div>
         {!readOnly ? (
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <Button
               type="button"
               size="sm"
@@ -1721,9 +1803,10 @@ function CompareResponsibilitySection({
               <Plus className="size-3.5" />
               Add
             </Button>
+            {selfManagedSave ? <SelfManagedSaveBar save={selfManagedSave} busy={actionBusy} /> : null}
           </div>
         ) : (
-          <p className="text-muted-foreground mt-3 text-[11px]">View only — maintained by CROSSUB staff</p>
+          <p className="text-muted-foreground mt-3 text-[11px]">{copy.compareViewOnly}</p>
         )}
         {showResponsibilityAcknowledgment ? (
           <ResponsibilityAgentAcknowledgment
@@ -1791,6 +1874,7 @@ function QuoteResponsibilitySection({
   maintenanceColumnMode = 'hidden',
   tenantReviewPending = false,
   tableFooter,
+  selfManagedSave,
 }: {
   title: string;
   items: ReportComparisonRepairItem[];
@@ -1814,7 +1898,10 @@ function QuoteResponsibilitySection({
   maintenanceColumnMode?: MaintenanceColumnMode;
   tenantReviewPending?: boolean;
   tableFooter?: ReactNode;
+  /** Self-Manage: the agent keys in quotes and contractors and saves through the agent facade. */
+  selfManagedSave?: SelfManagedSaveState;
 }) {
+  const copy = useComparisonCopy();
   const showQuoteCols = hideQuoteColumns === true ? false : showQuoteColumns !== false;
   const showMaintenanceColumn = maintenanceColumnMode !== 'hidden';
 
@@ -1848,8 +1935,14 @@ function QuoteResponsibilitySection({
         />
         {readOnly ? (
           <p className="text-muted-foreground mt-2 text-[11px]">
-            {lockedHint ?? 'View only — quotes maintained by CROSSUB staff'}
+            {lockedHint ?? copy.quoteViewOnly}
           </p>
+        ) : null}
+        {!readOnly && selfManagedSave ? (
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-muted-foreground text-[11px]">{SELF_MANAGED_COMPARISON_EDIT_COPY.quoteEditHint}</p>
+            <SelfManagedSaveBar save={selfManagedSave} busy={busy} />
+          </div>
         ) : null}
         <ResponsibilityCommentsBlock
           staffComment={staffComment}
@@ -1914,16 +2007,6 @@ function withRepairRowKeys(items: ReportComparisonRepairItem[]): RepairRow[] {
     (item as RepairRow).localKey
       ? (item as RepairRow)
       : { ...item, localKey: crypto.randomUUID() },
-  );
-}
-
-function hasRepairContent(item: ReportComparisonRepairItem): boolean {
-  return Boolean(
-    item.area.trim() ||
-      item.description.trim() ||
-      item.quote?.trim() ||
-      item.handymanName?.trim() ||
-      item.handymanId,
   );
 }
 
@@ -2372,15 +2455,25 @@ function InspectorSyncedResponsibilityTable({
   );
 }
 
-export function EndLeasingReportComparisonPanel({
-  caseData,
-  mode = 'compare',
-}: {
+type EndLeasingReportComparisonPanelProps = {
   caseData: TerminationCaseDetail;
   mode?: 'compare' | 'quote' | 'tenant-response' | 'inspector-readonly';
-}) {
+};
+
+export function EndLeasingReportComparisonPanel(props: EndLeasingReportComparisonPanelProps) {
+  const selfManaged = useIsPropertySelfManaged(props.caseData.propertyId);
+  return (
+    <ComparisonCopyContext.Provider value={END_LEASING_COMPARISON_COPY[agentCopyVariant(selfManaged)]}>
+      <ReportComparisonPanelBody {...props} />
+    </ComparisonCopyContext.Provider>
+  );
+}
+
+function ReportComparisonPanelBody({ caseData, mode = 'compare' }: EndLeasingReportComparisonPanelProps) {
+  const copy = useComparisonCopy();
   const { apiConnected, properties } = useAgentData();
   const applyCase = useEndLeasingStore((s) => s.applyCase);
+  const selfManaged = useIsPropertySelfManaged(caseData.propertyId);
 
   const property = useMemo(
     () => properties.find((p) => p.id === caseData.propertyId) ?? null,
@@ -2647,7 +2740,7 @@ export function EndLeasingReportComparisonPanel({
       toast.success(
         response === 'approved'
           ? 'Landlord quotation approved — you can send to tenant'
-          : 'Landlord quotation declined — CROSSUB will re-send',
+          : copy.landlordQuoteDeclinedToast,
       );
     } catch (err) {
       toast.error(apiErrorMessage(err));
@@ -2813,9 +2906,9 @@ export function EndLeasingReportComparisonPanel({
           ? 'Re-send quotation to tenant'
           : 'Quotation sent to tenant'
     : !agentBondProposalSent
-      ? 'Awaiting bond deduction from CROSSUB'
+      ? copy.sendAwaitBond
       : quoteStepHasLandlordItems(rc) && !quoteStepLandlordQuoteSentToAgent(rc)
-        ? 'Awaiting landlord quotation from CROSSUB'
+        ? copy.sendAwaitLandlordQuote
         : agentLandlordQuoteResponse === 'pending'
           ? 'Approve landlord quotation first'
           : agentLandlordQuoteResponse === 'declined'
@@ -2845,6 +2938,63 @@ export function EndLeasingReportComparisonPanel({
       return;
     }
     void openSendLandlordQuotationDialog();
+  };
+
+  // Self-Manage: the agent builds the responsibility lists and quotes; serviced tiers stay read-only.
+  const selfManagedEditable =
+    selfManaged &&
+    caseData.status === TERMINATION_CASE_STATUS.OPEN &&
+    caseData.settlement.status !== LEASING_ITEM_STATUS.DONE;
+  const canEditTenantItems = selfManagedEditable && !tenantRepairItemsLocked(rc);
+  const canEditLandlordItems = selfManagedEditable;
+  const tenantItemsDirty =
+    canEditTenantItems && repairItemsChanged(tenantItems, rc.tenantResponsibility, contractors);
+  const landlordItemsDirty =
+    canEditLandlordItems && repairItemsChanged(landlordItems, rc.landlordResponsibility, contractors);
+
+  const saveSelfManagedItems = async () => {
+    const body: SelfManagedReportComparisonInput = {
+      ...(tenantItemsDirty
+        ? { tenantResponsibility: toReportComparisonItemsInput(tenantItems, contractors) }
+        : {}),
+      ...(landlordItemsDirty
+        ? { landlordResponsibility: toReportComparisonItemsInput(landlordItems, contractors) }
+        : {}),
+    };
+    setBusy(true);
+    try {
+      await updateSelfManagedReportComparison(caseData.id, body);
+      const updated = await terminationApi.get(caseData.id);
+      applyCase(updated);
+      setTenantItems(withRepairRowKeys(updated.reportComparison.tenantResponsibility));
+      setLandlordItems(withRepairRowKeys(updated.reportComparison.landlordResponsibility));
+      toast.success(SELF_MANAGED_COMPARISON_EDIT_COPY.saved);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const selfManagedSave: SelfManagedSaveState = {
+    dirty: tenantItemsDirty || landlordItemsDirty,
+    onSave: () => void saveSelfManagedItems(),
+  };
+
+  /** Moves a draft row to the other party's list; both lists save together. */
+  const moveRow = (from: ResponsibilitySide, index: number) => {
+    const fromTenant = from === DEDUCTION_RESPONSIBILITY.TENANT;
+    const source = fromTenant ? tenantItems : landlordItems;
+    const row = source[index];
+    if (!row) return;
+    const rest = source.filter((_, i) => i !== index);
+    if (fromTenant) {
+      setTenantItems(rest);
+      setLandlordItems((prev) => [...prev, row]);
+    } else {
+      setLandlordItems(rest);
+      setTenantItems((prev) => [...prev, row]);
+    }
   };
 
   const inspectorReadOnlyItems = useMemo(() => {
@@ -2914,12 +3064,17 @@ export function EndLeasingReportComparisonPanel({
         />
         <CompareResponsibilitySection
           title="Tenant responsibility"
-          description="Recorded by CROSSUB staff. Email the tenant when ready — they acknowledge the comparison in the tenant app."
+          description={copy.tenantResponsibilityDescription}
           items={tenantItems}
           onChange={setTenantItems}
-          readOnly
+          readOnly={!canEditTenantItems}
+          selfManagedSave={canEditTenantItems ? selfManagedSave : undefined}
+          onMoveRow={
+            canEditTenantItems ? (index) => moveRow(DEDUCTION_RESPONSIBILITY.TENANT, index) : undefined
+          }
+          moveRowLabel={SELF_MANAGED_COMPARISON_EDIT_COPY.moveToLandlord}
           actionBusy={busy}
-          emptyReadOnlyMessage="No items recorded yet — CROSSUB staff will add these from the admin portal."
+          emptyReadOnlyMessage={copy.emptyResponsibility}
           staffComment={tenantStaffComment}
           agentComment={tenantAgentComment}
           onSendAgentComment={(message) => sendAgentComment('tenant', message)}
@@ -2938,8 +3093,8 @@ export function EndLeasingReportComparisonPanel({
               {tenantResponsibilityReviewStatus === 'pending'
                 ? 'Awaiting tenant acknowledgement in the tenant app.'
                 : tenantResponsibilityReviewStatus === 'accepted'
-                  ? 'Tenant acknowledged — CROSSUB can proceed to quotes.'
-                  : 'Tenant disagreed — CROSSUB staff will send an updated list.'}
+                  ? copy.tenantReviewAccepted
+                  : copy.tenantReviewDisagreed}
             </p>
             {rc.tenantResponsibilityDeclineReason ? (
               <p className="text-xs whitespace-pre-wrap">
@@ -2951,12 +3106,17 @@ export function EndLeasingReportComparisonPanel({
         ) : null}
         <CompareResponsibilitySection
           title="Landlord responsibility"
-          description="Recorded by CROSSUB staff. Acknowledge this list (Yes/No), add comments, then email the landlord property update when ready."
+          description={copy.landlordResponsibilityDescription}
           items={landlordItems}
           onChange={setLandlordItems}
-          readOnly
+          readOnly={!canEditLandlordItems}
+          selfManagedSave={canEditLandlordItems ? selfManagedSave : undefined}
+          onMoveRow={
+            canEditTenantItems ? (index) => moveRow(DEDUCTION_RESPONSIBILITY.LANDLORD, index) : undefined
+          }
+          moveRowLabel={SELF_MANAGED_COMPARISON_EDIT_COPY.moveToTenant}
           actionBusy={busy}
-          emptyReadOnlyMessage="No items recorded yet — CROSSUB staff will add these from the admin portal."
+          emptyReadOnlyMessage={copy.emptyResponsibility}
           staffComment={landlordStaffComment}
           agentComment={landlordAgentComment}
           onSendAgentComment={(message) => sendAgentComment('landlord', message)}
@@ -3049,18 +3209,19 @@ export function EndLeasingReportComparisonPanel({
           agencyId={agencyId}
           onContractorsChange={setContractors}
           onChange={setTenantItems}
-          readOnly
+          readOnly={!canEditTenantItems}
+          selfManagedSave={canEditTenantItems ? selfManagedSave : undefined}
           lockedHint={
             !tenantMaintenanceReady
               ? 'Awaiting tenant responsibility review'
               : !agentBondProposalSent
-                ? 'Awaiting bond deduction proposal from CROSSUB'
+                ? copy.lockAwaitBond
                 : quoteStepHasLandlordItems(rc) && !quoteStepLandlordQuoteSentToAgent(rc)
-                  ? 'Awaiting landlord maintenance quotation from CROSSUB'
+                  ? copy.lockAwaitLandlordQuote
                   : agentLandlordQuoteResponse === 'pending'
-                    ? 'Approve the landlord quotation from CROSSUB, then mark landlord-waivable items and send to tenant'
+                    ? copy.lockApproveLandlordQuote
                     : agentLandlordQuoteResponse === 'declined'
-                      ? 'Landlord quotation declined — await an updated quotation from CROSSUB'
+                      ? copy.lockLandlordQuoteDeclined
                       : !endLeasingQuotesReadyForTenant
                         ? 'Complete End of Lease maintenance quotes, then send the quotation to the tenant'
                         : 'Mark landlord-waivable items, then send the quotation to the tenant app and email'
@@ -3108,7 +3269,8 @@ export function EndLeasingReportComparisonPanel({
           agencyId={agencyId}
           onContractorsChange={setContractors}
           onChange={setLandlordItems}
-          readOnly
+          readOnly={!canEditLandlordItems}
+          selfManagedSave={canEditLandlordItems ? selfManagedSave : undefined}
           lockedHint={
             !landlordMaintenanceReady
               ? 'Agree with the landlord responsibility list first'

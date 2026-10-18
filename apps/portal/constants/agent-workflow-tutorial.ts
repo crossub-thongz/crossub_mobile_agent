@@ -1,3 +1,5 @@
+import { AGENT_COPY_VARIANT, type AgentCopyVariant } from '@/constants/agent-copy-variant';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { ROUTES } from '@/constants/routes';
 
 export type AgentWorkflowTrainingId =
@@ -452,3 +454,95 @@ export const AGENT_WORKFLOW_TRAINING: Record<AgentWorkflowTrainingId, AgentWorkf
 
 export const AGENT_WORKFLOW_TRAINING_MODULES: AgentWorkflowTrainingModule[] =
   AGENT_WORKFLOW_TRAINING_ORDER.map((id) => AGENT_WORKFLOW_TRAINING[id]);
+
+/** Replacement text for a module: item descriptions by title; omitted fields keep the base copy. */
+type AgentWorkflowTrainingOverride = {
+  overview?: string;
+  steps?: Record<string, string>;
+  functions?: Record<string, string>;
+  tips?: string[];
+};
+
+function applyTrainingItemOverrides(
+  items: AgentWorkflowTrainingItem[],
+  overrides: Record<string, string> | undefined,
+): AgentWorkflowTrainingItem[] {
+  if (!overrides) return items;
+  return items.map((item) =>
+    item.title in overrides ? { ...item, description: overrides[item.title]! } : item,
+  );
+}
+
+function withTrainingOverride(
+  module: AgentWorkflowTrainingModule,
+  override: AgentWorkflowTrainingOverride,
+): AgentWorkflowTrainingModule {
+  return {
+    ...module,
+    overview: override.overview ?? module.overview,
+    steps: applyTrainingItemOverrides(module.steps, override.steps),
+    functions: applyTrainingItemOverrides(module.functions, override.functions),
+    tips: override.tips ?? module.tips,
+  };
+}
+
+/**
+ * Self-Manage: the agency runs the work and CROS assists, so there is no "CROS handling" and no
+ * Account Manager. Only the items that say CROSSUB does the work change.
+ */
+const SELF_MANAGED_WORKFLOW_TRAINING_OVERRIDES: Record<
+  AgentWorkflowTrainingId,
+  AgentWorkflowTrainingOverride
+> = {
+  maintenance: {
+    overview: `Maintenance covers the full repair lifecycle: tenant or agent intake, responsibility (tenant, landlord, or strata), quoting, your approval, scheduling, completion evidence, and invoicing. Most work is created from Tasks or a property hub; once you assign responsibility you invite contractors and run the job, with ${CROS_ASSISTANT_NAME} drafting messages and summarising quotes.`,
+    steps: {
+      'Review intake':
+        'Read the issue description and intake photos or videos. Confirm the issue type, property, and tenant contact. This is the record you and contractors rely on.',
+      'Approve or decline quotes':
+        'When status is Quote approval or Need my action, open the job, compare contractor pricing and scope, then approve, decline, or send a counter offer. The contractor is notified automatically.',
+      'Track visit and completion':
+        'After approval, book the visit with the contractor. When work finishes, review completion photos and evidence. Approve completion and invoice when the job meets your standard.',
+    },
+    functions: {
+      'Get quote / RFQ':
+        "Invite the agency's preferred contractors to quote and enter the quotes they send. You see invited contractors, responses, and reminder status on the job workflow.",
+    },
+    tips: [
+      'Clear Need my action on maintenance quotes quickly — contractors cannot schedule until you approve.',
+      'Upload extra photos during review if the intake set is thin — it speeds accurate quoting.',
+      'Urgent priority jobs should be triaged the same day.',
+      `Ask ${CROS_ASSISTANT_NAME} to draft a chaser when a contractor goes quiet.`,
+    ],
+  },
+  inspections: {},
+  new_leasing: {
+    functions: {
+      'Tasks → Leasing filter':
+        'Shows all open leasing jobs across the portfolio. Use with status cards (Need my action, Waiting) to prioritise.',
+    },
+  },
+  end_leasing: {},
+  tribunal: {
+    tips: [
+      'Document every rent reminder before filing — tribunals expect a paper trail.',
+      'Bond disputes need ingoing and outgoing inspection reports when available.',
+      'Not every arrears matter needs tribunal — confirm with your landlord first.',
+      'Closed tribunal cases remain on the property history for future reference.',
+    ],
+  },
+};
+
+/** Training modules for the copy set. Inspection Only and Full Service keep the base copy. */
+export const AGENT_WORKFLOW_TRAINING_BY_VARIANT: Record<
+  AgentCopyVariant,
+  Record<AgentWorkflowTrainingId, AgentWorkflowTrainingModule>
+> = {
+  [AGENT_COPY_VARIANT.SERVICED]: AGENT_WORKFLOW_TRAINING,
+  [AGENT_COPY_VARIANT.SELF_MANAGED]: Object.fromEntries(
+    AGENT_WORKFLOW_TRAINING_ORDER.map((id) => [
+      id,
+      withTrainingOverride(AGENT_WORKFLOW_TRAINING[id], SELF_MANAGED_WORKFLOW_TRAINING_OVERRIDES[id]),
+    ]),
+  ) as Record<AgentWorkflowTrainingId, AgentWorkflowTrainingModule>,
+};

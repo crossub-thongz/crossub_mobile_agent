@@ -226,8 +226,15 @@ export const LEASING_WORKSPACE_COPY: ModuleWorkspaceCopy = {
   emptyTitle: 'No letting cycles yet',
   emptyDescription: 'Start a letting from a property to see it here.',
   noMatchTitle: 'No lettings match',
-  detailPlaceholder: 'Select a letting to see its summary and decisions.',
+  detailPlaceholder: 'Select a letting to work on it here.',
 };
+
+/** The letting workspace inside the Leasing page's detail pane. */
+export const LEASING_WORKSPACE_PANE_COPY = {
+  title: 'Letting workspace',
+  loading: 'Loading the letting…',
+  closed: 'This letting is closed. Open the full job for its history.',
+} as const;
 
 export const MODULE_WORKSPACE_LABELS = {
   allLane: 'All',

@@ -8,6 +8,8 @@ import {
 } from '@/components/agent/property-workflow-panel';
 import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { PROPERTY_ASSISTANT_CARD_COPY } from '@/constants/agent-copy-variant';
+import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
 import { useShellDockStore } from '@/lib/shell-dock-store';
 import type {
@@ -66,6 +68,7 @@ export function PropertyMobileHub({
   const { primaryAgency, properties } = useAgentData();
   const [formsOpen, setFormsOpen] = useState(false);
   const [manualAction, setManualAction] = useState<PropertyWorkflowActionId | null>(null);
+  const assistantCopy = PROPERTY_ASSISTANT_CARD_COPY[useAgentCopyVariant(property.agencyId)];
 
   const fullAddress = formatPropertyFullAddress(property);
 
@@ -91,11 +94,8 @@ export function PropertyMobileHub({
             <Sparkles className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Ask Gii, your Account Manager</p>
-            <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
-              Tell Gii what you need — maintenance jobs, inspections, leasing, or a quick status
-              check for this property.
-            </p>
+            <p className="text-sm font-semibold">{assistantCopy.title}</p>
+            <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">{assistantCopy.body}</p>
           </div>
         </div>
       </button> */}

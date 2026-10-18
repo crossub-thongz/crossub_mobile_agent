@@ -73,6 +73,7 @@ export function ModuleWorkspace<Row, Lane extends string, SortKey extends string
   defaultSortDirection = 'desc',
   mobileRow,
   renderDetail,
+  detailClassName,
 }: {
   copy: ModuleWorkspaceCopy;
   emptyIcon: LucideIcon;
@@ -91,6 +92,8 @@ export function ModuleWorkspace<Row, Lane extends string, SortKey extends string
   /** Card body on mobile. */
   mobileRow: (row: Row) => ReactNode;
   renderDetail: (row: Row) => ReactNode;
+  /** Widens the detail pane where it hosts a whole workspace (Leasing). */
+  detailClassName?: string;
 }) {
   const desktop = useDesktopViewport();
   const [lane, setLane] = useState<Lane | ModuleLaneAll>(MODULE_LANE_ALL);
@@ -244,7 +247,12 @@ export function ModuleWorkspace<Row, Lane extends string, SortKey extends string
           </section>
 
           {desktop ? (
-            <aside className="scrollbar-subtle min-h-0 w-[400px] shrink-0 overflow-y-auto rounded-xl border bg-card xl:w-[460px]">
+            <aside
+              className={cn(
+                'scrollbar-subtle min-h-0 w-[400px] shrink-0 overflow-y-auto rounded-xl border bg-card xl:w-[460px]',
+                detailClassName,
+              )}
+            >
               {selected ? (
                 <div key={selectedRowId}>{renderDetail(selected)}</div>
               ) : (

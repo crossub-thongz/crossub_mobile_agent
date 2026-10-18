@@ -14,6 +14,20 @@ export type TrustDisbursementBlockedReason = NonNullable<
   Schemas['TrustDisbursementCandidateDto']['blockedReason']
 >;
 export type TrustDisbursementKind = Schemas['DisburseDto']['kind'];
+export type TrustTransactionKind = Schemas['TrustTransactionDto']['kind'];
+export type TrustTransactionDisplayStatus = Schemas['TrustTransactionDto']['displayStatus'];
+export type TrustTransactionCategory = NonNullable<
+  NonNullable<
+    operations['AgentTrustController_listTransactions']['parameters']['query']
+  >['category']
+>;
+export type TrustFeeChargeStatus = Schemas['TrustFeeChargeDto']['status'];
+export type TrustBatchMethod = Schemas['CreatePaymentBatchDto']['method'];
+export type TrustBankLineStatus = Schemas['TrustBankFileLineDto']['status'];
+export type TrustReportKind =
+  operations['AgentTrustController_reportCsv']['parameters']['path']['kind'];
+export type TrustLedgerFileFormat =
+  operations['AgentTrustController_ledgerFile']['parameters']['path']['format'];
 export type TrustDisbursementTab = NonNullable<
   NonNullable<
     operations['AgentTrustController_disbursementCandidates']['parameters']['query']
@@ -29,10 +43,15 @@ export const TRUST_PAGE_SIZE_MAX = 100;
 export const TRUST_TAB = {
   OVERVIEW: 'overview',
   LEDGERS: 'ledgers',
+  TRANSACTIONS: 'transactions',
   RENT: 'rent',
   BILLS: 'bills',
   DISBURSE: 'disburse',
+  BANK_FILES: 'bank-files',
+  BANK_STATEMENT: 'bank-statement',
   RECONCILIATION: 'reconciliation',
+  REPORTS: 'reports',
+  SETTINGS: 'settings',
 } as const;
 
 export type TrustTab = (typeof TRUST_TAB)[keyof typeof TRUST_TAB];
@@ -40,10 +59,15 @@ export type TrustTab = (typeof TRUST_TAB)[keyof typeof TRUST_TAB];
 export const TRUST_TABS: readonly { id: TrustTab; label: string }[] = [
   { id: TRUST_TAB.OVERVIEW, label: 'Overview' },
   { id: TRUST_TAB.LEDGERS, label: 'Ledgers' },
+  { id: TRUST_TAB.TRANSACTIONS, label: 'Transactions' },
   { id: TRUST_TAB.RENT, label: 'Rent' },
   { id: TRUST_TAB.BILLS, label: 'Bills' },
   { id: TRUST_TAB.DISBURSE, label: 'Disburse' },
+  { id: TRUST_TAB.BANK_FILES, label: 'Bank files' },
+  { id: TRUST_TAB.BANK_STATEMENT, label: 'Bank statement' },
   { id: TRUST_TAB.RECONCILIATION, label: 'Reconciliation' },
+  { id: TRUST_TAB.REPORTS, label: 'Reports' },
+  { id: TRUST_TAB.SETTINGS, label: 'Settings' },
 ];
 
 /** Chart-of-accounts code kinds: a bill takes an EXPENSE code. */
@@ -302,6 +326,9 @@ export const TRUST_LEDGERS_COPY = {
   downloadPdf: 'PDF',
   emailOwner: 'Email owner',
   showing: (shown: number, total: number) => `Showing ${shown} of ${total}`,
+  downloadCsv: 'CSV',
+  downloadLedgerPdf: 'PDF',
+  downloadFailed: "Couldn't download the ledger",
 } as const;
 
 export const TRUST_RENT_COPY = {
@@ -472,3 +499,360 @@ export const TRUST_RECONCILIATION_COPY = {
   dateRequired: 'Pick the statement date',
   cancel: 'Cancel',
 } as const;
+
+// --------------------------------------------------------------------------- Transactions
+
+export const TRUST_TRANSACTION_KIND_LABEL: Record<TrustTransactionKind, string> = {
+  RECEIPT: 'Receipt',
+  WITHDRAWAL: 'Withdrawal',
+  JOURNAL: 'Journal',
+  OPENING: 'Opening balance',
+};
+
+export const TRUST_TRANSACTION_DISPLAY_STATUS = {
+  POSTED: 'POSTED',
+  REVERSED: 'REVERSED',
+} as const satisfies Record<string, TrustTransactionDisplayStatus>;
+
+export const TRUST_TRANSACTION_DISPLAY_STATUS_LABEL: Record<TrustTransactionDisplayStatus, string> = {
+  POSTED: 'Posted',
+  REVERSED: 'Reversed',
+};
+
+export const TRUST_TRANSACTION_DISPLAY_STATUS_TONE: Record<TrustTransactionDisplayStatus, string> = {
+  POSTED: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  REVERSED: 'bg-muted text-muted-foreground',
+};
+
+export const TRUST_TRANSACTION_CATEGORY = {
+  MONEY_IN: 'MONEY_IN',
+  MONEY_OUT: 'MONEY_OUT',
+  JOURNALS_AND_REVERSALS: 'JOURNALS_AND_REVERSALS',
+} as const satisfies Record<string, TrustTransactionCategory>;
+
+export const TRUST_TRANSACTION_CATEGORY_ALL = 'ALL' as const;
+export type TrustTransactionCategoryFilter =
+  | TrustTransactionCategory
+  | typeof TRUST_TRANSACTION_CATEGORY_ALL;
+
+export const TRUST_TRANSACTION_CATEGORY_FILTERS: readonly {
+  id: TrustTransactionCategoryFilter;
+  label: string;
+}[] = [
+  { id: TRUST_TRANSACTION_CATEGORY_ALL, label: 'All' },
+  { id: TRUST_TRANSACTION_CATEGORY.MONEY_IN, label: 'Money in' },
+  { id: TRUST_TRANSACTION_CATEGORY.MONEY_OUT, label: 'Money out' },
+  { id: TRUST_TRANSACTION_CATEGORY.JOURNALS_AND_REVERSALS, label: 'Journals and reversals' },
+];
+
+export const TRUST_TRANSACTIONS_COPY = {
+  searchPlaceholder: 'Search description, party or reference',
+  from: 'From',
+  to: 'To',
+  empty: 'No transactions here.',
+  audit: 'No.',
+  date: 'Date',
+  kind: 'Type',
+  description: 'Description',
+  method: 'Method',
+  amount: 'Amount',
+  status: 'Status',
+  reconciled: 'On statement',
+  notReconciled: 'Not on statement',
+  receiptNumber: (n: number) => `Receipt #${n}`,
+  auditNumber: (n: number) => `#${n}`,
+  detailTitle: (n: number) => `Transaction #${n}`,
+  entries: 'Ledger entries',
+  ledger: 'Ledger',
+  details: 'Details',
+  party: 'Party',
+  reference: 'Reference',
+  postedBy: 'Posted by',
+  bankLine: 'Bank statement line',
+  bill: (n: number) => `Bill #${n}`,
+  reversalOf: 'Reverses an earlier transaction',
+  reversedReason: (reason: string) => `Reversed: ${reason}`,
+  reverse: 'Reverse',
+  close: 'Close',
+} as const;
+
+export const TRUST_REVERSE_COPY = {
+  title: (n: number) => `Reverse transaction #${n}`,
+  description:
+    'Posts the opposite entries, rolls back any rent paid-to date and unmatches its bank line. This cannot be undone.',
+  reason: 'Reason',
+  reasonRequired: 'Give a reason',
+  submit: 'Reverse',
+  cancel: 'Cancel',
+  done: (n: number) => `Transaction #${n} reversed`,
+} as const;
+
+// --------------------------------------------------------------------------- Fee charges
+
+export const TRUST_FEE_CHARGE_STATUS = {
+  PENDING: 'PENDING',
+  POSTED: 'POSTED',
+  REVERSED: 'REVERSED',
+  WAIVED: 'WAIVED',
+} as const satisfies Record<string, TrustFeeChargeStatus>;
+
+export const TRUST_FEE_CHARGE_STATUS_LABEL: Record<TrustFeeChargeStatus, string> = {
+  PENDING: 'Pending',
+  POSTED: 'Posted',
+  REVERSED: 'Reversed',
+  WAIVED: 'Waived',
+};
+
+export const TRUST_FEE_CHARGE_STATUS_TONE: Record<TrustFeeChargeStatus, string> = {
+  PENDING: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+  POSTED: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  REVERSED: 'bg-muted text-muted-foreground',
+  WAIVED: 'bg-muted text-muted-foreground',
+};
+
+export const TRUST_FEES_COPY = {
+  title: 'Fees',
+  empty: 'No fees charged yet.',
+  charge: 'Charge fee',
+  postPending: 'Post pending',
+  pending: (amount: string, count: number) => `${amount} pending (${count})`,
+  postedThisMonth: (amount: string) => `${amount} posted this month`,
+  postedResult: (posted: number, stillPending: number) =>
+    `${posted} posted, ${stillPending} still pending`,
+  waive: 'Waive',
+  date: 'Date',
+  fee: 'Fee',
+  amount: 'Amount',
+  status: 'Status',
+} as const;
+
+export const TRUST_NEW_FEE_COPY = {
+  title: 'Charge a fee',
+  description: 'A one-off fee on this owner ledger. It posts now if the owner has the funds, otherwise it waits.',
+  name: 'Fee name',
+  amount: 'Amount ($)',
+  gstInclusive: 'Amount includes GST',
+  category: 'Income category',
+  chooseCategory: 'Choose a category',
+  noCategories: 'No income categories are set up on this trust account. Ask CROSSUB to add them.',
+  date: 'Charge date',
+  incomplete: 'Fill in the name, amount, category and date',
+  submit: 'Charge fee',
+  cancel: 'Cancel',
+  done: 'Fee charged',
+} as const;
+
+export const TRUST_WAIVE_FEE_COPY = {
+  title: (name: string) => `Waive ${name}`,
+  description: 'The owner will not be charged this fee.',
+  reason: 'Reason',
+  reasonRequired: 'Give a reason',
+  submit: 'Waive fee',
+  cancel: 'Cancel',
+  done: 'Fee waived',
+} as const;
+
+// --------------------------------------------------------------------------- Bank files (ABA)
+
+export const TRUST_BATCH_METHOD = {
+  EFT: 'EFT',
+  BPAY: 'BPAY',
+} as const satisfies Record<string, TrustBatchMethod>;
+
+export const TRUST_BATCH_METHOD_LABEL: Record<TrustBatchMethod, string> = {
+  EFT: 'ABA (bank transfer)',
+  BPAY: 'BPAY',
+};
+
+export const TRUST_BANK_FILES_COPY = {
+  pool: 'Waiting for a bank file',
+  poolCount: (count: number, amount: string) =>
+    `${count} payment${count === 1 ? '' : 's'}, ${amount}`,
+  lastFile: (n: number, date: string) => `Last file #${n} on ${date}`,
+  chequeCount: (count: number) => `${count} cheque${count === 1 ? '' : 's'} recorded`,
+  abaNotReady: 'An ABA file cannot be built yet. Ask CROSSUB to complete:',
+  createAba: 'Create ABA file',
+  createBpay: 'Create BPAY file',
+  processingDate: 'Processing date',
+  created: (n: number) => `Bank file #${n} created`,
+  batches: 'Bank files',
+  empty: 'No bank files yet. Disbursements and bill payments by bank transfer wait here until you create one.',
+  number: 'File',
+  method: 'Type',
+  payments: 'Payments',
+  total: 'Total',
+  createdAt: 'Created',
+  file: 'File',
+  report: 'Report',
+  downloadFailed: "Couldn't download the file",
+  detailTitle: (n: number) => `Bank file #${n}`,
+  payee: 'Payee',
+  ledger: 'Ledger',
+  account: 'Account',
+  amount: 'Amount',
+  close: 'Close',
+} as const;
+
+// --------------------------------------------------------------------------- Bank statement
+
+export const TRUST_BANK_FILE = {
+  /** QIF is the format the staff bank file read supports. */
+  ACCEPT: '.qif,application/qif,text/plain',
+  DEFAULT_MIME_TYPE: 'application/qif',
+  MAX_BYTES: 2 * 1024 * 1024,
+} as const;
+
+export const TRUST_BANK_LINE_STATUS = {
+  UNMATCHED: 'UNMATCHED',
+  MATCHED: 'MATCHED',
+  PROCESSED: 'PROCESSED',
+  DISMISSED: 'DISMISSED',
+} as const satisfies Record<string, TrustBankLineStatus>;
+
+export const TRUST_BANK_LINE_STATUS_LABEL: Record<TrustBankLineStatus, string> = {
+  UNMATCHED: 'Unmatched',
+  MATCHED: 'Suggested match',
+  PROCESSED: 'Reconciled',
+  DISMISSED: 'Dismissed',
+};
+
+export const TRUST_BANK_LINE_STATUS_TONE: Record<TrustBankLineStatus, string> = {
+  UNMATCHED: 'bg-destructive/15 text-destructive',
+  MATCHED: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+  PROCESSED: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  DISMISSED: 'bg-muted text-muted-foreground',
+};
+
+export const TRUST_BANK_LINE_FILTER_ALL = 'ALL' as const;
+export type TrustBankLineFilter = TrustBankLineStatus | typeof TRUST_BANK_LINE_FILTER_ALL;
+
+export const TRUST_BANK_STATEMENT_COPY = {
+  intro:
+    'Import the bank statement as a QIF file. Nothing in the file is stored: only the lines you reconcile are kept.',
+  choose: 'Import QIF file',
+  reread: 'Read again',
+  tooLarge: 'The file is larger than 2 MB',
+  readFailed: "Couldn't read the bank statement",
+  summary: (lines: number, from: string, to: string) => `${lines} lines, ${from} to ${to}`,
+  skipped: (count: number) => `${count} before the account opened were left out`,
+  all: 'All',
+  unmatched: 'Unmatched',
+  matched: 'Suggested',
+  reconciled: 'Reconciled',
+  empty: 'No lines here.',
+  date: 'Date',
+  memo: 'Statement text',
+  amount: 'Amount',
+  status: 'Status',
+  match: 'Match',
+  suggestionTenant: (name: string, address: string | null) =>
+    address ? `Rent from ${name}, ${address}` : `Rent from ${name}`,
+  suggestionTransaction: (n: number, description: string) => `#${n} ${description}`,
+  amountDiffers: 'Amount differs from the rent',
+  reconciledTo: (n: number, description: string) => `#${n} ${description}`,
+  processOne: 'Accept',
+  link: 'Match',
+  unlink: 'Unmatch',
+  processAll: (count: number) => `Accept all suggested (${count})`,
+  processed: (count: number) => `${count} line${count === 1 ? '' : 's'} reconciled`,
+  failed: (count: number) => `${count} line${count === 1 ? '' : 's'} could not be reconciled`,
+  unlinked: 'Bank line unmatched',
+  linked: 'Bank line matched',
+} as const;
+
+export const TRUST_LINK_LINE_COPY = {
+  title: 'Match bank line',
+  description: (amount: string, date: string) =>
+    `Posted transactions of ${amount} not yet on a statement, around ${date}.`,
+  empty: 'No posted transaction of this amount is waiting. Post the receipt or payment first.',
+  choose: 'Match',
+  cancel: 'Cancel',
+} as const;
+
+/** How many days either side of a bank line to look for its transaction. */
+export const TRUST_LINK_LINE_WINDOW_DAYS = 31;
+
+// --------------------------------------------------------------------------- Reports
+
+export const TRUST_REPORT_KIND = {
+  RECEIPTS: 'receipts',
+  WITHDRAWALS: 'withdrawals',
+  FOLIO_BALANCES: 'folio-balances',
+  UNPRESENTED_PAYMENTS: 'unpresented-payments',
+} as const satisfies Record<string, TrustReportKind>;
+
+export const TRUST_REPORT_KINDS: readonly { id: TrustReportKind; label: string }[] = [
+  { id: TRUST_REPORT_KIND.RECEIPTS, label: 'Receipts' },
+  { id: TRUST_REPORT_KIND.WITHDRAWALS, label: 'Withdrawals' },
+  { id: TRUST_REPORT_KIND.FOLIO_BALANCES, label: 'Ledger balances' },
+  { id: TRUST_REPORT_KIND.UNPRESENTED_PAYMENTS, label: 'Unpresented payments' },
+];
+
+/** Reports over a period (from and to); the rest are as at one date. */
+export const TRUST_PERIOD_REPORT_KINDS: readonly TrustReportKind[] = [
+  TRUST_REPORT_KIND.RECEIPTS,
+  TRUST_REPORT_KIND.WITHDRAWALS,
+];
+
+export const TRUST_REPORTS_COPY = {
+  from: 'From',
+  to: 'To',
+  asOf: 'As at',
+  downloadCsv: 'Download CSV',
+  downloadFailed: "Couldn't download the report",
+  total: 'Total',
+  rows: (count: number) => `${count} row${count === 1 ? '' : 's'}`,
+  truncated: 'Too many rows to show. Download the CSV for the full report.',
+  empty: 'Nothing in this report.',
+  date: 'Date',
+  audit: 'No.',
+  description: 'Description',
+  party: 'Party',
+  method: 'Method',
+  reference: 'Reference',
+  amount: 'Amount',
+  reversal: 'Reversal',
+  code: 'Code',
+  name: 'Name',
+  kind: 'Kind',
+  property: 'Property',
+  balance: 'Balance',
+  payee: 'Payee',
+  days: 'Days',
+} as const;
+
+export const TRUST_LEDGER_FILE_FORMAT = {
+  CSV: 'csv',
+  PDF: 'pdf',
+} as const satisfies Record<string, TrustLedgerFileFormat>;
+
+// --------------------------------------------------------------------------- Settings summary
+
+export const TRUST_SETTINGS_SUMMARY_COPY = {
+  title: 'Trust account settings',
+  description:
+    'CROSSUB sets up and maintains your trust bank accounts and account codes. Contact CROSSUB to change them.',
+  bankAccounts: 'Trust bank accounts',
+  noBankAccounts: 'No trust bank account yet.',
+  accountCodes: 'Account codes',
+  noAccountCodes: 'No account codes yet.',
+  bsb: 'BSB',
+  account: 'Account',
+  status: 'Status',
+  code: 'Code',
+  name: 'Name',
+  kind: 'Kind',
+  gst: 'GST',
+  gstApplies: 'Yes',
+  gstNone: 'No',
+  inactive: 'inactive',
+  openTrust: 'Open Trust',
+} as const;
+
+export const TRUST_ACCOUNT_CODE_KIND_LABEL: Record<
+  Schemas['TrustAccountCodeDto']['kind'],
+  string
+> = {
+  INCOME: 'Income',
+  EXPENSE: 'Expense',
+};

@@ -3,6 +3,8 @@
 import { MaintenanceCompletionGatesPanel } from '@/components/maintenance/maintenance-completion-gates-panel';
 import { MaintenanceStrataContactsPanel } from '@/components/maintenance/maintenance-strata-contacts-panel';
 import { MaintenanceTenantAcknowledgementPanel } from '@/components/maintenance/maintenance-tenant-acknowledgement-panel';
+import { TASK_DETAIL_COPY } from '@/constants/agent-copy-variant';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import {
   requiresContractorFlow,
@@ -10,6 +12,7 @@ import {
 } from '@/lib/maintenance/agent-workflow-model';
 import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
 import { resolveMaintenanceStrataContacts } from '@/lib/maintenance/resolve-strata-contacts';
+import { agentCopyVariant } from '@/lib/portal-service-level';
 import type { Property } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -26,6 +29,7 @@ export function MaintenanceInProgressPanel({
   onCaseUpdated?: () => Promise<void>;
   apiConnected?: boolean;
 }) {
+  const detailCopy = TASK_DETAIL_COPY[agentCopyVariant(useIsPropertySelfManaged(ctx.item.propertyId))];
   const landlordFlow = requiresContractorFlow(ctx);
   const showCompletionGates = ['in_progress', 'completed', 'closed'].includes(
     ctx.workspaceCase.status,
@@ -47,7 +51,7 @@ export function MaintenanceInProgressPanel({
       <div className="space-y-4">
         <div className="rounded-xl border bg-card p-4">
           <p className="text-muted-foreground mb-3 text-sm">
-            Strata is responsible for this repair. CROSSUB will coordinate with the strata body.
+            {detailCopy.strataResponsibleNote}
           </p>
           <MaintenanceStrataContactsPanel {...strataContacts} />
         </div>

@@ -22,9 +22,10 @@ import { LeasingKeyCollectionEvidencePanel } from '@/components/leasing-workflow
 import { LeasingKeyCollectionSchedule } from '@/components/leasing-workflow/leasing-key-collection-schedule';
 import { LeasingSelfManagedAgreementPanel } from '@/components/leasing-workflow/leasing-self-managed-agreement-panel';
 import { LeasingSelfManagedBondLink } from '@/components/leasing-workflow/leasing-self-managed-bond-link';
+import { LeasingSelfManagedMoneyActions } from '@/components/leasing-workflow/leasing-self-managed-money-actions';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { SELF_MANAGED_LEASING_COPY } from '@/constants/self-managed-leasing';
+import { ONBOARDING_MONEY_ITEM, SELF_MANAGED_LEASING_COPY } from '@/constants/self-managed-leasing';
 import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import {
   LEASING_ITEM_STATUS,
@@ -36,7 +37,8 @@ import type { LeasingAgreementState, LeasingPropertyDetail } from '@/lib/leasing
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { LEASING_ONBOARDING_BOND_SECTION_ID } from '@/lib/property-leasing-navigation';
 import { extractBondReferenceFromLink, formatBondIdForDisplay } from '@/lib/property-overview';
-import { formatCurrency, formatDate, formatDateTime, formatOpenInspectionWindow } from '@/lib/utils';
+import { formatCurrency, formatDate, formatOpenInspectionWindow } from '@/lib/utils';
+import { formatPropertyDateTime } from '@/lib/format-datetime';
 
 const SIGNING_LABEL: Record<LeasingAgreementState['signingStatus'], string> = {
   not_sent: 'Not sent',
@@ -332,7 +334,15 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         </div>
         <div className="mt-2 space-y-2">
           <ProofLine fileName={o.deposit.proofFileName} proofUrl={o.deposit.proofUrl} />
-          {depositPendingConfirm ? (
+          {selfManaged && apiConnected ? (
+            <LeasingSelfManagedMoneyActions
+              item={ONBOARDING_MONEY_ITEM.DEPOSIT}
+              propertyId={id}
+              cycleId={cycleId}
+              status={o.deposit.status}
+              proofPending={depositPendingConfirm}
+            />
+          ) : depositPendingConfirm ? (
             <OnboardingReviewActions
               approving={confirmingDeposit}
               rejecting={rejectingDeposit}
@@ -369,7 +379,7 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
           {o.bond.sentToTenantAt ? (
             <StepFact
               label="Link sent"
-              value={formatDateTime(o.bond.sentToTenantAt)}
+              value={formatPropertyDateTime(o.bond.sentToTenantAt)}
               className="col-span-2"
             />
           ) : null}
@@ -384,7 +394,15 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
             />
           ) : null}
           <ProofLine fileName={o.bond.proofFileName} proofUrl={o.bond.proofUrl} />
-          {bondPendingConfirm ? (
+          {selfManaged && apiConnected ? (
+            <LeasingSelfManagedMoneyActions
+              item={ONBOARDING_MONEY_ITEM.BOND}
+              propertyId={id}
+              cycleId={cycleId}
+              status={o.bond.status}
+              proofPending={bondPendingConfirm}
+            />
+          ) : bondPendingConfirm ? (
             <OnboardingReviewActions
               approving={confirmingBond}
               rejecting={rejectingBond}
@@ -503,7 +521,7 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
                 ? formatOpenInspectionWindow(
                     o.keyCollection.time,
                     o.keyCollection.timeEnd,
-                  ) ?? formatDateTime(o.keyCollection.time)
+                  ) ?? formatPropertyDateTime(o.keyCollection.time)
                 : 'Not set'
             }
           />

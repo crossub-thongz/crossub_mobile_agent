@@ -1,3 +1,5 @@
+import { TENANT_REPAIR_RESPONSE } from '@/constants/end-leasing';
+
 import type { ReportComparisonStageState } from './types';
 
 export type AgentLandlordQuoteResponse = 'none' | 'pending' | 'approved' | 'declined';
@@ -41,6 +43,21 @@ export function canAgentSendTenantQuotation(rc: ReportComparisonStageState): boo
     quoteStepBondSentToAgent(rc) &&
     quoteStepLandlordQuoteSentToAgent(rc) &&
     quoteStepAgentApprovedLandlordQuote(rc)
+  );
+}
+
+/**
+ * The API's lock on the tenant list (`updateReportComparison`): once the tenant has the repair
+ * quotation or the bond acknowledgement, the list can't change while their answer is pending or
+ * yes — unless they disagreed with the responsibility list.
+ */
+export function tenantRepairItemsLocked(rc: ReportComparisonStageState): boolean {
+  const quotationSent = Boolean(rc.tenantRepairQuoteEmail?.sentAt || rc.tenantBondDeductionAckEmail?.sentAt);
+  return (
+    quotationSent &&
+    rc.tenantResponsibilityReviewStatus !== TENANT_REPAIR_RESPONSE.DECLINED &&
+    (rc.tenantQuoteResponse === TENANT_REPAIR_RESPONSE.PENDING ||
+      rc.tenantQuoteResponse === TENANT_REPAIR_RESPONSE.ACCEPTED)
   );
 }
 

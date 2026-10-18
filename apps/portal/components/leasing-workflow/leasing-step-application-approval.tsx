@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { LeasingApplicantAddPanel } from '@/components/leasing-workflow/leasing-applicant-add-panel';
 import { LeasingApplicantDocumentIntake } from '@/components/leasing-workflow/leasing-applicant-document-intake';
 import { LeasingApplicantOrderCard } from '@/components/leasing-workflow/leasing-applicant-order-card';
+import { LeasingSelfManagedSkipScreening } from '@/components/leasing-workflow/leasing-self-managed-skip-screening';
 import { OpenInspectionApplicantLinksPanel } from '@/components/open-inspection/open-inspection-applicant-links-panel';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -27,7 +28,8 @@ import { runThenReadCycle } from '@/lib/leasing/self-managed-letting';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
-import { cn, formatDateTime } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { formatPropertyDateTime } from '@/lib/format-datetime';
 
 export function LeasingStepApplicationApproval({ detail }: { detail: LeasingPropertyDetail }) {
   const { leasingCycles, apiConnected } = useAgentData();
@@ -127,6 +129,9 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
 
   const intakeSection = !readOnly ? (
     <div className="space-y-3">
+      {selfManaged && apiConnected && getApprovedApplications(detail).length === 0 ? (
+        <LeasingSelfManagedSkipScreening propertyId={detail.propertyId} cycleId={cycleId} />
+      ) : null}
       <LeasingApplicantDocumentIntake
         propertyId={detail.propertyId}
         cycleId={cycleId}
@@ -180,7 +185,7 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
                   <p className="text-xs">
                     <span className="text-muted-foreground">Scheduled viewing · </span>
                     <span className="font-medium">
-                      {formatDateTime(detail.openInspection.scheduledTime)}
+                      {formatPropertyDateTime(detail.openInspection.scheduledTime)}
                     </span>
                   </p>
                 ) : null}

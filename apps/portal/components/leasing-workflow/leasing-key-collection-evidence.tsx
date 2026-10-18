@@ -15,7 +15,7 @@ import type {
   LeasingKeyCollectionState,
   LeasingKeyCollectionTenantReport,
 } from '@/lib/leasing/types';
-import { formatDateTime } from '@/lib/utils';
+import { formatPropertyDateTime } from '@/lib/format-datetime';
 
 const REPORT_ROWS: {
   key: keyof LeasingKeyCollectionTenantReport;
@@ -175,7 +175,7 @@ export function LeasingKeyCollectionEvidencePanel({
           available={reportReady}
           availableLabel={
             report?.submittedAt
-              ? `Checklist submitted ${formatDateTime(report.submittedAt)}`
+              ? `Checklist submitted ${formatPropertyDateTime(report.submittedAt)}`
               : 'Tenant handover checklist on file'
           }
           missingLabel="Awaiting tenant key collection report"
@@ -255,7 +255,7 @@ export function LeasingKeyCollectionEvidencePanel({
               <>
                 {report.submittedAt && (
                   <p className="text-xs text-muted-foreground">
-                    Submitted {formatDateTime(report.submittedAt)}
+                    Submitted {formatPropertyDateTime(report.submittedAt)}
                   </p>
                 )}
                 {report.tagNumber && (
@@ -293,7 +293,7 @@ export function LeasingKeyCollectionEvidencePanel({
               <p className="text-xs text-muted-foreground">
                 The tenant submitted key collection photo proof
                 {keyCollection.time
-                  ? ` for pickup on ${formatDateTime(keyCollection.time)}`
+                  ? ` for pickup on ${formatPropertyDateTime(keyCollection.time)}`
                   : ''}
                 .
               </p>

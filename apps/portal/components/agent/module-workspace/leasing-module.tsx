@@ -3,6 +3,7 @@
 import { FileText } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 
+import { LeasingCycleWorkspacePane } from '@/components/agent/module-workspace/leasing-cycle-workspace-pane';
 import { ModuleCaseDetail } from '@/components/agent/module-workspace/module-case-detail';
 import {
   ModuleCellText,
@@ -17,6 +18,7 @@ import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import {
   LEASING_LANES,
   LEASING_WORKSPACE_COPY,
+  LEASING_WORKSPACE_PANE_COPY,
   MODULE_FIELD_LABELS,
   MODULE_WORKSPACE_LABELS,
 } from '@/constants/module-workspace';
@@ -31,6 +33,9 @@ import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 import { leasingCycleStageLabel, leasingCycleStatusLabel } from '@/utils/leasing-relet-decision';
 
 type LeasingSortKey = 'lane' | 'reference' | 'property' | 'stage' | 'rent' | 'available' | 'created';
+
+/** Wider than the other modules' panes: it hosts the whole letting workspace. */
+const DETAIL_PANE_CLASS = 'lg:w-[500px] xl:w-[600px] 2xl:w-[720px]';
 
 const laneOf = (c: LeasingCycle) => findLaneDefinition(LEASING_LANES, leasingCycleLane(c));
 const laneIndex = (c: LeasingCycle) => LEASING_LANES.indexOf(laneOf(c));
@@ -126,7 +131,10 @@ function MobileRow({ c }: { c: LeasingCycle }) {
   );
 }
 
-/** Self-Manage Leasing page body — letting cycles by status, with the cycle summary beside it. */
+/**
+ * Self-Manage Leasing page body: letting cycles by status, with the selected cycle's summary and
+ * its letting workspace in the split pane.
+ */
 export function LeasingModule() {
   const { leasingCycles } = useAgentData();
   const scope = useSelfManagedPropertyIds();
@@ -152,6 +160,7 @@ export function LeasingModule() {
       sortComparators={SORT}
       defaultSortKey="created"
       mobileRow={(c) => <MobileRow c={c} />}
+      detailClassName={DETAIL_PANE_CLASS}
       renderDetail={(c) => (
         <ModuleCaseDetail
           module={OWNER_DECISION_MODULE.LEASING}
@@ -163,6 +172,15 @@ export function LeasingModule() {
           lane={laneOf(c)}
           statusLabel={leasingCycleStatusLabel(c) ?? undefined}
           detailHref={rowHref(c)}
+          actions={{
+            title: LEASING_WORKSPACE_PANE_COPY.title,
+            content:
+              c.isActive === false ? (
+                <p className="text-muted-foreground text-xs">{LEASING_WORKSPACE_PANE_COPY.closed}</p>
+              ) : (
+                <LeasingCycleWorkspacePane cycle={c} />
+              ),
+          }}
           fields={[
             {
               label: MODULE_FIELD_LABELS.status,

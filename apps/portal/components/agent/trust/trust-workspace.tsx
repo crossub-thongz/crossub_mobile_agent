@@ -6,17 +6,23 @@ import { useState } from 'react';
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { SELECT_CLASS } from '@/components/agent/maintenance-self-managed/step-card';
+import { TrustBankFilesTab } from '@/components/agent/trust/trust-bank-files-tab';
+import { TrustBankStatementTab } from '@/components/agent/trust/trust-bank-statement-tab';
 import { TrustBillsTab } from '@/components/agent/trust/trust-bills-tab';
 import { TrustDisburseTab } from '@/components/agent/trust/trust-disburse-tab';
 import { TrustLedgersTab } from '@/components/agent/trust/trust-ledgers-tab';
 import { TrustOverviewTab } from '@/components/agent/trust/trust-overview-tab';
 import { TrustReconciliationTab } from '@/components/agent/trust/trust-reconciliation-tab';
 import { TrustRentTab } from '@/components/agent/trust/trust-rent-tab';
-import { TrustLoadError, TrustLoading } from '@/components/agent/trust/trust-ui';
+import { TrustReportsTab } from '@/components/agent/trust/trust-reports-tab';
+import { TrustWorkspaceSettingsTables } from '@/components/agent/trust/trust-settings-summary';
+import { TrustTransactionsTab } from '@/components/agent/trust/trust-transactions-tab';
+import { TrustLoadError, TrustLoading, TrustPanel } from '@/components/agent/trust/trust-ui';
 import { Label } from '@/components/ui/label';
 import {
   TRUST_BANK_ACCOUNT_STATUS,
   TRUST_PAGE_COPY as COPY,
+  TRUST_SETTINGS_SUMMARY_COPY,
   TRUST_TAB,
   TRUST_TABS,
   type TrustTab,
@@ -24,7 +30,7 @@ import {
 import { useTrustResource } from '@/hooks/use-trust-resource';
 import {
   fetchTrustWorkspace,
-  type TrustAccountCode,
+  type AgentTrustWorkspace,
   type TrustBankAccount,
 } from '@/lib/crossub-api/agent-trust-client';
 import { isTrustNotSetUpError } from '@/lib/trust-accounting';
@@ -45,27 +51,43 @@ function TrustTabContent({
   tab,
   agencyId,
   bankAccountId,
-  accountCodes,
+  workspace,
 }: {
   tab: TrustTab;
   agencyId: string;
   bankAccountId: string;
-  accountCodes: readonly TrustAccountCode[];
+  workspace: AgentTrustWorkspace;
 }) {
   const props = { agencyId, bankAccountId };
+  const { accountCodes } = workspace;
   switch (tab) {
     case TRUST_TAB.OVERVIEW:
       return <TrustOverviewTab {...props} />;
     case TRUST_TAB.LEDGERS:
-      return <TrustLedgersTab {...props} />;
+      return <TrustLedgersTab {...props} accountCodes={accountCodes} />;
+    case TRUST_TAB.TRANSACTIONS:
+      return <TrustTransactionsTab {...props} />;
     case TRUST_TAB.RENT:
       return <TrustRentTab {...props} />;
     case TRUST_TAB.BILLS:
       return <TrustBillsTab {...props} accountCodes={accountCodes} />;
     case TRUST_TAB.DISBURSE:
       return <TrustDisburseTab {...props} />;
+    case TRUST_TAB.BANK_FILES:
+      return <TrustBankFilesTab {...props} />;
+    case TRUST_TAB.BANK_STATEMENT:
+      return <TrustBankStatementTab {...props} />;
     case TRUST_TAB.RECONCILIATION:
       return <TrustReconciliationTab {...props} />;
+    case TRUST_TAB.REPORTS:
+      return <TrustReportsTab {...props} />;
+    case TRUST_TAB.SETTINGS:
+      return (
+        <TrustPanel title={TRUST_SETTINGS_SUMMARY_COPY.title}>
+          <p className="text-muted-foreground mb-4 text-sm">{TRUST_SETTINGS_SUMMARY_COPY.description}</p>
+          <TrustWorkspaceSettingsTables workspace={workspace} />
+        </TrustPanel>
+      );
   }
 }
 
@@ -151,7 +173,7 @@ export function TrustWorkspace({ agencies }: { agencies: readonly Agency[] }) {
             tab={tab}
             agencyId={agencyId}
             bankAccountId={bankAccountId}
-            accountCodes={workspace.data.accountCodes}
+            workspace={workspace.data}
           />
         </>
       )}

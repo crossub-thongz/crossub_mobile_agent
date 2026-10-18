@@ -1,4 +1,10 @@
-import { TERMINATION_TYPE, TENANT_SETTLEMENT_CONFIRMATION, TERMINATION_CASE_STATUS } from '@/constants/end-leasing';
+import { AGENT_COPY_VARIANT, type AgentCopyVariant } from '@/constants/agent-copy-variant';
+import {
+  END_LEASING_COMPARISON_COPY,
+  TERMINATION_TYPE,
+  TENANT_SETTLEMENT_CONFIRMATION,
+  TERMINATION_CASE_STATUS,
+} from '@/constants/end-leasing';
 import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
 import {
   buildLandlordTerminationNoticeEmailRecord,
@@ -327,6 +333,7 @@ function workflowNameForStep(
   step: EndLeasingAgentStep,
   caseData: TerminationCaseDetail,
   subProgress: EndLeasingSubProgressItem[],
+  copyVariant: AgentCopyVariant,
 ): string {
   const next = subProgress.find((i) => !i.done);
   switch (step) {
@@ -343,8 +350,10 @@ function workflowNameForStep(
     case END_LEASING_AGENT_STEP.REPORT_COMPARISON:
       return 'Compare ingoing/outgoing & define responsibility';
     case END_LEASING_AGENT_STEP.GET_QUOTE:
-      if (next?.id === 'bond_agent') return 'Await bond deduction from CROSSUB';
-      if (next?.id === 'landlord_quote_agent') return 'Await landlord quotation from CROSSUB';
+      if (next?.id === 'bond_agent') return END_LEASING_COMPARISON_COPY[copyVariant].awaitBondStep;
+      if (next?.id === 'landlord_quote_agent') {
+        return END_LEASING_COMPARISON_COPY[copyVariant].awaitLandlordQuoteStep;
+      }
       if (next?.id === 'agent_approve') return 'Approve landlord quotation';
       if (next?.id === 'tenant_quote') return 'Send quotation to tenant';
       return 'Quote step complete';
@@ -395,8 +404,10 @@ function resolveLiveStep(steps: EndLeasingAgentStepState[]): EndLeasingAgentStep
   return END_LEASING_AGENT_STEP.BOND_RELEASED;
 }
 
+/** `copyVariant` — Self-Manage step names speak to the agent; defaults to the CROSSUB-serviced copy. */
 export function buildEndLeasingAgentWorkflow(
   caseData: TerminationCaseDetail,
+  copyVariant: AgentCopyVariant = AGENT_COPY_VARIANT.SERVICED,
 ): EndLeasingAgentWorkflowModel {
   const subByStep: Record<EndLeasingAgentStep, EndLeasingSubProgressItem[]> = {
     [END_LEASING_AGENT_STEP.VACATE_CONFIRMED]: vacateConfirmedSubProgress(caseData),
@@ -414,7 +425,7 @@ export function buildEndLeasingAgentWorkflow(
       id,
       label: END_LEASING_AGENT_STEP_LABEL[id],
       subProgress,
-      workflowName: workflowNameForStep(id, caseData, subProgress),
+      workflowName: workflowNameForStep(id, caseData, subProgress, copyVariant),
       complete,
       ratio: subProgressRatio(subProgress),
     };
