@@ -3,6 +3,7 @@
 import { Wrench } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 
+import { SelfManagedMaintenancePanel } from '@/components/agent/maintenance-self-managed/self-managed-maintenance-panel';
 import { ModuleCaseDetail } from '@/components/agent/module-workspace/module-case-detail';
 import {
   ModuleCellText,
@@ -20,6 +21,7 @@ import {
   MODULE_WORKSPACE_LABELS,
 } from '@/constants/module-workspace';
 import { OWNER_DECISION_MODULE } from '@/constants/owner-decision';
+import { SELF_MANAGED_MAINTENANCE_COPY } from '@/constants/self-managed-maintenance';
 import { maintenanceDetail } from '@/constants/routes';
 import { compareNumbers, compareSortTime, compareStrings } from '@/lib/client-table-sort';
 import { findLaneDefinition, maintenanceLane } from '@/lib/module-workspace-lanes';
@@ -117,6 +119,10 @@ function MobileRow({ m }: { m: MaintenanceRequest }) {
 }
 
 function Detail({ m }: { m: MaintenanceRequest }) {
+  const { properties, refresh } = useAgentData();
+  const agencyId = properties.find((p) => p.id === m.propertyId)?.agencyId ?? null;
+  // Lanes come from the portfolio list, so a step that moves the job re-reads it.
+  const onChanged = useCallback(() => void refresh({ force: true }), [refresh]);
   return (
     <ModuleCaseDetail
       module={OWNER_DECISION_MODULE.MAINTENANCE}
@@ -128,6 +134,17 @@ function Detail({ m }: { m: MaintenanceRequest }) {
       lane={laneOf(m)}
       statusLabel={m.status}
       detailHref={maintenanceDetail(m.id)}
+      actions={{
+        title: SELF_MANAGED_MAINTENANCE_COPY.sectionTitle,
+        content: (
+          <SelfManagedMaintenancePanel
+            key={m.id}
+            requestId={m.id}
+            agencyId={agencyId}
+            onChanged={onChanged}
+          />
+        ),
+      }}
       fields={[
         { label: MODULE_FIELD_LABELS.status, value: m.status },
         { label: MODULE_FIELD_LABELS.tradie, value: m.contractorName ?? MODULE_WORKSPACE_LABELS.noValue },

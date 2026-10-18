@@ -16,7 +16,18 @@ export type MaintenancePaymentStatus =
 export type MaintenanceWorkOrderStatus =
   components['schemas']['AgentMaintenanceWorkOrderDto']['status'];
 
-/** Read-only payment lane (§13, §20). The agent sees the state; only staff can move it. */
+export const MAINTENANCE_PAYMENT_STATUS = {
+  NOT_READY: 'NOT_READY',
+  PAYMENT_PENDING: 'PAYMENT_PENDING',
+  PAID: 'PAID',
+  EXTERNAL_SETTLEMENT: 'EXTERNAL_SETTLEMENT',
+  BLOCKED: 'BLOCKED',
+} as const satisfies Record<string, MaintenancePaymentStatus>;
+
+/**
+ * Payment lane (§13, §20). Staff move it; a Self-Manage agency also records its own
+ * off-platform settlement.
+ */
 export const MAINTENANCE_PAYMENT_STATUS_LABEL: Record<MaintenancePaymentStatus, string> = {
   NOT_READY: 'Payment not ready',
   PAYMENT_PENDING: 'Payment pending',

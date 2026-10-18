@@ -3,6 +3,10 @@
 ## 2026-10-17
 
 ### Added
+- Self-Manage Maintenance page detail pane runs the job: urgent decision with spending limit, reported issues with dismiss and tenant answers, email questions, compare and decide submitted quotes, enter a quote for an invited tradie, split, combine, book the visit, accept or dispute the invoice, record the agency's own payment and sign the work off.
+- Maintenance pane notes when the owner gets an emailed copy (quote decisions above the repair limit, and the sign-off).
+- Agent client calls for the Self-Manage maintenance routes (contract 0.27.0).
+- `@crossub-thongz/api-contract` bumped to ^0.27.0.
 - `@crossub-thongz/api-contract` bumped to ^0.26.0 (was ^0.24.0).
 - Settings → Plan card compares Self-Manage, Inspection Only and Full Service; a principal switches plan with a confirmation dialog, agents and Legacy agencies see it read-only.
 - Self-Manage copy variants for page tours, module tutorials, Tasks buckets, CROS's role line and the property approval banner (`constants/agent-copy-variant.ts`).
@@ -33,6 +37,9 @@
 - Type errors in `register-confirm-panel.tsx` and `add-payment-method-gate.tsx`.
 - A portfolio refresh requested while another is in flight now runs once more instead of being dropped, so a plan switch shows straight away.
 - Message threads in the new `SALES` department map to Others.
+
+### Removed
+- Unused `createMaintenanceQuotation` legacy staff-route client call.
 
 ## 2026-09-29
 

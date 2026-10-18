@@ -182,6 +182,173 @@ export async function fetchAgentMaintenanceDetail(
   return unwrapAgentMaintenance(result, 'Failed to load the maintenance job');
 }
 
+// ---------------------------------------------------------------------------------------------
+// Self-Manage maintenance (Phase 1): the Account Manager's steps on a job, run by the agent.
+// Self-Manage properties only — the server returns 403 for every other plan. Each call returns
+// the refreshed job detail.
+// ---------------------------------------------------------------------------------------------
+
+export type AgentMaintenanceIssue = components['schemas']['AgentMaintenanceIssueDto'];
+export type AgentMaintenanceContractorRef =
+  components['schemas']['AgentMaintenanceContractorRefDto'];
+export type AgentMaintenanceCombineCandidate =
+  components['schemas']['MaintenanceCombineCandidateDto'];
+export type AuthoriseUrgentWorkInput = components['schemas']['AuthoriseUrgentWorkDto'];
+export type SplitMaintenanceJobInput = components['schemas']['SplitMaintenanceFlowDto'];
+export type CombineMaintenanceJobsInput = components['schemas']['CombineMaintenanceCasesDto'];
+export type DismissMaintenanceIssueInput = components['schemas']['DismissMaintenanceIssueDto'];
+export type SendMaintenanceQuestionsInput = components['schemas']['SendMaintenanceQuestionsDto'];
+export type RecordMaintenanceAnswersInput =
+  components['schemas']['RecordMaintenanceIssueAnswersDto'];
+export type SelfManagedQuoteInput = components['schemas']['AgentSelfManagedCreateQuoteDto'];
+export type SelfManagedScheduleArrangedInput =
+  components['schemas']['AgentSelfManagedScheduleArrangedDto'];
+export type ResolveInvoiceMatchInput = components['schemas']['ResolveMaintenanceInvoiceMatchDto'];
+export type SelfManagedPaymentInput = components['schemas']['AgentSelfManagedRecordPaymentDto'];
+
+export async function authoriseUrgentMaintenance(
+  requestId: string,
+  body: AuthoriseUrgentWorkInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/urgent-authorisations', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't record the urgent decision");
+}
+
+export async function splitMaintenanceJob(
+  requestId: string,
+  body: SplitMaintenanceJobInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/split', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't split the job");
+}
+
+export async function fetchMaintenanceCombineCandidates(
+  requestId: string,
+): Promise<AgentMaintenanceCombineCandidate[]> {
+  const result = await crossub.GET('/agent/maintenance/{requestId}/combine-candidates', {
+    params: { path: { requestId } },
+  });
+  return unwrapAgentMaintenance(result, "Couldn't load jobs to combine with").candidates;
+}
+
+/** Folds this job into `intoRequestId`; returns the surviving job. */
+export async function combineMaintenanceJob(
+  requestId: string,
+  body: CombineMaintenanceJobsInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/combine', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't combine the jobs");
+}
+
+export async function dismissMaintenanceIssue(
+  requestId: string,
+  issueId: string,
+  body: DismissMaintenanceIssueInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/issues/{issueId}/dismiss', {
+    params: { path: { requestId, issueId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't dismiss the issue");
+}
+
+export async function sendMaintenanceQuestions(
+  requestId: string,
+  body: SendMaintenanceQuestionsInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/issues/send-questions', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't send the questions");
+}
+
+export async function recordMaintenanceAnswers(
+  requestId: string,
+  body: RecordMaintenanceAnswersInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/issues/answers', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't save the answers");
+}
+
+export async function createSelfManagedMaintenanceQuote(
+  requestId: string,
+  body: SelfManagedQuoteInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/quotes', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't save the quote");
+}
+
+export async function submitMaintenanceVisitTimes(
+  requestId: string,
+  availableTimes: string,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/schedule/availability', {
+    params: { path: { requestId } },
+    body: { availableTimes },
+  });
+  return unwrapAgentMaintenance(result, "Couldn't send the visit times");
+}
+
+export async function recordMaintenanceVisitArranged(
+  requestId: string,
+  body: SelfManagedScheduleArrangedInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/schedule/arranged', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't record the visit");
+}
+
+export async function resolveMaintenanceInvoiceMatch(
+  requestId: string,
+  matchId: string,
+  body: ResolveInvoiceMatchInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST(
+    '/agent/maintenance/{requestId}/invoice-matches/{matchId}/resolve',
+    { params: { path: { requestId, matchId } }, body },
+  );
+  return unwrapAgentMaintenance(result, "Couldn't resolve the invoice");
+}
+
+export async function recordMaintenancePayment(
+  requestId: string,
+  matchId: string,
+  body: SelfManagedPaymentInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST(
+    '/agent/maintenance/{requestId}/invoice-matches/{matchId}/payment',
+    { params: { path: { requestId, matchId } }, body },
+  );
+  return unwrapAgentMaintenance(result, "Couldn't record the payment");
+}
+
+export async function approveMaintenanceCompletion(
+  requestId: string,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/completion/approve', {
+    params: { path: { requestId } },
+  });
+  return unwrapAgentMaintenance(result, "Couldn't sign the job off");
+}
+
 export async function setMaintenanceCompletionEvidence(
   requestId: string,
   uploaded: boolean,
@@ -301,29 +468,6 @@ export async function inviteMaintenanceContractorsForRfq(
           previewContractorName: options.previewContractorName,
         }
       : {}),
-  });
-}
-
-export async function createMaintenanceQuotation(input: {
-  maintenanceRequestId: string;
-  contractorId: string;
-  price: number;
-  currency: 'AUD';
-  scope: string;
-  availableSchedule: string;
-  lineItems?: Array<{
-    id: string;
-    description: string;
-    quantity: number;
-    unitPriceExGst: number;
-    gst: number;
-    amountIncGst: number;
-  }>;
-  comments?: string;
-}): Promise<ApiMaintenanceState> {
-  return api.post<ApiMaintenanceState>('/maintenance/quotations/create', {
-    ...input,
-    actorRole: AGENT_ROLE,
   });
 }
 

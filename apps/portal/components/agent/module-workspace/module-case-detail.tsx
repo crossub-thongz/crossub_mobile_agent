@@ -38,8 +38,8 @@ function DetailSection({ title, children }: { title: string; children: ReactNode
 
 /**
  * Right-hand pane on the Self-Manage module pages: job summary, a link to the existing full
- * detail page, a generic "Record a decision" (Phase 1 wires the real actions) and the owner
- * decision history for this job.
+ * detail page, the module's own actions when it has them (Maintenance, Phase 1), a generic
+ * "Record a decision" and the owner decision history for this job.
  */
 export function ModuleCaseDetail({
   module,
@@ -52,6 +52,7 @@ export function ModuleCaseDetail({
   statusLabel,
   fields,
   detailHref,
+  actions,
 }: {
   module: OwnerDecisionModule;
   /** The job's UUID — decisions are filed against it. */
@@ -66,6 +67,8 @@ export function ModuleCaseDetail({
   statusLabel?: string;
   fields: readonly ModuleCaseDetailField[];
   detailHref: string;
+  /** The module's workflow actions for this job, above the generic decision record. */
+  actions?: { title: string; content: ReactNode };
 }) {
   const { properties, archivedProperties, agencies } = useAgentData();
   const [decisionToken, setDecisionToken] = useState(0);
@@ -113,6 +116,8 @@ export function ModuleCaseDetail({
           ))}
         </dl>
       </DetailSection>
+
+      {actions ? <DetailSection title={actions.title}>{actions.content}</DetailSection> : null}
 
       {property ? (
         <>

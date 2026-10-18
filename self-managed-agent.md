@@ -54,7 +54,7 @@ Owner: Chan
   - Allow a landlord recipient when that property's resolved level is `SELF_MANAGED`.
   - Keep failing closed when the level cannot be resolved.
   - Thread the context through `mail.service.ts` call sites.
-- [ ] **Agency sender.** (Code done; SPF/DKIM for the inbound domain still to confirm with ops.) Send owner email as `"Agency name" <inboundEmailSlug@CROSSUB domain>` so replies land in the agency's inbox (`agency-inbound-email-assign.util.ts`, `formatAgencyInboundAddress`). Confirm SPF/DKIM for that domain.
+- [ ] **Agency sender.** (Code done. DKIM and sending records for `email.crossub.com.au` are entered in GoDaddy and wait for the domain owner's SMS verification, then Resend verification.) Send owner email as `"Agency name" <inboundEmailSlug@CROSSUB domain>` so replies land in the agency's inbox (`agency-inbound-email-assign.util.ts`, `formatAgencyInboundAddress`). Confirm SPF/DKIM for that domain.
 - [x] **Shared decision record.** One service that records "decision + emailed owner copy" on a job's timeline. Every module reuses it.
 - [x] Agent route to change the agency's tier, for the plan switch. Principal only.
 
@@ -90,14 +90,14 @@ Today the agent can log a job, set responsibility, invite tradies, approve, reje
 
 New agent actions (backend route, contract, then screen):
 
-- [ ] Urgent triage: confirm urgent, convert to normal, make-safe or escalate, and set the spending limit (`MaintenanceUrgentAuthorisation`).
-- [ ] Issue triage: split, combine, dismiss, send questions to the tenant, record answers.
-- [ ] Enter a quote for a tradie. `createMaintenanceQuotation` exists in the client but is unused.
-- [ ] Quote comparison view.
-- [ ] Book visit times on the contractor's behalf.
-- [ ] Invoice match (matched, variance, disputed) and payment status.
-- [ ] Self-Manage: quote decisions above `maintenanceSpendThreshold` and job completion send the owner a copy through the shared decision record.
-- [ ] Desktop Maintenance page: lanes (Needs action, Awaiting contractor, Awaiting tenant, In progress, Done) as a table with the case workspace in a split pane.
+- [x] Urgent triage: confirm urgent, convert to normal, make-safe or escalate, and set the spending limit (`MaintenanceUrgentAuthorisation`).
+- [x] Issue triage: split, combine, dismiss, send questions to the tenant, record answers.
+- [x] Enter a quote for a tradie (invited tradies only). The unused legacy `createMaintenanceQuotation` is removed.
+- [x] Quote comparison view (submitted quotes side by side, lowest flagged, approve or decline).
+- [x] Book visit times on the contractor's behalf, or record a visit they arranged directly.
+- [x] Invoice match (accept variance or dispute) and payment status. A Self-Manage agency records its own payment as `EXTERNAL_SETTLEMENT`; `PAID` stays staff only.
+- [x] Self-Manage: quote decisions above `maintenanceSpendThreshold` (any decision when none is set) and job completion send the owner a copy through the shared decision record.
+- [x] Desktop Maintenance page: lanes (Needs action, Awaiting contractor, Awaiting tenant, In progress, Done) as a table with the case workspace in a split pane.
 
 ### Inspection (agency staff in the inspector app)
 
