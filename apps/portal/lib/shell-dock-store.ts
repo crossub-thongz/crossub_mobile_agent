@@ -24,18 +24,23 @@ type ShellDockStore = {
   activePanel: ShellDockPanel;
   /** Mobile Gii bottom sheet — false keeps the compact ask bar visible. */
   giiExpanded: boolean;
+  /** Desktop CROS covers the app. The side panel is the step before this. */
+  crosWorkspace: boolean;
   giiLaunch: GiiLaunchContext | null;
   togglePanel: (id: Exclude<ShellDockPanel, null>) => void;
   closePanel: () => void;
   openGii: (launch?: GiiLaunchContext) => void;
   minimizeGii: () => void;
   expandGii: () => void;
+  enterCrosWorkspace: () => void;
+  exitCrosWorkspace: () => void;
   clearGiiLaunch: () => void;
 };
 
 export const useShellDockStore = create<ShellDockStore>((set) => ({
   activePanel: null,
   giiExpanded: false,
+  crosWorkspace: false,
   giiLaunch: null,
   togglePanel: (id) =>
     set((state) => ({
@@ -43,15 +48,18 @@ export const useShellDockStore = create<ShellDockStore>((set) => ({
       giiLaunch: id === 'gii' ? state.giiLaunch : state.giiLaunch,
       giiExpanded: id === 'gii' ? true : state.giiExpanded,
     })),
-  closePanel: () => set({ activePanel: null, giiExpanded: false }),
+  closePanel: () => set({ activePanel: null, giiExpanded: false, crosWorkspace: false }),
   openGii: (launch?: GiiLaunchContext | null) =>
     set((state) => ({
       activePanel: 'gii',
       giiExpanded: true,
+      crosWorkspace: false,
       giiLaunch: launch === undefined ? state.giiLaunch : launch,
     })),
-  minimizeGii: () => set({ giiExpanded: false }),
+  minimizeGii: () => set({ giiExpanded: false, crosWorkspace: false }),
   expandGii: () => set({ activePanel: 'gii', giiExpanded: true }),
+  enterCrosWorkspace: () => set({ activePanel: 'gii', giiExpanded: true, crosWorkspace: true }),
+  exitCrosWorkspace: () => set({ crosWorkspace: false }),
   clearGiiLaunch: () => set({ giiLaunch: null }),
 }));
 

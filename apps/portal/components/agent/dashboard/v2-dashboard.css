@@ -56,6 +56,10 @@
   z-index: 1;
 }
 
+.v2-dashboard-canvas > .agent-sidebar {
+  z-index: 60;
+}
+
 .v2-dashboard-canvas .v2-dashboard-chrome {
   border-color: color-mix(in oklab, var(--crossub-border) 50%, transparent);
   -webkit-backdrop-filter: none;

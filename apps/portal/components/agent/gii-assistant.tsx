@@ -2,15 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, Mic, Send, X } from 'lucide-react';
+import { Building2, Maximize2, Mic, Minimize2, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CrosAssistantLogo, CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
 import {
-  DashboardAskCrosPanel,
-  DashboardNeedsAttentionPanel,
-} from '@/components/agent/dashboard/dashboard-cros-panel';
+  CrosPortfolioBody,
+  CrosPortfolioTabs,
+  readCrosHistory,
+  useCrosPortfolioModel,
+  writeCrosHistory,
+  type CrosHistoryEntry,
+  type CrosPortfolioView,
+} from '@/components/agent/cros-portfolio-views';
 import { GiiBriefingCard } from '@/components/agent/gii-briefing-card';
 import { GiiChatGreeting, GiiChatLine } from '@/components/agent/gii-chat-line';
 import {
@@ -212,6 +217,8 @@ export function GiiAssistant({
   onClose,
   variant = 'modal',
   expanded = true,
+  workspace = false,
+  onToggleWorkspace,
   scope,
   children,
   messageReply,
@@ -224,6 +231,9 @@ export function GiiAssistant({
   variant?: 'modal' | 'panel' | 'embedded' | 'message-dock';
   /** Mobile bottom sheet — when false the session stays mounted but hidden. */
   expanded?: boolean;
+  /** Desktop full-screen CROS workspace. */
+  workspace?: boolean;
+  onToggleWorkspace?: () => void;
   /** Embed overrides — property/message pages pass scope directly instead of via the shell store. */
   scope?: GiiScope;
   /** Message thread bubbles rendered above the Gii transcript (message-dock only). */
@@ -368,10 +378,15 @@ export function GiiAssistant({
     return formatPropertyFullAddress(scopedProperty);
   }, [effectiveLaunch.propertyAddress, scopedProperty]);
 
-  /** V2 shell rail — Needs attention + Ask CROS on every portfolio page (not property/message scope). */
-  const isDashboardV2Panel =
-    isPanel && isV2 && !scopedProperty && !messageScoped;
-  const isFrostedV2Panel = isPanel && isV2 && !isDashboardV2Panel;
+  /** Portfolio CROS — Discover, chat, insights, and this session's history. */
+  const isPortfolioCros = (isPanel || isModal) && isV2 && !scopedProperty && !messageScoped;
+  const isFrostedV2Panel = isPanel && isV2 && !isPortfolioCros;
+  const [crosView, setCrosView] = useState<CrosPortfolioView>('discover');
+  const [crosHistory, setCrosHistory] = useState<CrosHistoryEntry[]>([]);
+  const crosHistoryIdRef = useRef<string | null>(null);
+  const portfolioCrosRef = useRef(false);
+  portfolioCrosRef.current = isPortfolioCros;
+  const portfolioModel = useCrosPortfolioModel();
 
   // On a property, Gii opens with that property's IN-PROGRESS JOBS — the same "Jobs in
   // progress" set the Overview tab shows (one shared selector, so the two never disagree),
@@ -643,6 +658,7 @@ export function GiiAssistant({
     const trimmed = text.trim();
     const hasAttachments = attachmentFiles.length > 0;
     if ((!trimmed && !hasAttachments) || sending) return;
+    if (portfolioCrosRef.current) setCrosView('chat');
 
     const attachmentViews = attachmentFiles.map(pendingToView);
     const userLine: ChatLine = {
@@ -790,6 +806,48 @@ export function GiiAssistant({
       initialPromptHandledRef.current = false;
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setCrosHistory(readCrosHistory(user.id));
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!isPortfolioCros || !user?.id) return;
+    const settled = lines.filter((line) => !line.pending && line.text && line.text !== 'Thinking…');
+    const firstUser = settled.find((line) => line.role === 'user');
+    if (!firstUser) return;
+    if (!crosHistoryIdRef.current) crosHistoryIdRef.current = `cros-${firstUser.id}`;
+    const entry: CrosHistoryEntry = {
+      id: crosHistoryIdRef.current,
+      title: firstUser.text.slice(0, 80),
+      at: new Date().toISOString(),
+      lines: settled.map((line) => ({ id: line.id, role: line.role, text: line.text })),
+    };
+    setCrosHistory((prev) => {
+      const next = [entry, ...prev.filter((item) => item.id !== entry.id)].slice(0, 20);
+      writeCrosHistory(user.id, next);
+      return next;
+    });
+  }, [isPortfolioCros, lines, user?.id]);
+
+  const openCrosHistory = (entry: CrosHistoryEntry) => {
+    crosHistoryIdRef.current = entry.id;
+    setLines(
+      entry.lines.map((line) => ({
+        id: line.id,
+        role: line.role,
+        text: line.text,
+      })),
+    );
+    setCrosView('chat');
+  };
+
+  const startCrosChat = () => {
+    crosHistoryIdRef.current = null;
+    setLines([]);
+    setCrosView('discover');
+  };
 
   /** Ask Gii conversationally about a briefing row — scoped to that property automatically. */
   const askAboutRow = (row: PropertyNeedAction) => {
@@ -1151,9 +1209,10 @@ export function GiiAssistant({
     <div
       className={cn(
         'flex flex-col',
-        isDashboardV2Panel && 'bg-transparent',
+        isPortfolioCros && 'bg-[#f7faf9]',
         isFrostedV2Panel && 'v2-frosted-surface border-0 shadow-none',
-        !isDashboardV2Panel && !isFrostedV2Panel && 'bg-white dark:bg-card',
+        !isPortfolioCros && !isFrostedV2Panel && 'bg-white dark:bg-card',
+        workspace && 'h-full w-full bg-[#f7faf9] px-[max(1.5rem,calc((100%-930px)/2))]',
         isEmbedded
           ? 'w-full'
           : isPanel
@@ -1169,90 +1228,63 @@ export function GiiAssistant({
       <div
         className={cn(
           'flex shrink-0 items-center justify-between border-b px-4 py-3',
-          isFrostedV2Panel && 'border-border/40',
+          (isFrostedV2Panel || isPortfolioCros) && 'border-[#ccece3]',
           isEmbedded && 'py-2.5',
-          isDashboardV2Panel && 'hidden',
         )}
       >
         <div className="flex min-w-0 items-center gap-2">
           <CrosAssistantLogoBadge size="xl" />
           <div className="min-w-0">
-            <p className="text-sm font-bold">{CROS_ASSISTANT_NAME}</p>
+            <p className="text-sm font-bold">
+              {isPanel && isV2 ? `${CROS_ASSISTANT_NAME} Assistant` : CROS_ASSISTANT_NAME}
+            </p>
             <p className="text-muted-foreground truncate text-[11px]">
               {messageScoped
                 ? 'Message assistant · context loaded'
-                : isEmbedded || isPanel
-                  ? roleCopy.headerRole
-                  : scopedAddress
-                    ? `${roleCopy.headerScopedRole} · ${scopedAddress}`
-                    : `${roleCopy.headerRole} · ${multilingualHint()}`}
+                : isPanel && isV2
+                  ? 'Ready to help'
+                  : isEmbedded || isPanel
+                    ? roleCopy.headerRole
+                    : scopedAddress
+                      ? `${roleCopy.headerScopedRole} · ${scopedAddress}`
+                      : `${roleCopy.headerRole} · ${multilingualHint()}`}
             </p>
           </div>
         </div>
-        {!isInline && onClose ? (
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-secondary"
-            aria-label={`Close ${CROS_ASSISTANT_NAME}`}
-          >
-            <X className="size-5" />
-          </button>
+        {onToggleWorkspace || onClose ? (
+          <div className="flex shrink-0 items-center">
+            {onToggleWorkspace ? (
+              <button
+                type="button"
+                onClick={onToggleWorkspace}
+                className="text-muted-foreground hover:bg-secondary hover:text-primary flex size-10 items-center justify-center rounded-lg"
+                aria-label={workspace ? 'Exit full screen' : 'Expand workspace'}
+                title={workspace ? 'Exit full screen' : 'Expand workspace'}
+              >
+                {workspace ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+              </button>
+            ) : null}
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-muted-foreground hover:bg-secondary flex size-10 items-center justify-center rounded-lg"
+                aria-label={`Close ${CROS_ASSISTANT_NAME}`}
+              >
+                <X className="size-5" />
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
-      {isDashboardV2Panel ? (
-        <div className="normal-case grid min-h-0 flex-1 grid-rows-[minmax(0,1.15fr)_minmax(0,0.85fr)] gap-3 p-3">
-          <div className="v2-dashboard__card flex min-h-0 flex-col overflow-hidden">
-            <DashboardNeedsAttentionPanel />
-          </div>
-          <div className="v2-dashboard__card flex min-h-0 flex-col overflow-hidden">
-            <DashboardAskCrosPanel
-              query={query}
-              onQueryChange={setQuery}
-              onSubmit={(event) => {
-                event.preventDefault();
-                void runQuery(query);
-              }}
-              onPrompt={(prompt) => void runQuery(prompt)}
-              sending={sending}
-              hasMessages={hasUserMessages}
-              chatScrollRef={scrollContainerRef}
-              chatEndRef={endRef}
-              onClose={onClose}
-            >
-              {lines.length > 0 ? (
-                <div className="space-y-3 pb-2">
-                  {lines.map((line) => (
-                    <div key={line.id} className="space-y-2">
-                      <GiiChatLine
-                        role={line.role}
-                        text={line.text}
-                        pending={line.pending}
-                        attachments={line.attachments}
-                      />
-                      {line.assessment ? <GiiAssessmentCard assessment={line.assessment} /> : null}
-                      {line.jobCases?.length ? (
-                        <GiiJobCaseButtons
-                          cases={line.jobCases}
-                          portfolioData={portfolioData}
-                          onOpen={openJob}
-                          onOpenMissing={openJobCaseLink}
-                        />
-                      ) : null}
-                      {line.lodgedRef ? (
-                        <p className="mr-auto text-xs font-medium text-primary">
-                          Case <span className="tabular-nums">{line.lodgedRef}</span> created
-                        </p>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </DashboardAskCrosPanel>
-          </div>
-        </div>
-      ) : (
+      {isPortfolioCros ? (
+        <CrosPortfolioTabs
+          view={crosView}
+          onView={setCrosView}
+          insightCount={portfolioModel.insights.length}
+        />
+      ) : null}
         <>
       {scopedAddress && !isEmbedded ? (
         <div className="border-border/40 border-b px-4 py-2">
@@ -1273,11 +1305,26 @@ export function GiiAssistant({
       <div
         ref={scrollContainerRef}
         className={cn(
-          'space-y-3 px-4 py-3',
+          'px-4 py-3',
           usePageScroll ? undefined : 'scrollbar-subtle min-h-0 flex-1 overflow-y-auto overscroll-contain',
         )}
       >
-        {!data.loading && !effectiveLaunch.initialPrompt ? (
+        <div
+          key={isPortfolioCros ? crosView : 'assistant'}
+          className={cn('space-y-3', isPortfolioCros && 'cros-panel-view-in')}
+        >
+        {isPortfolioCros && crosView !== 'chat' ? (
+          <CrosPortfolioBody
+            view={crosView}
+            wide={workspace}
+            onAsk={(prompt) => void runQuery(prompt)}
+            history={crosHistory}
+            onOpenHistory={openCrosHistory}
+            onNewChat={startCrosChat}
+          />
+        ) : null}
+
+        {!isPortfolioCros && !data.loading && !effectiveLaunch.initialPrompt ? (
           <div className="space-y-2">
             {!hasUserMessages ? (
               <GiiChatGreeting text={greetingText} />
@@ -1298,7 +1345,7 @@ export function GiiAssistant({
           </div>
         ) : null}
 
-        {lines.length === 0 && data.loading ? (
+        {lines.length === 0 && data.loading && !(isPortfolioCros && crosView !== 'chat') ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <CrosAssistantLogoBadge size="2xl" className="mb-4" />
             <p className="text-sm font-semibold">{roleCopy.askTitle}</p>
@@ -1314,7 +1361,8 @@ export function GiiAssistant({
         !data.loading &&
         briefingIsEmpty &&
         !effectiveLaunch.initialPrompt &&
-        !messageScoped ? (
+        !messageScoped &&
+        !isPortfolioCros ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <p className="text-muted-foreground max-w-[260px] text-xs leading-relaxed">
               {scopedProperty
@@ -1324,7 +1372,7 @@ export function GiiAssistant({
           </div>
         ) : null}
 
-        {lines.map((line) => (
+        {(!isPortfolioCros || crosView === 'chat') && lines.map((line) => (
           <div key={line.id} className="space-y-2">
             <GiiChatLine
               role={line.role}
@@ -1351,6 +1399,7 @@ export function GiiAssistant({
             ) : null}
           </div>
         ))}
+        </div>
 
         <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
       </div>
@@ -1358,12 +1407,14 @@ export function GiiAssistant({
       <div
         className={cn(
           'sticky bottom-0 z-10 shrink-0 border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
-          isFrostedV2Panel
-            ? 'border-border/50 bg-transparent shadow-none'
-            : 'bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)] dark:bg-card',
+          isPortfolioCros
+            ? 'border-[#ccece3] bg-[#f7faf9] shadow-none'
+            : isFrostedV2Panel
+              ? 'border-border/50 bg-transparent shadow-none'
+              : 'bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)] dark:bg-card',
         )}
       >
-        {!sending && !hasUserMessages ? (
+        {!isPortfolioCros && !sending && !hasUserMessages ? (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {suggestedPrompts.map((item) => (
               <button
@@ -1506,7 +1557,6 @@ export function GiiAssistant({
         </p>
       </div>
         </>
-      )}
     </div>
   );
 

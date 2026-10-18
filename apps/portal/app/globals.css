@@ -715,3 +715,33 @@
     animation: none;
   }
 }
+
+/* CROS premium demo: the panel slides in from the right, and a tab change uses the same curve. */
+@keyframes cros-panel-view-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.cros-panel-view-in {
+  animation: cros-panel-view-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.cros-panel-motion {
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cros-panel-view-in {
+    animation: none;
+  }
+
+  .cros-panel-motion {
+    transition: none;
+  }
+}

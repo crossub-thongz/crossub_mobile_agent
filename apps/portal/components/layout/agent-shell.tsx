@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useRef, useState, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 
 import { ConnectionBanner } from '@/components/agent/connection-banner';
 import { AddFirstPropertyBanner } from '@/components/agent/add-first-property-banner';
@@ -38,6 +39,7 @@ import { filterHiddenBillingNav } from '@/lib/platform-billing-ui';
 import { isShellHomePath } from '@/components/layout/shell-back-button';
 import { useScrollbarReveal } from '@/lib/use-scrollbar-reveal';
 import { useShellAsideStore } from '@/lib/shell-aside-store';
+import { useShellDockStore } from '@/lib/shell-dock-store';
 import { cn } from '@/lib/utils';
 
 import '@/components/agent/dashboard/v2-dashboard.css';
@@ -105,9 +107,42 @@ export function AgentShell({
   const setHeaderCrosLauncher = useShellAsideStore((s) => s.setHeaderCrosLauncher);
   const showPropertyShellPreview =
     isV2 && propertiesPageActive && Boolean(propertyPreviewId);
-  const hideCrosRail =
-    Boolean(hideNeedAction) || (isV2 && propertiesPageActive && !propertyPreviewId);
-  const showHeaderCrosLauncher = hideCrosRail || showPropertyShellPreview;
+  const activePanel = useShellDockStore((state) => state.activePanel);
+  const crosWorkspace = useShellDockStore((state) => state.crosWorkspace);
+  const closePanel = useShellDockStore((state) => state.closePanel);
+  const enterCrosWorkspace = useShellDockStore((state) => state.enterCrosWorkspace);
+  const exitCrosWorkspace = useShellDockStore((state) => state.exitCrosWorkspace);
+  const crosOpen = activePanel === 'gii';
+  const crosOverlay = isV2 && !showPropertyShellPreview;
+  const [overlayFull, setOverlayFull] = useState(false);
+  const [crosLayerReady, setCrosLayerReady] = useState(false);
+  const hideCrosRail = isV2
+    ? !crosOpen && !showPropertyShellPreview
+    : Boolean(hideNeedAction) || (propertiesPageActive && !propertyPreviewId);
+  const showHeaderCrosLauncher = !isV2 && (hideCrosRail || showPropertyShellPreview);
+
+  useEffect(() => {
+    setCrosLayerReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!crosOverlay) return;
+    if (crosOpen) {
+      setOverlayFull(crosWorkspace);
+      return;
+    }
+    const timer = window.setTimeout(() => setOverlayFull(false), 300);
+    return () => window.clearTimeout(timer);
+  }, [crosOpen, crosOverlay, crosWorkspace]);
+
+  useEffect(() => {
+    if (!crosOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closePanel();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [closePanel, crosOpen]);
 
   useEffect(() => {
     if (!persistentChrome) return;
@@ -547,27 +582,64 @@ export function AgentShell({
         {!immersive ? (
           <CrosFloatingLauncher
             pathname={pathname}
-            crosRailOnDesktop={!hideCrosRail && !showPropertyShellPreview}
+            crosRailOnDesktop={!isV2 && !hideCrosRail}
           />
         ) : null}
         </div>
 
+        {(() => {
+          const crosFull = crosOpen ? crosWorkspace : overlayFull;
+          const panel = (
         <aside
           className={cn(
-            'v2-cros-rail h-full min-h-0 shrink-0 overflow-hidden border-l',
-            hideCrosRail ? 'hidden' : 'hidden lg:flex',
-            isV2 ? 'w-[min(100%,380px)] min-w-[320px] max-w-[420px]' : 'w-1/4 min-w-[300px] max-w-[420px]',
-            isV2
-              ? 'v2-frosted-surface border-border/50'
-              : 'border-border bg-background',
+            'v2-cros-rail min-h-0 shrink-0 overflow-hidden',
+            crosOverlay
+              ? cn(
+                  'cros-panel-motion fixed right-0 bottom-0 z-40 flex max-lg:hidden flex-col border-l border-[#ccece3] bg-[#f7faf9] shadow-[-16px_0_70px_rgba(32,76,75,0.12)]',
+                  !crosOpen && 'pointer-events-none',
+                )
+              : cn(
+                  hideCrosRail && 'hidden',
+                  !hideCrosRail && 'hidden lg:flex',
+                  !crosOpen &&
+                    (isV2
+                      ? 'h-full w-[380px] border-l border-border/50 bg-background'
+                      : 'h-full w-1/4 min-w-[300px] max-w-[420px] border-l border-border bg-background'),
+                ),
           )}
+          style={
+            crosOverlay
+              ? {
+                  top: 'var(--env-banner-height, 0px)',
+                  right: 0,
+                  width: crosFull ? 'calc(100% - 252px)' : '480px',
+                  transform: crosOpen ? 'translateX(0)' : 'translateX(104%)',
+                  transition: 'transform .3s cubic-bezier(.2,.8,.2,1), width .2s',
+                }
+              : undefined
+          }
+          inert={crosOverlay && !crosOpen ? true : undefined}
+          aria-hidden={crosOverlay && !crosOpen ? true : undefined}
         >
-          {showPropertyShellPreview && propertyPreviewId ? (
+          {showPropertyShellPreview && propertyPreviewId && !crosOpen ? (
             <PropertyListShellPreview propertyId={propertyPreviewId} />
           ) : (
-            <GiiAssistant open variant="panel" />
+            <GiiAssistant
+              open
+              variant="panel"
+              workspace={isV2 && crosWorkspace}
+              onClose={isV2 ? closePanel : undefined}
+              onToggleWorkspace={
+                isV2 ? (crosWorkspace ? exitCrosWorkspace : enterCrosWorkspace) : undefined
+              }
+            />
           )}
         </aside>
+          );
+          if (!crosOverlay) return panel;
+          if (!crosLayerReady) return null;
+          return createPortal(panel, document.body);
+        })()}
         </div>
       </div>
     </div>

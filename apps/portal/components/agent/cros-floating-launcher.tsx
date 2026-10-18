@@ -15,19 +15,19 @@ function isActiveChatPath(pathname: string): boolean {
 }
 
 /**
- * CROS launcher for surfaces that do not show the Ask CROS rail or dashboard ask bar.
- * Desktop v2 uses the rail or a header logo; this FAB covers mobile and v1.
+ * Floating CROS entry. Clicking it opens the side panel; the panel can then expand
+ * to the full workspace. Below the desktop breakpoint the same click opens the sheet.
  */
 export function CrosFloatingLauncher({
   pathname,
-  crosRailOnDesktop,
+  crosRailOnDesktop = false,
 }: {
   pathname: string;
-  /** True when the shell aside already shows Gii (not a property preview). */
-  crosRailOnDesktop: boolean;
+  /** Kept for callers that still pin CROS in a permanent rail. */
+  crosRailOnDesktop?: boolean;
 }) {
   const isV2 = useIsAgentUiV2();
-  const { properties } = useAgentData();
+  const { properties, needActionItems } = useAgentData();
   const activePanel = useShellDockStore((s) => s.activePanel);
   const giiExpanded = useShellDockStore((s) => s.giiExpanded);
   const openGii = useShellDockStore((s) => s.openGii);
@@ -36,10 +36,11 @@ export function CrosFloatingLauncher({
   const propertyId = propertyIdFromPath(pathname);
   const property = propertyId ? properties.find((p) => p.id === propertyId) : undefined;
   const isDashboard = pathname === ROUTES.DASHBOARD;
-  const modalOpen = activePanel === 'gii' && giiExpanded;
+  const panelOpen = activePanel === 'gii';
   const messageThread = isActiveChatPath(pathname);
+  const attentionCount = needActionItems.length;
 
-  const showFab = !modalOpen && !messageThread;
+  const showFab = !panelOpen && !messageThread && !crosRailOnDesktop;
 
   const handleOpen = () => {
     if (propertyId && property) {
@@ -55,28 +56,40 @@ export function CrosFloatingLauncher({
   return (
     <>
       {showFab ? (
-        <button
-          type="button"
-          onClick={handleOpen}
-          aria-label={`Ask ${CROS_ASSISTANT_NAME}`}
+        <div
           className={cn(
-            'fixed z-[70] flex size-14 items-center justify-center rounded-full',
-            'bg-card/95 shadow-lg shadow-black/15 ring-1 ring-border/70 backdrop-blur-md',
-            'hover:bg-card active:scale-[0.97] transition',
+            'fixed z-[70] flex items-center gap-3',
             'right-3.5 bottom-[calc(5.5rem+env(safe-area-inset-bottom))]',
             'sm:right-4',
             'lg:right-6 lg:bottom-6',
-            (crosRailOnDesktop || isV2) && 'lg:hidden',
             isDashboard && 'max-lg:hidden',
             propertyId && 'max-lg:hidden',
           )}
         >
-          <CrosAssistantLogoBadge size="lg" />
-        </button>
+          <p className="border-border/70 bg-background hidden rounded-xl px-4 py-3 text-sm font-medium shadow-lg shadow-black/10 lg:block">
+            Ask {CROS_ASSISTANT_NAME} — your AI property assistant
+          </p>
+          <button
+            type="button"
+            onClick={handleOpen}
+            aria-label={`Ask ${CROS_ASSISTANT_NAME}`}
+            className={cn(
+              'relative flex size-16 items-center justify-center rounded-[1.35rem] text-white',
+              'bg-primary shadow-[0_10px_32px_rgba(0,158,123,0.33)] transition hover:-translate-y-0.5 active:scale-[0.97]',
+            )}
+          >
+            <CrosAssistantLogoBadge size="lg" />
+            {attentionCount > 0 ? (
+              <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white ring-2 ring-white">
+                {attentionCount > 9 ? '9+' : attentionCount}
+              </span>
+            ) : null}
+          </button>
+        </div>
       ) : null}
 
-      {modalOpen && !messageThread ? (
-        <div className={cn(crosRailOnDesktop && 'lg:hidden')}>
+      {panelOpen && giiExpanded && !messageThread ? (
+        <div className={cn(isV2 && 'lg:hidden')}>
           <GiiAssistant open expanded={giiExpanded} variant="modal" onClose={closePanel} />
         </div>
       ) : null}
