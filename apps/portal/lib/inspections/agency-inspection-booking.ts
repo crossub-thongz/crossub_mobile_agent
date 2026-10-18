@@ -5,6 +5,7 @@ import {
   ROUTINE_FLOW,
   type AgencyInspectionType,
 } from '@/constants/self-managed-inspections';
+import { propertyWallClockToIso } from '@/lib/utils/property-wall-clock';
 
 /**
  * The agency-conducted type a create-inspection form books, or null when the form keeps the
@@ -24,10 +25,13 @@ export function resolveAgencyBookingType(args: {
   return type;
 }
 
-/** A `datetime-local` value as an ISO instant; throws when it is missing or invalid. */
+/**
+ * A `datetime-local` value, read as Sydney time like every other property time, as an ISO
+ * instant; throws when it is missing or invalid.
+ */
 export function agencyScheduledTimeIso(local: string): string {
   if (!local.trim()) throw new Error(AGENCY_BOOKING_COPY.needTime);
-  const when = new Date(local);
-  if (Number.isNaN(when.getTime())) throw new Error(AGENCY_BOOKING_COPY.invalidTime);
-  return when.toISOString();
+  const iso = propertyWallClockToIso(local);
+  if (!iso) throw new Error(AGENCY_BOOKING_COPY.invalidTime);
+  return iso;
 }

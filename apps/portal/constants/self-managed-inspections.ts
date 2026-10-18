@@ -127,7 +127,7 @@ export const AGENCY_BOOKING_COPY = {
   heading: 'Your agency conducts this inspection',
   hint: 'You set the time and the inspector. There is no CROSSUB charge.',
   routineNoticeHint: 'A routine visit needs the tenant’s written notice period, so pick a date far enough out.',
-  scheduledTime: 'Inspection date and time *',
+  scheduledTime: 'Inspection date and time (Sydney time) *',
   conductedBy: 'Conducted by *',
   submit: 'Book inspection',
   submitting: 'Booking…',

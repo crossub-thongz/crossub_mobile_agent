@@ -20,6 +20,7 @@
 - Maintenance jobs with sent visit times move to Awaiting tenant.
 - An approved quote no longer keeps the job in Needs action while the visit is booked.
 - Agency-conducted inspections move to Published once the agency signs the report off.
+- Self-Manage inspection booking reads the date and time as Sydney time, whatever zone the browser is in.
 
 ## 2026-10-17
 
