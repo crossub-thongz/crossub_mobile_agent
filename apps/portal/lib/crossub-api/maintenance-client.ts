@@ -352,6 +352,29 @@ export async function recordMaintenancePayment(
   return unwrapAgentMaintenance(result, "Couldn't record the payment");
 }
 
+export type SelfManagedUploadInput = components['schemas']['AgentSelfManagedUploadDto'];
+
+/** Completion photos or the tradie's invoice, uploaded for the tradie; clears that gate. */
+export async function uploadSelfManagedCompletionFile(
+  requestId: string,
+  body: SelfManagedUploadInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/completion/files', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't upload the file");
+}
+
+export async function recordMaintenanceTenantSignOff(
+  requestId: string,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/completion/tenant-sign-off', {
+    params: { path: { requestId } },
+  });
+  return unwrapAgentMaintenance(result, "Couldn't record the tenant sign-off");
+}
+
 export async function approveMaintenanceCompletion(
   requestId: string,
 ): Promise<AgentMaintenanceDetail> {

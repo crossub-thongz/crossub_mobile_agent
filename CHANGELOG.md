@@ -7,7 +7,8 @@
 - Maintenance pane notes when the owner gets an emailed copy (quote decisions above the repair limit, and the sign-off).
 - Agent client calls for the Self-Manage maintenance routes (contract 0.27.0).
 - Maintenance pane asks the agency's preferred tradies to quote, with an inline add-a-tradie for an agency that has none.
-- `@crossub-thongz/api-contract` bumped to ^0.28.0.
+- Maintenance pane Finish the job checklist: upload completion photos and the invoice for the tradie, record the tenant's sign-off, and sign the work off.
+- `@crossub-thongz/api-contract` bumped to ^0.29.0.
 - `@crossub-thongz/api-contract` bumped to ^0.26.0 (was ^0.24.0).
 - Settings → Plan card compares Self-Manage, Inspection Only and Full Service; a principal switches plan with a confirmation dialog, agents and Legacy agencies see it read-only.
 - Self-Manage copy variants for page tours, module tutorials, Tasks buckets, CROS's role line and the property approval banner (`constants/agent-copy-variant.ts`).

@@ -97,6 +97,7 @@ New agent actions (backend route, contract, then screen):
 - [x] Quote comparison view (submitted quotes side by side, lowest flagged, approve or decline).
 - [x] Book visit times on the contractor's behalf, or record a visit they arranged directly.
 - [x] Invoice match (accept variance or dispute) and payment status. A Self-Manage agency records its own payment as `EXTERNAL_SETTLEMENT`; `PAID` stays staff only.
+- [x] Completion gates the agency clears itself (added in testing: they were contractor or staff only, so a Self-Manage job could not close): upload completion photos and the invoice for the tradie, record the tenant's sign-off.
 - [x] Self-Manage: quote decisions above `maintenanceSpendThreshold` (any decision when none is set) and job completion send the owner a copy through the shared decision record.
 - [x] Desktop Maintenance page: lanes (Needs action, Awaiting contractor, Awaiting tenant, In progress, Done) as a table with the case workspace in a split pane.
 

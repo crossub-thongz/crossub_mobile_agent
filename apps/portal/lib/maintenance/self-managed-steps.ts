@@ -29,7 +29,7 @@ export interface SelfManagedMaintenanceSteps {
   invoiceDecision: boolean;
   /** The invoice is cleared and the tradie still needs paying. */
   payment: boolean;
-  /** The work is under way or done, and not signed off yet. */
+  /** The work is under way or done, and a completion gate is still open. */
   completion: boolean;
 }
 
@@ -77,8 +77,13 @@ export function selfManagedMaintenanceSteps(
       !SETTLED_PAYMENT.includes(match.paymentStatus),
     completion:
       open &&
-      !detail.agentApprovalReceived &&
-      (detail.completionEvidenceUploaded || WORK_STATUSES.includes(detail.status)),
+      WORK_STATUSES.includes(detail.status) &&
+      !(
+        detail.completionEvidenceUploaded &&
+        detail.invoiceUploaded &&
+        detail.tenantApprovalReceived &&
+        detail.agentApprovalReceived
+      ),
   };
 }
 

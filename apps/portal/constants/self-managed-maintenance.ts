@@ -14,6 +14,13 @@ export type InvoiceResolution = Schemas['ResolveMaintenanceInvoiceMatchDto']['re
 export type InvoiceMatchStatus = Schemas['AgentMaintenanceInvoiceMatchDto']['status'];
 export type MaintenanceIssueStatus = Schemas['AgentMaintenanceIssueDto']['status'];
 export type MaintenanceSplitPriority = NonNullable<Schemas['SplitMaintenanceFlowDto']['priority']>;
+export type SelfManagedUploadKind = Schemas['AgentSelfManagedUploadDto']['kind'];
+
+export const SELF_MANAGED_UPLOAD_KIND = {
+  EVIDENCE: 'evidence',
+  INVOICE: 'invoice',
+} as const satisfies Record<string, SelfManagedUploadKind>;
+
 export type UrgentAuthorisationStatus = Schemas['AgentMaintenanceUrgentAuthorisationDto']['status'];
 export type MaintenanceQuoteStatus = Schemas['AgentMaintenanceQuoteDto']['status'];
 
@@ -212,10 +219,20 @@ export const SELF_MANAGED_MAINTENANCE_COPY = {
   recordPayment: 'Mark paid',
   paymentRecorded: 'Payment recorded',
 
-  completionTitle: 'Sign off the work',
-  completionNeedsEvidence: 'The tradie’s completion photos are needed before you can sign off.',
-  completionReady: 'Completion photos are in. Signing off closes the job once the tenant is happy.',
-  completionSigned: 'Signed off',
+  completionTitle: 'Finish the job',
+  completionHint: 'The job closes once all four are done.',
+  gateEvidence: 'Completion photos',
+  gateInvoice: 'Tradie’s invoice',
+  gateTenant: 'Tenant confirmed it’s fixed',
+  gateAgency: 'You signed the work off',
+  uploadPhotos: 'Upload photos',
+  uploadInvoice: 'Upload invoice',
+  uploaded: 'Uploaded',
+  tenantConfirmed: 'Tenant confirmed',
+  recordTenant: 'Record tenant sign-off',
+  tenantRecorded: 'Tenant sign-off recorded',
   signOff: 'Sign off work',
   signedOff: 'Work signed off',
+  signOffNeedsEvidence: 'Upload the completion photos first.',
+  done: 'Done',
 } as const;
