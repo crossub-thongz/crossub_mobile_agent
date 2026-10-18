@@ -14,7 +14,7 @@ import {
   leasingCycleLane,
   maintenanceLane,
 } from '@/lib/module-workspace-lanes';
-import type { Inspection, LeasingCycle, MaintenanceRequest, MessageThread } from '@/lib/types';
+import type { Inspection, LeasingCycle, MaintenanceRequest } from '@/lib/types';
 import { inspectionRefSourceId, workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 import { leasingCycleStatusLabel } from '@/utils/leasing-relet-decision';
 
@@ -29,11 +29,11 @@ export type ConversationJobContext = {
 };
 
 /**
- * Resolve `thread.relatedCaseId` against the jobs the portfolio already loaded. Null when the
+ * Resolve a thread's linked case id against the jobs the portfolio already loaded. Null when the
  * thread has no linked job, or links one this pane does not show (rent review, tribunal…).
  */
 export function resolveConversationJob(
-  thread: MessageThread,
+  caseId: string | null,
   jobs: {
     maintenance: readonly MaintenanceRequest[];
     inspections: readonly Inspection[];
@@ -41,7 +41,6 @@ export function resolveConversationJob(
   },
   isV2: boolean,
 ): ConversationJobContext | null {
-  const caseId = thread.relatedCaseId;
   if (!caseId) return null;
 
   const maintenance = jobs.maintenance.find((m) => m.id === caseId);

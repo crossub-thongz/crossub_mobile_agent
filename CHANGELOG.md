@@ -18,6 +18,12 @@
 - Self-Manage lease agreement panel: edit term, start date and weekly rent, add a condition, confirm, send to tenant, regenerate and resend, upload own agreement and upload signed copy.
 - Self-Manage bond: paste the bond lodgement link and email it to the tenant.
 - Self-Manage end-of-lease bond settlement panel: set the bond held and the tenant's deductions, then confirm the settlement; replaces the key-in-when-asked window.
+- `@crossub-thongz/api-contract` bumped to ^0.35.0.
+- Agent client calls for the Self-Manage agency inbox routes.
+- Conversations thread list filters by Open, Resolved or All, Assigned to me, property and search, with unread dot, assignee and Load more.
+- Conversations thread pane: email reply from the agency address, Cros draft, template picker, Resolve and Reopen, and assignee picker.
+- Conversations job context: File under property, link and unlink a job on the property.
+- Conversations New conversation dialog emails a tenant, owner or contractor on a Self-Manage property.
 
 ### Changed
 - Agency team calls use the typed contract client.
@@ -25,6 +31,7 @@
 - Inspections pane drops Record a decision on agency-conducted jobs; sign-off is the decision.
 - Self-Manage applicant approve and reject, open report generation and ingoing inspection order go through the agent facade.
 - Self-Manage rent review tenant response recorded on the tenant's behalf goes through the agent facade.
+- Conversations page reads the Self-Manage agency inbox instead of the app message threads, and opens threads in place on mobile.
 
 ### Fixed
 - Maintenance jobs with sent visit times move to Awaiting tenant.
