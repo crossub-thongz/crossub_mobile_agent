@@ -151,18 +151,20 @@ Today the agent can make the re-let decision, add and shortlist applicants, hand
 
 New agent actions:
 
-- [ ] Application screening, with Cros scoring visible, and reference checks.
-- [ ] Applicant negotiation and request-info.
-- [ ] Prepare the contract, send it to the tenant, upload the signed copy.
-- [ ] Mark deposit paid, set the bond link, mark bond paid, record bond lodgement and refund.
-- [ ] Generate the open report and order the ingoing inspection (reuses Phase 1).
-- [ ] Rent review: key in landlord offers and record tenant responses as the agent (today the ACCOUNT_MANAGER channel).
-- [ ] End leasing:
+- [ ] Application screening, with Cros scoring visible, and reference checks. (AI score already shows on the applicant card; reference check still on staff routes.)
+- [x] Applicant negotiation and request-info.
+- [x] Prepare the contract, send it to the tenant, upload the signed copy.
+- [ ] Mark deposit paid, set the bond link, mark bond paid, record bond lodgement and refund. (Bond link done. Deposit/bond paid post to the trust ledger, so they move to Phase 3 with the accountant.)
+- [x] Generate the open report and order the ingoing inspection (reuses Phase 1).
+- [x] Rent review: key in landlord offers and record tenant responses as the agent (today the ACCOUNT_MANAGER channel).
+- [x] End leasing (settlement panel; responsibility items have a route, report-comparison UI still shows CROSSUB quote-step copy):
   - The agent builds the report comparison and deductions themselves. Today they enter them only "when CROSSUB asks" (`lib/termination-case-api.ts`, `agent-deductions-window.tsx`).
   - The agent proposes bond deductions and confirms the settlement.
-- [ ] Self-Manage owner copies: chosen applicant, rent increase, bond deductions.
-- [ ] **Bug:** tenant-selection approve and decline are local only (`app/tenant-selection/[id]/page.tsx:39-55`). Wire them to the API.
+- [x] Self-Manage owner copies: chosen applicant, rent increase, bond deductions.
+- [x] **Bug:** tenant-selection approve and decline are local only (`app/tenant-selection/[id]/page.tsx:39-55`). Wire them to the API.
 - [ ] Desktop Leasing page: cycles table with status pills and the cycle workspace in a split pane.
+
+- Built 18 Oct 2026 (crossub_web 39dc2b0a7, 17ae46c27; contract 0.33.0, 0.34.0; agent app 7d42cc3). Not yet run on staging.
 
 ### Conversations
 
