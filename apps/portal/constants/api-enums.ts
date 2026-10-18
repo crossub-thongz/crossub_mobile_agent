@@ -164,7 +164,30 @@ export const AGENT_NOTIFICATION_TYPE = {
 export const AGENCY_MEMBERSHIP_TIER = {
   PRINCIPAL: 'PRINCIPAL',
   AGENT: 'AGENT',
+  // Added on the API in contract 0.35.0: runs a Self-Manage agency's trust account.
+  ACCOUNTANT: 'ACCOUNTANT',
 } as const;
+
+export type AgencyMembershipTierValue =
+  (typeof AGENCY_MEMBERSHIP_TIER)[keyof typeof AGENCY_MEMBERSHIP_TIER];
+
+export const AGENCY_MEMBERSHIP_TIER_LABEL: Record<AgencyMembershipTierValue, string> = {
+  [AGENCY_MEMBERSHIP_TIER.PRINCIPAL]: 'Principal',
+  [AGENCY_MEMBERSHIP_TIER.AGENT]: 'Agent',
+  [AGENCY_MEMBERSHIP_TIER.ACCOUNTANT]: 'Accountant',
+};
+
+/** Tiers a principal can invite to the team. CROSSUB sets the principal. */
+export const AGENCY_INVITE_TIERS = [
+  AGENCY_MEMBERSHIP_TIER.AGENT,
+  AGENCY_MEMBERSHIP_TIER.ACCOUNTANT,
+] as const;
+
+/** Tiers that run a Self-Manage agency's trust account. */
+export const AGENCY_TRUST_TIERS = [
+  AGENCY_MEMBERSHIP_TIER.PRINCIPAL,
+  AGENCY_MEMBERSHIP_TIER.ACCOUNTANT,
+] as const;
 
 /** AgencyStatus — the client-agency lifecycle. */
 export const AGENCY_STATUS = {

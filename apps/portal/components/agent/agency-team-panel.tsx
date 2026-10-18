@@ -16,7 +16,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AGENCY_MEMBERSHIP_TIER } from '@/constants/api-enums';
+import { AGENCY_INVITE_TIER_HINT, AGENCY_TEAM_INVITE_COPY as INVITE_COPY } from '@/constants/agency-team';
+import {
+  AGENCY_INVITE_TIERS,
+  AGENCY_MEMBERSHIP_TIER,
+  AGENCY_MEMBERSHIP_TIER_LABEL,
+} from '@/constants/api-enums';
 import { AGENCY_INSPECTOR_TEAM_COPY as INSPECTOR_COPY } from '@/constants/self-managed-inspections';
 import {
   fetchAgencyTeam,
@@ -24,6 +29,7 @@ import {
   removeAgencyTeamMember,
   type AgencyTeamMember,
   type AgencyTeamResponse,
+  type InviteAgencyTeamMemberInput,
 } from '@/lib/crossub-api/agent-client';
 import {
   grantAgencyInspector,
@@ -54,13 +60,19 @@ export function AgencyTeamPanel({
   selectedMemberId?: string | null;
   onSelectMember?: (userId: string | null) => void;
   showPropertyCounts?: boolean;
-  /** Self-Manage agency: show agency inspectors, and let a principal add or remove them. */
+  /**
+   * Self-Manage agency: show agency inspectors, let a principal add or remove them, and let a
+   * principal invite an accountant.
+   */
   selfManaged?: boolean;
 }) {
   const [team, setTeam] = useState<AgencyTeamResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
+  const [inviteTier, setInviteTier] = useState<InviteAgencyTeamMemberInput['tier']>(
+    AGENCY_MEMBERSHIP_TIER.AGENT,
+  );
   const [inviting, setInviting] = useState(false);
   const [inspectorBusyId, setInspectorBusyId] = useState<string | null>(null);
   const [removeInspector, setRemoveInspector] = useState<AgencyTeamMember | null>(null);
@@ -84,7 +96,7 @@ export function AgencyTeamPanel({
   async function onInvite() {
     const email = inviteEmail.trim();
     if (!email) {
-      toast.error('Enter the agent email');
+      toast.error(INVITE_COPY.emailRequired);
       return;
     }
     setInviting(true);
@@ -92,6 +104,7 @@ export function AgencyTeamPanel({
       const result = await inviteAgencyTeamMember(agencyId, {
         email,
         contactName: inviteName.trim() || undefined,
+        tier: inviteTier,
       });
       if (result.alreadyRegistered) {
         toast.success('Existing user linked — password reset emailed');
@@ -100,6 +113,7 @@ export function AgencyTeamPanel({
       }
       setInviteEmail('');
       setInviteName('');
+      setInviteTier(AGENCY_MEMBERSHIP_TIER.AGENT);
       await loadTeam();
     } catch {
       toast.error('Could not send invite');
@@ -184,7 +198,7 @@ export function AgencyTeamPanel({
                   {member.email}
                 </p>
                 <p className="text-muted-foreground mt-1 text-[11px]">
-                  {isPrincipalMember ? 'Principal' : 'Agent'}
+                  {AGENCY_MEMBERSHIP_TIER_LABEL[member.tier]}
                   {showPropertyCounts
                     ? ` · ${member.assignedPropertyCount} propert${member.assignedPropertyCount === 1 ? 'y' : 'ies'}`
                     : ''}
@@ -255,7 +269,7 @@ export function AgencyTeamPanel({
                         : 'bg-muted text-muted-foreground',
                     )}
                   >
-                    {isPrincipalMember ? 'Principal' : 'Agent'}
+                    {AGENCY_MEMBERSHIP_TIER_LABEL[member.tier]}
                   </span>
                 )}
               </li>
@@ -303,9 +317,35 @@ export function AgencyTeamPanel({
 
       {canManage && (
         <div className="mt-4 space-y-3 rounded-xl border border-dashed p-3">
-          <p className="text-sm font-medium">Invite agent</p>
+          <p className="text-sm font-medium">{INVITE_COPY.heading}</p>
+          {selfManaged ? (
+            <div className="space-y-2">
+              <Label>{INVITE_COPY.roleLabel}</Label>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={INVITE_COPY.roleLabel}>
+                {AGENCY_INVITE_TIERS.map((tier) => (
+                  <button
+                    key={tier}
+                    type="button"
+                    role="radio"
+                    aria-checked={inviteTier === tier}
+                    disabled={inviting}
+                    onClick={() => setInviteTier(tier)}
+                    className={cn(
+                      'rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
+                      inviteTier === tier
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-card text-muted-foreground',
+                    )}
+                  >
+                    {AGENCY_MEMBERSHIP_TIER_LABEL[tier]}
+                  </button>
+                ))}
+              </div>
+              <p className="text-muted-foreground text-xs">{AGENCY_INVITE_TIER_HINT[inviteTier]}</p>
+            </div>
+          ) : null}
           <div className="space-y-2">
-            <Label htmlFor="team-invite-name">Name (optional)</Label>
+            <Label htmlFor="team-invite-name">{INVITE_COPY.nameLabel}</Label>
             <Input
               id="team-invite-name"
               inputKind="person_name"
@@ -316,7 +356,7 @@ export function AgencyTeamPanel({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="team-invite-email">Agent email</Label>
+            <Label htmlFor="team-invite-email">{INVITE_COPY.emailLabel}</Label>
             <Input
               id="team-invite-email"
               type="email"
@@ -337,7 +377,7 @@ export function AgencyTeamPanel({
             ) : (
               <>
                 <UserPlus className="size-4" />
-                Send invite
+                {INVITE_COPY.send}
               </>
             )}
           </Button>

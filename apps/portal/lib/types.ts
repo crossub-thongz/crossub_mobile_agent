@@ -168,7 +168,7 @@ export interface Property {
 
 export type AgencyStatus = 'ONBOARDING' | 'ACTIVE' | 'INACTIVE';
 
-export type AgencyMembershipTier = 'PRINCIPAL' | 'AGENT';
+export type AgencyMembershipTier = 'PRINCIPAL' | 'AGENT' | 'ACCOUNTANT';
 
 export type AgentPortalServiceLevel =
   | 'LEVEL_1_INSPECTION_ONLY'

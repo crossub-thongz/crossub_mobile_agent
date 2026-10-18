@@ -1,23 +1,26 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Landmark } from 'lucide-react';
 
-import { EmptyState } from '@/components/agent/empty-state';
+import { TrustWorkspace } from '@/components/agent/trust/trust-workspace';
 import { AgentShell } from '@/components/layout/agent-shell';
-import { TRUST_PAGE_COPY } from '@/constants/module-workspace';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
+import { TRUST_PAGE_COPY } from '@/constants/trust';
 import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
+import { selfManagedTrustAgencies } from '@/lib/portal-service-level';
 
 /**
- * Self-Manage trust accounting — principals only. A shell until the agent trust routes land
- * (plan Phase 3); everyone else goes back to the dashboard.
+ * Self-Manage trust accounting (plan Phase 3) — the agency's principal or accountant. Everyone
+ * else goes back to the dashboard.
  */
 export default function TrustPage() {
   const router = useRouter();
-  const { ready, selfManagedPrincipal } = useSelfManagedAccess();
-  const redirect = ready && !selfManagedPrincipal;
+  const { agencies } = useAgentData();
+  const { ready, selfManagedTrust } = useSelfManagedAccess();
+  const trustAgencies = useMemo(() => selfManagedTrustAgencies(agencies), [agencies]);
+  const redirect = ready && !selfManagedTrust;
 
   useEffect(() => {
     if (redirect) router.replace(ROUTES.DASHBOARD);
@@ -27,13 +30,7 @@ export default function TrustPage() {
 
   return (
     <AgentShell title={TRUST_PAGE_COPY.title} wide hideNeedAction>
-      <div className="lg:px-6 lg:py-6">
-        <EmptyState
-          icon={Landmark}
-          title={TRUST_PAGE_COPY.emptyTitle}
-          description={TRUST_PAGE_COPY.emptyDescription}
-        />
-      </div>
+      <TrustWorkspace agencies={trustAgencies} />
     </AgentShell>
   );
 }

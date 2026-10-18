@@ -10,14 +10,14 @@ import { PortalServiceLevelBadge } from '@/components/agent/portal-service-level
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
-import { AGENCY_MEMBERSHIP_TIER } from '@/constants/api-enums';
+import { AGENCY_MEMBERSHIP_TIER, AGENCY_MEMBERSHIP_TIER_LABEL } from '@/constants/api-enums';
 import { agencyDetail, ROUTES } from '@/constants/routes';
 import { isSelfManagedLevel, resolvePortalServiceLevel } from '@/lib/portal-service-level';
 import type { Agency } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 function membershipLabel(tier: Agency['membershipTier']): string {
-  return tier === AGENCY_MEMBERSHIP_TIER.AGENT ? 'Agent' : 'Principal';
+  return AGENCY_MEMBERSHIP_TIER_LABEL[tier ?? AGENCY_MEMBERSHIP_TIER.PRINCIPAL];
 }
 
 function AgencyTeamSection({
@@ -27,7 +27,7 @@ function AgencyTeamSection({
   agency: Agency;
   currentUserId?: string;
 }) {
-  const isPrincipal = agency.membershipTier !== AGENCY_MEMBERSHIP_TIER.AGENT;
+  const isPrincipal = agency.membershipTier === AGENCY_MEMBERSHIP_TIER.PRINCIPAL;
   const isLocal = agency.id.startsWith('local-');
   const selfManaged = isSelfManagedLevel(resolvePortalServiceLevel(agency.portalServiceLevel));
 

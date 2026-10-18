@@ -24,6 +24,15 @@
 - Conversations thread pane: email reply from the agency address, Cros draft, template picker, Resolve and Reopen, and assignee picker.
 - Conversations job context: File under property, link and unlink a job on the property.
 - Conversations New conversation dialog emails a tenant, owner or contractor on a Self-Manage property.
+- Accountant team tier: label on the Team page, and an Agent or Accountant role picker on a Self-Manage agency's invite form.
+- Agent client calls for the Self-Manage trust accounting routes.
+- Trust page: agency and trust account pickers with Overview, Ledgers, Rent, Bills, Disburse and Reconciliation tabs.
+- Trust Ledgers: search and kind filter, ledger entries, and owner statements with PDF download and Email owner.
+- Trust Rent: rent list with arrears figures and a Receipt dialog.
+- Trust Bills: bills by Due, Future and Paid, New bill dialog and Pay.
+- Trust Disburse: select owners and disburse, with each owner statement email status and Resend.
+- Trust Reconciliation: month chain, month figures, record bank balance and Lock month.
+- Trust page shows Trust isn't set up for this agency yet until CROSSUB creates the trust account.
 
 ### Changed
 - Agency team calls use the typed contract client.
@@ -32,12 +41,14 @@
 - Self-Manage applicant approve and reject, open report generation and ingoing inspection order go through the agent facade.
 - Self-Manage rent review tenant response recorded on the tenant's behalf goes through the agent facade.
 - Conversations page reads the Self-Manage agency inbox instead of the app message threads, and opens threads in place on mobile.
+- Trust nav and page open to the principal or accountant of a Self-Manage agency.
 
 ### Fixed
 - Maintenance jobs with sent visit times move to Awaiting tenant.
 - An approved quote no longer keeps the job in Needs action while the visit is booked.
 - Agency-conducted inspections move to Published once the agency signs the report off.
 - Self-Manage inspection booking reads the date and time as Sydney time, whatever zone the browser is in.
+- Team page and agency profile treat only a principal as able to manage the team, not an accountant.
 - Signed-off agency inspections say when no tenant email is on file, or the tenant copy failed, instead of "not emailed yet".
 - Tenant selection Approve and Decline record the decision on the server instead of only on the device.
 

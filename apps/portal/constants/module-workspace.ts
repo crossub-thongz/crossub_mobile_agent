@@ -263,10 +263,3 @@ export const MODULE_FIELD_LABELS = {
   description: 'Description',
   report: 'Report',
 } as const;
-
-export const TRUST_PAGE_COPY = {
-  title: 'Trust',
-  emptyTitle: 'Trust accounting for your agency is coming',
-  emptyDescription:
-    'Receipt rent, pay bills, run owner disbursements and statements, and reconcile your trust account here. Your accountant will get their own access.',
-} as const;

@@ -39,12 +39,12 @@ const CONVERSATIONS_NAV_ITEM: NavItem = {
   portalAccess: PORTAL_NAV_ACCESS.SELF_MANAGED,
 };
 
-/** Self-Manage trust accounting — principals only. */
+/** Self-Manage trust accounting — principals and accountants. */
 const TRUST_NAV_ITEM: NavItem = {
   href: ROUTES.TRUST,
   label: 'Trust',
   icon: Landmark,
-  portalAccess: PORTAL_NAV_ACCESS.SELF_MANAGED_PRINCIPAL,
+  portalAccess: PORTAL_NAV_ACCESS.SELF_MANAGED_TRUST,
 };
 
 /**

@@ -12,6 +12,7 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import type { Agency } from '@/lib/types';
+import { AGENCY_MEMBERSHIP_TIER } from '@/constants/api-enums';
 import { ROUTES } from '@/constants/routes';
 import { cn } from '@/lib/utils';
 import {
@@ -58,7 +59,7 @@ export default function AgencyDetailPage() {
   if (!agency) notFound();
 
   const agencyProperties = properties.filter((p) => p.agencyId === id);
-  const isPrincipal = agency.membershipTier !== 'AGENT';
+  const isPrincipal = agency.membershipTier === AGENCY_MEMBERSHIP_TIER.PRINCIPAL;
   const occupied = agencyProperties.filter((p) => p.leaseStatus !== 'vacant').length;
   const vacant = agencyProperties.length - occupied;
 

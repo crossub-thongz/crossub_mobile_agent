@@ -6,6 +6,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   hasSelfManagedAgency,
   hasSelfManagedPrincipalAccess,
+  hasSelfManagedTrustAccess,
   selfManagedPropertyIds,
   type SelfManagedNavAccess,
 } from '@/lib/portal-service-level';
@@ -26,6 +27,7 @@ export function useSelfManagedAccess(): SelfManagedAccess {
       ready: !loading,
       selfManaged: hasSelfManagedAgency(agencies),
       selfManagedPrincipal: hasSelfManagedPrincipalAccess(agencies),
+      selfManagedTrust: hasSelfManagedTrustAccess(agencies),
     }),
     [agencies, loading],
   );

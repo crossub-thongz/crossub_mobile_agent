@@ -1,7 +1,7 @@
 import type { BuiltinQuickActionId } from '@/lib/quick-actions';
 import type { Agency } from '@/lib/types';
 import { ROUTES } from '@/constants/routes';
-import { AGENCY_MEMBERSHIP_TIER } from '@/constants/api-enums';
+import { AGENCY_MEMBERSHIP_TIER, AGENCY_TRUST_TIERS } from '@/constants/api-enums';
 import { AGENT_COPY_VARIANT, type AgentCopyVariant } from '@/constants/agent-copy-variant';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 
@@ -113,6 +113,25 @@ export function hasSelfManagedPrincipalAccess(agencies: Agency[]): boolean {
       isSelfManagedLevel(resolvePortalServiceLevel(a.portalServiceLevel)) &&
       a.membershipTier === AGENCY_MEMBERSHIP_TIER.PRINCIPAL,
   );
+}
+
+/** True when the tier runs a Self-Manage agency's trust account: principal or accountant. */
+export function isAgencyTrustTier(tier: Agency['membershipTier']): boolean {
+  return tier != null && (AGENCY_TRUST_TIERS as readonly string[]).includes(tier);
+}
+
+/** Self-Manage agencies whose trust account the agent runs (principal or accountant). */
+export function selfManagedTrustAgencies(agencies: Agency[]): Agency[] {
+  return agencies.filter(
+    (a) =>
+      isSelfManagedLevel(resolvePortalServiceLevel(a.portalServiceLevel)) &&
+      isAgencyTrustTier(a.membershipTier),
+  );
+}
+
+/** True when the agent runs the trust account of a Self-Manage agency — Trust is theirs. */
+export function hasSelfManagedTrustAccess(agencies: Agency[]): boolean {
+  return selfManagedTrustAgencies(agencies).length > 0;
 }
 
 export function hasFullManagementAccess(agencies: Agency[]): boolean {
@@ -272,21 +291,24 @@ export function isFullManagementRoute(pathname: string): boolean {
 
 /**
  * `self` — only agents with a Self-Manage agency (the desktop module pages).
- * `self-principal` — only principals of a Self-Manage agency (Trust).
+ * `self-principal` — only principals of a Self-Manage agency.
+ * `self-trust` — only principals or accountants of a Self-Manage agency (Trust).
  */
-export type PortalNavAccess = 'any' | 'full' | 'self' | 'self-principal';
+export type PortalNavAccess = 'any' | 'full' | 'self' | 'self-principal' | 'self-trust';
 
 export const PORTAL_NAV_ACCESS = {
   ANY: 'any',
   FULL: 'full',
   SELF_MANAGED: 'self',
   SELF_MANAGED_PRINCIPAL: 'self-principal',
+  SELF_MANAGED_TRUST: 'self-trust',
 } as const satisfies Record<string, PortalNavAccess>;
 
 /** Self-Manage flags for {@link filterNavByAccess}. Omitted, Self-Manage-only entries stay hidden. */
 export type SelfManagedNavAccess = {
   selfManaged: boolean;
   selfManagedPrincipal: boolean;
+  selfManagedTrust: boolean;
 };
 
 export function filterNavByAccess<T extends { portalAccess?: PortalNavAccess }>(
@@ -301,6 +323,9 @@ export function filterNavByAccess<T extends { portalAccess?: PortalNavAccess }>(
     }
     if (item.portalAccess === PORTAL_NAV_ACCESS.SELF_MANAGED_PRINCIPAL) {
       return selfManagedAccess?.selfManagedPrincipal === true;
+    }
+    if (item.portalAccess === PORTAL_NAV_ACCESS.SELF_MANAGED_TRUST) {
+      return selfManagedAccess?.selfManagedTrust === true;
     }
     return true;
   });
