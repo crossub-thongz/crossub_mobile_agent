@@ -45,6 +45,7 @@
 - Trust nav and page open to the principal or accountant of a Self-Manage agency.
 
 ### Fixed
+- Self-Manage settlement confirmed note no longer claims the owner was emailed; it points to Owner decisions for the send status.
 - Trust New bill offers the trust account's expense categories instead of only categories from earlier bills.
 - Maintenance jobs with sent visit times move to Awaiting tenant.
 - An approved quote no longer keeps the job in Needs action while the visit is booked.

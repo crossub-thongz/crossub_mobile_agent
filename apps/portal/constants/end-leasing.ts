@@ -462,7 +462,7 @@ export const DEDUCTION_RESPONSIBILITY = {
 export const SELF_MANAGED_SETTLEMENT_COPY = {
   title: "Bond settlement",
   intro: "You set the bond held and the tenant's deductions, then confirm. The owner gets a copy by email.",
-  confirmed: "Settlement confirmed. The tenant has been asked to accept it, and the owner was emailed a copy.",
+  confirmed: "Settlement confirmed. The tenant has been asked to accept it. The owner copy and whether it sent are under Owner decisions.",
   editTitle: "Bond and deductions",
   editHint: "Leave a row blank to keep it as it is. 0 clears it. Amounts ex. GST.",
   confirmTitle: "Confirm the bond settlement?",
