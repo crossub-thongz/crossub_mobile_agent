@@ -27,7 +27,12 @@ import {
   type TrustBillStageFilter,
 } from '@/constants/trust';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
-import { fetchTrustBills, type TrustBill, type TrustBillList } from '@/lib/crossub-api/agent-trust-client';
+import {
+  fetchTrustBills,
+  type TrustAccountCode,
+  type TrustBill,
+  type TrustBillList,
+} from '@/lib/crossub-api/agent-trust-client';
 import { formatCents, formatTrustDate } from '@/lib/trust-accounting';
 import { cn } from '@/lib/utils';
 
@@ -44,9 +49,11 @@ function stageOptions(counts: TrustBillList['counts'] | undefined) {
 export function TrustBillsTab({
   agencyId,
   bankAccountId,
+  accountCodes,
 }: {
   agencyId: string;
   bankAccountId: string;
+  accountCodes: readonly TrustAccountCode[];
 }) {
   const [stage, setStage] = useState<TrustBillStageFilter>(TRUST_BILL_STAGE.DUE);
   const [search, setSearch] = useState('');
@@ -156,6 +163,7 @@ export function TrustBillsTab({
         <TrustNewBillDialog
           agencyId={agencyId}
           bankAccountId={bankAccountId}
+          accountCodes={accountCodes}
           onClose={() => setCreating(false)}
           onCreated={reload}
         />

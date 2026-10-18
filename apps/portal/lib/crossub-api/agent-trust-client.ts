@@ -25,6 +25,7 @@ export type TenantReceiptAllocation = components['schemas']['TenantReceiptAlloca
 export type TrustBill = components['schemas']['TrustBillDto'];
 export type TrustBillList = components['schemas']['TrustBillListDto'];
 export type TrustAccountCodeRef = components['schemas']['TrustAccountCodeRefDto'];
+export type TrustAccountCode = components['schemas']['TrustAccountCodeDto'];
 export type CreateTrustBillInput = components['schemas']['CreateBillDto'];
 export type PayTrustBillInput = components['schemas']['PayBillDto'];
 export type TrustDisbursementCandidates = components['schemas']['TrustDisbursementCandidatesDto'];

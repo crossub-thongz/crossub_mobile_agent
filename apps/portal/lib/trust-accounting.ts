@@ -1,7 +1,7 @@
 import { PROPERTY_TIME_ZONE } from '@/constants/time-zone';
-import { TRUST_NOT_SET_UP_MARKER } from '@/constants/trust';
+import { TRUST_ACCOUNT_CODE_KIND, TRUST_NOT_SET_UP_MARKER } from '@/constants/trust';
 import { ApiError } from '@/lib/api';
-import type { TrustAccountCodeRef, TrustBill } from '@/lib/crossub-api/agent-trust-client';
+import type { TrustAccountCode } from '@/lib/crossub-api/agent-trust-client';
 import { formatAgreementDate } from '@/lib/format-datetime';
 import { formatCurrency } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
@@ -64,12 +64,9 @@ export function trustStatementFilename(ledgerCode: string, statementNumber: numb
   return `statement-${ledgerCode.toLowerCase()}-${statementNumber}.pdf`;
 }
 
-/**
- * The expense categories (account codes) seen on earlier bills, by code. The agent facade has no
- * account-code list, so the New bill picker offers the categories the agency already bills to.
- */
-export function billAccountCodes(bills: readonly TrustBill[]): TrustAccountCodeRef[] {
-  const byId = new Map<string, TrustAccountCodeRef>();
-  for (const bill of bills) byId.set(bill.accountCode.id, bill.accountCode);
-  return [...byId.values()].sort((a, b) => a.code.localeCompare(b.code));
+/** The active EXPENSE codes a bill can be filed under, by code. */
+export function billCategoryCodes(codes: readonly TrustAccountCode[]): TrustAccountCode[] {
+  return codes
+    .filter((code) => code.isActive && code.kind === TRUST_ACCOUNT_CODE_KIND.EXPENSE)
+    .sort((a, b) => a.code.localeCompare(b.code));
 }

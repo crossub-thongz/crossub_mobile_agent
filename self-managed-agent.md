@@ -170,11 +170,12 @@ New agent actions:
 
 Today the agent has messages and the message center with linked Gmail or Yahoo and reply.
 
-- [ ] Agency inbox on the agency's CROSSUB address (folio EXTERNAL scoping), with landlord recipients allowed in Self-Manage (Phase 0 guard).
-- [ ] Compose to tenant, owner or tradie, using templates and Cros drafts.
-- [ ] Assign a thread to a team member, link it to a job, set status.
-- [ ] Desktop Conversations page: three panes (threads, conversation, job context).
+- [x] Agency inbox on the agency's CROSSUB address (folio EXTERNAL scoping), with landlord recipients allowed in Self-Manage (Phase 0 guard).
+- [x] Compose to tenant, owner or tradie, using templates and Cros drafts. (Templates are CROSSUB's global ones; agency-owned templates need a migration.)
+- [x] Assign a thread to a team member, link it to a job, set status.
+- [x] Desktop Conversations page: three panes (threads, conversation, job context).
 - Note: there is no SMS or WhatsApp gateway. Those channels stay record-only.
+- Built 18 Oct 2026 (crossub_web 13ecd773b, contract 0.35.0; agent app 5cf3779). Not yet run on staging.
 
 **Done when:** a Self-Manage agent can let a property end to end and handle the tenancy's end without CROSSUB involvement. Owner emails and replies thread in the agency inbox.
 
@@ -186,9 +187,9 @@ Owner: whoever frees up first. Can start earlier, since the decisions are made.
 
 ### Backend
 
-- [ ] Add `ACCOUNTANT` to `enum AgencyMembershipTier`. The Principal invites an accountant like any team member.
-- [ ] The accountant becomes a `TrustWorkspaceMember` of the agency's `TrustWorkspaceKind.AGENCY` workspace, with trust permissions (`POST_TRUST_TRANSACTIONS`, `APPROVE_TRUST_PAYMENTS`, `RECONCILE_TRUST_ACCOUNT`, `MANAGE_TRUST_SETTINGS`) scoped to that workspace only.
-- [ ] Agent trust routes wrapping `src/modules/trust-accounting/*`:
+- [x] Add `ACCOUNTANT` to `enum AgencyMembershipTier`. The Principal invites an accountant like any team member.
+- [x] The accountant becomes a `TrustWorkspaceMember` of the agency's `TrustWorkspaceKind.AGENCY` workspace, with trust permissions (`POST_TRUST_TRANSACTIONS`, `APPROVE_TRUST_PAYMENTS`, `RECONCILE_TRUST_ACCOUNT`, `MANAGE_TRUST_SETTINGS`) scoped to that workspace only.
+- [x] Agent trust routes wrapping `src/modules/trust-accounting/*` (fee charges, ABA payment batches and bank statement import not exposed yet):
   - ledgers
   - receipts and tenant receipts
   - bills
@@ -197,14 +198,16 @@ Owner: whoever frees up first. Can start earlier, since the decisions are made.
   - owner statements
   - bank statements
   - reconciliation locks
-- [ ] Owner statements emailed to the owner for Self-Manage (Phase 0 guard).
-- [ ] Update `crossub_web/docs/trustaccounting.md`: decisions D89 to D91 reversed, R24 answered.
+- [x] Owner statements emailed to the owner for Self-Manage (Phase 0 guard).
+- [x] Update `crossub_web/docs/trustaccounting.md`: decisions D89 to D91 reversed, R24 answered (D132).
 
 ### Agent app
 
-- [ ] Turn on `ACCOUNTING_MODULE_LAUNCHED` for Self-Manage and replace the placeholder settings section (`components/accounting/accounting-settings-section.tsx`).
-- [ ] Desktop Trust pages: overview, transactions, ledgers, bills, rent, disbursement, reconciliation, bank statements, reports. Modelled on `crossub_web/apps/web/app/trust-accounting/`.
-- [ ] Only Principal and Accountant see Trust.
+- [ ] Turn on `ACCOUNTING_MODULE_LAUNCHED` for Self-Manage and replace the placeholder settings section (`components/accounting/accounting-settings-section.tsx`). (Not done: Trust has its own page.)
+- [x] Desktop Trust pages: overview, ledgers, bills, rent, disbursement, reconciliation. (Transactions, bank statements and reports not yet.)
+- [x] Only Principal and Accountant see Trust.
+
+- Built 18 Oct 2026 (crossub_web 13ecd773b, 8d01dc358; contract 0.35.0, 0.36.0; agent app a734708). CROSSUB staff must create each agency's AGENCY trust workspace and bank account first. Not yet run on staging.
 
 **Done when:** an agency accountant receipts rent, pays a bill, runs an owner disbursement, issues the owner statement by email, and reconciles and locks the month, all inside their own agency workspace.
 

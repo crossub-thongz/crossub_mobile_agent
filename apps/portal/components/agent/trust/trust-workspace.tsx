@@ -22,7 +22,11 @@ import {
   type TrustTab,
 } from '@/constants/trust';
 import { useTrustResource } from '@/hooks/use-trust-resource';
-import { fetchTrustWorkspace, type TrustBankAccount } from '@/lib/crossub-api/agent-trust-client';
+import {
+  fetchTrustWorkspace,
+  type TrustAccountCode,
+  type TrustBankAccount,
+} from '@/lib/crossub-api/agent-trust-client';
 import { isTrustNotSetUpError } from '@/lib/trust-accounting';
 import type { Agency } from '@/lib/types';
 
@@ -41,10 +45,12 @@ function TrustTabContent({
   tab,
   agencyId,
   bankAccountId,
+  accountCodes,
 }: {
   tab: TrustTab;
   agencyId: string;
   bankAccountId: string;
+  accountCodes: readonly TrustAccountCode[];
 }) {
   const props = { agencyId, bankAccountId };
   switch (tab) {
@@ -55,7 +61,7 @@ function TrustTabContent({
     case TRUST_TAB.RENT:
       return <TrustRentTab {...props} />;
     case TRUST_TAB.BILLS:
-      return <TrustBillsTab {...props} />;
+      return <TrustBillsTab {...props} accountCodes={accountCodes} />;
     case TRUST_TAB.DISBURSE:
       return <TrustDisburseTab {...props} />;
     case TRUST_TAB.RECONCILIATION:
@@ -145,6 +151,7 @@ export function TrustWorkspace({ agencies }: { agencies: readonly Agency[] }) {
             tab={tab}
             agencyId={agencyId}
             bankAccountId={bankAccountId}
+            accountCodes={workspace.data.accountCodes}
           />
         </>
       )}

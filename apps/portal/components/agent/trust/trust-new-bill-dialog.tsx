@@ -29,20 +29,22 @@ import {
 import { useTrustResource } from '@/hooks/use-trust-resource';
 import {
   createTrustBill,
-  fetchTrustBills,
   fetchTrustLedgers,
+  type TrustAccountCode,
 } from '@/lib/crossub-api/agent-trust-client';
-import { billAccountCodes, parseDollarsToCents, trustTodayKey } from '@/lib/trust-accounting';
+import { billCategoryCodes, parseDollarsToCents, trustTodayKey } from '@/lib/trust-accounting';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
 export function TrustNewBillDialog({
   agencyId,
   bankAccountId,
+  accountCodes,
   onClose,
   onCreated,
 }: {
   agencyId: string;
   bankAccountId: string;
+  accountCodes: readonly TrustAccountCode[];
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -61,10 +63,7 @@ export function TrustNewBillDialog({
       pageSize: TRUST_PAGE_SIZE_MAX,
     }),
   );
-  const pastBills = useTrustResource(scope, () =>
-    fetchTrustBills(agencyId, bankAccountId, { pageSize: TRUST_PAGE_SIZE_MAX }),
-  );
-  const categories = pastBills.data ? billAccountCodes(pastBills.data.items) : [];
+  const categories = billCategoryCodes(accountCodes);
 
   const [ownerLedgerId, setOwnerLedgerId] = useState('');
   const [supplierLedgerId, setSupplierLedgerId] = useState('');
@@ -77,10 +76,10 @@ export function TrustNewBillDialog({
   const [priority, setPriority] = useState<TrustBillPriority>(TRUST_BILL_PRIORITY.NORMAL);
   const [pending, setPending] = useState(false);
 
-  const lookupsLoading = owners.loading || suppliers.loading || pastBills.loading;
-  const lookupError = owners.error ?? suppliers.error ?? pastBills.error;
+  const lookupsLoading = owners.loading || suppliers.loading;
+  const lookupError = owners.error ?? suppliers.error;
   const noSuppliers = suppliers.data != null && suppliers.data.items.length === 0;
-  const noCategories = pastBills.data != null && categories.length === 0;
+  const noCategories = categories.length === 0;
 
   async function onSubmit() {
     const amountCents = parseDollarsToCents(amount);

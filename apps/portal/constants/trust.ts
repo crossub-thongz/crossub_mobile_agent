@@ -46,6 +46,12 @@ export const TRUST_TABS: readonly { id: TrustTab; label: string }[] = [
   { id: TRUST_TAB.RECONCILIATION, label: 'Reconciliation' },
 ];
 
+/** Chart-of-accounts code kinds: a bill takes an EXPENSE code. */
+export const TRUST_ACCOUNT_CODE_KIND = {
+  INCOME: 'INCOME',
+  EXPENSE: 'EXPENSE',
+} as const;
+
 export const TRUST_LEDGER_KIND = {
   OWNER: 'OWNER',
   TENANT: 'TENANT',
@@ -369,8 +375,7 @@ export const TRUST_NEW_BILL_COPY = {
   chooseSupplier: 'Choose a supplier',
   chooseCategory: 'Choose a category',
   noSuppliers: 'No supplier ledgers yet. Ask CROSSUB to add the supplier.',
-  noCategories:
-    'No bill categories yet. Categories come from earlier bills; ask CROSSUB to enter the first one.',
+  noCategories: 'No expense categories are set up on this trust account. Ask CROSSUB to add them.',
   billDate: 'Bill date',
   dueDate: 'Due date (optional)',
   details: 'Details',

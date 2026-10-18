@@ -70,7 +70,7 @@ export function AgencyTeamPanel({
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
-  const [inviteTier, setInviteTier] = useState<InviteAgencyTeamMemberInput['tier']>(
+  const [inviteTier, setInviteTier] = useState<NonNullable<InviteAgencyTeamMemberInput['tier']>>(
     AGENCY_MEMBERSHIP_TIER.AGENT,
   );
   const [inviting, setInviting] = useState(false);
