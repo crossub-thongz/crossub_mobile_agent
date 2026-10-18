@@ -760,6 +760,24 @@ export async function declineMaintenance(
   return data;
 }
 
+export type SetApplicationDecisionInput = components['schemas']['SetApplicantDecisionDto'];
+
+/**
+ * Approve or decline an applicant from the tenant-selection queue (all plans). Returns
+ * `{ id: applicationId }`; 409 when already decided or the offer is locked to another applicant.
+ */
+export async function setAgentApplicationDecision(
+  propertyId: string,
+  applicationId: string,
+  body: SetApplicationDecisionInput,
+): Promise<components['schemas']['AgentWorkflowCreateResultDto']> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/applications/{applicationId}/decision',
+    { params: { path: { propertyId, applicationId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't record the decision");
+}
+
 /** Message threads across the agent's managed properties (`GET /agent/messages`). */
 export async function fetchMessageThreads(): Promise<AgentMessageThread[]> {
   const { data, error } = await crossub.GET('/agent/messages');

@@ -1,4 +1,7 @@
-import type { ServerLeasingMainStatus } from '@/lib/leasing-cycle-types';
+import type {
+  ServerLeasingMainStatus,
+  ServerLeasingNegotiation,
+} from '@/lib/leasing-cycle-types';
 import type {
   LeasingAdvertisingStatus,
   LeasingAgentDecision,
@@ -120,6 +123,8 @@ export interface LeasingApplicationDetail {
   agentDecision: LeasingAgentDecision;
   /** Uploaded supporting documents (application forms, ID scans, etc.). */
   documents?: LeasingApplicantDocument[];
+  /** Counter-offer rounds (Self-Manage negotiates these itself). */
+  negotiation?: ServerLeasingNegotiation;
 }
 
 export interface LeasingContractCondition {

@@ -39,3 +39,9 @@ export function useSelfManagedPropertyIds(): Set<string> {
     [agencies, archivedProperties, properties],
   );
 }
+
+/** True when this property's agency is Self-Manage — the agent runs the steps CROSSUB runs elsewhere. */
+export function useIsPropertySelfManaged(propertyId: string | null | undefined): boolean {
+  const ids = useSelfManagedPropertyIds();
+  return propertyId ? ids.has(propertyId) : false;
+}

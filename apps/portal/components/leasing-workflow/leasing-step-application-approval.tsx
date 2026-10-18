@@ -10,6 +10,8 @@ import { LeasingApplicantOrderCard } from '@/components/leasing-workflow/leasing
 import { OpenInspectionApplicantLinksPanel } from '@/components/open-inspection/open-inspection-applicant-links-panel';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
+import { setAgentApplicationDecision } from '@/lib/crossub-api/agent-client';
 import {
   LEASING_AGENT_DECISION,
   LEASING_AGENT_SELF_OPEN_LABEL,
@@ -21,6 +23,7 @@ import {
   countSelectedForApprovalSend,
   isApplicationApprovalLocked,
 } from '@/lib/leasing/lifecycle';
+import { runThenReadCycle } from '@/lib/leasing/self-managed-letting';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
@@ -36,6 +39,7 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
   const [sendingSelected, setSendingSelected] = useState(false);
   const [busyAppId, setBusyAppId] = useState<string | null>(null);
   const [showContactForm, setShowContactForm] = useState(false);
+  const selfManaged = useIsPropertySelfManaged(detail.propertyId);
 
   const cycle = (leasingCycles ?? []).find((c) => c.propertyId === detail.propertyId);
   const cycleId = detail.cycleId ?? cycle?.id;
@@ -94,7 +98,12 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
   ) => {
     setBusyAppId(applicationId);
     try {
-      if (apiConnected && cycleId) {
+      if (apiConnected && cycleId && selfManaged) {
+        const view = await runThenReadCycle(cycleId, () =>
+          setAgentApplicationDecision(detail.propertyId, applicationId, { decision }),
+        );
+        applyCycleView(detail.propertyId, view);
+      } else if (apiConnected && cycleId) {
         const view = await leasingOpsApi.setApplicantDecision(cycleId, applicationId, {
           decision,
         });
@@ -260,6 +269,7 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
             cycleId={cycleId}
             readOnly={readOnly}
             busy={busyAppId === app.id}
+            selfManaged={selfManaged}
             onToggle={() => void toggleSelected(app.id)}
             onApprove={() => void setDecision(app.id, LEASING_AGENT_DECISION.APPROVED)}
             onReject={() => void setDecision(app.id, LEASING_AGENT_DECISION.REJECTED)}

@@ -13,9 +13,11 @@ import {
 } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { AgentDeductionsWindow } from '@/components/end-leasing/agent-deductions-window';
 import { EndLeasingAgentWorkflowPanel } from '@/components/end-leasing/end-leasing-agent-workflow-panel';
+import { SelfManagedSettlementPanel } from '@/components/end-leasing/self-managed-settlement-panel';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
 import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
 import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
 import { inspectionDetail, propertyDetail } from '@/constants/routes';
@@ -134,6 +136,7 @@ export function EndLeasingTaskDetailView({
   );
 
   const propertyId = caseData.propertyId ?? '';
+  const selfManaged = useIsPropertySelfManaged(caseData.propertyId);
   const property = properties.find((row) => row.id === propertyId) ?? null;
   const currentLease = leasingRecords.find(
     (row) => row.propertyId === propertyId && row.status === 'current',
@@ -309,7 +312,11 @@ export function EndLeasingTaskDetailView({
         </section>
       ) : null}
 
-          <AgentDeductionsWindow caseData={caseData} />
+          {selfManaged ? (
+            <SelfManagedSettlementPanel caseData={caseData} />
+          ) : (
+            <AgentDeductionsWindow caseData={caseData} />
+          )}
 
           <TaskWorkflowRailSlot />
 

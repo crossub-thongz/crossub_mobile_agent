@@ -6,9 +6,16 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RENT_REVIEW_TENANT_DECISION } from '@/constants/self-managed-leasing';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
+import {
+  recordSelfManagedRentReviewTenantResponse,
+  type AgentRentReviewTenantResponseInput,
+} from '@/lib/crossub-api/agent-workflow-client';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
+import type { TenantResponseInput } from '@/lib/rent-review-workflow-types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
 /**
@@ -28,8 +35,23 @@ export function RentReviewTenantResponseOnBehalfPanel({
   const [busy, setBusy] = useState(false);
   const [moveOutDate, setMoveOutDate] = useState(detail.tenantMoveOutDate ?? '');
   const [counterWeekly, setCounterWeekly] = useState('');
+  const selfManaged = useIsPropertySelfManaged(detail.propertyId);
 
   if (readOnly) return null;
+
+  /**
+   * Self-Manage keys the answer in through the agent facade, then re-reads the review on the
+   * existing read path; other plans keep the staff route.
+   */
+  const tenantResponse = async (
+    input: AgentRentReviewTenantResponseInput & TenantResponseInput,
+  ): Promise<RentReviewWorkflowDetail> => {
+    if (selfManaged && detail.propertyId) {
+      await recordSelfManagedRentReviewTenantResponse(detail.propertyId, detail.id, input);
+      return rentReviewApi.get(detail.id, detail.leaseEndDate);
+    }
+    return rentReviewApi.tenantResponse(detail.id, input);
+  };
 
   const run = async (action: () => Promise<RentReviewWorkflowDetail>, success: string) => {
     setBusy(true);
@@ -61,7 +83,7 @@ export function RentReviewTenantResponseOnBehalfPanel({
         disabled={busy}
         onClick={() =>
           void run(
-            () => rentReviewApi.tenantResponse(detail.id, { decision: 'accept' }),
+            () => tenantResponse({ decision: RENT_REVIEW_TENANT_DECISION.ACCEPT }),
             'Tenant accepted — rent will be updated',
           )
         }
@@ -84,8 +106,8 @@ export function RentReviewTenantResponseOnBehalfPanel({
           onClick={() =>
             void run(
               () =>
-                rentReviewApi.tenantResponse(detail.id, {
-                  decision: 'reject',
+                tenantResponse({
+                  decision: RENT_REVIEW_TENANT_DECISION.REJECT,
                   moveOutDate,
                 }),
               'Tenant rejected — choose End Leasing or counter',
@@ -112,8 +134,8 @@ export function RentReviewTenantResponseOnBehalfPanel({
             onClick={() =>
               void run(
                 () =>
-                  rentReviewApi.tenantResponse(detail.id, {
-                    decision: 'counter',
+                  tenantResponse({
+                    decision: RENT_REVIEW_TENANT_DECISION.COUNTER,
                     counterWeekly: Number(counterWeekly),
                   }),
                 'Counter recorded — returned to Agent Confirmed',

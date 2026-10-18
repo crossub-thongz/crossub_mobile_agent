@@ -20,8 +20,12 @@ import { LeasingAgreementSignedDocumentPanel, LeasingAgreementActionGroup } from
 import { LeasingContractDialog } from '@/components/leasing-workflow/leasing-contract-dialog';
 import { LeasingKeyCollectionEvidencePanel } from '@/components/leasing-workflow/leasing-key-collection-evidence';
 import { LeasingKeyCollectionSchedule } from '@/components/leasing-workflow/leasing-key-collection-schedule';
+import { LeasingSelfManagedAgreementPanel } from '@/components/leasing-workflow/leasing-self-managed-agreement-panel';
+import { LeasingSelfManagedBondLink } from '@/components/leasing-workflow/leasing-self-managed-bond-link';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { SELF_MANAGED_LEASING_COPY } from '@/constants/self-managed-leasing';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import {
   LEASING_ITEM_STATUS,
   LEASING_KEY_CUSTODY,
@@ -134,6 +138,7 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
   const bondHighlightPropertyId = useLeasingWorkflowStore((s) => s.bondHighlightPropertyId);
   const clearBondSectionHighlight = useLeasingWorkflowStore((s) => s.clearBondSectionHighlight);
   const { leasingCycles, apiConnected } = useAgentData();
+  const selfManaged = useIsPropertySelfManaged(id);
   const [recordingSigning, setRecordingSigning] = useState(false);
   const [confirmingDeposit, setConfirmingDeposit] = useState(false);
   const [rejectingDeposit, setRejectingDeposit] = useState(false);
@@ -345,7 +350,11 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         id={LEASING_ONBOARDING_BOND_SECTION_ID}
         highlighted={highlightBond}
         title="Bond"
-        description="Bond link is sent to the tenant on approval — status updates from CROSSUB."
+        description={
+          selfManaged
+            ? SELF_MANAGED_LEASING_COPY.bondDescription
+            : 'Bond link is sent to the tenant on approval — status updates from CROSSUB.'
+        }
         status={o.bond.status}
       >
         <div className="grid grid-cols-2 gap-3">
@@ -366,6 +375,14 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
           ) : null}
         </div>
         <div className="mt-2 space-y-2">
+          {selfManaged && apiConnected && o.bond.status !== LEASING_ITEM_STATUS.DONE ? (
+            <LeasingSelfManagedBondLink
+              key={o.bond.agentLink ?? 'no-link'}
+              propertyId={id}
+              cycleId={cycleId}
+              currentLink={o.bond.agentLink}
+            />
+          ) : null}
           <ProofLine fileName={o.bond.proofFileName} proofUrl={o.bond.proofUrl} />
           {bondPendingConfirm ? (
             <OnboardingReviewActions
@@ -386,9 +403,11 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         description={
           o.agreement.signingStatus === 'signed'
             ? 'Agreement signed — terms are locked.'
-            : agreementReady
-              ? 'Agreement sent from CROSSUB — review and record signing when complete.'
-              : 'CROSSUB will generate and send the agreement after onboarding items are complete.'
+            : selfManaged
+              ? SELF_MANAGED_LEASING_COPY.agreementDescription
+              : agreementReady
+                ? 'Agreement sent from CROSSUB — review and record signing when complete.'
+                : 'CROSSUB will generate and send the agreement after onboarding items are complete.'
         }
         status={o.agreement.status}
         footer={
@@ -443,6 +462,9 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
           ) : undefined
         }
       >
+        {selfManaged && apiConnected ? (
+          <LeasingSelfManagedAgreementPanel detail={detail} cycleId={cycleId} />
+        ) : null}
         <LeasingAgreementSignedDocumentPanel
           fileName={o.agreement.signedProofFileName}
           proofUrl={o.agreement.signedProofUrl}

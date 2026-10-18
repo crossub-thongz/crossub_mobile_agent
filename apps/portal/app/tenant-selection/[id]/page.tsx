@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -11,16 +12,24 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { ROUTES, tenantNew } from '@/constants/routes';
+import {
+  APPLICANT_DECISION,
+  TENANT_SELECTION_COPY,
+  type ApplicantDecisionValue,
+} from '@/constants/self-managed-leasing';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
+import { setAgentApplicationDecision } from '@/lib/crossub-api/agent-client';
 import { useAgentStore } from '@/lib/store';
 import { prefillFromTenantSelection } from '@/lib/tenant-provision-prefill';
 import { tenantSelectionDecisionKey } from '@/lib/tenant-selection';
 import { formatCurrency } from '@/lib/utils';
+import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
 export default function TenantSelectionPage() {
   const params = useParams();
   const id = params.id as string;
-  const { tenantSelections } = useAgentData();
+  const { tenantSelections, refresh } = useAgentData();
+  const [deciding, setDeciding] = useState(false);
   const back = useBackNavigation(ROUTES.TASKS, 'Tasks');
   const setTenantSelectionDecision = useAgentStore((s) => s.setTenantSelectionDecision);
   const item = tenantSelections.find((t) => t.id === id);
@@ -36,23 +45,30 @@ export default function TenantSelectionPage() {
     propertyId: item.propertyId,
   });
 
-  const handleApprove = () => {
-    setTenantSelectionDecision(tenantSelectionDecisionKey(item.propertyId, item.id), {
-      action: 'approved',
-      applicantName: item.applicantName,
-      decidedAt: new Date().toISOString(),
-    });
-    toast.success('Applicant approved — lease communication triggered');
+  /** Records the decision on the server, then mirrors it into the store until the refresh lands. */
+  const decide = async (decision: ApplicantDecisionValue, successMessage: string) => {
+    setDeciding(true);
+    try {
+      await setAgentApplicationDecision(item.propertyId, item.id, { decision });
+      setTenantSelectionDecision(tenantSelectionDecisionKey(item.propertyId, item.id), {
+        action: decision,
+        applicantName: item.applicantName,
+        decidedAt: new Date().toISOString(),
+      });
+      toast.success(successMessage);
+      await refresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, TENANT_SELECTION_COPY.decisionFailed));
+    } finally {
+      setDeciding(false);
+    }
   };
 
-  const handleDecline = (reason: string) => {
-    setTenantSelectionDecision(tenantSelectionDecisionKey(item.propertyId, item.id), {
-      action: 'rejected',
-      applicantName: item.applicantName,
-      decidedAt: new Date().toISOString(),
-    });
-    toast.success(`Declined: ${reason}`);
-  };
+  const handleApprove = () =>
+    void decide(APPLICANT_DECISION.APPROVED, TENANT_SELECTION_COPY.approved(item.applicantName));
+
+  const handleDecline = (reason: string) =>
+    void decide(APPLICANT_DECISION.REJECTED, TENANT_SELECTION_COPY.declined(reason));
 
   return (
     <AgentShell title="Tenant selection" backHref={back.href} backLabel={back.label}>
@@ -71,7 +87,7 @@ export default function TenantSelectionPage() {
         <ApprovalPanel
           title={`Approve ${item.applicantName}`}
           recommendation="Shortlisted after open inspection — references verified by CROSSUB."
-          disabled={!item.requiresApproval}
+          disabled={!item.requiresApproval || deciding}
           onApprove={handleApprove}
           onDecline={handleDecline}
           onRequote={(r) => toast.info(`Query sent: ${r}`)}

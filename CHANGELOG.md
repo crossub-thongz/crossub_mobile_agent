@@ -12,11 +12,19 @@
 - Ingoing and outgoing detail pages show Waiting for your sign-off and the sign-off panel on agency-conducted jobs.
 - `@crossub-thongz/api-contract` bumped to ^0.31.0.
 - `@crossub-thongz/api-contract` bumped to ^0.32.0.
+- `@crossub-thongz/api-contract` bumped to ^0.34.0.
+- Agent client calls for the Self-Manage leasing routes and the tenant-selection decision route.
+- Self-Manage applicant orders: Request info, Propose terms, and Accept, Decline or Counter on the round on the table.
+- Self-Manage lease agreement panel: edit term, start date and weekly rent, add a condition, confirm, send to tenant, regenerate and resend, upload own agreement and upload signed copy.
+- Self-Manage bond: paste the bond lodgement link and email it to the tenant.
+- Self-Manage end-of-lease bond settlement panel: set the bond held and the tenant's deductions, then confirm the settlement; replaces the key-in-when-asked window.
 
 ### Changed
 - Agency team calls use the typed contract client.
 - Inspections pane labels the inspector Conducted by on agency-conducted jobs.
 - Inspections pane drops Record a decision on agency-conducted jobs; sign-off is the decision.
+- Self-Manage applicant approve and reject, open report generation and ingoing inspection order go through the agent facade.
+- Self-Manage rent review tenant response recorded on the tenant's behalf goes through the agent facade.
 
 ### Fixed
 - Maintenance jobs with sent visit times move to Awaiting tenant.
@@ -24,6 +32,7 @@
 - Agency-conducted inspections move to Published once the agency signs the report off.
 - Self-Manage inspection booking reads the date and time as Sydney time, whatever zone the browser is in.
 - Signed-off agency inspections say when no tenant email is on file, or the tenant copy failed, instead of "not emailed yet".
+- Tenant selection Approve and Decline record the decision on the server instead of only on the device.
 
 ## 2026-10-17
 

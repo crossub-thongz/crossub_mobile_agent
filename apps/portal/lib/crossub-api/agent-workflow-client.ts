@@ -1,6 +1,9 @@
 import type { components } from '@crossub-thongz/api-contract';
 
+import { unwrapCrossubResult } from '@/lib/utils/unwrap-crossub-result';
+
 import { agentFetch } from './agent-client';
+import { crossub } from './client';
 
 export type AgentWorkflowCreateResult = { id: string; openInspectionId?: string };
 
@@ -122,6 +125,198 @@ export async function cancelAgentLeasingCycle(
     method: 'POST',
     body: JSON.stringify({ ...body, force: body.force ?? true }),
   });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Self-Manage letting (Phase 2): the Account Manager's letting steps, run by the agent.
+// Self-Manage properties only — the server returns 403 for every other plan. Each write returns
+// `{ id: cycleId }`; re-read the cycle (`leasingOpsApi.get`) for the new state.
+// ---------------------------------------------------------------------------------------------
+
+type AgentWorkflowCreateResultDto = components['schemas']['AgentWorkflowCreateResultDto'];
+
+export type AddNegotiationRoundInput = components['schemas']['AddNegotiationRoundDto'];
+export type RespondToNegotiationRoundInput =
+  components['schemas']['RespondToNegotiationRoundDto'];
+export type RequestApplicantInformationInput =
+  components['schemas']['RequestApplicantInformationDto'];
+export type UpdateLettingContractInput = components['schemas']['UpdateContractDto'];
+export type AddLettingContractConditionInput = components['schemas']['AddContractConditionDto'];
+export type UploadLettingContractInput = components['schemas']['UploadContractDto'];
+export type UploadLettingSignedAgreementInput =
+  components['schemas']['UploadSignedAgreementDto'];
+export type SetLettingBondLinkInput = components['schemas']['SetBondLinkDto'];
+export type AgentRentReviewTenantResponseInput = components['schemas']['TenantResponseDto'];
+export type AgentRentReviewResult = components['schemas']['AgentRentReviewResultDto'];
+
+const lettingPath = (propertyId: string, cycleId: string) => ({ propertyId, cycleId });
+
+export async function addSelfManagedNegotiationRound(
+  propertyId: string,
+  cycleId: string,
+  applicationId: string,
+  body: AddNegotiationRoundInput,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/applications/{applicationId}/negotiation',
+    { params: { path: { ...lettingPath(propertyId, cycleId), applicationId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't propose the terms");
+}
+
+export async function respondToSelfManagedNegotiationRound(
+  propertyId: string,
+  cycleId: string,
+  applicationId: string,
+  roundId: string,
+  body: RespondToNegotiationRoundInput,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/applications/{applicationId}/negotiation/{roundId}/respond',
+    { params: { path: { ...lettingPath(propertyId, cycleId), applicationId, roundId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't answer the terms");
+}
+
+export async function requestSelfManagedApplicantInformation(
+  propertyId: string,
+  cycleId: string,
+  applicationId: string,
+  body: RequestApplicantInformationInput,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/applications/{applicationId}/request-info',
+    { params: { path: { ...lettingPath(propertyId, cycleId), applicationId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't email the applicant");
+}
+
+export async function updateSelfManagedContract(
+  propertyId: string,
+  cycleId: string,
+  body: UpdateLettingContractInput,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.PATCH(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/contract',
+    { params: { path: lettingPath(propertyId, cycleId) }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't save the agreement terms");
+}
+
+export async function addSelfManagedContractCondition(
+  propertyId: string,
+  cycleId: string,
+  body: AddLettingContractConditionInput,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/contract/conditions',
+    { params: { path: lettingPath(propertyId, cycleId) }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't add the condition");
+}
+
+export async function confirmSelfManagedContract(
+  propertyId: string,
+  cycleId: string,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/contract/confirm',
+    { params: { path: lettingPath(propertyId, cycleId) } },
+  );
+  return unwrapCrossubResult(result, "Couldn't confirm the draft");
+}
+
+export async function regenerateSelfManagedContract(
+  propertyId: string,
+  cycleId: string,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/contract/regenerate',
+    { params: { path: lettingPath(propertyId, cycleId) } },
+  );
+  return unwrapCrossubResult(result, "Couldn't regenerate the agreement");
+}
+
+export async function sendSelfManagedContractToTenant(
+  propertyId: string,
+  cycleId: string,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/contract/send-to-tenant',
+    { params: { path: lettingPath(propertyId, cycleId) } },
+  );
+  return unwrapCrossubResult(result, "Couldn't send the agreement");
+}
+
+export async function uploadSelfManagedContract(
+  propertyId: string,
+  cycleId: string,
+  body: UploadLettingContractInput,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/contract/upload',
+    { params: { path: lettingPath(propertyId, cycleId) }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't upload the agreement");
+}
+
+export async function uploadSelfManagedSignedAgreement(
+  propertyId: string,
+  cycleId: string,
+  body: UploadLettingSignedAgreementInput,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/agreement/signed-copy',
+    { params: { path: lettingPath(propertyId, cycleId) }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't upload the signed copy");
+}
+
+export async function setSelfManagedBondLink(
+  propertyId: string,
+  cycleId: string,
+  body: SetLettingBondLinkInput,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/onboarding/bond-link',
+    { params: { path: lettingPath(propertyId, cycleId) }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't send the bond link");
+}
+
+export async function generateSelfManagedOpenReport(
+  propertyId: string,
+  cycleId: string,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/open-report/generate',
+    { params: { path: lettingPath(propertyId, cycleId) } },
+  );
+  return unwrapCrossubResult(result, "Couldn't generate the open report");
+}
+
+export async function orderSelfManagedIngoingInspection(
+  propertyId: string,
+  cycleId: string,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/ingoing/order',
+    { params: { path: lettingPath(propertyId, cycleId) } },
+  );
+  return unwrapCrossubResult(result, "Couldn't order the ingoing inspection");
+}
+
+/** The tenant's answer to a rent offer, keyed in by the agent (Self-Manage only). */
+export async function recordSelfManagedRentReviewTenantResponse(
+  propertyId: string,
+  reviewId: string,
+  body: AgentRentReviewTenantResponseInput,
+): Promise<AgentRentReviewResult> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/rent-review/{reviewId}/negotiation/tenant-response',
+    { params: { path: { propertyId, reviewId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't record the tenant's response");
 }
 
 export type RequestAgentOpenInspectionInput = {

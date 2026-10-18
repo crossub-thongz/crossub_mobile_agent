@@ -102,6 +102,30 @@ export interface ServerLeasingApplicationReview {
   agentDecision: string
   decisionAt: string | null
   documents: string[]
+  /** Counter-offer history, oldest round first. Optional — older payloads lack it. */
+  negotiation?: ServerLeasingNegotiation
+}
+
+/** One round of a counter-offer negotiation on an application. */
+export interface ServerLeasingNegotiationRound {
+  id: string
+  roundNo: number
+  proposedBy: string
+  weeklyRent: number | null
+  leaseTerm: string | null
+  startDate: string | null
+  note: string | null
+  response: string
+  respondedAt: string | null
+  createdAt: string
+}
+
+export interface ServerLeasingNegotiation {
+  rounds: ServerLeasingNegotiationRound[]
+  /** The round on the table, or null. */
+  liveRoundId: string | null
+  /** The round that settled the terms, or null. */
+  acceptedRoundId: string | null
 }
 
 /** CROSSUB review personnel for a cycle (the agency's assigned account managers). */

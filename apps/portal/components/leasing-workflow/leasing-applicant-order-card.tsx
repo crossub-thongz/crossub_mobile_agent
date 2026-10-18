@@ -5,6 +5,7 @@ import { Check, ExternalLink, FileText, Send, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { LeasingApplicantDocumentDropzone } from '@/components/leasing-workflow/leasing-applicant-document-dropzone';
+import { LeasingSelfManagedApplicantActions } from '@/components/leasing-workflow/leasing-self-managed-applicant-actions';
 import { LeasingToneBadge } from '@/components/leasing-workflow/leasing-status-badge';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -35,6 +36,7 @@ export function LeasingApplicantOrderCard({
   cycleId,
   readOnly = false,
   busy = false,
+  selfManaged = false,
   onToggle,
   onApprove,
   onReject,
@@ -44,6 +46,8 @@ export function LeasingApplicantOrderCard({
   cycleId?: string;
   readOnly?: boolean;
   busy?: boolean;
+  /** Self-Manage: the agent requests info and negotiates terms itself. */
+  selfManaged?: boolean;
   onToggle: () => void;
   onApprove: () => void;
   onReject: () => void;
@@ -209,6 +213,10 @@ export function LeasingApplicantOrderCard({
               </div>
             ) : null}
           </div>
+
+          {selfManaged && app.agentDecision !== LEASING_AGENT_DECISION.REJECTED ? (
+            <LeasingSelfManagedApplicantActions app={app} propertyId={propertyId} cycleId={cycleId} />
+          ) : null}
         </div>
 
         {!readOnly && app.agentDecision === LEASING_AGENT_DECISION.PENDING ? (

@@ -417,3 +417,58 @@ export const AGENT_DEDUCTION_GROUP_LABEL: Record<AgentDeductionGroup, string> = 
 }
 
 export const AGENT_DEDUCTION_NOTE_MAX = 1000
+
+/**
+ * Self-Manage settlement (Phase 2): the agent sets the deductions by group and confirms the
+ * settlement. Keys are the `PATCH /agent/end-leasing/:caseId/settlement/breakdown` fields.
+ */
+export const SELF_MANAGED_SETTLEMENT_GROUP = {
+  UNPAID_RENT: "unpaidRent",
+  UNPAID_WATER: "unpaidWater",
+  BREAK_LEASE: "breakLease",
+  REPAIR: "repair",
+  CLEANING: "cleaning",
+  OTHER: "other",
+} as const
+
+export type SelfManagedSettlementGroup =
+  (typeof SELF_MANAGED_SETTLEMENT_GROUP)[keyof typeof SELF_MANAGED_SETTLEMENT_GROUP]
+
+export const SELF_MANAGED_SETTLEMENT_GROUP_ORDER: SelfManagedSettlementGroup[] = [
+  SELF_MANAGED_SETTLEMENT_GROUP.UNPAID_RENT,
+  SELF_MANAGED_SETTLEMENT_GROUP.UNPAID_WATER,
+  SELF_MANAGED_SETTLEMENT_GROUP.BREAK_LEASE,
+  SELF_MANAGED_SETTLEMENT_GROUP.REPAIR,
+  SELF_MANAGED_SETTLEMENT_GROUP.CLEANING,
+  SELF_MANAGED_SETTLEMENT_GROUP.OTHER,
+]
+
+export const SELF_MANAGED_SETTLEMENT_GROUP_LABEL: Record<SelfManagedSettlementGroup, string> = {
+  [SELF_MANAGED_SETTLEMENT_GROUP.UNPAID_RENT]: "Unpaid rent",
+  [SELF_MANAGED_SETTLEMENT_GROUP.UNPAID_WATER]: "Unpaid water usage",
+  [SELF_MANAGED_SETTLEMENT_GROUP.BREAK_LEASE]: "Break lease fee",
+  [SELF_MANAGED_SETTLEMENT_GROUP.REPAIR]: "Repair cost (on top of the report issues)",
+  [SELF_MANAGED_SETTLEMENT_GROUP.CLEANING]: "Cleaning",
+  [SELF_MANAGED_SETTLEMENT_GROUP.OTHER]: "Other charges",
+}
+
+/** Who pays a settlement deduction line. */
+export const DEDUCTION_RESPONSIBILITY = {
+  TENANT: "tenant",
+  LANDLORD: "landlord",
+  SHARED: "shared",
+} as const
+
+export const SELF_MANAGED_SETTLEMENT_COPY = {
+  title: "Bond settlement",
+  intro: "You set the bond held and the tenant's deductions, then confirm. The owner gets a copy by email.",
+  confirmed: "Settlement confirmed. The tenant has been asked to accept it, and the owner was emailed a copy.",
+  editTitle: "Bond and deductions",
+  editHint: "Leave a row blank to keep it as it is. 0 clears it. Amounts ex. GST.",
+  confirmTitle: "Confirm the bond settlement?",
+  confirmBody:
+    "This sends the final statement to the tenant to accept and emails the owner a copy of the deductions and refund. You can't edit the figures after this.",
+  saved: "Settlement updated",
+  confirmedToast: "Settlement confirmed",
+  noDeductions: "No deductions yet.",
+} as const

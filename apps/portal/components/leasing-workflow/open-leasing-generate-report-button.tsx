@@ -6,13 +6,17 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
+import { generateSelfManagedOpenReport } from '@/lib/crossub-api/agent-workflow-client';
 import { LEASING_UI } from '@/lib/leasing/constants';
+import { runThenReadCycle } from '@/lib/leasing/self-managed-letting';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { cn } from '@/lib/utils';
 
 export function OpenLeasingGenerateReportButton({
   cycleId,
+  propertyId,
+  selfManaged = false,
   sessionId,
   reportReady = false,
   onCycleView,
@@ -21,6 +25,9 @@ export function OpenLeasingGenerateReportButton({
   className,
 }: {
   cycleId?: string;
+  /** With `selfManaged`, generation goes through the agent facade. */
+  propertyId?: string;
+  selfManaged?: boolean;
   sessionId?: string;
   reportReady?: boolean;
   onCycleView?: (view: Awaited<ReturnType<typeof leasingOpsApi.get>>) => void;
@@ -35,7 +42,12 @@ export function OpenLeasingGenerateReportButton({
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      if (cycleId) {
+      if (cycleId && selfManaged && propertyId) {
+        const view = await runThenReadCycle(cycleId, (id) =>
+          generateSelfManagedOpenReport(propertyId, id),
+        );
+        onCycleView?.(view);
+      } else if (cycleId) {
         const view = await leasingOpsApi.generateOpenReport(cycleId);
         onCycleView?.(view);
       } else if (sessionId) {

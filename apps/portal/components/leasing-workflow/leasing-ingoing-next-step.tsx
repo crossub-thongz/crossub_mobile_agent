@@ -7,8 +7,13 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { SELF_MANAGED_LEASING_COPY } from '@/constants/self-managed-leasing';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { fromLeasingWorkflow } from '@/lib/detail-navigation';
-import { createAgentIngoingInspection } from '@/lib/crossub-api/agent-workflow-client';
+import {
+  createAgentIngoingInspection,
+  orderSelfManagedIngoingInspection,
+} from '@/lib/crossub-api/agent-workflow-client';
 import { LEASING_AGENT_DECISION, LEASING_UI } from '@/lib/leasing/constants';
 import {
   LEASING_INGOING_SCHEDULE_WINDOW_DAYS,
@@ -20,6 +25,7 @@ import {
   isLeasingReadyForIngoingHandoff,
   showLeasingIngoingNextStepPanel,
 } from '@/lib/leasing/lifecycle';
+import { runThenReadCycle } from '@/lib/leasing/self-managed-letting';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { leasingCycleApprovalRef } from '@/lib/workflow-case-reference';
@@ -30,6 +36,7 @@ export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropert
   const { leasingCycles, inspections, apiConnected, refresh } = useAgentData();
   const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
   const scheduleLocal = useLeasingWorkflowStore((s) => s.scheduleIngoingInspection);
+  const selfManaged = useIsPropertySelfManaged(detail.propertyId);
 
   const [busy, setBusy] = useState(false);
   const [inspectionDialogId, setInspectionDialogId] = useState<string | null>(null);
@@ -52,7 +59,34 @@ export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropert
     setInspectionDialogId(inspectionId);
   };
 
+  /** Self-Manage orders the ingoing through the agent facade; the cycle re-read names the job. */
+  const handleSelfManagedOrder = async (id: string) => {
+    setBusy(true);
+    try {
+      const view = await runThenReadCycle(id, (cid) =>
+        orderSelfManagedIngoingInspection(detail.propertyId, cid),
+      );
+      applyCycleView(detail.propertyId, view);
+      await refresh();
+      const inspectionId = view.onboarding?.ingoingInspection?.inspectionId ?? null;
+      if (!inspectionId) {
+        toast.error('Ingoing inspection was ordered but no job id was returned');
+        return;
+      }
+      toast.success(SELF_MANAGED_LEASING_COPY.ingoingOrdered);
+      openJobCase(inspectionId);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not order ingoing inspection');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleStart = async () => {
+    if (selfManaged && apiConnected && cycleId) {
+      await handleSelfManagedOrder(cycleId);
+      return;
+    }
     const moveIn = detail.rental.moveInDate ?? detail.rental.availableFrom;
     if (!moveIn) {
       toast.error('Move-in date is required before scheduling an ingoing inspection');

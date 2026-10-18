@@ -267,6 +267,7 @@ export function patchDetailFromCycleView(
         fileName: fileNameFromDocumentUrl(url),
         url,
       })),
+      negotiation: r.negotiation,
     };
     }),
     onboarding: mapOnboarding(view),

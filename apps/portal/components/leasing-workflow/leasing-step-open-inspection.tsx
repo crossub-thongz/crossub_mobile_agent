@@ -26,6 +26,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { cancelAgentLeasingCycle } from '@/lib/crossub-api/agent-workflow-client';
 import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
 import { LEASING_AGENT_SELF_OPEN_LABEL, LEASING_UI } from '@/lib/leasing/constants';
@@ -64,6 +65,7 @@ export function LeasingStepOpenInspection({
   onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
   const { inspections, leasingCycles, apiConnected, refresh } = useAgentData();
+  const selfManaged = useIsPropertySelfManaged(detail.propertyId);
   const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
   const clearDetail = useLeasingWorkflowStore((s) => s.clearDetail);
 
@@ -445,6 +447,8 @@ export function LeasingStepOpenInspection({
       {canShowGenerateReport ? (
         <OpenLeasingGenerateReportButton
           cycleId={cycleId}
+          propertyId={detail.propertyId}
+          selfManaged={selfManaged}
           sessionId={oi.viewingSessionId ?? undefined}
           reportReady={reportReady}
           onCycleView={(view) => applyCycleView(detail.propertyId, view)}
