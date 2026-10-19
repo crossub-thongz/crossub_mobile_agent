@@ -21,6 +21,7 @@
 - Self-Manage bond settlement: choose deduct from bond or tenant pays separately, with the refund and amount owed following the method.
 
 ### Fixed
+- Self-Manage applicant orders: Request info and Propose terms no longer show once the applicant is approved; the agreed terms stay.
 - Self-Manage bond settlement shows the refund from the bond minus the existing deductions before the first edit.
 - Conversations job context shows the property's tenant instead of "—".
 - Conversations assignee picker shows the assignee's name, or Someone outside your team, instead of a raw id.
@@ -29,6 +30,7 @@
 - Leasing workflow timestamps show in Sydney time whatever the browser's time zone.
 
 ### Changed
+- Self-Manage bond settlement: editable again when the tenant declines the confirmed settlement, with a note to revise and confirm again.
 - Self-Manage onboarding: only the agency principal or accountant sees Mark received and Approve for the deposit and bond; field agents can still reject a proof.
 - Self-Manage task detail badges and status cards read In progress, CROS assisting instead of CROS handling, with agent-voiced recommendations and strata notes.
 - Self-Manage end-of-lease report comparison and repair-quote step speak to the agent instead of waiting on CROSSUB.

@@ -24,6 +24,7 @@ import {
   SETTLEMENT_METHOD_HINT,
   SETTLEMENT_METHOD_LABEL,
   SETTLEMENT_METHOD_ORDER,
+  TENANT_SETTLEMENT_CONFIRMATION,
   TERMINATION_CASE_STATUS,
   type SelfManagedSettlementGroup,
   type SettlementMethod,
@@ -76,7 +77,10 @@ export function SelfManagedSettlementPanel({ caseData }: { caseData: Termination
   const { settlement } = caseData;
   const open = caseData.status === TERMINATION_CASE_STATUS.OPEN;
   const confirmed = settlement.status === LEASING_ITEM_STATUS.DONE;
-  const canEdit = open && !confirmed;
+  // Matches the API: a confirmed settlement opens again only when the tenant declines it.
+  const tenantDeclined =
+    confirmed && caseData.tenantConfirmation.status === TENANT_SETTLEMENT_CONFIRMATION.DECLINED;
+  const canEdit = open && (!confirmed || tenantDeclined);
   const tenantLines = settlement.deductions.filter((line) => line.responsibility === DEDUCTION_RESPONSIBILITY.TENANT && line.amount > 0);
   const balance = settlementBalance(settlement);
 
@@ -127,7 +131,11 @@ export function SelfManagedSettlementPanel({ caseData }: { caseData: Termination
           <div className="min-w-0">
             <p className="text-sm font-semibold">{SELF_MANAGED_SETTLEMENT_COPY.title}</p>
             <p className="text-muted-foreground mt-0.5 text-xs">
-              {confirmed ? SELF_MANAGED_SETTLEMENT_COPY.confirmed : SELF_MANAGED_SETTLEMENT_COPY.intro}
+              {tenantDeclined
+                ? SELF_MANAGED_SETTLEMENT_COPY.tenantDeclined
+                : confirmed
+                  ? SELF_MANAGED_SETTLEMENT_COPY.confirmed
+                  : SELF_MANAGED_SETTLEMENT_COPY.intro}
             </p>
           </div>
         </div>

@@ -502,11 +502,12 @@ export const SELF_MANAGED_SETTLEMENT_COPY = {
   title: "Bond settlement",
   intro: "You set the bond held, the tenant's deductions and how they are paid, then confirm. The owner gets a copy by email.",
   confirmed: "Settlement confirmed. The tenant has been asked to accept it. The owner copy and whether it sent are under Owner decisions.",
+  tenantDeclined: "The tenant declined the settlement. Revise the figures or method, then confirm again.",
   editTitle: "Bond and deductions",
   editHint: "Leave a row blank to keep it as it is. 0 clears it. Amounts ex. GST.",
   confirmTitle: "Confirm the bond settlement?",
   confirmBody:
-    "This sends the final statement to the tenant to accept and emails the owner a copy of the deductions and refund. You can't edit the figures after this.",
+    "This sends the final statement to the tenant to accept and emails the owner a copy of the deductions and refund. You can't edit the figures after this unless the tenant declines.",
   saved: "Settlement updated",
   confirmedToast: "Settlement confirmed",
   noDeductions: "No deductions yet.",

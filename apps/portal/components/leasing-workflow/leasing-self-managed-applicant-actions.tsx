@@ -55,15 +55,18 @@ function roundTermsLine(round: ServerLeasingNegotiationRound): string {
 /**
  * Self-Manage applicant actions on an applicant order: email the applicant for more
  * information, propose terms, and accept / decline / counter the round on the table.
+ * Once the applicant is decided (`actionable` false), only the agreed terms show.
  */
 export function LeasingSelfManagedApplicantActions({
   app,
   propertyId,
   cycleId,
+  actionable,
 }: {
   app: LeasingApplicationDetail;
   propertyId: string;
   cycleId?: string;
+  actionable: boolean;
 }) {
   const { pending, run } = useSelfManagedLettingAction(propertyId, cycleId);
   const [openForm, setOpenForm] = useState<OpenForm>(null);
@@ -139,6 +142,14 @@ export function LeasingSelfManagedApplicantActions({
 
   const setProposalField = (field: keyof NegotiationProposalForm, value: string) =>
     setProposal((current) => ({ ...current, [field]: value }));
+
+  if (!actionable) {
+    return accepted ? (
+      <p className={cn('rounded-md px-2.5 py-1.5 text-[12.5px]', LEASING_UI.callout)}>
+        {COPY.acceptedRound(accepted.roundNo)} · {roundTermsLine(accepted)}
+      </p>
+    ) : null;
+  }
 
   return (
     <div className="space-y-2 rounded-lg border bg-muted/10 p-3">

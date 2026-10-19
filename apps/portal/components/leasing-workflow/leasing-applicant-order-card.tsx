@@ -226,7 +226,12 @@ export function LeasingApplicantOrderCard({
           ) : null}
 
           {selfManaged && app.agentDecision !== LEASING_AGENT_DECISION.REJECTED ? (
-            <LeasingSelfManagedApplicantActions app={app} propertyId={propertyId} cycleId={cycleId} />
+            <LeasingSelfManagedApplicantActions
+              app={app}
+              propertyId={propertyId}
+              cycleId={cycleId}
+              actionable={!readOnly && app.agentDecision === LEASING_AGENT_DECISION.PENDING}
+            />
           ) : null}
         </div>
 
