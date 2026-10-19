@@ -38,6 +38,29 @@ export function quoteStepTenantQuotationSent(rc: ReportComparisonStageState): bo
   return Boolean(rc.tenantBondDeductionAckEmail?.sentAt);
 }
 
+/**
+ * Every tenant item has a quote and a contractor. Serviced plans also need the End of Lease
+ * maintenance job CROSSUB opens for each item; on Self-Manage the agency keys the quote in itself,
+ * and the API's Self-Manage send does not ask for a job.
+ */
+export function tenantRepairItemsQuoted(
+  items: ReadonlyArray<{
+    quote?: string | null;
+    handymanName?: string | null;
+    maintenanceRequestId?: string | null;
+  }>,
+  selfManaged = false,
+): boolean {
+  return (
+    items.length > 0 &&
+    items.every(
+      (item) =>
+        Boolean(item.quote?.trim() && item.handymanName?.trim()) &&
+        (selfManaged || Boolean(item.maintenanceRequestId?.trim())),
+    )
+  );
+}
+
 /** On Self-Manage the agent sets the deductions and the landlord quotation, so no CROSSUB handoff gates it. */
 export function canAgentSendTenantQuotation(rc: ReportComparisonStageState, selfManaged = false): boolean {
   if (selfManaged) return true;

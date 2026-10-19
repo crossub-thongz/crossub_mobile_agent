@@ -77,6 +77,7 @@ import {
   quoteStepHasLandlordItems,
   quoteStepLandlordQuoteSentToAgent,
   tenantRepairItemsLocked,
+  tenantRepairItemsQuoted,
   type AgentLandlordQuoteResponse,
 } from '@/lib/end-leasing/quote-step-gates.util';
 import {
@@ -2868,16 +2869,7 @@ function ReportComparisonPanelBody({ caseData, mode = 'compare' }: EndLeasingRep
   const tenantResponsibilityReviewStatus = deriveTenantResponsibilityReviewStatus(rc);
   const tenantMaintenanceReady = tenantResponsibilityReviewStatus === 'accepted';
   const landlordMaintenanceReady = rc.landlordResponsibilityAgentAcknowledged === true;
-  const endLeasingQuotesReadyForTenant =
-    tenantItems.length > 0 &&
-    tenantItems.every(
-      (item) =>
-        Boolean(
-          item.maintenanceRequestId?.trim() &&
-            item.quote?.trim() &&
-            item.handymanName?.trim(),
-        ),
-    );
+  const endLeasingQuotesReadyForTenant = tenantRepairItemsQuoted(tenantItems, selfManaged);
   const endLeasingLandlordQuotesReady =
     landlordItems.length > 0 &&
     landlordItems.every(

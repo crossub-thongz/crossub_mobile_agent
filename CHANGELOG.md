@@ -21,6 +21,7 @@
 - Self-Manage bond settlement: choose deduct from bond or tenant pays separately, with the refund and amount owed following the method.
 
 ### Fixed
+- Self-Manage end of lease: Send quotation to tenant unlocks once each tenant item has a quote and a contractor, without a CROSSUB maintenance job per item.
 - Self-Manage end of lease: Email to Tenant reopens after the tenant disagrees with the responsibility list, so the revised list can be sent.
 - Agency inspection jobs: progress and report steps speak to the agency instead of CROSSUB, and the separate agent acknowledgement step is hidden after the agency's sign-off
 - Self-Manage applicant orders: Request info and Propose terms no longer show once the applicant is approved; the agreed terms stay.
