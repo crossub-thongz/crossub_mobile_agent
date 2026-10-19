@@ -119,6 +119,28 @@ export function formatPropertyTime(input: Date | string): string {
   return propertyDateTimeParts(d).time;
 }
 
+const PROPERTY_DATE_NUMERIC = new Intl.DateTimeFormat('en-GB', {
+  timeZone: PROPERTY_TIME_ZONE,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
+
+/**
+ * DD/MM/YYYY at the property (Sydney). A bare YYYY-MM-DD is a calendar date and is only
+ * reordered, so it never drifts a day; a timestamp is read in Sydney. "—" when absent.
+ */
+export function formatPropertyDateNumeric(input: Date | string | null | undefined): string {
+  if (input == null) return '—';
+  if (typeof input === 'string') {
+    const match = input.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+  }
+  const d = toValidDate(input);
+  if (!d) return fallbackDateLabel(input);
+  return PROPERTY_DATE_NUMERIC.format(d);
+}
+
 export function dayKey(input: Date | string): string {
   const d = toValidDate(input);
   if (!d) return typeof input === 'string' ? input.slice(0, 10) || 'unknown' : 'unknown';

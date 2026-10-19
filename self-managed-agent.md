@@ -230,6 +230,12 @@ Owner: whoever frees up first. Can start earlier, since the decisions are made.
 
 ---
 
+## People
+
+- [x] People page for any agent of a Self-Manage agency: search by name, email, phone or CP reference, filter by role, and open a profile with tenancies (folio or why there is none), owned properties, supplier jobs and folios, and applications, all limited to that agency (crossub_web 13df4bd57, contract 0.40.0). Not yet run on staging.
+
+---
+
 ## Open questions
 
 1. Switching tiers: per agency, or per property using the existing override? What happens to jobs in progress, and can an agency switch back down to Self-Manage?

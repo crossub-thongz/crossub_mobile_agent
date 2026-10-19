@@ -3,6 +3,9 @@
 ## 2026-10-19
 
 ### Added
+- `@crossub-thongz/api-contract` bumped to ^0.40.0.
+- Self-Manage People page: search the agency's tenants, owners, suppliers, applicants and staff by name, email, phone or CP reference, filter by role, and load more.
+- Self-Manage person profile: CP reference, roles, contact details, tenancies with folio, tenant contacts, owned properties, supplier jobs and folios, and applications.
 - Self-Manage lease agreement: Edit terms has a Bond field.
 - Self-Manage settlement: Edit deductions has a Quoted repairs row, so the agency can lower the repair quotation amount after the tenant declines.
 - Self-Manage end of lease: Send quotation to tenant without waiting for a CROSSUB bond deduction proposal or landlord quotation; the Quote step shows only the tenant quotation.

@@ -24,6 +24,7 @@ export const MORE_MENU_ITEM_DESCRIPTION: Partial<Record<string, string>> = {
   [ROUTES.MAINTENANCE]: 'Repair jobs, quotes and contractors.',
   [ROUTES.INSPECTIONS]: 'Open, routine, ingoing and outgoing inspections.',
   [ROUTES.CONVERSATIONS]: 'Tenant, owner and tradie threads beside the job they belong to.',
+  [ROUTES.PEOPLE]: 'Tenants, owners, suppliers and applicants with their CP references.',
   [ROUTES.TRUST]: 'Trust accounting for your agency.',
   [ROUTES.ACCOUNTING]: 'Rent and invoice arrears, plus rent chasing.',
   [ROUTES.TRIBUNAL]: 'Tribunal cases and rent chasing.',

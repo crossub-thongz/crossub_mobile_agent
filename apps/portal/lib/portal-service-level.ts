@@ -99,7 +99,12 @@ export function isSelfManagedLevel(level: AgentPortalServiceLevel): boolean {
 
 /** True when any assigned agency is Self-Manage — the desktop module pages and "you" copy switch on. */
 export function hasSelfManagedAgency(agencies: Agency[]): boolean {
-  return agencies.some((a) => isSelfManagedLevel(resolvePortalServiceLevel(a.portalServiceLevel)));
+  return selfManagedAgencies(agencies).length > 0;
+}
+
+/** Assigned agencies that are Self-Manage, whatever the agent's tier there (People). */
+export function selfManagedAgencies(agencies: Agency[]): Agency[] {
+  return agencies.filter((a) => isSelfManagedLevel(resolvePortalServiceLevel(a.portalServiceLevel)));
 }
 
 export function isPropertySelfManaged(agencies: Agency[], propertyAgencyId?: string): boolean {
@@ -247,6 +252,7 @@ export const FULL_MANAGEMENT_ROUTE_PREFIXES = [
   ROUTES.MESSAGES,
   ROUTES.COMMUNICATIONS,
   ROUTES.CONVERSATIONS,
+  ROUTES.PEOPLE,
   ROUTES.TRUST,
   ROUTES.AGREEMENTS,
   ROUTES.ACCOUNTING,

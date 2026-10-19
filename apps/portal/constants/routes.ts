@@ -25,6 +25,8 @@ export const ROUTES = {
   CONVERSATIONS: '/conversations',
   /** Self-Manage trust accounting (principals only; shell until the trust routes land). */
   TRUST: '/trust',
+  /** Self-Manage People: the agency's tenants, owners, suppliers and applicants with CP references. */
+  PEOPLE: '/people',
   NOTIFICATIONS: '/notifications',
   REPORTS: '/reports',
   SEARCH: '/search',
@@ -99,6 +101,12 @@ export function propertyFinancialsHref(
   return `${propertyDetail(id)}?${params.toString()}`;
 }
 export const agencyDetail = (id: string) => `/agencies/${id}`;
+/** People list, opened on one agency when the agent runs several Self-Manage agencies. */
+export const peopleList = (agencyId?: string) =>
+  agencyId ? `${ROUTES.PEOPLE}?agencyId=${encodeURIComponent(agencyId)}` : ROUTES.PEOPLE;
+/** One person's profile; the API scopes it to the agency, so the agency travels with the link. */
+export const personDetail = (personId: string, agencyId: string) =>
+  `${ROUTES.PEOPLE}/${encodeURIComponent(personId)}?agencyId=${encodeURIComponent(agencyId)}`;
 export const propertyLeasePackage = (propertyId: string, leaseId: string) =>
   `/properties/${propertyId}/lease/${leaseId}`;
 export const propertyArchivedLandlord = (propertyId: string, archiveKey: string) =>

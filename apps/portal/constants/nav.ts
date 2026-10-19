@@ -11,6 +11,7 @@ import {
   MessagesSquare,
   Settings,
   Tags,
+  Users,
   Wrench,
 } from 'lucide-react';
 
@@ -36,6 +37,14 @@ const CONVERSATIONS_NAV_ITEM: NavItem = {
   href: ROUTES.CONVERSATIONS,
   label: 'Conversations',
   icon: MessagesSquare,
+  portalAccess: PORTAL_NAV_ACCESS.SELF_MANAGED,
+};
+
+/** Self-Manage People — tenants, owners, suppliers and applicants with CP references. */
+const PEOPLE_NAV_ITEM: NavItem = {
+  href: ROUTES.PEOPLE,
+  label: 'People',
+  icon: Users,
   portalAccess: PORTAL_NAV_ACCESS.SELF_MANAGED,
 };
 
@@ -71,6 +80,7 @@ const V2_SELF_MANAGED_NAV: NavItem[] = [
     portalAccess: PORTAL_NAV_ACCESS.SELF_MANAGED,
   },
   CONVERSATIONS_NAV_ITEM,
+  PEOPLE_NAV_ITEM,
   TRUST_NAV_ITEM,
 ];
 
@@ -79,6 +89,7 @@ export const V1_MORE_NAV: NavItem[] = [
   { href: ROUTES.MAINTENANCE, label: 'Maintenance', icon: Wrench, portalAccess: 'full' },
   { href: ROUTES.INSPECTIONS, label: 'Inspections', icon: ClipboardList },
   CONVERSATIONS_NAV_ITEM,
+  PEOPLE_NAV_ITEM,
   TRUST_NAV_ITEM,
   { href: ROUTES.ACCOUNTING, label: 'Accounting', icon: FileText, portalAccess: 'full' },
   { href: ROUTES.TRIBUNAL, label: 'Tribunal', icon: FileText },

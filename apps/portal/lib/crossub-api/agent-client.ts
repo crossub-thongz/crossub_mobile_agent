@@ -1,4 +1,4 @@
-import type { components } from '@crossub-thongz/api-contract';
+import type { components, operations } from '@crossub-thongz/api-contract';
 
 import { ApiError, api, apiV1 } from '@/lib/api';
 import { fileToBase64WithProgress } from '@/lib/file-upload';
@@ -167,6 +167,43 @@ export async function fetchAgencyTeam(agencyId: string): Promise<AgencyTeamRespo
     params: { path: { agencyId } },
   });
   return unwrapCrossubResult(result, "Couldn't load the agency team");
+}
+
+/** Self-Manage People (`/api/v1/agent/agencies/{agencyId}/people`): everyone on the agency's properties, with CP references. */
+export type AgencyPeopleResponse = components['schemas']['PeopleListResponseDto'];
+export type AgencyPersonListItem = components['schemas']['PersonListItemDto'];
+export type AgencyPersonRole = AgencyPersonListItem['roles'][number];
+export type AgencyPersonProfile = components['schemas']['PersonProfileDto'];
+export type AgencyPersonTenancy = components['schemas']['PersonTenancyDto'];
+export type AgencyPersonTenantContact = components['schemas']['PersonTenantContactDto'];
+export type AgencyPersonOwnedProperty = components['schemas']['PersonOwnedPropertyDto'];
+export type AgencyPersonSupplier = components['schemas']['PersonSupplierDto'];
+export type AgencyPersonJob = components['schemas']['PersonJobDto'];
+export type AgencyPersonApplication = components['schemas']['PersonApplicationDto'];
+export type AgencyPeoplePropertyRef = components['schemas']['PeoplePropertyRefDto'];
+export type AgencyPeopleFolioRef = components['schemas']['PeopleFolioRefDto'];
+export type AgencyPeopleQuery = NonNullable<
+  operations['AgentPeopleController_list']['parameters']['query']
+>;
+
+export async function fetchAgencyPeople(
+  agencyId: string,
+  query: AgencyPeopleQuery,
+): Promise<AgencyPeopleResponse> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/people', {
+    params: { path: { agencyId }, query },
+  });
+  return unwrapCrossubResult(result, "Couldn't load people");
+}
+
+export async function fetchAgencyPerson(
+  agencyId: string,
+  personId: string,
+): Promise<AgencyPersonProfile> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/people/{personId}', {
+    params: { path: { agencyId, personId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't load this person");
 }
 
 export async function inviteAgencyTeamMember(
