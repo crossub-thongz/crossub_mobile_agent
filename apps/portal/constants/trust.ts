@@ -203,12 +203,21 @@ export const TRUST_DISBURSEMENT_KIND = {
 export const TRUST_DISBURSEMENT_TAB = {
   DUE_OWNERS: 'DUE_OWNERS',
   ALL_OWNERS: 'ALL_OWNERS',
+  ALL_SUPPLIERS: 'ALL_SUPPLIERS',
 } as const satisfies Record<string, TrustDisbursementTab>;
 
 export const TRUST_DISBURSEMENT_TABS: readonly { id: TrustDisbursementTab; label: string }[] = [
   { id: TRUST_DISBURSEMENT_TAB.DUE_OWNERS, label: 'Due owners' },
   { id: TRUST_DISBURSEMENT_TAB.ALL_OWNERS, label: 'All owners' },
+  { id: TRUST_DISBURSEMENT_TAB.ALL_SUPPLIERS, label: 'Suppliers' },
 ];
+
+/** The run each Disburse tab starts: owner tabs pay owners, the supplier tab pays paid bills out to tradies. */
+export const TRUST_DISBURSEMENT_KIND_FOR_TAB: Record<TrustDisbursementTab, TrustDisbursementKind> = {
+  DUE_OWNERS: TRUST_DISBURSEMENT_KIND.OWNER,
+  ALL_OWNERS: TRUST_DISBURSEMENT_KIND.OWNER,
+  ALL_SUPPLIERS: TRUST_DISBURSEMENT_KIND.SUPPLIER,
+};
 
 export const TRUST_DISBURSEMENT_BLOCKED_LABEL: Record<TrustDisbursementBlockedReason, string> = {
   NO_PAYOUT_METHOD: 'No payout method',
@@ -424,10 +433,42 @@ export const TRUST_PAY_BILL_COPY = {
   paid: (billNumber: number) => `Bill #${billNumber} paid`,
 } as const;
 
+/** Disburse copy that names who is paid. Suppliers are paid out with no statement. */
+export const TRUST_DISBURSE_PARTY_COPY: Record<
+  TrustDisbursementKind,
+  {
+    party: string;
+    searchPlaceholder: string;
+    empty: string;
+    disburse: (count: number) => string;
+    confirmTitle: string;
+    confirmBody: (count: number) => string;
+    noneSelected: string;
+  }
+> = {
+  OWNER: {
+    party: 'Owner',
+    searchPlaceholder: 'Search owner, code or address',
+    empty: 'No owners to pay.',
+    disburse: (count) => `Disburse ${count} owner${count === 1 ? '' : 's'}`,
+    confirmTitle: 'Disburse to owners',
+    confirmBody: (count) =>
+      `Posts fees, pays due bills, pays out ${count} owner${count === 1 ? '' : 's'} and emails each owner their statement.`,
+    noneSelected: 'Select at least one owner',
+  },
+  SUPPLIER: {
+    party: 'Supplier',
+    searchPlaceholder: 'Search supplier or code',
+    empty: 'No suppliers to pay.',
+    disburse: (count) => `Pay ${count} supplier${count === 1 ? '' : 's'}`,
+    confirmTitle: 'Pay suppliers',
+    confirmBody: (count) =>
+      `Pays out the paid bills held for ${count} supplier${count === 1 ? '' : 's'}. They go on the next bank file.`,
+    noneSelected: 'Select at least one supplier',
+  },
+};
+
 export const TRUST_DISBURSE_COPY = {
-  searchPlaceholder: 'Search owner, code or address',
-  empty: 'No owners to pay.',
-  owner: 'Owner',
   property: 'Property',
   balance: 'Balance',
   billsDue: 'Bills due',
@@ -435,13 +476,8 @@ export const TRUST_DISBURSE_COPY = {
   nextDue: 'Next due',
   date: 'Disbursement date',
   selectAll: 'Select all payable',
-  disburse: (count: number) => `Disburse ${count} owner${count === 1 ? '' : 's'}`,
-  confirmTitle: 'Disburse to owners',
-  confirmBody: (count: number) =>
-    `Posts fees, pays due bills, pays out ${count} owner${count === 1 ? '' : 's'} and emails each owner their statement.`,
   confirm: 'Disburse',
   cancel: 'Cancel',
-  noneSelected: 'Select at least one owner',
   resultTitle: (runNumber: number) => `Disbursement run #${runNumber}`,
   resultSummary: (paid: number, skipped: number, payout: string) =>
     `${paid} paid, ${skipped} skipped, ${payout} paid out.`,

@@ -29,8 +29,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   TRUST_DISBURSE_COPY as COPY,
+  TRUST_DISBURSE_PARTY_COPY,
   TRUST_DISBURSEMENT_BLOCKED_LABEL,
-  TRUST_DISBURSEMENT_KIND,
+  TRUST_DISBURSEMENT_KIND_FOR_TAB,
   TRUST_DISBURSEMENT_TAB,
   TRUST_DISBURSEMENT_TABS,
   TRUST_LEDGERS_COPY,
@@ -72,6 +73,8 @@ export function TrustDisburseTab({
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<AgentTrustDisbursementResult | null>(null);
   const query = useDebouncedValue(search.trim());
+  const kind = TRUST_DISBURSEMENT_KIND_FOR_TAB[tab];
+  const party = TRUST_DISBURSE_PARTY_COPY[kind];
 
   const { data, error, loading, reload } = useTrustResource(
     `${agencyId}:${bankAccountId}:${tab}:${query}`,
@@ -105,7 +108,7 @@ export function TrustDisburseTab({
 
   function openConfirm() {
     if (selectedIds.length === 0) {
-      toast.error(COPY.noneSelected);
+      toast.error(party.noneSelected);
       return;
     }
     setConfirmKey(newTrustIdempotencyKey());
@@ -117,7 +120,7 @@ export function TrustDisburseTab({
     try {
       const next = await disburseTrust(agencyId, bankAccountId, {
         idempotencyKey: confirmKey,
-        kind: TRUST_DISBURSEMENT_KIND.OWNER,
+        kind,
         disbursementDate: date,
         ledgerIds: selectedIds,
       });
@@ -139,9 +142,16 @@ export function TrustDisburseTab({
       ) : null}
 
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
-        <TrustSearchInput value={search} onChange={setSearch} placeholder={COPY.searchPlaceholder} />
+        <TrustSearchInput value={search} onChange={setSearch} placeholder={party.searchPlaceholder} />
         <div className="min-w-0 flex-1">
-          <FilterChips options={TRUST_DISBURSEMENT_TABS} value={tab} onChange={setTab} />
+          <FilterChips
+            options={TRUST_DISBURSEMENT_TABS}
+            value={tab}
+            onChange={(next) => {
+              setTab(next);
+              setSelected(new Set());
+            }}
+          />
         </div>
       </div>
 
@@ -164,7 +174,7 @@ export function TrustDisburseTab({
           onClick={openConfirm}
         >
           <Send className="size-4" />
-          {COPY.disburse(selectedIds.length)}
+          {party.disburse(selectedIds.length)}
         </Button>
       </div>
 
@@ -176,7 +186,7 @@ export function TrustDisburseTab({
         ) : null
       ) : data.items.length === 0 ? (
         <p className="text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm">
-          {query ? TRUST_PAGE_COPY.noMatches : COPY.empty}
+          {query ? TRUST_PAGE_COPY.noMatches : party.empty}
         </p>
       ) : (
         <div className={cn('overflow-x-auto rounded-xl border bg-card', loading && 'opacity-60')}>
@@ -193,7 +203,7 @@ export function TrustDisburseTab({
                     onChange={toggleAll}
                   />
                 </th>
-                <th className={TRUST_TABLE_HEAD_CLASS}>{COPY.owner}</th>
+                <th className={TRUST_TABLE_HEAD_CLASS}>{party.party}</th>
                 <th className={cn(TRUST_TABLE_HEAD_CLASS, 'hidden lg:table-cell')}>{COPY.property}</th>
                 <th className={cn(TRUST_TABLE_HEAD_CLASS, 'hidden text-right md:table-cell')}>
                   {COPY.balance}
@@ -257,8 +267,8 @@ export function TrustDisburseTab({
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{COPY.confirmTitle}</DialogTitle>
-            <DialogDescription>{COPY.confirmBody(selectedIds.length)}</DialogDescription>
+            <DialogTitle>{party.confirmTitle}</DialogTitle>
+            <DialogDescription>{party.confirmBody(selectedIds.length)}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" disabled={pending} onClick={() => setConfirmKey(null)}>
