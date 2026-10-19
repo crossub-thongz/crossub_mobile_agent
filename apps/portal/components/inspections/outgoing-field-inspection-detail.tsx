@@ -82,6 +82,8 @@ import {
 import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
+import { AGENCY_JOB_REPORT_AWAITING_SIGN_OFF } from '@/constants/inspection-approval';
+import { gateHintFor } from '@/utils/agency-job-gate-hint';
 
 type OutgoingSnapshot = {
   record: InspectionRecord | null;
@@ -569,7 +571,7 @@ export function OutgoingFieldInspectionDetail({
               : AGENT_OUTGOING_GATE_LABEL[viewingStep]}
           </span>
           {' — '}
-          {AGENT_OUTGOING_GATE_HINT[viewingStep]}
+          {gateHintFor(AGENT_OUTGOING_GATE_HINT, viewingStep, inspection.conductedByAgency === true)}
         </p>
       </section>
 
@@ -724,7 +726,7 @@ export function OutgoingFieldInspectionDetail({
           <StepCard
             icon={FileText}
             title="Outgoing report submitted"
-            description="Inspector submits the field report; CROSSUB generates the comparative PDF."
+            description="Inspector submits the field report and the comparative PDF is generated."
             status={
               reportSubmitted
                 ? LEASING_ITEM_STATUS.DONE
@@ -754,8 +756,9 @@ export function OutgoingFieldInspectionDetail({
                   />
                 ) : (
                   <p className="text-muted-foreground text-xs">
-                    Waiting for CROSSUB to approve this report. View and download appear
-                    here after approval.
+                    {inspection.conductedByAgency === true
+                      ? AGENCY_JOB_REPORT_AWAITING_SIGN_OFF
+                      : 'Waiting for CROSSUB to approve this report. View and download appear here after approval.'}
                   </p>
                 )}
               </div>
@@ -803,75 +806,78 @@ export function OutgoingFieldInspectionDetail({
             )}
           </StepCard>
 
-          <StepCard
-            icon={ClipboardCheck}
-            title="Agent acknowledgement"
-            description="Agent sign-off on the outgoing comparative inspection report."
-            status={
-              agentAcked
-                ? LEASING_ITEM_STATUS.DONE
-                : agentAck.state === 'pending'
-                  ? LEASING_ITEM_STATUS.WAITING
-                  : LEASING_ITEM_STATUS.NOT_STARTED
-            }
-          >
-            <div
-              className={cn(
-                'space-y-2',
-                !agentAcked && !reportReady && 'pointer-events-none opacity-60',
-              )}
+          {/* An agency job's sign-off above is the agent's acknowledgement. */}
+          {inspection.conductedByAgency !== true ? (
+            <StepCard
+              icon={ClipboardCheck}
+              title="Agent acknowledgement"
+              description="Agent sign-off on the outgoing comparative inspection report."
+              status={
+                agentAcked
+                  ? LEASING_ITEM_STATUS.DONE
+                  : agentAck.state === 'pending'
+                    ? LEASING_ITEM_STATUS.WAITING
+                    : LEASING_ITEM_STATUS.NOT_STARTED
+              }
             >
-              <div className="flex items-start gap-2 text-xs">
-                <User
-                  className={cn(
-                    'mt-0.5 size-4 shrink-0',
-                    agentAcked ? 'text-emerald-600' : 'text-muted-foreground',
-                  )}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium">{agentAck.label}</p>
-                  {agentAcked && agentAcknowledgedAt ? (
-                    <p className="text-muted-foreground mt-0.5 text-[12px]">
-                      Confirmed {formatDateTime(agentAcknowledgedAt)}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-              {!agentAcked && reportSubmitted && terminationCaseId ? (
-                <>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-8 gap-1.5 text-xs"
-                    disabled={ackBusy || !reportReady}
-                    onClick={() => void confirmAgentAcknowledgement()}
-                  >
-                    {ackBusy ? (
-                      <>
-                        <Loader2 className="size-3.5 animate-spin" />
-                        Confirming…
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="size-3.5" />
-                        Confirm report
-                      </>
+              <div
+                className={cn(
+                  'space-y-2',
+                  !agentAcked && !reportReady && 'pointer-events-none opacity-60',
+                )}
+              >
+                <div className="flex items-start gap-2 text-xs">
+                  <User
+                    className={cn(
+                      'mt-0.5 size-4 shrink-0',
+                      agentAcked ? 'text-emerald-600' : 'text-muted-foreground',
                     )}
-                  </Button>
-                  {!reportReady ? (
-                    <p className="text-muted-foreground text-[12px]">
-                      Available after CROSSUB approves the report.
-                    </p>
-                  ) : null}
-                </>
-              ) : null}
-              {!agentAcked && reportReady && !terminationCaseId ? (
-                <p className="text-muted-foreground text-[12px]">
-                  Link an end-leasing case to record agent acknowledgement.
-                </p>
-              ) : null}
-            </div>
-          </StepCard>
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{agentAck.label}</p>
+                    {agentAcked && agentAcknowledgedAt ? (
+                      <p className="text-muted-foreground mt-0.5 text-[12px]">
+                        Confirmed {formatDateTime(agentAcknowledgedAt)}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                {!agentAcked && reportSubmitted && terminationCaseId ? (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 gap-1.5 text-xs"
+                      disabled={ackBusy || !reportReady}
+                      onClick={() => void confirmAgentAcknowledgement()}
+                    >
+                      {ackBusy ? (
+                        <>
+                          <Loader2 className="size-3.5 animate-spin" />
+                          Confirming…
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="size-3.5" />
+                          Confirm report
+                        </>
+                      )}
+                    </Button>
+                    {!reportReady ? (
+                      <p className="text-muted-foreground text-[12px]">
+                        Available after CROSSUB approves the report.
+                      </p>
+                    ) : null}
+                  </>
+                ) : null}
+                {!agentAcked && reportReady && !terminationCaseId ? (
+                  <p className="text-muted-foreground text-[12px]">
+                    Link an end-leasing case to record agent acknowledgement.
+                  </p>
+                ) : null}
+              </div>
+            </StepCard>
+          ) : null}
         </div>
       ) : null}
 

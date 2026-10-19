@@ -80,6 +80,8 @@ import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDate, formatDateTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { AGENCY_JOB_REPORT_AWAITING_SIGN_OFF } from '@/constants/inspection-approval';
+import { gateHintFor } from '@/utils/agency-job-gate-hint';
 
 type IngoingSnapshot = {
   record: InspectionRecord | null;
@@ -522,7 +524,7 @@ export function IngoingInspectionAgentDetail({
               : AGENT_INGOING_GATE_LABEL[viewingStep]}
           </span>
           {' — '}
-          {AGENT_INGOING_GATE_HINT[viewingStep]}
+          {gateHintFor(AGENT_INGOING_GATE_HINT, viewingStep, inspection.conductedByAgency === true)}
         </p>
       </section>
 
@@ -654,7 +656,7 @@ export function IngoingInspectionAgentDetail({
           <StepCard
             icon={FileText}
             title="Ingoing report submitted"
-            description="Inspector submits the field report; CROSSUB generates the PDF."
+            description="Inspector submits the field report and the PDF is generated."
             status={
               reportSubmitted
                 ? LEASING_ITEM_STATUS.DONE
@@ -703,8 +705,9 @@ export function IngoingInspectionAgentDetail({
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-xs">
-                    Waiting for CROSSUB to approve this report. View and download appear
-                    here after approval.
+                    {inspection.conductedByAgency === true
+                      ? AGENCY_JOB_REPORT_AWAITING_SIGN_OFF
+                      : 'Waiting for CROSSUB to approve this report. View and download appear here after approval.'}
                   </p>
                 )}
               </div>

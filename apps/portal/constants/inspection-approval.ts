@@ -24,3 +24,14 @@ export const AGENCY_FIELD_REPORT_REVIEW_COPY = {
   approved: 'You signed off this report. You can view or download it.',
   notSubmitted: 'Your agency inspector conducts this inspection.',
 } as const;
+
+/** Progress hints that change on an agency job; the other steps read the same either way. */
+export const AGENCY_JOB_GATE_HINT = {
+  awaiting_approval:
+    'Your inspector has submitted the report. Review it and sign it off above to complete this job.',
+  completed: "You signed off your inspector's report. This job is complete.",
+} as const;
+
+/** The report step on an agency job before sign-off (the review panel above has the report). */
+export const AGENCY_JOB_REPORT_AWAITING_SIGN_OFF =
+  'Sign off the report above. View and download appear here after you sign off.';

@@ -21,6 +21,7 @@
 - Self-Manage bond settlement: choose deduct from bond or tenant pays separately, with the refund and amount owed following the method.
 
 ### Fixed
+- Agency inspection jobs: progress and report steps speak to the agency instead of CROSSUB, and the separate agent acknowledgement step is hidden after the agency's sign-off
 - Self-Manage applicant orders: Request info and Propose terms no longer show once the applicant is approved; the agreed terms stay.
 - Self-Manage bond settlement shows the refund from the bond minus the existing deductions before the first edit.
 - Conversations job context shows the property's tenant instead of "—".
