@@ -67,7 +67,10 @@ import {
   mergeInspectionResponsibilityItems,
 } from '@/lib/end-leasing/outgoing-inspection-sync';
 import { resolveCompareIngoingDetail } from '@/lib/end-leasing/resolve-compare-ingoing';
-import { deriveTenantResponsibilityReviewStatus } from '@/lib/end-leasing/tenant-responsibility-review.util';
+import {
+  deriveTenantResponsibilityReviewStatus,
+  tenantComparisonSummarySent,
+} from '@/lib/end-leasing/tenant-responsibility-review.util';
 import {
   canAgentSendTenantQuotation,
   deriveAgentLandlordQuoteResponse,
@@ -3088,7 +3091,7 @@ function ReportComparisonPanelBody({ caseData, mode = 'compare' }: EndLeasingRep
           emailHint="Send tenant responsibility summary to the tenant"
           emailButtonLabel="Email to Tenant"
           emailSentLabel="Email to Tenant sent"
-          emailSent={Boolean(rc.tenantComparisonSummaryEmail?.sentAt)}
+          emailSent={tenantComparisonSummarySent(rc)}
           onEmail={() => void sendComparisonSummary('tenant')}
         />
         {tenantResponsibilityReviewStatus !== 'none' ? (
