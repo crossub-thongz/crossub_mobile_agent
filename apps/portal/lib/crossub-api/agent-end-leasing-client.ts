@@ -23,6 +23,18 @@ export async function updateSelfManagedReportComparison(
   return unwrapCrossubResult(result, "Couldn't save the report comparison");
 }
 
+/** The tenant's repair quotation and bond deductions; no CROSSUB proposal or landlord quotation first. */
+export async function sendSelfManagedTenantBondAcknowledgement(
+  caseId: string,
+  tenantResponsibility: SelfManagedReportComparisonItemInput[],
+) {
+  const result = await crossub.POST('/agent/end-leasing/{caseId}/report-comparison/tenant-bond-acknowledgement', {
+    params: casePath(caseId),
+    body: { tenantResponsibility },
+  });
+  return unwrapCrossubResult(result, "Couldn't send the quotation to the tenant");
+}
+
 export async function setSelfManagedSettlementMethod(
   caseId: string,
   body: SelfManagedSettlementMethodInput,

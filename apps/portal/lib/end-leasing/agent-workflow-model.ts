@@ -269,8 +269,18 @@ function reportComparisonSubProgress(
   ];
 }
 
-function getQuoteSubProgress(caseData: TerminationCaseDetail): EndLeasingSubProgressItem[] {
+/** Self-Manage has no CROSSUB handoffs to the agent: only the tenant quotation. */
+function getQuoteSubProgress(
+  caseData: TerminationCaseDetail,
+  copyVariant: AgentCopyVariant,
+): EndLeasingSubProgressItem[] {
   const rc = caseData.reportComparison;
+  const tenantQuote: EndLeasingSubProgressItem = {
+    id: 'tenant_quote',
+    label: 'Quotation sent to tenant',
+    done: quoteStepTenantQuotationSent(rc),
+  };
+  if (copyVariant === AGENT_COPY_VARIANT.SELF_MANAGED) return [tenantQuote];
   const hasLandlord = quoteStepHasLandlordItems(rc);
   const items: EndLeasingSubProgressItem[] = [
     { id: 'bond_agent', label: 'Bond deduction sent to agent', done: quoteStepBondSentToAgent(rc) },
@@ -289,11 +299,7 @@ function getQuoteSubProgress(caseData: TerminationCaseDetail): EndLeasingSubProg
       },
     );
   }
-  items.push({
-    id: 'tenant_quote',
-    label: 'Quotation sent to tenant',
-    done: quoteStepTenantQuotationSent(rc),
-  });
+  items.push(tenantQuote);
   return items;
 }
 
@@ -413,7 +419,7 @@ export function buildEndLeasingAgentWorkflow(
     [END_LEASING_AGENT_STEP.VACATE_CONFIRMED]: vacateConfirmedSubProgress(caseData),
     [END_LEASING_AGENT_STEP.OUTGOING_INSPECTION]: outgoingInspectionSubProgress(caseData),
     [END_LEASING_AGENT_STEP.REPORT_COMPARISON]: reportComparisonSubProgress(caseData),
-    [END_LEASING_AGENT_STEP.GET_QUOTE]: getQuoteSubProgress(caseData),
+    [END_LEASING_AGENT_STEP.GET_QUOTE]: getQuoteSubProgress(caseData, copyVariant),
     [END_LEASING_AGENT_STEP.RESULT_CONFIRMED]: resultConfirmedSubProgress(caseData),
     [END_LEASING_AGENT_STEP.BOND_RELEASED]: bondReleasedSubProgress(caseData),
   };

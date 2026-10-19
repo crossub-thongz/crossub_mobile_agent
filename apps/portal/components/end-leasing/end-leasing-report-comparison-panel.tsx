@@ -94,6 +94,7 @@ import {
   type PreferredContractor,
 } from '@/lib/crossub-api/agent-client';
 import {
+  sendSelfManagedTenantBondAcknowledgement,
   updateSelfManagedReportComparison,
   type SelfManagedReportComparisonInput,
 } from '@/lib/crossub-api/agent-end-leasing-client';
@@ -2711,10 +2712,14 @@ function ReportComparisonPanelBody({ caseData, mode = 'compare' }: EndLeasingRep
   const sendTenantBondAcknowledgement = async (ackItems: ReportComparisonRepairItem[]) => {
     setBusy(true);
     try {
-      const updated = await terminationApi.sendTenantBondDeductionAcknowledgement(
-        caseData.id,
-        normalizeBondAckRepairItems(ackItems, contractors),
-      );
+      const items = normalizeBondAckRepairItems(ackItems, contractors);
+      let updated: TerminationCaseDetail;
+      if (selfManaged) {
+        await sendSelfManagedTenantBondAcknowledgement(caseData.id, items);
+        updated = await terminationApi.get(caseData.id);
+      } else {
+        updated = await terminationApi.sendTenantBondDeductionAcknowledgement(caseData.id, items);
+      }
       applyUpdatedCase(updated);
       setSendQuotationDialogOpen(false);
       setTenantQuotationSentDialogOpen(true);
@@ -2886,7 +2891,7 @@ function ReportComparisonPanelBody({ caseData, mode = 'compare' }: EndLeasingRep
   const landlordQuoteFromAdmin =
     quoteStepHasLandlordItems(rc) && quoteStepLandlordQuoteSentToAgent(rc);
   const canSendQuotationToTenant =
-    canAgentSendTenantQuotation(rc) &&
+    canAgentSendTenantQuotation(rc, selfManaged) &&
     endLeasingQuotesReadyForTenant &&
     (!tenantBondAckSent || rc.tenantQuoteResponse === 'declined');
   const canSendLandlordQuotation =
@@ -2905,9 +2910,9 @@ function ReportComparisonPanelBody({ caseData, mode = 'compare' }: EndLeasingRep
         : rc.tenantQuoteResponse === 'declined'
           ? 'Re-send quotation to tenant'
           : 'Quotation sent to tenant'
-    : !agentBondProposalSent
+    : !selfManaged && !agentBondProposalSent
       ? copy.sendAwaitBond
-      : quoteStepHasLandlordItems(rc) && !quoteStepLandlordQuoteSentToAgent(rc)
+      : !selfManaged && quoteStepHasLandlordItems(rc) && !quoteStepLandlordQuoteSentToAgent(rc)
         ? copy.sendAwaitLandlordQuote
         : agentLandlordQuoteResponse === 'pending'
           ? 'Approve landlord quotation first'
@@ -3214,9 +3219,9 @@ function ReportComparisonPanelBody({ caseData, mode = 'compare' }: EndLeasingRep
           lockedHint={
             !tenantMaintenanceReady
               ? 'Awaiting tenant responsibility review'
-              : !agentBondProposalSent
+              : !selfManaged && !agentBondProposalSent
                 ? copy.lockAwaitBond
-                : quoteStepHasLandlordItems(rc) && !quoteStepLandlordQuoteSentToAgent(rc)
+                : !selfManaged && quoteStepHasLandlordItems(rc) && !quoteStepLandlordQuoteSentToAgent(rc)
                   ? copy.lockAwaitLandlordQuote
                   : agentLandlordQuoteResponse === 'pending'
                     ? copy.lockApproveLandlordQuote

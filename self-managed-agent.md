@@ -157,7 +157,7 @@ New agent actions:
 - [x] Mark deposit paid, set the bond link, mark bond paid, record bond lodgement and refund. (Agent routes for deposit and bond paid and for approving or rejecting their proofs; buttons in the onboarding step. Mark paid posts the legacy ledger receipt as the agent with the ledger key for that request only. Lodgement is the bond link plus bond paid; refund is the end-leasing settlement. Recording the deposit or bond as received, by mark paid or proof approval, is the principal or accountant only; field agents can reject a proof.)
 - [x] Generate the open report and order the ingoing inspection (reuses Phase 1).
 - [x] Rent review: key in landlord offers and record tenant responses as the agent (today the ACCOUNT_MANAGER channel).
-- [x] End leasing (settlement panel with the settlement method; the agent edits the report comparison: responsibility items, moves between tenant and landlord, quotes and contractors. Gap: the quote step's Send quotation to tenant still waits on the CROSSUB bond deduction proposal and landlord quotation emails, which have no agent route):
+- [x] End leasing (settlement panel with the settlement method; the agent edits the report comparison: responsibility items, moves between tenant and landlord, quotes and contractors. Send quotation to tenant goes straight to the tenant on Self-Manage, with no CROSSUB bond deduction proposal or landlord quotation first; built 19 Oct 2026, crossub_web 8f2a26071, contract 0.38.0):
   - The agent builds the report comparison and deductions themselves. Today they enter them only "when CROSSUB asks" (`lib/termination-case-api.ts`, `agent-deductions-window.tsx`).
   - The agent proposes bond deductions and confirms the settlement.
 - [x] Self-Manage owner copies: chosen applicant, rent increase, bond deductions.
@@ -219,7 +219,7 @@ Owner: whoever frees up first. Can start earlier, since the decisions are made.
 - [x] Only Principal and Accountant see Trust.
 
 - Built 18 Oct 2026 (crossub_web 13ecd773b, 8d01dc358; contract 0.35.0, 0.36.0; agent app a734708). CROSSUB staff must create each agency's AGENCY trust workspace and bank account first. Not yet run on staging.
-- Transactions, fees, bank files, bank statement, reports and settings built 19 Oct 2026; uncommitted, needs a contract release after 0.36.0. Not yet run on staging.
+- Transactions, fees, bank files, bank statement, reports and settings built 19 Oct 2026 (crossub_web 4e32d9fd0, contract 0.37.0, agent app 55c63be). Not yet run on staging.
 
 **Done when:** an agency accountant receipts rent, pays a bill, runs an owner disbursement, issues the owner statement by email, and reconciles and locks the month, all inside their own agency workspace.
 

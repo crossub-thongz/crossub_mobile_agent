@@ -3,6 +3,7 @@
 ## 2026-10-19
 
 ### Added
+- Self-Manage end of lease: Send quotation to tenant without waiting for a CROSSUB bond deduction proposal or landlord quotation; the Quote step shows only the tenant quotation.
 - Agent client calls for the Self-Manage reference check, skip screening, and deposit and bond routes.
 - Self-Manage applicant orders: Screening panel with the Cros score, referees with phone numbers, notes, recommendation and Cros summary.
 - Self-Manage application step: Skip screening when the agent already has a tenant.

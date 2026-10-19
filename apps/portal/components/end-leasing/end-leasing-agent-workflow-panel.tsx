@@ -20,6 +20,8 @@ import {
   type EndLeasingAgentStep,
 } from '@/lib/end-leasing/agent-workflow-model';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
+import { agentCopyVariant } from '@/lib/portal-service-level';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 
 function StepContent({
   stepId,
@@ -51,7 +53,11 @@ export function EndLeasingAgentWorkflowPanel({
 }: {
   caseData: TerminationCaseDetail;
 }) {
-  const workflow = useMemo(() => buildEndLeasingAgentWorkflow(caseData), [caseData]);
+  const copyVariant = agentCopyVariant(useIsPropertySelfManaged(caseData.propertyId));
+  const workflow = useMemo(
+    () => buildEndLeasingAgentWorkflow(caseData, copyVariant),
+    [caseData, copyVariant],
+  );
   const [viewingStepId, setViewingStepId] = useState<EndLeasingAgentStep>(workflow.liveStepId);
   const initializedRef = useRef<string | null>(null);
   const followLiveStepRef = useRef(true);

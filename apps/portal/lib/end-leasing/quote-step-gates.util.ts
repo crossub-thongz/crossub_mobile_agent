@@ -38,7 +38,9 @@ export function quoteStepTenantQuotationSent(rc: ReportComparisonStageState): bo
   return Boolean(rc.tenantBondDeductionAckEmail?.sentAt);
 }
 
-export function canAgentSendTenantQuotation(rc: ReportComparisonStageState): boolean {
+/** On Self-Manage the agent sets the deductions and the landlord quotation, so no CROSSUB handoff gates it. */
+export function canAgentSendTenantQuotation(rc: ReportComparisonStageState, selfManaged = false): boolean {
+  if (selfManaged) return true;
   return (
     quoteStepBondSentToAgent(rc) &&
     quoteStepLandlordQuoteSentToAgent(rc) &&
