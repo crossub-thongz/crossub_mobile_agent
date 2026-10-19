@@ -139,7 +139,7 @@ Staging QA (18 Oct 2026): ingoing booked, done in the inspector app in agency mo
 - `email.crossub.com.au` verified in Resend on 19 Oct 2026, so owner copies are no longer blocked. Live delivery test skipped by decision.
 - Not yet run on staging: the tenant copy (the test job had no tenant email), a routine job and sending a report back.
 - Bug found 19 Oct 2026: the outgoing a vacating case opens, and the ingoing a letting opens, were CROSSUB pool jobs on Self-Manage, so the agency's inspector could not take them. Fixed in crossub_web 8d33fa9fd (created conducted by the property's agency, no charge) and 83cf67383 (migration hands unassigned draft ones to the agency). Staging: EL-0620462's outgoing reassigned to the QA inspector, done in the inspector app, signed off; owner and tenant copies SENT.
-- Copy still written for CROSSUB on agency jobs (not fixed): inspector app shows "EST. FEE $82.5"; agent app outgoing progress says "CROSSUB is reviewing it" and "The account manager has approved the inspector report", the completion step says "CROSSUB generates the comparative PDF", the assignment notification says "allocated to our inspector"; a separate "Agent acknowledgement / Confirm report" step remains after the agency's own sign-off.
+- Copy written for CROSSUB on agency jobs, fixed 19 Oct 2026 (crossub_web 30f386fc0, agent app c54f438, inspector app c995855): the inspector app hides the fee in agency mode; the agent app progress and report steps speak to the agency and the separate agent acknowledgement step is hidden after sign-off; no Job Allocated notice when the agency assigns its own inspector. Checked on staging on FI-4547151.
 
 ---
 
