@@ -3,6 +3,7 @@
 ## 2026-10-19
 
 ### Added
+- Self-Manage lease agreement: Edit terms has a Bond field.
 - Self-Manage settlement: Edit deductions has a Quoted repairs row, so the agency can lower the repair quotation amount after the tenant declines.
 - Self-Manage end of lease: Send quotation to tenant without waiting for a CROSSUB bond deduction proposal or landlord quotation; the Quote step shows only the tenant quotation.
 - Agent client calls for the Self-Manage reference check, skip screening, and deposit and bond routes.

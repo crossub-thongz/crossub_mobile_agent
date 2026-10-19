@@ -69,6 +69,7 @@ export const SELF_MANAGED_LEASING_COPY = {
   proposeTerms: 'Propose terms',
   counter: 'Counter',
   weeklyRent: 'Weekly rent ($)',
+  bond: 'Bond ($)',
   leaseTerm: 'Lease term',
   leaseTermPlaceholder: '52 weeks',
   startDate: 'Start date',

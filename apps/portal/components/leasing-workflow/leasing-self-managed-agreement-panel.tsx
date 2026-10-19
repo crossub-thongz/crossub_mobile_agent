@@ -139,7 +139,7 @@ export function LeasingSelfManagedAgreementPanel({
 
       {editing ? (
         <div className="space-y-2">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor={`contract-term-${propertyId}`} className="text-xs">
                 {COPY.leaseTerm}
@@ -173,6 +173,19 @@ export function LeasingSelfManagedAgreementPanel({
                 min={0}
                 value={basics.weeklyRent}
                 onChange={(e) => setBasicsField('weeklyRent', e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor={`contract-bond-${propertyId}`} className="text-xs">
+                {COPY.bond}
+              </Label>
+              <Input
+                id={`contract-bond-${propertyId}`}
+                type="number"
+                inputMode="decimal"
+                min={0}
+                value={basics.bond}
+                onChange={(e) => setBasicsField('bond', e.target.value)}
               />
             </div>
           </div>

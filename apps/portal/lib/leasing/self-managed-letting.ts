@@ -111,6 +111,7 @@ export type ContractBasicsForm = {
   leaseTerm: string;
   startDate: string;
   weeklyRent: string;
+  bond: string;
 };
 
 export function contractBasicsFormFrom(contract: LeasingContract): ContractBasicsForm {
@@ -118,6 +119,7 @@ export function contractBasicsFormFrom(contract: LeasingContract): ContractBasic
     leaseTerm: contract.leaseTerm ?? '',
     startDate: contract.startDate ? contract.startDate.slice(0, 10) : '',
     weeklyRent: contract.weeklyRent != null ? String(contract.weeklyRent) : '',
+    bond: contract.bond != null ? String(contract.bond) : '',
   };
 }
 
@@ -136,5 +138,7 @@ export function buildContractBasicsPatch(
   if (weeklyRent !== undefined && weeklyRent !== contract.weeklyRent) {
     patch.weeklyRent = weeklyRent;
   }
+  const bond = parsePositiveAmount(form.bond);
+  if (bond !== undefined && bond !== contract.bond) patch.bond = bond;
   return Object.keys(patch).length > 0 ? patch : null;
 }
