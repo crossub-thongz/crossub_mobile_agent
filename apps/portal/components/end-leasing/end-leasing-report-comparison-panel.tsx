@@ -77,7 +77,7 @@ import {
   quoteStepHasLandlordItems,
   quoteStepLandlordQuoteSentToAgent,
   tenantRepairItemsLocked,
-  tenantRepairItemsQuoted,
+  repairItemsQuoted,
   type AgentLandlordQuoteResponse,
 } from '@/lib/end-leasing/quote-step-gates.util';
 import {
@@ -98,6 +98,7 @@ import {
   type PreferredContractor,
 } from '@/lib/crossub-api/agent-client';
 import {
+  sendSelfManagedLandlordQuotation,
   sendSelfManagedTenantBondAcknowledgement,
   updateSelfManagedReportComparison,
   type SelfManagedReportComparisonInput,
@@ -2787,7 +2788,13 @@ function ReportComparisonPanelBody({ caseData, mode = 'compare' }: EndLeasingRep
   const sendLandlordQuotation = async () => {
     setBusy(true);
     try {
-      const updated = await terminationApi.sendRepairQuoteEmail(caseData.id, 'landlord');
+      let updated: TerminationCaseDetail;
+      if (selfManaged) {
+        await sendSelfManagedLandlordQuotation(caseData.id);
+        updated = await terminationApi.get(caseData.id);
+      } else {
+        updated = await terminationApi.sendRepairQuoteEmail(caseData.id, 'landlord');
+      }
       applyUpdatedCase(updated);
       setSendLandlordQuotationDialogOpen(false);
       setLandlordQuotationSentDialogOpen(true);
@@ -2869,17 +2876,8 @@ function ReportComparisonPanelBody({ caseData, mode = 'compare' }: EndLeasingRep
   const tenantResponsibilityReviewStatus = deriveTenantResponsibilityReviewStatus(rc);
   const tenantMaintenanceReady = tenantResponsibilityReviewStatus === 'accepted';
   const landlordMaintenanceReady = rc.landlordResponsibilityAgentAcknowledged === true;
-  const endLeasingQuotesReadyForTenant = tenantRepairItemsQuoted(tenantItems, selfManaged);
-  const endLeasingLandlordQuotesReady =
-    landlordItems.length > 0 &&
-    landlordItems.every(
-      (item) =>
-        Boolean(
-          item.maintenanceRequestId?.trim() &&
-            item.quote?.trim() &&
-            item.handymanName?.trim(),
-        ),
-    );
+  const endLeasingQuotesReadyForTenant = repairItemsQuoted(tenantItems, selfManaged);
+  const endLeasingLandlordQuotesReady = repairItemsQuoted(landlordItems, selfManaged);
   const landlordQuotationSent = Boolean(rc.landlordRepairQuoteEmail?.sentAt);
   const tenantQuotationSent = tenantBondAckSent || Boolean(rc.tenantRepairQuoteEmail?.sentAt);
   const agentLandlordQuoteResponse = deriveAgentLandlordQuoteResponse(rc);

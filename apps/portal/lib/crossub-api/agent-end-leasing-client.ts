@@ -35,6 +35,14 @@ export async function sendSelfManagedTenantBondAcknowledgement(
   return unwrapCrossubResult(result, "Couldn't send the quotation to the tenant");
 }
 
+/** The landlord-responsibility quotation to the owner; a keyed-in quote and contractor per item, no CROSSUB job. */
+export async function sendSelfManagedLandlordQuotation(caseId: string) {
+  const result = await crossub.POST('/agent/end-leasing/{caseId}/report-comparison/landlord-quotation', {
+    params: casePath(caseId),
+  });
+  return unwrapCrossubResult(result, "Couldn't send the quotation to the landlord");
+}
+
 export async function setSelfManagedSettlementMethod(
   caseId: string,
   body: SelfManagedSettlementMethodInput,

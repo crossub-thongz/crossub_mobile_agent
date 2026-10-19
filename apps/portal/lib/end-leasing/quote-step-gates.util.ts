@@ -39,11 +39,11 @@ export function quoteStepTenantQuotationSent(rc: ReportComparisonStageState): bo
 }
 
 /**
- * Every tenant item has a quote and a contractor. Serviced plans also need the End of Lease
- * maintenance job CROSSUB opens for each item; on Self-Manage the agency keys the quote in itself,
- * and the API's Self-Manage send does not ask for a job.
+ * Every tenant or landlord item has a quote and a contractor. Serviced plans also need the End of
+ * Lease maintenance job CROSSUB opens for each item; on Self-Manage the agency keys the quote in
+ * itself, and the API's Self-Manage sends do not ask for a job.
  */
-export function tenantRepairItemsQuoted(
+export function repairItemsQuoted(
   items: ReadonlyArray<{
     quote?: string | null;
     handymanName?: string | null;

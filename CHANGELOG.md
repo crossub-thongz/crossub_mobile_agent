@@ -3,6 +3,7 @@
 ## 2026-10-19
 
 ### Added
+- Self-Manage settlement: Edit deductions has a Quoted repairs row, so the agency can lower the repair quotation amount after the tenant declines.
 - Self-Manage end of lease: Send quotation to tenant without waiting for a CROSSUB bond deduction proposal or landlord quotation; the Quote step shows only the tenant quotation.
 - Agent client calls for the Self-Manage reference check, skip screening, and deposit and bond routes.
 - Self-Manage applicant orders: Screening panel with the Cros score, referees with phone numbers, notes, recommendation and Cros summary.
@@ -21,6 +22,7 @@
 - Self-Manage bond settlement: choose deduct from bond or tenant pays separately, with the refund and amount owed following the method.
 
 ### Fixed
+- Self-Manage end of lease: Send quotation to landlord works with a keyed-in quote and contractor per item, without a CROSSUB maintenance job.
 - Trust Disburse: a Suppliers tab pays out paid bills held for tradies, so they reach the bank file.
 - Self-Manage end of lease: Send quotation to tenant unlocks once each tenant item has a quote and a contractor, without a CROSSUB maintenance job per item.
 - Self-Manage end of lease: Email to Tenant reopens after the tenant disagrees with the responsibility list, so the revised list can be sent.
