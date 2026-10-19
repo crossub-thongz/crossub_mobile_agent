@@ -54,7 +54,7 @@ Owner: Chan
   - Allow a landlord recipient when that property's resolved level is `SELF_MANAGED`.
   - Keep failing closed when the level cannot be resolved.
   - Thread the context through `mail.service.ts` call sites.
-- [ ] **Agency sender.** (Code done. `email.crossub.com.au` DKIM, SPF and DMARC records added in GoDaddy and verified in Resend on 19 Oct 2026. Still to confirm: a real owner email arrives.) Send owner email as `"Agency name" <inboundEmailSlug@CROSSUB domain>` so replies land in the agency's inbox (`agency-inbound-email-assign.util.ts`, `formatAgencyInboundAddress`). Confirm SPF/DKIM for that domain.
+- [x] **Agency sender.** (Code done. `email.crossub.com.au` DKIM, SPF and DMARC records added in GoDaddy and verified in Resend on 19 Oct 2026. Live delivery test to a landlord inbox skipped by decision, 19 Oct 2026.) Send owner email as `"Agency name" <inboundEmailSlug@CROSSUB domain>` so replies land in the agency's inbox (`agency-inbound-email-assign.util.ts`, `formatAgencyInboundAddress`). Confirm SPF/DKIM for that domain.
 - [x] **Shared decision record.** One service that records "decision + emailed owner copy" on a job's timeline. Every module reuses it.
 - [x] Agent route to change the agency's tier, for the plan switch. Principal only.
 
@@ -136,7 +136,7 @@ Agent app:
 **Done when:** a Self-Manage principal adds a staff member as inspector and creates a routine inspection for them. The staff member does it in the inspector app, the principal signs it off in the agent app, and the report goes to the tenant and owner. There is no CROSSUB charge, no payout, no HR record, and the job never appears in the CROSSUB pool.
 
 Staging QA (18 Oct 2026): ingoing booked, done in the inspector app in agency mode and signed off in the agent app; no charge, kept out of the pool. Still open:
-- `email.crossub.com.au` verified in Resend on 19 Oct 2026, so owner copies are no longer blocked. Still to confirm: the PDF arrives attached.
+- `email.crossub.com.au` verified in Resend on 19 Oct 2026, so owner copies are no longer blocked. Live delivery test skipped by decision.
 - Not yet run on staging: the tenant copy (the test job had no tenant email), a routine job and sending a report back.
 
 ---
