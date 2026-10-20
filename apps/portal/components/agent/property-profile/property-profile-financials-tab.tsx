@@ -15,6 +15,9 @@ import { RentChasingArrearsDialog } from '@/components/agent/rent-chasing-arrear
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ACCOUNTING_MODULE_LAUNCHED } from '@/constants/accounting-sections';
+import { PROPERTY_EDIT_COPY } from '@/constants/property-profile-edit';
+import { sendPropertyArrearsReminder } from '@/lib/crossub-api/agent-client';
+import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
 import {
   fetchAgentTribunalRentChasingPrefill,
@@ -314,6 +317,21 @@ export function PropertyProfileFinancialsTab({
     loadPrefill();
   }, [loadPrefill]);
 
+  const hasOpenArrears = (prefill?.arrears.length ?? 0) > 0;
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const sendReminder = async () => {
+    if (!propertyId || !window.confirm(PROPERTY_EDIT_COPY.reminderConfirm)) return;
+    setSendingReminder(true);
+    try {
+      const sent = await sendPropertyArrearsReminder(propertyId);
+      toast.success(PROPERTY_EDIT_COPY.reminderSent(sent.emailsSent));
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Couldn't send the reminder"));
+    } finally {
+      setSendingReminder(false);
+    }
+  };
+
   const refreshArrears = useCallback(() => {
     loadPrefill();
     void refreshPortalDetail();
@@ -412,6 +430,17 @@ export function PropertyProfileFinancialsTab({
               View / mark paid
               <ChevronRight className="size-4" />
             </button>
+            {hasOpenArrears ? (
+              <button
+                type="button"
+                disabled={sendingReminder}
+                onClick={() => void sendReminder()}
+                className="text-primary inline-flex items-center gap-1 text-sm font-semibold disabled:opacity-50"
+              >
+                {sendingReminder ? <Loader2 className="size-4 animate-spin" /> : null}
+                {PROPERTY_EDIT_COPY.sendReminder}
+              </button>
+            ) : null}
           </div>
         </div>
 

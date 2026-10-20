@@ -438,3 +438,15 @@ export function formatProfileLeaseStatus(
   if (property.leaseStatus === 'vacating') return 'Vacating';
   return deriveLeaseTermLabel(leaseEnd) ?? property.leaseStatus;
 }
+
+/**
+ * A whole-number field from a text input: undefined when blank, null when it is not a whole
+ * number between 0 and max (the caller refuses the save).
+ */
+export function parseWholeNumberInput(raw: string, max: number): number | undefined | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  if (!/^\d+$/.test(trimmed)) return null;
+  const value = Number(trimmed);
+  return value <= max ? value : null;
+}

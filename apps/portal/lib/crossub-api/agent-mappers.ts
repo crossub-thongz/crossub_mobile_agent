@@ -275,6 +275,9 @@ export function mapAgentProperty(
         .paymentReference ??
       ext.paymentReference ??
       undefined,
+    rentPeriod: dto.rentPeriod,
+    maintenanceSpendThreshold: dto.maintenanceSpendThreshold,
+    pinnedTenancyId: dto.pinnedTenancyId,
     imageUrl:
       (dto as AgentProperty & { imageUrl?: string | null }).imageUrl ??
       (list as AgentPropertyListFields & { imageUrl?: string | null }).imageUrl ??

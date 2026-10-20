@@ -231,11 +231,11 @@ export async function assignPropertyAgent(
   propertyId: string,
   assignedAgentUserId: string | null,
 ): Promise<AgentProperty> {
-  return agentFetch<AgentProperty>(`/agent/properties/${propertyId}/assigned-agent`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ assignedAgentUserId }),
+  const result = await crossub.PATCH('/agent/properties/{propertyId}/assigned-agent', {
+    params: { path: { propertyId } },
+    body: { assignedAgentUserId },
   });
+  return unwrapCrossubResult(result, "Couldn't assign the agent");
 }
 
 /**
@@ -496,6 +496,88 @@ export async function updatePropertyContact(
     }
     throw err;
   }
+}
+
+/** Typed `PATCH /api/v1/agent/properties/{propertyId}` for the property profile's edit dialogs. */
+export type AgentPropertyPatch = components['schemas']['UpdateAgentPropertyDto'];
+
+export async function patchAgentProperty(
+  propertyId: string,
+  body: AgentPropertyPatch,
+): Promise<AgentProperty> {
+  const result = await crossub.PATCH('/agent/properties/{propertyId}', {
+    params: { path: { propertyId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't save the property");
+}
+
+/** Remove a contact (soft archive); removing the primary promotes the next one. */
+export async function removePropertyContact(
+  propertyId: string,
+  contactId: string,
+): Promise<AgentPropertyContact[]> {
+  const result = await crossub.DELETE('/agent/properties/{propertyId}/contacts/{contactId}', {
+    params: { path: { propertyId, contactId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't remove the contact").contacts;
+}
+
+export type AgentTenantLoginSent = components['schemas']['AgentTenantLoginSentDto'];
+
+/** Email a tenant contact their Tenant app login (409 when they already have one). */
+export async function sendTenantLogin(
+  propertyId: string,
+  contactId: string,
+): Promise<AgentTenantLoginSent> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/contacts/{contactId}/tenant-login',
+    { params: { path: { propertyId, contactId } } },
+  );
+  return unwrapCrossubResult(result, "Couldn't send the tenant login");
+}
+
+export async function archivePropertyTenancy(propertyId: string): Promise<AgentProperty> {
+  const result = await crossub.POST('/agent/properties/{propertyId}/tenancy/archive', {
+    params: { path: { propertyId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't archive the tenancy");
+}
+
+export async function restorePropertyTenancy(
+  propertyId: string,
+  archivedAt: string,
+): Promise<AgentProperty> {
+  const result = await crossub.POST('/agent/properties/{propertyId}/tenancy/restore', {
+    params: { path: { propertyId } },
+    body: { archivedAt },
+  });
+  return unwrapCrossubResult(result, "Couldn't restore the tenancy");
+}
+
+/** Pin the current tenancy by its agreement id, or clear the pin with null. */
+export async function setCurrentPropertyTenancy(
+  propertyId: string,
+  tenancyId: string | null,
+): Promise<AgentProperty> {
+  const result = await crossub.PUT('/agent/properties/{propertyId}/tenancy/current', {
+    params: { path: { propertyId } },
+    body: { tenancyId },
+  });
+  return unwrapCrossubResult(result, "Couldn't set the current tenancy");
+}
+
+export type AgentArrearsReminderResult = components['schemas']['AgentArrearsReminderResultDto'];
+
+export async function sendPropertyArrearsReminder(
+  propertyId: string,
+  body: components['schemas']['AgentSendArrearsReminderDto'] = {},
+): Promise<AgentArrearsReminderResult> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/accounting/arrears/remind',
+    { params: { path: { propertyId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't send the reminder");
 }
 
 export type TenantPortalInviteResult =

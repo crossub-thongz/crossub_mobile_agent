@@ -1,3 +1,4 @@
+import type { PropertyRentPeriod } from '@/constants/property-profile-edit';
 import type { PropertyApprovalStatus } from '@/constants/api-enums';
 import type { AgentPortfolioId } from '@/lib/agent-scope';
 import type {
@@ -154,6 +155,12 @@ export interface Property {
   rentPaidUntil?: string;
   /** Rent payment reference for bank transfers (agency initials + property ref). */
   paymentReference?: string;
+  /** Cycle the rent was agreed in (display only; rentWeekly stays weekly). */
+  rentPeriod?: PropertyRentPeriod;
+  /** Repair limit set on this property, AUD; null uses the agency default. */
+  maintenanceSpendThreshold?: number | null;
+  /** TenancyAgreement pinned as current, overriding the lease-date rule. */
+  pinnedTenancyId?: string | null;
   /** Public cover image URL (R2) for listings and property profile. */
   imageUrl?: string | null;
   openTasks: number;

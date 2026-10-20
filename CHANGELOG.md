@@ -3,6 +3,12 @@
 ## 2026-10-20
 
 ### Added
+- Property profile: edit the address, suburb, state, postcode, property type, bedrooms, bathrooms, parking and furnished after the property is added; bedrooms, bathrooms and parking now show on the profile.
+- Property profile: Rent settings for the rent cycle, rent payment reference and the property's repair limit.
+- Tenancy card: Archive tenant, Restore tenancy on a past tenancy, and Set as current when more than one live agreement could be current.
+- Edit tenancy: Send app login to a tenant, and Remove a co-tenant.
+- Arrears: Send reminder emails the tenant about open arrears.
+- Agency details: Assigned agent shows and can be changed to one of the agency's own agents.
 - Self-Manage maintenance job: Needs your decision lists the job's open escalations, with Carry on, Not an issue, or I decided myself (reason and note).
 - Self-Manage maintenance job: the Email tab sends a real email to the tenant, tradie or strata, and the sent email shows in the trail.
 

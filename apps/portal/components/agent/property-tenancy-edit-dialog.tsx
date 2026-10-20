@@ -21,9 +21,13 @@ import {
   vacateDateChangeInvalid,
 } from '@/components/agent/property-vacate-date-field';
 import { TenancyPagerControls } from '@/components/agent/tenancy-pager-controls';
+import { PROPERTY_EDIT_COPY } from '@/constants/property-profile-edit';
+import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import {
   addPropertyContact,
   listPropertyContacts,
+  removePropertyContact,
+  sendTenantLogin,
   updatePropertyContact,
   type AgentPropertyContact,
 } from '@/lib/crossub-api/agent-client';
@@ -266,6 +270,50 @@ export function PropertyTenancyEditDialog({
   const activeIsPrimary = editIndex === 0;
   const activeContact = activeIsPrimary ? null : extraContacts[editIndex - 1];
   const activeDraft = activeContact ? coTenantDrafts[activeContact.id] : null;
+  // The saved contact row behind the page on screen — the primary is matched to the registry
+  // tenant as it was when the dialog opened, not to what is being typed.
+  const pageContact = activeIsPrimary
+    ? (tenantContacts.find((contact) =>
+        isSameHouseholdPerson(contact, {
+          name: baseline.tenantName,
+          email: baseline.tenantEmail,
+        }),
+      ) ?? null)
+    : activeContact;
+  const [contactBusy, setContactBusy] = useState(false);
+
+  const sendLogin = async () => {
+    if (!pageContact) return;
+    setContactBusy(true);
+    try {
+      const sent = await sendTenantLogin(propertyId, pageContact.id);
+      setInviteSentTo(sent.email);
+      setInviteSentOpen(true);
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Couldn't send the tenant login"));
+    } finally {
+      setContactBusy(false);
+    }
+  };
+
+  // Only a co-tenant is removed here; the primary tenant leaves through Archive tenant.
+  const removeCoTenant = async () => {
+    if (!activeContact) return;
+    const name = activeContact.name?.trim() || activeContact.email?.trim() || 'this tenant';
+    if (!window.confirm(PROPERTY_EDIT_COPY.removeConfirm(name))) return;
+    setContactBusy(true);
+    try {
+      const contacts = await removePropertyContact(propertyId, activeContact.id);
+      setTenantContacts(contacts.filter((c) => c.role === 'TENANT'));
+      setEditIndex(0);
+      toast.success(PROPERTY_EDIT_COPY.removed);
+      onSaved?.();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Couldn't remove the contact"));
+    } finally {
+      setContactBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (editIndex >= pageCount) setEditIndex(0);
@@ -645,6 +693,35 @@ export function PropertyTenancyEditDialog({
                 </div>
               </div>
             </div>
+
+            {pageContact ? (
+              <div className="flex flex-wrap gap-2">
+                {pageContact.email?.trim() ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 text-xs"
+                    disabled={contactBusy}
+                    onClick={() => void sendLogin()}
+                  >
+                    {PROPERTY_EDIT_COPY.sendLogin}
+                  </Button>
+                ) : null}
+                {activeContact ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive h-7 px-2 text-xs"
+                    disabled={contactBusy}
+                    onClick={() => void removeCoTenant()}
+                  >
+                    {PROPERTY_EDIT_COPY.removeContact}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
 
             <TenancyDateFields
               idPrefix="primary-tenant"

@@ -4,6 +4,8 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp, Home } from 'lucide-react';
 
 import { PropertyBuildingContactsDialog } from '@/components/agent/property-building-contacts-dialog';
+import { PropertyFactsEditDialog } from '@/components/agent/property-facts-edit-dialog';
+import { PropertyRentSettingsDialog } from '@/components/agent/property-rent-settings-dialog';
 import {
   ContactTile,
   formatStrataMeta,
@@ -15,6 +17,11 @@ import { RentEquivalentsHint } from '@/components/rent-equivalents-hint';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { PROPERTY_TYPE_LABEL, type PropertyType } from '@/constants/api-enums';
+import {
+  PROPERTY_EDIT_COPY,
+  PROPERTY_RENT_PERIOD,
+  PROPERTY_RENT_PERIOD_LABEL,
+} from '@/constants/property-profile-edit';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import {
   formatProfileLeaseStatus,
@@ -88,6 +95,10 @@ function StatCell({
   );
 }
 
+function formatCount(value: number | undefined): string {
+  return value == null ? '—' : String(value);
+}
+
 function formatKeyFobCount(count: number | null | undefined): string {
   if (count == null) return '—';
   return count === 1 ? '1 fob' : `${count} fobs`;
@@ -156,6 +167,8 @@ export function PropertyProfileDetails({
 
   const [open, setOpen] = useState(false);
   const [buildingDialogOpen, setBuildingDialogOpen] = useState(false);
+  const [factsDialogOpen, setFactsDialogOpen] = useState(false);
+  const [rentDialogOpen, setRentDialogOpen] = useState(false);
 
   const furnished =
     sync.overview?.furnished ??
@@ -230,6 +243,9 @@ export function PropertyProfileDetails({
         />
         <StatCell label="Property Type" value={formatPropertyTypeDisplay(registry.propertyType)} />
         <StatCell label="Key Fob" value={formatKeyFobCount(sync.keyFobCount)} />
+        <StatCell label={PROPERTY_EDIT_COPY.bedrooms} value={formatCount(property.bedrooms)} />
+        <StatCell label={PROPERTY_EDIT_COPY.bathrooms} value={formatCount(property.bathrooms)} />
+        <StatCell label={PROPERTY_EDIT_COPY.parking} value={formatCount(property.carSpaces)} />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <StatCell
@@ -243,6 +259,20 @@ export function PropertyProfileDetails({
           }
         />
         <StatCell label="Lease Status" value={profileLeaseStatus} />
+        <StatCell
+          label={PROPERTY_EDIT_COPY.rentPeriod}
+          value={PROPERTY_RENT_PERIOD_LABEL[property.rentPeriod ?? PROPERTY_RENT_PERIOD.WEEKLY]}
+          onEdit={apiConnected ? () => setRentDialogOpen(true) : undefined}
+        />
+        <StatCell
+          label={PROPERTY_EDIT_COPY.repairLimit}
+          value={
+            property.maintenanceSpendThreshold != null
+              ? formatCurrency(property.maintenanceSpendThreshold)
+              : PROPERTY_EDIT_COPY.agencyDefault
+          }
+          onEdit={apiConnected ? () => setRentDialogOpen(true) : undefined}
+        />
       </div>
       {property.paymentReference ? (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-2">
@@ -324,6 +354,17 @@ export function PropertyProfileDetails({
         </button>
 
         <div className={cn('mt-3 space-y-3', !open && 'hidden lg:block')}>
+          {apiConnected ? (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setFactsDialogOpen(true)}
+                className="text-primary text-xs font-semibold"
+              >
+                {PROPERTY_EDIT_COPY.editDetails}
+              </button>
+            </div>
+          ) : null}
           {propertyFacts}
           {tenancySections}
         </div>
@@ -334,6 +375,18 @@ export function PropertyProfileDetails({
           propertyId={propertyId}
           onSaved={handleSaved}
         />
+        <PropertyFactsEditDialog
+          open={factsDialogOpen}
+          onOpenChange={setFactsDialogOpen}
+          property={property}
+          onSaved={handleSaved}
+        />
+        <PropertyRentSettingsDialog
+          open={rentDialogOpen}
+          onOpenChange={setRentDialogOpen}
+          property={property}
+          onSaved={handleSaved}
+        />
       </div>
     );
   }
@@ -341,7 +394,11 @@ export function PropertyProfileDetails({
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-2">
-        <PropertyProfileInfoCard title="Property Details" icon={Home}>
+        <PropertyProfileInfoCard
+          title="Property Details"
+          icon={Home}
+          onEdit={apiConnected ? () => setFactsDialogOpen(true) : undefined}
+        >
           {propertyFacts}
         </PropertyProfileInfoCard>
         {tenancySections}
@@ -351,6 +408,18 @@ export function PropertyProfileDetails({
         open={buildingDialogOpen}
         onOpenChange={setBuildingDialogOpen}
         propertyId={propertyId}
+        onSaved={handleSaved}
+      />
+      <PropertyFactsEditDialog
+        open={factsDialogOpen}
+        onOpenChange={setFactsDialogOpen}
+        property={property}
+        onSaved={handleSaved}
+      />
+      <PropertyRentSettingsDialog
+        open={rentDialogOpen}
+        onOpenChange={setRentDialogOpen}
+        property={property}
         onSaved={handleSaved}
       />
     </>

@@ -11,12 +11,15 @@ import {
   type DocumentPreviewItem,
 } from '@/components/agent/property-document-preview-dialog';
 import { PropertyLandlordOverviewEditDialog } from '@/components/agent/property-landlord-overview-edit-dialog';
+import { PropertyAssignedAgentDialog } from '@/components/agent/property-assigned-agent-dialog';
+import { PropertyTenancyActions } from '@/components/agent/property-tenancy-actions';
 import { PropertyTenancyEditDialog } from '@/components/agent/property-tenancy-edit-dialog';
 import { PropertyProfileInfoCard } from '@/components/agent/property-profile/property-profile-info-card';
 import { TenancyPagerControls } from '@/components/agent/tenancy-pager-controls';
 import { MANAGEMENT_AGREEMENT_DOC_SLOT } from '@/components/agent/property-management-details-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
+import { PROPERTY_EDIT_COPY } from '@/constants/property-profile-edit';
 import {
   agentDocumentPreviewHref,
   isViewableDocumentUrl,
@@ -279,6 +282,7 @@ export function PropertyTenancyManagementSections({
   const [tenancyDialogOpen, setTenancyDialogOpen] = useState(false);
   const [landlordDialogOpen, setLandlordDialogOpen] = useState(false);
   const [bondDialogOpen, setBondDialogOpen] = useState(false);
+  const [agentDialogOpen, setAgentDialogOpen] = useState(false);
   const [docPreview, setDocPreview] = useState<DocumentPreviewItem | null>(null);
   const [tenantHistoryIndex, setTenantHistoryIndex] = useState<number | null>(null);
   const [endLeasingDialogCase, setEndLeasingDialogCase] =
@@ -623,6 +627,15 @@ export function PropertyTenancyManagementSections({
     });
   };
 
+  // The past tenancy on screen (V2 pager or the legacy history picker), for Restore.
+  const viewingArchiveAt = isV2
+    ? viewingPreviousPage
+      ? (activeTenancyPage?.archive?.archivedAt ?? null)
+      : null
+    : tenantHistoryIndex != null
+      ? (tenancyArchives[tenantHistoryIndex]?.archivedAt ?? null)
+      : null;
+
   const tenancyBody = (
     <>
       {archiveBanner ? (
@@ -779,6 +792,14 @@ export function PropertyTenancyManagementSections({
           }
         />
       </div>
+      {apiConnected ? (
+        <PropertyTenancyActions
+          property={property}
+          viewingArchiveAt={viewingArchiveAt}
+          hasCurrentTenant={!isVacant}
+          onRefresh={onRefresh}
+        />
+      ) : null}
     </>
   );
 
@@ -795,6 +816,14 @@ export function PropertyTenancyManagementSections({
           ? () => openDocPreview(managementAgreementDoc, MANAGEMENT_AGREEMENT_DOC_SLOT.label)
           : undefined
       }
+    />
+  );
+
+  const assignedAgentCell = (
+    <StatCell
+      label={PROPERTY_EDIT_COPY.assignedAgent}
+      value={property.assignedPortalAgentName?.trim() || PROPERTY_EDIT_COPY.unassigned}
+      onEdit={apiConnected && property.agencyId ? () => setAgentDialogOpen(true) : undefined}
     />
   );
 
@@ -860,6 +889,7 @@ export function PropertyTenancyManagementSections({
             <div className="mt-2 grid grid-cols-2 gap-2">
               <StatCell label="Service Type" value={serviceTypeLabel} />
               <StatCell label="Management Rate" value={managementRateDisplay} />
+              {assignedAgentCell}
               {managementAgreementCell}
               {endOfManagementCell}
             </div>
@@ -887,6 +917,7 @@ export function PropertyTenancyManagementSections({
             />
             <div className="mt-2 grid grid-cols-2 gap-2">
               <StatCell label="Management Rate" value={managementRateDisplay} />
+              {assignedAgentCell}
               {managementAgreementCell}
               {endOfManagementCell}
             </div>
@@ -908,6 +939,13 @@ export function PropertyTenancyManagementSections({
         propertyId={propertyId}
         property={property}
         initial={landlordInitial}
+        onSaved={handleSaved}
+      />
+
+      <PropertyAssignedAgentDialog
+        open={agentDialogOpen}
+        onOpenChange={setAgentDialogOpen}
+        property={property}
         onSaved={handleSaved}
       />
 
