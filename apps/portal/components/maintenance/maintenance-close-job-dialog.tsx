@@ -15,6 +15,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  MAINTENANCE_CLOSE_CONFLICT_CODE,
   MAINTENANCE_CLOSE_NOTE_MAX_LENGTH,
   MAINTENANCE_CLOSE_REASON,
   MAINTENANCE_CLOSE_REASON_LABEL,
@@ -23,17 +24,17 @@ import {
   type MaintenanceCloseReason,
 } from '@/constants/maintenance-close';
 import { closeMaintenanceCaseWithReason } from '@/lib/crossub-api/maintenance-client';
-import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { apiErrorCode, apiErrorMessage } from '@/lib/utils/api-error-message';
 
 /**
  * Close a job that should not proceed — a duplicate, one raised in error, one the tenant sorted
  * out. Deliberately separate from the completion close: the reason is what keeps a cancelled job
  * tellable from finished work afterwards.
  *
- * The commitment warning is the server's judgement, not the app's. On a 409 whose message reads
- * "…commitments that need acknowledging first…" the message is held and the button becomes
- * "Close anyway", which re-sends with `acknowledgeCommitments: true` — a second copy of that rule
- * in the browser is a second copy to drift.
+ * The warnings are the server's judgement, not the app's. A 409 coded as outstanding commitments
+ * or an unpaid contractor invoice holds the message and turns the button into "Close anyway",
+ * which re-sends with that acknowledgement set — a second copy of those rules in the browser is
+ * a second copy to drift. The two can come one after the other.
  */
 export function MaintenanceCloseJobDialog({
   open,
@@ -51,7 +52,9 @@ export function MaintenanceCloseJobDialog({
   );
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
-  const [commitments, setCommitments] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [acknowledged, setAcknowledged] = useState({ commitments: false, payment: false });
+  const [paymentWarned, setPaymentWarned] = useState(false);
 
   const noteRequired = MAINTENANCE_CLOSE_REASON_REQUIRES_NOTE.includes(reason);
   const noteMissing = noteRequired && !note.trim();
@@ -59,10 +62,16 @@ export function MaintenanceCloseJobDialog({
   const reset = () => {
     setReason(MAINTENANCE_CLOSE_REASON.DUPLICATE);
     setNote('');
-    setCommitments(null);
+    clearWarning();
   };
 
-  const submit = async (acknowledgeCommitments: boolean) => {
+  const clearWarning = () => {
+    setWarning(null);
+    setAcknowledged({ commitments: false, payment: false });
+    setPaymentWarned(false);
+  };
+
+  const submit = async (ack: { commitments: boolean; payment: boolean }) => {
     if (noteMissing) {
       toast.error('Add a note explaining why');
       return;
@@ -72,7 +81,8 @@ export function MaintenanceCloseJobDialog({
       await closeMaintenanceCaseWithReason(requestId, {
         reason,
         note: note.trim() || undefined,
-        acknowledgeCommitments,
+        acknowledgeCommitments: ack.commitments,
+        acknowledgePayment: ack.payment,
       });
       toast.success('Job closed');
       reset();
@@ -80,10 +90,16 @@ export function MaintenanceCloseJobDialog({
       await onClosed?.();
     } catch (err) {
       const message = apiErrorMessage(err, "Couldn't close the job");
-      // 409 with the commitment list — surface it and let the agent confirm rather than
-      // failing them with a toast they cannot act on.
-      if (message.toLowerCase().includes('acknowledging')) {
-        setCommitments(message);
+      const code = apiErrorCode(err);
+      // A coded 409 — surface it and let the agent confirm rather than failing them with a
+      // toast they cannot act on.
+      if (code === MAINTENANCE_CLOSE_CONFLICT_CODE.COMMITMENTS) {
+        setWarning(message);
+        setAcknowledged({ ...ack, commitments: true });
+      } else if (code === MAINTENANCE_CLOSE_CONFLICT_CODE.PAYMENT_UNSETTLED) {
+        setWarning(message);
+        setAcknowledged({ ...ack, payment: true });
+        setPaymentWarned(true);
       } else {
         toast.error(message);
       }
@@ -124,7 +140,7 @@ export function MaintenanceCloseJobDialog({
               disabled={saving}
               onChange={(e) => {
                 setReason(e.target.value as MaintenanceCloseReason);
-                setCommitments(null);
+                clearWarning();
               }}
             >
               {MAINTENANCE_CLOSE_REASON_ORDER.map((value) => (
@@ -158,15 +174,16 @@ export function MaintenanceCloseJobDialog({
             </p>
           </div>
 
-          {commitments ? (
+          {warning ? (
             <div className="border-warning/40 bg-warning/10 rounded-md border px-3 py-2.5">
               <p className="text-foreground flex items-start gap-2 text-xs font-medium">
                 <AlertTriangle className="text-warning mt-0.5 size-3.5 shrink-0" />
-                <span>{commitments}</span>
+                <span>{warning}</span>
               </p>
               <p className="text-muted-foreground mt-1.5 pl-5 text-[12px]">
-                Closing will not tell them. Stand the contractor down yourself if the visit is no
-                longer going ahead.
+                {paymentWarned
+                  ? 'Closing leaves the invoice unpaid. Settle it with the contractor yourself.'
+                  : 'Closing will not tell them. Stand the contractor down yourself if the visit is no longer going ahead.'}
               </p>
             </div>
           ) : null}
@@ -187,10 +204,10 @@ export function MaintenanceCloseJobDialog({
           <Button
             type="button"
             disabled={saving || noteMissing}
-            onClick={() => void submit(commitments !== null)}
+            onClick={() => void submit(acknowledged)}
           >
             {saving ? <Loader2 className="mr-1 size-4 animate-spin" /> : null}
-            {commitments ? 'Close anyway' : 'Close job'}
+            {warning ? 'Close anyway' : 'Close job'}
           </Button>
         </div>
       </DialogContent>

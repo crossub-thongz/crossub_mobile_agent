@@ -121,6 +121,60 @@ export const MAINTENANCE_SPLIT_PRIORITY_OPTIONS: readonly {
   { value: 'critical', label: 'Critical (urgent)' },
 ];
 
+export type EscalationStatus = Schemas['AgentMaintenanceEscalationDto']['status'];
+export type EscalationResolutionAction = Schemas['ResolveMaintenanceEscalationDto']['action'];
+export type EscalationOverrideReason = NonNullable<
+  Schemas['ResolveMaintenanceEscalationDto']['reasonCode']
+>;
+
+export const ESCALATION_STATUS = {
+  OPEN: 'open',
+  RESOLVED: 'resolved',
+} as const satisfies Record<string, EscalationStatus>;
+
+export const ESCALATION_RESOLUTION_ACTION = {
+  OVERRIDE: 'override',
+  PROCEED: 'proceed',
+  DISMISS: 'dismiss',
+} as const satisfies Record<string, EscalationResolutionAction>;
+
+/** Why the agency decided by hand — the reason an override must carry. */
+export const ESCALATION_OVERRIDE_REASON_OPTIONS: readonly {
+  value: EscalationOverrideReason;
+  label: string;
+}[] = [
+  { value: 'CLIENT_INSTRUCTION', label: 'Owner or tenant instruction' },
+  { value: 'POLICY', label: 'Agency policy' },
+  { value: 'SAFETY', label: 'Safety' },
+  { value: 'AI_WRONG', label: 'The system got it wrong' },
+  { value: 'DATA_CORRECTION', label: 'Correcting job details' },
+  { value: 'DUPLICATE', label: 'Duplicate' },
+  { value: 'OTHER', label: 'Other' },
+];
+
+export type MaintenanceEmailRecipientRole = Schemas['MaintenanceCaseEmailRecipientDto']['role'];
+
+/** Who the agency can email from a job. The landlord is refused by the server. */
+export const MAINTENANCE_EMAIL_RECIPIENT = {
+  TENANT: 'tenant',
+  CONTRACTOR: 'contractor',
+  STRATA: 'strata',
+} as const satisfies Record<string, MaintenanceEmailRecipientRole>;
+
+export type MaintenanceEmailRecipient =
+  (typeof MAINTENANCE_EMAIL_RECIPIENT)[keyof typeof MAINTENANCE_EMAIL_RECIPIENT];
+
+export const MAINTENANCE_EMAIL_RECIPIENT_LABEL: Record<MaintenanceEmailRecipient, string> = {
+  tenant: 'Tenant',
+  contractor: 'Tradie',
+  strata: 'Strata',
+};
+
+/** A new email from the job is recorded as a reply on the job's thread (provenance only). */
+export const MAINTENANCE_CASE_EMAIL_INTENT = {
+  REPLY: 'reply',
+} as const satisfies Record<string, Schemas['SendMaintenanceCaseEmailDto']['intent']>;
+
 /** Server limits mirrored for the inputs (the DTOs enforce them too). */
 export const SELF_MANAGED_MAINTENANCE_LIMITS = {
   dismissReasonMin: 3,
@@ -257,4 +311,26 @@ export const SELF_MANAGED_MAINTENANCE_COPY = {
   signedOff: 'Work signed off',
   signOffNeedsEvidence: 'Upload the completion photos first.',
   done: 'Done',
+
+  escalationTitle: 'Needs your decision',
+  escalationHint: 'The system stopped here and needs a person to decide.',
+  escalationProceed: 'Carry on',
+  escalationDismiss: 'Not an issue',
+  escalationOverride: 'I decided myself',
+  escalationReason: 'Reason',
+  escalationNote: 'What you decided',
+  escalationNoteRequired: 'Say what you decided.',
+  escalationSave: 'Save decision',
+  escalationCancel: 'Cancel',
+  escalationResolved: 'Escalation resolved',
+  escalationRaised: (at: string) => `Raised ${at}`,
+
+  emailRecipient: 'To',
+  emailSubject: 'Subject',
+  emailBody: 'Message',
+  emailSend: 'Send email',
+  emailSent: 'Email sent',
+  emailNoRecipient: 'No email address on this job yet.',
+  emailServiced: 'CROSSUB sends the emails on this job. They show here once sent.',
+  appUpdatesNote: 'Updates the tenant gets in their app.',
 } as const;

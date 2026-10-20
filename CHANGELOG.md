@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-20
+
+### Added
+- Self-Manage maintenance job: Needs your decision lists the job's open escalations, with Carry on, Not an issue, or I decided myself (reason and note).
+- Self-Manage maintenance job: the Email tab sends a real email to the tenant, tradie or strata, and the sent email shows in the trail.
+
+### Fixed
+- Editing a tenant or landlord contact in the tenancy dialog saves instead of failing (contract 0.41.0).
+- Close job on a job with an unpaid tradie invoice offers Close anyway instead of failing.
+- The job message box no longer shows a message as sent when nothing was sent; on other plans the trail is read-only.
+
+### Changed
+- Close job reads the server's conflict code instead of matching the message text.
+
 ## 2026-10-19
 
 ### Added

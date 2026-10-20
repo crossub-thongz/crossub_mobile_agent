@@ -482,18 +482,14 @@ export async function addPropertyContact(
 export async function updatePropertyContact(
   propertyId: string,
   contactId: string,
-  body: {
-    name?: string | null;
-    email?: string | null;
-    phone?: string | null;
-  },
+  body: components['schemas']['UpdateAgentPropertyContactDto'],
 ): Promise<AgentPropertyContact[]> {
   try {
-    const data = await apiV1.patch<{ contacts: AgentPropertyContact[] }>(
-      `/agent/properties/${propertyId}/contacts/${contactId}`,
+    const result = await crossub.PATCH('/agent/properties/{propertyId}/contacts/{contactId}', {
+      params: { path: { propertyId, contactId } },
       body,
-    );
-    return data.contacts;
+    });
+    return unwrapCrossubResult(result, "Couldn't save the contact").contacts;
   } catch (err) {
     if (err instanceof ApiError) {
       throw new Error(formatApiErrorMessage(err));

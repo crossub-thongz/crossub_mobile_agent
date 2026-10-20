@@ -1,5 +1,6 @@
 import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 import {
+  ESCALATION_STATUS,
   INVOICE_MATCH_NEEDS_DECISION,
   INVOICE_MATCH_PAYABLE,
   MAINTENANCE_ISSUE_LIVE,
@@ -18,6 +19,8 @@ export interface SelfManagedMaintenanceSteps {
   urgent: boolean;
   /** The job is still live (not completed or cancelled). */
   open: boolean;
+  /** Open escalations the agency has to decide, oldest first. */
+  escalations: AgentMaintenanceDetail['escalations'];
   /** Live issues extracted from the report. */
   issues: AgentMaintenanceDetail['issues'];
   /** Still being scoped (reported or out for quotes): issues, split and combine. */
@@ -68,6 +71,9 @@ export function selfManagedMaintenanceSteps(
   return {
     urgent: open && detail.urgent && !hasActiveAuthorisation,
     open,
+    escalations: open
+      ? detail.escalations.filter((e) => e.status === ESCALATION_STATUS.OPEN)
+      : [],
     issues: detail.issues.filter((i) => MAINTENANCE_ISSUE_LIVE.includes(i.status)),
     triage: open && !hasApprovedQuote && TRIAGE_STATUSES.includes(detail.status),
     enterQuote: open && !hasApprovedQuote && QUOTE_STAGE_STATUSES.includes(detail.status),

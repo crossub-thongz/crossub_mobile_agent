@@ -21,3 +21,12 @@ export function apiErrorMessage(err: unknown, fallback = 'Something went wrong')
   if (typeof err === 'string' && err.trim()) return err;
   return fallback;
 }
+
+/** The machine-readable `code` an API error body carries, when it has one. */
+export function apiErrorCode(err: unknown): string | null {
+  if (!(err instanceof ApiError)) return null;
+  const body = err.body;
+  if (!body || typeof body !== 'object') return null;
+  const code = (body as { code?: unknown }).code;
+  return typeof code === 'string' && code.trim() ? code : null;
+}

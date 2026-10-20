@@ -90,3 +90,12 @@ export const MAINTENANCE_CLOSE_HIDDEN_STATUSES: MaintenanceWorkspaceStatus[] = [
   'closed',
   'deleted',
 ];
+
+/** `code` on the API's 409 for a manual close (mirrors `MAINTENANCE_CLOSE_CONFLICT_CODE` in the API). */
+export const MAINTENANCE_CLOSE_CONFLICT_CODE = {
+  COMMITMENTS: 'MAINTENANCE_CLOSE_COMMITMENTS',
+  PAYMENT_UNSETTLED: 'MAINTENANCE_CLOSE_PAYMENT_UNSETTLED',
+} as const;
+
+export type MaintenanceCloseConflictCode =
+  (typeof MAINTENANCE_CLOSE_CONFLICT_CODE)[keyof typeof MAINTENANCE_CLOSE_CONFLICT_CODE];

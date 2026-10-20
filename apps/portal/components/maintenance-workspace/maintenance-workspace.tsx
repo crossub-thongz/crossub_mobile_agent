@@ -21,6 +21,7 @@ import {
   MAINTENANCE_PAYMENT_STATUS_LABEL,
   MAINTENANCE_PAYMENT_STATUS_TONE,
 } from '@/constants/maintenance-v2';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import type { AgentMaintenanceDetail } from '@/lib/crossub-api/maintenance-client';
 import type {
   ApiMaintenanceAttachment,
@@ -109,6 +110,7 @@ export function MaintenanceWorkspace({
   maintenanceReminders?: ApiMaintenanceState['maintenanceReminders'];
   agentDetail?: AgentMaintenanceDetail | null;
 }) {
+  const selfManaged = useIsPropertySelfManaged(item?.propertyId);
   const [bottomNavTab, setBottomNavTab] = useState<'details' | 'chat'>('details');
   const [caseFlagged, setCaseFlagged] = useState(false);
   const [notifications, setNotifications] = useState(workspaceCase.notifications);
@@ -681,7 +683,8 @@ export function MaintenanceWorkspace({
       ) : (
         <WorkspaceChatPanel
           workspaceCase={workspaceWithNotifications}
-          agentName={workspaceCase.agent?.name ?? 'Agent'}
+          selfManaged={selfManaged}
+          onSent={onCaseUpdated}
         />
       )}
     </>

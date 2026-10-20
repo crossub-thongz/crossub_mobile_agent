@@ -7,6 +7,7 @@ import {
   InvoiceDecisionStep,
   PaymentStep,
 } from '@/components/agent/maintenance-self-managed/invoice-completion-steps';
+import { EscalationStep } from '@/components/agent/maintenance-self-managed/escalation-step';
 import { InviteTradiesStep } from '@/components/agent/maintenance-self-managed/invite-tradies-step';
 import { IssueTriageStep } from '@/components/agent/maintenance-self-managed/issue-triage-step';
 import { QuoteCompareStep } from '@/components/agent/maintenance-self-managed/quote-compare-step';
@@ -74,6 +75,14 @@ export function SelfManagedMaintenancePanel({
           : COPY.ownerCopyLimit(formatCurrency(detail.spendThreshold))}
       </p>
 
+      {steps.escalations.length > 0 ? (
+        <EscalationStep
+          requestId={requestId}
+          escalations={steps.escalations}
+          busy={busy}
+          run={run}
+        />
+      ) : null}
       {steps.urgent ? (
         <UrgentDecisionStep requestId={requestId} agencyId={agencyId} busy={busy} run={run} />
       ) : null}

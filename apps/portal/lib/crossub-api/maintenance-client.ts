@@ -134,8 +134,9 @@ export async function transitionMaintenanceCase(
  * The manual-close path — distinct from the completion close in `maintenance-case-ops.ts`. It
  * deliberately bypasses the completion gates and records a reason so a cancelled job stays
  * tellable from completed work. The API refuses (409) a job carrying commitments (an assigned
- * contractor, an approved quote, a booked visit) unless `acknowledgeCommitments` is set; the
- * dialog surfaces that message and re-sends with the flag. `actorRole` is derived server-side.
+ * contractor, an approved quote, a booked visit) unless `acknowledgeCommitments` is set, and a
+ * job whose contractor invoice is unpaid unless `acknowledgePayment` is set; the dialog surfaces
+ * the message and re-sends with the flag. `actorRole` is derived server-side.
  */
 export async function closeMaintenanceCaseWithReason(
   requestId: string,
@@ -143,6 +144,7 @@ export async function closeMaintenanceCaseWithReason(
     reason: MaintenanceCloseReason;
     note?: string;
     acknowledgeCommitments?: boolean;
+    acknowledgePayment?: boolean;
   },
 ): Promise<AgentMaintenanceCard> {
   const result = await crossub.POST('/agent/maintenance/{requestId}/close', {
@@ -151,6 +153,7 @@ export async function closeMaintenanceCaseWithReason(
       reason: body.reason,
       ...(body.note ? { note: body.note } : {}),
       ...(body.acknowledgeCommitments ? { acknowledgeCommitments: true } : {}),
+      ...(body.acknowledgePayment ? { acknowledgePayment: true } : {}),
     },
   });
   return unwrapAgentMaintenance(result, "Couldn't close the job");
@@ -194,6 +197,10 @@ export type SelfManagedScheduleArrangedInput =
   components['schemas']['AgentSelfManagedScheduleArrangedDto'];
 export type ResolveInvoiceMatchInput = components['schemas']['ResolveMaintenanceInvoiceMatchDto'];
 export type SelfManagedPaymentInput = components['schemas']['AgentSelfManagedRecordPaymentDto'];
+export type AgentMaintenanceEscalation = components['schemas']['AgentMaintenanceEscalationDto'];
+export type ResolveMaintenanceEscalationInput =
+  components['schemas']['ResolveMaintenanceEscalationDto'];
+export type SendMaintenanceCaseEmailInput = components['schemas']['SendMaintenanceCaseEmailDto'];
 
 export async function authoriseUrgentMaintenance(
   requestId: string,
@@ -259,6 +266,31 @@ export async function sendMaintenanceQuestions(
     body,
   });
   return unwrapAgentMaintenance(result, "Couldn't send the questions");
+}
+
+/** Email the tenant, a contractor or strata from the job; recipients are roles, never addresses. */
+export async function sendMaintenanceCaseEmail(
+  requestId: string,
+  body: SendMaintenanceCaseEmailInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/emails', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't send the email");
+}
+
+/** Override, proceed or dismiss an escalation the agency was raised. */
+export async function resolveMaintenanceEscalation(
+  requestId: string,
+  escalationId: string,
+  body: ResolveMaintenanceEscalationInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST(
+    '/agent/maintenance/{requestId}/escalations/{escalationId}/resolve',
+    { params: { path: { requestId, escalationId } }, body },
+  );
+  return unwrapAgentMaintenance(result, "Couldn't resolve the escalation");
 }
 
 export async function recordMaintenanceAnswers(
