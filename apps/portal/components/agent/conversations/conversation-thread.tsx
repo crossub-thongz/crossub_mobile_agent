@@ -1,46 +1,23 @@
 'use client';
 
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Loader2,
-  Paperclip,
-  PanelRight,
-  RotateCcw,
-  Send,
-  Sparkles,
-} from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { ArrowLeft, CheckCircle2, Loader2, Paperclip, PanelRight, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { ReplyComposer } from '@/components/agent/conversations/reply-composer';
 import { MessageBody } from '@/components/agent/message-body';
 import { SELECT_CLASS } from '@/components/agent/maintenance-self-managed/step-card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   CONVERSATION_ACTION,
-  CONVERSATION_AI_DRAFT_DEFAULT_INSTRUCTION,
-  CONVERSATION_AI_DRAFT_INSTRUCTION_MIN_CHARS,
-  CONVERSATION_DELIVERY_SENT,
   CONVERSATION_MESSAGE_DIRECTION,
-  CONVERSATION_REPLY_CHANNEL,
-  CONVERSATION_SELECT_PROMPT_VALUE,
   CONVERSATION_STATE_ACTION,
   CONVERSATION_UNASSIGNED_VALUE,
   CONVERSATIONS_COPY,
 } from '@/constants/conversations';
 import { useConversationAction } from '@/hooks/use-agent-conversations';
-import {
-  conversationHeadline,
-  defaultReplyToEmail,
-  latestInboundMessageId,
-  teamMemberName,
-} from '@/lib/agent-conversations';
+import { conversationHeadline, teamMemberName } from '@/lib/agent-conversations';
 import type { AgencyTeamMember } from '@/lib/crossub-api/agent-client';
 import {
-  draftAgentConversationReply,
-  replyToAgentConversation,
   setAgentConversationAssignee,
   setAgentConversationState,
   type AgentConversationDetail,
@@ -144,8 +121,8 @@ function AssigneeSelect({
 }
 
 /**
- * Middle pane: the thread's messages, Resolve / Reopen, the assignee, and an email reply composer
- * with a template picker and a Cros draft. Every write hands the returned thread back up.
+ * Middle pane: the thread's messages, Resolve / Reopen, the assignee, and the email reply
+ * composer. Every write hands the returned thread back up.
  */
 export function ConversationThread({
   detail,
@@ -165,12 +142,7 @@ export function ConversationThread({
   onShowContext?: () => void;
 }) {
   const { pending, run } = useConversationAction();
-  const [subject, setSubject] = useState(detail.subject);
-  const [body, setBody] = useState('');
-  const [toEmail, setToEmail] = useState(() => defaultReplyToEmail(detail));
-  const [instruction, setInstruction] = useState('');
   const busy = pending !== null;
-  const replyToMessageId = useMemo(() => latestInboundMessageId(detail), [detail]);
 
   const toggleState = async () => {
     const action = detail.resolved ? CONVERSATION_STATE_ACTION.REOPEN : CONVERSATION_STATE_ACTION.RESOLVE;
@@ -187,55 +159,6 @@ export function ConversationThread({
     if (!next) return;
     onChange(next);
     toast.success(CONVERSATIONS_COPY.assigneeSaved);
-  };
-
-  const insertTemplate = (templateId: string) => {
-    const template = templates.find((t) => t.id === templateId);
-    if (!template) return;
-    const text = toPlainTextBody(template.body);
-    setBody((current) => (current.trim() ? `${current.trimEnd()}\n\n${text}` : text));
-  };
-
-  const draft = async () => {
-    const steer = instruction.trim();
-    const result = await run(CONVERSATION_ACTION.DRAFT, () =>
-      draftAgentConversationReply(detail.id, {
-        instruction:
-          steer.length >= CONVERSATION_AI_DRAFT_INSTRUCTION_MIN_CHARS
-            ? steer
-            : CONVERSATION_AI_DRAFT_DEFAULT_INSTRUCTION,
-      }),
-    );
-    if (!result) return;
-    setBody(result.bodyText);
-    if (result.subject.trim()) setSubject(result.subject);
-    if (result.notice) toast.message(result.notice);
-    else toast.success(CONVERSATIONS_COPY.crosDrafted);
-  };
-
-  const send = async () => {
-    const text = body.trim();
-    if (!text) return;
-    const trimmedSubject = subject.trim();
-    const to = toEmail.trim();
-    const result = await run(CONVERSATION_ACTION.SEND, () =>
-      replyToAgentConversation(detail.id, {
-        channel: CONVERSATION_REPLY_CHANNEL.EMAIL,
-        body: text,
-        ...(trimmedSubject && trimmedSubject !== detail.subject ? { subject: trimmedSubject } : {}),
-        ...(replyToMessageId ? { replyToMessageId } : {}),
-        ...(to ? { toEmails: [to] } : {}),
-      }),
-    );
-    if (!result) return;
-    onChange(result.conversation);
-    setBody('');
-    setInstruction('');
-    if (result.delivery && result.delivery !== CONVERSATION_DELIVERY_SENT) {
-      toast.warning(CONVERSATIONS_COPY.notSent(result.delivery));
-    } else {
-      toast.success(result.sentTo ? `${CONVERSATIONS_COPY.sent}: ${result.sentTo}` : CONVERSATIONS_COPY.sent);
-    }
   };
 
   return (
@@ -292,87 +215,7 @@ export function ConversationThread({
         )}
       </div>
 
-      <div className="shrink-0 space-y-2 border-t px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {templates.length > 0 ? (
-            <select
-              aria-label={CONVERSATIONS_COPY.templateLabel}
-              className={cn(SELECT_CLASS, 'h-8 w-48 text-xs')}
-              value={CONVERSATION_SELECT_PROMPT_VALUE}
-              disabled={busy}
-              onChange={(e) => insertTemplate(e.target.value)}
-            >
-              <option value={CONVERSATION_SELECT_PROMPT_VALUE}>{CONVERSATIONS_COPY.templatePlaceholder}</option>
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          ) : null}
-          <Input
-            className="h-8 min-w-0 flex-1 text-xs"
-            placeholder={CONVERSATIONS_COPY.crosInstructionPlaceholder}
-            value={instruction}
-            disabled={busy}
-            onChange={(e) => setInstruction(e.target.value)}
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1.5"
-            disabled={busy}
-            onClick={() => void draft()}
-          >
-            {pending === CONVERSATION_ACTION.DRAFT ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="size-3.5" />
-            )}
-            {CONVERSATIONS_COPY.crosDraft}
-          </Button>
-        </div>
-        <Input
-          aria-label={CONVERSATIONS_COPY.replyToLabel}
-          type="email"
-          className="h-8 text-xs"
-          placeholder={CONVERSATIONS_COPY.replyToPlaceholder}
-          value={toEmail}
-          disabled={busy}
-          onChange={(e) => setToEmail(e.target.value)}
-        />
-        <Input
-          aria-label={CONVERSATIONS_COPY.replySubjectLabel}
-          className="h-8 text-xs"
-          value={subject}
-          disabled={busy}
-          onChange={(e) => setSubject(e.target.value)}
-        />
-        <Textarea
-          rows={4}
-          placeholder={CONVERSATIONS_COPY.replyPlaceholder}
-          value={body}
-          disabled={busy}
-          onChange={(e) => setBody(e.target.value)}
-        />
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            size="sm"
-            className="h-8 gap-1.5"
-            disabled={busy || !body.trim()}
-            onClick={() => void send()}
-          >
-            {pending === CONVERSATION_ACTION.SEND ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Send className="size-3.5" />
-            )}
-            {CONVERSATIONS_COPY.send}
-          </Button>
-        </div>
-      </div>
+      <ReplyComposer detail={detail} templates={templates} pending={pending} run={run} onChange={onChange} />
     </div>
   );
 }

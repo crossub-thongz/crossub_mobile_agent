@@ -3,6 +3,10 @@
 ## 2026-10-21
 
 ### Added
+- Self-Manage Conversations reply: several To addresses, Cc and Bcc, each added as a chip.
+- Self-Manage Conversations reply: attach up to 10 files to the email.
+- Self-Manage Conversations reply: bold, italic, underline, bulleted and numbered lists, links, and clearing pasted font and size.
+- Self-Manage Conversations reply: the signature line, Save draft (kept in this browser, restored when the thread is opened again), and Send and resolve.
 - Self-Manage maintenance job: Ask the tenant picks which suggested questions to email and adds the agent's own questions.
 - Self-Manage maintenance job: a fault's urgency can be set when adding or editing it, and shows on the fault.
 - Self-Manage trust: Set rent and Edit rent on the Rent tab set a tenant's rent, how often it is due, the paid-to date, a part payment and a rent change.

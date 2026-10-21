@@ -12,6 +12,7 @@ export type AgentConversationMessage = components['schemas']['AgentConversationM
 export type AgentConversationTemplate = components['schemas']['AgentConversationTemplateDto'];
 export type AgentConversationReplyResult = components['schemas']['AgentConversationReplyResultDto'];
 export type AgentConversationReplyInput = components['schemas']['AgentConversationReplyDto'];
+export type AgentConversationAttachmentUpload = components['schemas']['AgentConversationAttachmentUploadDto'];
 export type AgentCreateConversationInput = components['schemas']['AgentCreateConversationDto'];
 export type AgentConversationStateAction = components['schemas']['AgentConversationStateDto']['action'];
 export type AgentConversationJobInput = components['schemas']['AgentConversationJobDto'];

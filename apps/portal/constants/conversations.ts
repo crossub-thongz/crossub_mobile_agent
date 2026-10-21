@@ -116,6 +116,46 @@ export const CONVERSATION_SELECT_PROMPT_VALUE = '';
 /** Reply delivery outcome the server reports when the email actually went out. */
 export const CONVERSATION_DELIVERY_SENT = 'sent';
 
+/** Most addresses the API takes on each of To, Cc and Bcc. */
+export const CONVERSATION_RECIPIENTS_MAX = 20;
+
+/** Mirrors the API's email attachment caps: 10 files, 4 MB each, 20 MB a video. */
+export const CONVERSATION_ATTACHMENT_LIMITS = {
+  maxFiles: 10,
+  maxBytes: 4 * 1024 * 1024,
+  maxVideoBytes: 20 * 1024 * 1024,
+} as const;
+
+export const VIDEO_MIME_PREFIX = 'video/';
+export const FALLBACK_MIME_TYPE = 'application/octet-stream';
+
+/** Where a thread's unsent reply is kept in this browser, by conversation id. */
+export const CONVERSATION_REPLY_DRAFT_KEY_PREFIX = 'crossub.agent.conversation-reply-draft.';
+
+/** What happens after the reply goes: nothing more, or the thread is resolved too. */
+export const CONVERSATION_SEND_MODE = {
+  SEND: 'send',
+  SEND_AND_RESOLVE: 'send-and-resolve',
+} as const;
+export type ConversationSendMode = (typeof CONVERSATION_SEND_MODE)[keyof typeof CONVERSATION_SEND_MODE];
+
+/** Formatting buttons on the reply editor, as `document.execCommand` names them. */
+export const COMPOSER_FORMAT_COMMAND = {
+  BOLD: 'bold',
+  ITALIC: 'italic',
+  UNDERLINE: 'underline',
+  BULLETED_LIST: 'insertUnorderedList',
+  NUMBERED_LIST: 'insertOrderedList',
+  CREATE_LINK: 'createLink',
+  INSERT_HTML: 'insertHTML',
+} as const;
+export type ComposerFormatCommand = (typeof COMPOSER_FORMAT_COMMAND)[keyof typeof COMPOSER_FORMAT_COMMAND];
+
+export const COMPOSER_ENTER_KEY = 'Enter';
+/** Keys that commit a typed address to the recipient list. */
+export const COMPOSER_RECIPIENT_COMMIT_KEYS: ReadonlySet<string> = new Set([COMPOSER_ENTER_KEY, ',', ';', 'Tab']);
+export const COMPOSER_BACKSPACE_KEY = 'Backspace';
+
 export const CONVERSATIONS_COPY = {
   title: 'Conversations',
   searchPlaceholder: 'Search threads…',
@@ -150,16 +190,48 @@ export const CONVERSATIONS_COPY = {
   noMessages: 'No messages on this thread yet.',
   attachments: 'Attachments',
   toLabel: 'To',
-  replyPlaceholder: 'Write an email reply…',
+  ccLabel: 'Cc',
+  bccLabel: 'Bcc',
+  replyHeading: (to: string | undefined) => (to ? `Reply to ${to}` : 'Reply to the thread’s contact'),
+  replyPlaceholder: 'Write your message…',
+  replyBodyLabel: 'Message',
   replySubjectLabel: 'Subject',
-  replyToLabel: 'To',
-  replyToPlaceholder: 'To — leave blank to write to the thread’s contact',
-  send: 'Send email',
+  recipientPlaceholder: 'Type an email, then add…',
+  addRecipient: 'Add',
+  removeRecipient: (address: string) => `Remove ${address}`,
+  tooManyRecipients: (max: number) => `Up to ${max} addresses on each line.`,
+  bold: 'Bold',
+  italic: 'Italic',
+  underline: 'Underline',
+  bulletedList: 'Bulleted list',
+  numberedList: 'Numbered list',
+  clearFormatting: 'Clear pasted font and size',
+  insertLink: 'Insert link',
+  linkPlaceholder: 'https://…',
+  addLink: 'Add link',
+  attachFile: 'Attach a file',
+  removeAttachment: (name: string) => `Remove ${name}`,
+  tooManyFiles: (max: number) => `Up to ${max} attachments.`,
+  fileTooBig: (name: string, megabytes: number) => `${name} is over ${megabytes} MB.`,
+  attachFailed: "Couldn't attach that file.",
+  signatureHint: 'CROSSUB signature is added on send',
+  yourName: 'Your name',
+  saveDraft: 'Save draft',
+  draftSaved: 'Draft saved',
+  draftNotSaved: "Couldn't save the draft — this browser's storage is full.",
+  draftRestored: 'Draft restored',
+  noBody: 'Write a message to send',
+  checkAddress: (address: string) => `Check the address "${address}"`,
+  send: 'Send',
+  sendOptions: 'Send options',
+  crosLabel: 'CROS',
+  crosDraftButton: 'Draft reply',
+  sendAndResolve: 'Send and resolve',
+  sentNotResolved: "Sent, but couldn't resolve the conversation.",
   sent: 'Email sent',
   notSent: (delivery: string) => `Saved, but the email was not sent (${delivery.replace(/_/g, ' ')}).`,
   templateLabel: 'Template',
   templatePlaceholder: 'Insert a template…',
-  crosDraft: 'Cros draft',
   crosInstructionPlaceholder: 'Tell Cros what to say (optional)',
   crosDrafted: 'Cros drafted a reply. Check it before sending.',
   contextHeading: 'Job context',
