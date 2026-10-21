@@ -373,6 +373,120 @@ export async function recordMaintenancePayment(
   return unwrapAgentMaintenance(result, "Couldn't record the payment");
 }
 
+/** Withdraw a dispute: the invoice goes back to accept-or-dispute. */
+export async function reopenMaintenanceInvoiceMatch(
+  requestId: string,
+  matchId: string,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST(
+    '/agent/maintenance/{requestId}/invoice-matches/{matchId}/reopen',
+    { params: { path: { requestId, matchId } } },
+  );
+  return unwrapAgentMaintenance(result, "Couldn't withdraw the dispute");
+}
+
+export type AgentMaintenanceManualControl =
+  components['schemas']['AgentMaintenanceManualControlDto'];
+export type TakeMaintenanceControlInput = components['schemas']['TakeControlDto'];
+export type ResumeMaintenanceAutomationInput = components['schemas']['ResumeAutomationDto'];
+export type UpdateMaintenanceJobInput = components['schemas']['AgentSelfManagedUpdateJobDto'];
+export type AddMaintenanceIssueInput = components['schemas']['CreateMaintenanceIssueDto'];
+export type UpdateMaintenanceIssueInput = components['schemas']['UpdateMaintenanceIssueDto'];
+export type MaintenanceQuoteFormLinkInput = components['schemas']['IssueQuoteRequestLinkDto'];
+export type MaintenanceQuoteFormLink = components['schemas']['AgentQuoteRequestLinkDto'];
+
+/** Hold the job in manual control: no automatic chasers or steps until it is resumed. */
+export async function takeMaintenanceControl(
+  requestId: string,
+  body: TakeMaintenanceControlInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/take-control', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't take control of the job");
+}
+
+export async function resumeMaintenanceAutomation(
+  requestId: string,
+  body: ResumeMaintenanceAutomationInput = {},
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/resume', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't resume automation");
+}
+
+/** Correct the job's issue type, description or urgency. */
+export async function updateMaintenanceJob(
+  requestId: string,
+  body: UpdateMaintenanceJobInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.PATCH('/agent/maintenance/{requestId}/details', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't save the job");
+}
+
+export async function addMaintenanceIssue(
+  requestId: string,
+  body: AddMaintenanceIssueInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/issues', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't add the fault");
+}
+
+export async function updateMaintenanceIssue(
+  requestId: string,
+  issueId: string,
+  body: UpdateMaintenanceIssueInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.PATCH('/agent/maintenance/{requestId}/issues/{issueId}', {
+    params: { path: { requestId, issueId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't save the fault");
+}
+
+/** Read the report again with the AI; faults the agent corrected are kept. */
+export async function rerunMaintenanceAiReview(
+  requestId: string,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/ai-review', {
+    params: { path: { requestId } },
+  });
+  return unwrapAgentMaintenance(result, "Couldn't run the AI review");
+}
+
+/** Take an invited tradie off the quote request. */
+export async function withdrawMaintenanceContractor(
+  requestId: string,
+  contractorId: string,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/withdraw-contractor', {
+    params: { path: { requestId } },
+    body: { contractorId },
+  });
+  return unwrapAgentMaintenance(result, "Couldn't withdraw the tradie");
+}
+
+/** A fresh quote-form link for one invited tradie; replaces their last link. */
+export async function issueMaintenanceQuoteFormLink(
+  requestId: string,
+  body: MaintenanceQuoteFormLinkInput,
+): Promise<MaintenanceQuoteFormLink> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/quote-form-links', {
+    params: { path: { requestId } },
+    body,
+  });
+  return unwrapAgentMaintenance(result, "Couldn't create the quote form link");
+}
+
 export type SelfManagedUploadInput = components['schemas']['AgentSelfManagedUploadDto'];
 
 /** Completion photos or the tradie's invoice, uploaded for the tradie; clears that gate. */

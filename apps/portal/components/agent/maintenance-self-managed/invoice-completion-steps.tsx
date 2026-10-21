@@ -19,6 +19,7 @@ import {
   approveMaintenanceCompletion,
   recordMaintenancePayment,
   recordMaintenanceTenantSignOff,
+  reopenMaintenanceInvoiceMatch,
   resolveMaintenanceInvoiceMatch,
   uploadSelfManagedCompletionFile,
   type AgentMaintenanceDetail,
@@ -80,6 +81,38 @@ export function InvoiceDecisionStep({
           {COPY.dispute}
         </Button>
       </div>
+    </StepCard>
+  );
+}
+
+/** A disputed invoice: withdraw the dispute to accept it or dispute it again. */
+export function DisputedInvoiceStep({
+  requestId,
+  match,
+  busy,
+  run,
+}: {
+  requestId: string;
+  match: AgentMaintenanceInvoiceMatch;
+  busy: boolean;
+  run: SelfManagedMaintenanceRun;
+}) {
+  return (
+    <StepCard
+      title={COPY.disputedTitle}
+      hint={COPY.disputedHint(formatCurrency(match.invoiceAmount))}
+      tone="attention"
+    >
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={busy}
+        onClick={() =>
+          void run(() => reopenMaintenanceInvoiceMatch(requestId, match.id), COPY.disputeWithdrawn)
+        }
+      >
+        {COPY.withdrawDispute}
+      </Button>
     </StepCard>
   );
 }

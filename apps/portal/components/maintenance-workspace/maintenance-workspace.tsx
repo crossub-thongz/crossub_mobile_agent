@@ -683,6 +683,7 @@ export function MaintenanceWorkspace({
       ) : (
         <WorkspaceChatPanel
           workspaceCase={workspaceWithNotifications}
+          propertyId={item?.propertyId}
           selfManaged={selfManaged}
           onSent={onCaseUpdated}
         />

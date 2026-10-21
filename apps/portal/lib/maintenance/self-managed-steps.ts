@@ -2,6 +2,7 @@ import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 import {
   ESCALATION_STATUS,
   INVOICE_MATCH_NEEDS_DECISION,
+  INVOICE_MATCH_STATUS,
   INVOICE_MATCH_PAYABLE,
   MAINTENANCE_ISSUE_LIVE,
   MAINTENANCE_QUOTE_STATUS,
@@ -33,6 +34,8 @@ export interface SelfManagedMaintenanceSteps {
   schedule: boolean;
   /** The invoice differs from the approved quote, or matches none. */
   invoiceDecision: boolean;
+  /** The agency disputed the invoice; the dispute can be withdrawn. */
+  disputed: boolean;
   /** The invoice is cleared and the tradie still needs paying. */
   payment: boolean;
   /** The work is under way or done, and a completion gate is still open. */
@@ -80,6 +83,7 @@ export function selfManagedMaintenanceSteps(
     compareQuotes: open && !hasApprovedQuote && hasSubmittedQuote,
     schedule: open && hasApprovedQuote && detail.status === MAINTENANCE_STATUS.APPROVED,
     invoiceDecision: open && match !== null && INVOICE_MATCH_NEEDS_DECISION.includes(match.status),
+    disputed: open && match !== null && match.status === INVOICE_MATCH_STATUS.DISPUTED,
     payment:
       match !== null &&
       INVOICE_MATCH_PAYABLE.includes(match.status) &&

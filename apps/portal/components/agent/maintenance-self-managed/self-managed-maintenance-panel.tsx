@@ -4,12 +4,16 @@ import { Loader2 } from 'lucide-react';
 
 import {
   CompletionStep,
+  DisputedInvoiceStep,
   InvoiceDecisionStep,
   PaymentStep,
 } from '@/components/agent/maintenance-self-managed/invoice-completion-steps';
 import { EscalationStep } from '@/components/agent/maintenance-self-managed/escalation-step';
 import { InviteTradiesStep } from '@/components/agent/maintenance-self-managed/invite-tradies-step';
+import { InvitedTradiesStep } from '@/components/agent/maintenance-self-managed/invited-tradies-step';
 import { IssueTriageStep } from '@/components/agent/maintenance-self-managed/issue-triage-step';
+import { JobDetailsStep } from '@/components/agent/maintenance-self-managed/job-details-step';
+import { ManualControlStep } from '@/components/agent/maintenance-self-managed/manual-control-step';
 import { QuoteCompareStep } from '@/components/agent/maintenance-self-managed/quote-compare-step';
 import {
   EnterQuoteStep,
@@ -66,6 +70,9 @@ export function SelfManagedMaintenancePanel({
   const steps = selfManagedMaintenanceSteps(detail);
   if (!steps.open) return null;
   const match = detail.invoiceMatch;
+  const quotedNames = new Set(
+    detail.quotes.map((q) => q.contractorName).filter((name): name is string => name !== null),
+  );
 
   return (
     <div className="space-y-3">
@@ -75,6 +82,12 @@ export function SelfManagedMaintenancePanel({
           : COPY.ownerCopyLimit(formatCurrency(detail.spendThreshold))}
       </p>
 
+      <ManualControlStep
+        requestId={requestId}
+        manualControl={detail.manualControl}
+        busy={busy}
+        run={run}
+      />
       {steps.escalations.length > 0 ? (
         <EscalationStep
           requestId={requestId}
@@ -88,6 +101,9 @@ export function SelfManagedMaintenancePanel({
       ) : null}
       {steps.invoiceDecision && match ? (
         <InvoiceDecisionStep requestId={requestId} match={match} busy={busy} run={run} />
+      ) : null}
+      {steps.disputed && match ? (
+        <DisputedInvoiceStep requestId={requestId} match={match} busy={busy} run={run} />
       ) : null}
       {steps.payment && match ? (
         <PaymentStep requestId={requestId} match={match} busy={busy} run={run} />
@@ -104,6 +120,7 @@ export function SelfManagedMaintenancePanel({
         />
       ) : null}
       {steps.compareQuotes ? <QuoteCompareStep detail={detail} busy={busy} run={run} /> : null}
+      <JobDetailsStep detail={detail} busy={busy} run={run} />
       {steps.triage ? (
         <IssueTriageStep requestId={requestId} issues={steps.issues} busy={busy} run={run} />
       ) : null}
@@ -112,6 +129,15 @@ export function SelfManagedMaintenancePanel({
           requestId={requestId}
           agencyId={agencyId}
           invited={detail.invitedContractors}
+          busy={busy}
+          run={run}
+        />
+      ) : null}
+      {steps.enterQuote && detail.invitedContractors.length > 0 ? (
+        <InvitedTradiesStep
+          requestId={requestId}
+          invited={detail.invitedContractors}
+          quotedNames={quotedNames}
           busy={busy}
           run={run}
         />

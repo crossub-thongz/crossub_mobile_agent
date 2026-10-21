@@ -577,6 +577,7 @@ export function MaintenanceTaskDetailView({
             <section className="flex min-h-[28rem] max-h-[min(70dvh,44rem)] flex-col overflow-hidden rounded-2xl border v2-frosted-surface p-2">
               <WorkspaceChatPanel
                 workspaceCase={workspaceCase}
+                propertyId={propertyId}
                 reference={taskRef}
                 selfManaged={selfManaged}
                 onSent={onCaseUpdated}

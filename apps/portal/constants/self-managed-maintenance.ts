@@ -7,6 +7,12 @@
 
 import type { components } from '@crossub-thongz/api-contract';
 
+import {
+  MAINTENANCE_ISSUE_TYPE_OTHER,
+  MAINTENANCE_ISSUE_TYPES,
+  type MaintenanceIssueType,
+} from '@/constants/maintenance-issue-types';
+
 type Schemas = components['schemas'];
 
 export type UrgentDecision = Schemas['AuthoriseUrgentWorkDto']['decision'];
@@ -111,6 +117,14 @@ export const MAINTENANCE_ISSUE_LIVE: readonly MaintenanceIssueStatus[] = [
   MAINTENANCE_ISSUE_STATUS.CONFIRMED,
 ];
 
+export type MaintenanceIssueTrade = NonNullable<Schemas['UpdateMaintenanceIssueDto']['trade']>;
+
+/** The trades a fault can be put under — the issue types, less the free-text "Others". */
+export const MAINTENANCE_ISSUE_TRADE_OPTIONS = MAINTENANCE_ISSUE_TYPES.filter(
+  (type): type is Exclude<MaintenanceIssueType, typeof MAINTENANCE_ISSUE_TYPE_OTHER> =>
+    type !== MAINTENANCE_ISSUE_TYPE_OTHER,
+) satisfies readonly MaintenanceIssueTrade[];
+
 export const MAINTENANCE_SPLIT_PRIORITY_OPTIONS: readonly {
   value: MaintenanceSplitPriority;
   label: string;
@@ -154,11 +168,15 @@ export const ESCALATION_OVERRIDE_REASON_OPTIONS: readonly {
 
 export type MaintenanceEmailRecipientRole = Schemas['MaintenanceCaseEmailRecipientDto']['role'];
 
-/** Who the agency can email from a job. The landlord is refused by the server. */
+/**
+ * Who the agency can email from a job. The owner (landlord) is emailed on their own, from the
+ * agency's address rather than the job's.
+ */
 export const MAINTENANCE_EMAIL_RECIPIENT = {
   TENANT: 'tenant',
   CONTRACTOR: 'contractor',
   STRATA: 'strata',
+  LANDLORD: 'landlord',
 } as const satisfies Record<string, MaintenanceEmailRecipientRole>;
 
 export type MaintenanceEmailRecipient =
@@ -168,6 +186,7 @@ export const MAINTENANCE_EMAIL_RECIPIENT_LABEL: Record<MaintenanceEmailRecipient
   tenant: 'Tenant',
   contractor: 'Tradie',
   strata: 'Strata',
+  landlord: 'Owner',
 };
 
 /** A new email from the job is recorded as a reply on the job's thread (provenance only). */
@@ -179,6 +198,11 @@ export const MAINTENANCE_CASE_EMAIL_INTENT = {
 export const SELF_MANAGED_MAINTENANCE_LIMITS = {
   dismissReasonMin: 3,
   splitDescriptionMin: 3,
+  takeControlReasonMin: 3,
+  jobDescriptionMin: 5,
+  jobDescriptionMax: 2000,
+  issueDescriptionMax: 400,
+  issueLocationMax: 200,
 } as const;
 
 export const SELF_MANAGED_MAINTENANCE_COPY = {
@@ -325,6 +349,55 @@ export const SELF_MANAGED_MAINTENANCE_COPY = {
   escalationResolved: 'Escalation resolved',
   escalationRaised: (at: string) => `Raised ${at}`,
 
+  manualTitle: 'Automation',
+  manualAutoHint:
+    'The system chases tradies and the tenant and moves the job on by itself. Take control to stop that.',
+  manualHeldHint: (when: string) =>
+    `You took control ${when}. Nothing is sent or moved on automatically until you resume.`,
+  manualReason: 'Why are you taking control?',
+  takeControl: 'Take control',
+  controlTaken: 'You have control of this job',
+  resumeAutomation: 'Resume automation',
+  automationResumed: 'Automation resumed',
+
+  jobTitle: 'Job details',
+  jobEdit: 'Edit job',
+  jobDescription: 'Description',
+  jobUrgent: 'Urgent',
+  jobSave: 'Save job',
+  jobSaved: 'Job updated',
+  cancel: 'Cancel',
+
+  issueEdit: 'Edit',
+  issueDescription: 'Fault',
+  issueLocation: 'Where (optional)',
+  issueTrade: 'Trade',
+  issueTradeNone: 'No trade set',
+  issueSave: 'Save fault',
+  issueAdd: 'Add a fault',
+  issueAdded: 'Fault added',
+  aiReview: 'Read the report again with AI',
+  aiReviewConfirm:
+    'Read the report again? The faults are picked out afresh; ones you edited are kept. Faults needing different trades become their own jobs.',
+  aiReviewDone: 'Report read again',
+
+  withdrawTradie: 'Withdraw',
+  withdrawConfirm: (name: string) => `Stop asking ${name} to quote?`,
+  tradieWithdrawn: 'Tradie withdrawn',
+  copyQuoteLink: 'Copy quote link',
+  quoteLinkCopied: 'Quote form link copied',
+  quoteLinkReady: 'Quote form link',
+  quoteLinkExpires: (when: string) => `Works until ${when}. A new link replaces this one.`,
+  quoteLinkCopyFailed: "Couldn't copy. Select the link and copy it.",
+  invitedTitle: 'Asked to quote',
+
+  disputedTitle: 'Invoice disputed',
+  disputedHint: (invoice: string) =>
+    `You disputed the ${invoice} invoice. Withdraw the dispute to accept it or dispute it again.`,
+  withdrawDispute: 'Withdraw dispute',
+  disputeWithdrawn: 'Dispute withdrawn',
+
+  emailOwnerNote: 'Goes to the owner on its own, from your agency’s address.',
   emailRecipient: 'To',
   emailSubject: 'Subject',
   emailBody: 'Message',

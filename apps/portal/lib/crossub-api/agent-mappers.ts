@@ -81,6 +81,7 @@ import type {
 import type { AgentPortfolioId } from '@/lib/agent-scope';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
+import { splitAgentMaintenanceDescription } from '@/lib/maintenance/maintenance-description';
 
 type ExtendedAgentProperty = AgentProperty & {
   state?: string | null;
@@ -493,21 +494,6 @@ const MAINTENANCE_STATUS_LABEL: Record<AgentMaintenance['status'], string> = {
   [MAINTENANCE_STATUS.COMPLETED]: 'Completed',
   [MAINTENANCE_STATUS.CANCELLED]: 'Deleted',
 };
-
-function splitAgentMaintenanceDescription(description: string | null | undefined): {
-  issueType: string;
-  body: string;
-} {
-  const raw = description?.trim() ?? '';
-  const colon = raw.indexOf(':');
-  if (colon > 0) {
-    return {
-      issueType: raw.slice(0, colon).trim(),
-      body: raw.slice(colon + 1).trim(),
-    };
-  }
-  return { issueType: '', body: raw };
-}
 
 export function mapAgentMaintenance(
   dtos: AgentMaintenance[],

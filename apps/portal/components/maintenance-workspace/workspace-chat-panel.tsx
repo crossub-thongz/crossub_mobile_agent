@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Loader2, Mail, MessageSquareText, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { AgentInputFeedbackAnchor } from '@/components/ui/agent-input-feedback';
 import { Input } from '@/components/ui/input';
@@ -128,7 +129,10 @@ function withTaskNumber(text: string, caseId: string, caseRef: string): string {
 }
 
 /** The parties this job holds an address for, in the order the picker offers them. */
-function emailRecipientsFor(workspaceCase: MaintenanceWorkspaceCase): MaintenanceEmailRecipient[] {
+function emailRecipientsFor(
+  workspaceCase: MaintenanceWorkspaceCase,
+  ownerEmailOnFile: boolean,
+): MaintenanceEmailRecipient[] {
   const out: MaintenanceEmailRecipient[] = [];
   if (workspaceCase.tenant?.email?.trim()) out.push(MAINTENANCE_EMAIL_RECIPIENT.TENANT);
   if (workspaceCase.assignedContractorId || workspaceCase.invitedContractorIds?.length) {
@@ -137,6 +141,7 @@ function emailRecipientsFor(workspaceCase: MaintenanceWorkspaceCase): Maintenanc
   if (workspaceCase.strataContact?.email?.trim() || workspaceCase.buildingManager?.email?.trim()) {
     out.push(MAINTENANCE_EMAIL_RECIPIENT.STRATA);
   }
+  if (ownerEmailOnFile) out.push(MAINTENANCE_EMAIL_RECIPIENT.LANDLORD);
   return out;
 }
 
@@ -152,11 +157,14 @@ function scrollListToLatest(el: HTMLElement | null) {
  */
 export function WorkspaceChatPanel({
   workspaceCase,
+  propertyId,
   reference,
   selfManaged = false,
   onSent,
 }: {
   workspaceCase: MaintenanceWorkspaceCase;
+  /** The job's property — its owner can be emailed on Self-Manage when an address is on file. */
+  propertyId?: string | null;
   /** Preferred task number (order no. / tracking no.) shown in the header. */
   reference?: string;
   selfManaged?: boolean;
@@ -166,7 +174,14 @@ export function WorkspaceChatPanel({
   const id = useId();
   const [chatTab, setChatTab] = useState<'app' | 'email'>(selfManaged ? 'email' : 'app');
   const caseRef = displayCaseRef(workspaceCase, reference);
-  const recipients = useMemo(() => emailRecipientsFor(workspaceCase), [workspaceCase]);
+  const { properties } = useAgentData();
+  const ownerEmailOnFile = Boolean(
+    propertyId && properties.find((p) => p.id === propertyId)?.homeOwnerContact.email?.trim(),
+  );
+  const recipients = useMemo(
+    () => emailRecipientsFor(workspaceCase, ownerEmailOnFile),
+    [workspaceCase, ownerEmailOnFile],
+  );
   const [recipient, setRecipient] = useState<MaintenanceEmailRecipient | null>(null);
   const [subject, setSubject] = useState('');
   const [draft, setDraft] = useState('');
@@ -349,6 +364,9 @@ export function WorkspaceChatPanel({
                   className="h-9 min-w-0 flex-1 text-sm"
                 />
               </div>
+              {activeRecipient === MAINTENANCE_EMAIL_RECIPIENT.LANDLORD ? (
+                <p className="text-muted-foreground text-[11px]">{COPY.emailOwnerNote}</p>
+              ) : null}
               <div className="flex items-end gap-2">
                 <AgentInputFeedbackAnchor kind="message" value={draft} className="flex-1">
                   <textarea

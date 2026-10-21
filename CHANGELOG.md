@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-21
+
+### Added
+- Self-Manage maintenance job: Take control stops the system's chasers and automatic steps on the job, and Resume automation hands it back.
+- Self-Manage maintenance job: Edit job corrects the issue type, description and urgency.
+- Self-Manage maintenance job: edit a reported fault, add one the AI missed, and have the AI read the report again.
+- Self-Manage maintenance job: Asked to quote lists the invited tradies, with Copy quote link and Withdraw.
+- Self-Manage maintenance job: Withdraw dispute on a disputed tradie invoice.
+- Self-Manage maintenance job: the Email tab can email the owner when an owner email is on file.
+
 ## 2026-10-20
 
 ### Added
