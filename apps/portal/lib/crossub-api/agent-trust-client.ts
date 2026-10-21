@@ -21,6 +21,8 @@ export type TrustLedgerEntryList = components['schemas']['TrustLedgerEntryListDt
 export type TrustRentList = components['schemas']['TrustRentListDto'];
 export type TrustRentRow = components['schemas']['TrustRentListRowDto'];
 export type PostTenantReceiptInput = components['schemas']['PostTenantReceiptDto'];
+export type SetTrustRentProfileInput = components['schemas']['SetRentProfileDto'];
+export type AddTrustSupplierInput = components['schemas']['AgentAddSupplierDto'];
 export type TenantReceiptAllocation = components['schemas']['TenantReceiptAllocationDto'];
 export type TrustBill = components['schemas']['TrustBillDto'];
 export type TrustBillList = components['schemas']['TrustBillListDto'];
@@ -170,6 +172,30 @@ export async function postTrustTenantReceipt(
     { params: { path: { agencyId, bankAccountId } }, body },
   );
   return unwrapCrossubResult(result, "Couldn't receipt the payment");
+}
+
+export async function setTrustRentProfile(
+  agencyId: string,
+  ledgerId: string,
+  body: SetTrustRentProfileInput,
+): Promise<TrustLedger> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/rent-profile', {
+    params: { path: { agencyId, ledgerId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't save the rent");
+}
+
+export async function addTrustSupplier(
+  agencyId: string,
+  bankAccountId: string,
+  body: AddTrustSupplierInput,
+): Promise<TrustLedger> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/suppliers',
+    { params: { path: { agencyId, bankAccountId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't add the supplier");
 }
 
 export async function fetchTrustBills(

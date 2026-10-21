@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import { SELECT_CLASS } from '@/components/agent/maintenance-self-managed/step-card';
+import { TrustAddSupplierDialog } from '@/components/agent/trust/trust-add-supplier-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,6 +25,7 @@ import {
   TRUST_LEDGER_STATUS,
   TRUST_NEW_BILL_COPY as COPY,
   TRUST_PAGE_SIZE_MAX,
+  TRUST_SUPPLIER_COPY,
   type TrustBillPriority,
 } from '@/constants/trust';
 import { useTrustResource } from '@/hooks/use-trust-resource';
@@ -75,6 +77,7 @@ export function TrustNewBillDialog({
   const [amount, setAmount] = useState('');
   const [priority, setPriority] = useState<TrustBillPriority>(TRUST_BILL_PRIORITY.NORMAL);
   const [pending, setPending] = useState(false);
+  const [addingSupplier, setAddingSupplier] = useState(false);
 
   const lookupsLoading = owners.loading || suppliers.loading;
   const lookupError = owners.error ?? suppliers.error;
@@ -169,6 +172,16 @@ export function TrustNewBillDialog({
               ))}
             </select>
             {noSuppliers ? <p className="text-muted-foreground text-xs">{COPY.noSuppliers}</p> : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              disabled={pending || lookupsLoading}
+              onClick={() => setAddingSupplier(true)}
+            >
+              {TRUST_SUPPLIER_COPY.add}
+            </Button>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="trust-bill-category">{COPY.category}</Label>
@@ -272,6 +285,17 @@ export function TrustNewBillDialog({
             {COPY.submit}
           </Button>
         </DialogFooter>
+        {addingSupplier ? (
+          <TrustAddSupplierDialog
+            agencyId={agencyId}
+            bankAccountId={bankAccountId}
+            onClose={() => setAddingSupplier(false)}
+            onAdded={(supplier) => {
+              suppliers.reload();
+              setSupplierLedgerId(supplier.id);
+            }}
+          />
+        ) : null}
       </DialogContent>
     </Dialog>
   );

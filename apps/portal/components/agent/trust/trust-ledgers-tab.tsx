@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { FilterChips } from '@/components/agent/filter-chips';
+import { TrustAddSupplierDialog } from '@/components/agent/trust/trust-add-supplier-dialog';
 import { TrustLedgerDetail } from '@/components/agent/trust/trust-ledger-detail';
 import {
   TRUST_TABLE_CELL_CLASS,
@@ -11,6 +12,7 @@ import {
   TrustLoading,
   TrustSearchInput,
 } from '@/components/agent/trust/trust-ui';
+import { Button } from '@/components/ui/button';
 import {
   TRUST_LEDGER_KIND_ALL,
   TRUST_LEDGER_KIND_FILTERS,
@@ -18,6 +20,7 @@ import {
   TRUST_LEDGERS_COPY as COPY,
   TRUST_PAGE_COPY,
   TRUST_PAGE_SIZE_MAX,
+  TRUST_SUPPLIER_COPY,
   type TrustLedgerKindFilter,
 } from '@/constants/trust';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
@@ -37,6 +40,7 @@ export function TrustLedgersTab({
   const [kind, setKind] = useState<TrustLedgerKindFilter>(TRUST_LEDGER_KIND_ALL);
   const [search, setSearch] = useState('');
   const [openLedgerId, setOpenLedgerId] = useState<string | null>(null);
+  const [addingSupplier, setAddingSupplier] = useState(false);
   const query = useDebouncedValue(search.trim());
 
   const { data, error, loading, reload } = useTrustResource(
@@ -67,7 +71,19 @@ export function TrustLedgersTab({
         <div className="min-w-0 flex-1">
           <FilterChips options={TRUST_LEDGER_KIND_FILTERS} value={kind} onChange={setKind} />
         </div>
+        <Button type="button" size="sm" variant="outline" onClick={() => setAddingSupplier(true)}>
+          {TRUST_SUPPLIER_COPY.add}
+        </Button>
       </div>
+
+      {addingSupplier ? (
+        <TrustAddSupplierDialog
+          agencyId={agencyId}
+          bankAccountId={bankAccountId}
+          onClose={() => setAddingSupplier(false)}
+          onAdded={reload}
+        />
+      ) : null}
 
       {!data ? (
         error ? (

@@ -8,6 +8,7 @@ export type TrustReceiptAllocationKind = Schemas['TenantReceiptAllocationDto']['
 export type TrustBillDisplayStatus = Schemas['TrustBillDto']['displayStatus'];
 export type TrustBillStage = Schemas['TrustBillDto']['stage'];
 export type TrustBillPriority = Schemas['CreateBillDto']['priority'];
+export type TrustRentPeriod = Schemas['SetRentProfileDto']['rentPeriod'];
 export type TrustStatementEmailStatus = Schemas['AgentTrustStatementEmailDto']['status'];
 export type TrustReconciliationStatus = Schemas['TrustReconciliationMonthDto']['status'];
 export type TrustDisbursementBlockedReason = NonNullable<
@@ -39,6 +40,12 @@ export const TRUST_NOT_SET_UP_MARKER = 'not set up';
 
 /** The API caps every trust list at this page size. */
 export const TRUST_PAGE_SIZE_MAX = 100;
+
+/** The API's limits on what the agent app types into trust records. */
+export const TRUST_INPUT_LIMITS = {
+  ledgerNameMax: 160,
+  rentNoteMax: 300,
+} as const;
 
 export const TRUST_TAB = {
   OVERVIEW: 'overview',
@@ -367,6 +374,56 @@ export const TRUST_RENT_PERIOD_LABEL: Record<
   MONTHLY: '/ mth',
 };
 
+export const TRUST_RENT_PERIOD = {
+  WEEKLY: 'WEEKLY',
+  FORTNIGHTLY: 'FORTNIGHTLY',
+  MONTHLY: 'MONTHLY',
+} as const satisfies Record<string, TrustRentPeriod>;
+
+export const TRUST_RENT_PERIODS: readonly TrustRentPeriod[] = Object.values(TRUST_RENT_PERIOD);
+
+export const TRUST_RENT_PERIOD_NAME: Record<TrustRentPeriod, string> = {
+  WEEKLY: 'Weekly',
+  FORTNIGHTLY: 'Fortnightly',
+  MONTHLY: 'Monthly',
+};
+
+export const TRUST_RENT_PROFILE_COPY = {
+  setUp: 'Set rent',
+  edit: 'Edit rent',
+  title: (tenant: string) => `Rent for ${tenant}`,
+  description:
+    'Rent amount, how often it is due and the date it is paid to. Receipts move the paid-to date on from here.',
+  amount: 'Rent ($)',
+  period: 'Every',
+  paidTo: 'Paid to',
+  paidToHint: 'For a new tenancy, the day before move-in.',
+  partPayment: 'Part payment held ($)',
+  partPaymentHint: 'Money already received toward the next day. Leave 0 if none.',
+  newRentAmount: 'New rent ($, optional)',
+  newRentFrom: 'New rent from',
+  note: 'Note (optional)',
+  amountInvalid: 'Enter a rent amount above $0.00',
+  paidToRequired: 'Pick the paid-to date',
+  partPaymentInvalid: 'Enter a part payment of $0.00 or more',
+  newRentIncomplete: 'Enter both the new rent and the date it starts, or neither',
+  newRentAfterPaidTo: 'The new rent must start after the paid-to date',
+  submit: 'Save rent',
+  cancel: 'Cancel',
+  saved: 'Rent saved',
+} as const;
+
+export const TRUST_SUPPLIER_COPY = {
+  add: 'Add supplier',
+  title: 'Add supplier',
+  description: 'A tradie or utility you pay bills to from owner ledgers. Payout details are set up by CROSSUB.',
+  name: 'Supplier name',
+  nameRequired: 'Enter the supplier name',
+  submit: 'Add supplier',
+  cancel: 'Cancel',
+  added: (name: string) => `${name} added`,
+} as const;
+
 export const TRUST_RECEIPT_COPY = {
   title: 'Receipt money',
   description: (tenant: string) => `From ${tenant}. Rent goes to the owner ledger.`,
@@ -410,7 +467,7 @@ export const TRUST_NEW_BILL_COPY = {
   chooseOwner: 'Choose an owner',
   chooseSupplier: 'Choose a supplier',
   chooseCategory: 'Choose a category',
-  noSuppliers: 'No supplier ledgers yet. Ask CROSSUB to add the supplier.',
+  noSuppliers: 'No supplier ledgers yet. Add the supplier first.',
   noCategories: 'No expense categories are set up on this trust account. Ask CROSSUB to add them.',
   billDate: 'Bill date',
   dueDate: 'Due date (optional)',

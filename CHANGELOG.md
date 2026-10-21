@@ -3,6 +3,8 @@
 ## 2026-10-21
 
 ### Added
+- Self-Manage trust: Set rent and Edit rent on the Rent tab set a tenant's rent, how often it is due, the paid-to date, a part payment and a rent change.
+- Self-Manage trust: Add supplier on the Ledgers tab and in New bill opens a supplier ledger.
 - Self-Manage maintenance job: Take control stops the system's chasers and automatic steps on the job, and Resume automation hands it back.
 - Self-Manage maintenance job: Edit job corrects the issue type, description and urgency.
 - Self-Manage maintenance job: edit a reported fault, add one the AI missed, and have the AI read the report again.

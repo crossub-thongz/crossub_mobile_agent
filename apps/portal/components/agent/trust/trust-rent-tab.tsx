@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { TrustReceiptDialog } from '@/components/agent/trust/trust-receipt-dialog';
+import { TrustRentProfileDialog } from '@/components/agent/trust/trust-rent-profile-dialog';
 import {
   TRUST_TABLE_CELL_CLASS,
   TRUST_TABLE_HEAD_CLASS,
@@ -17,6 +18,7 @@ import {
   TRUST_PAGE_SIZE_MAX,
   TRUST_RENT_COPY as COPY,
   TRUST_RENT_PERIOD_LABEL,
+  TRUST_RENT_PROFILE_COPY as RENT_COPY,
 } from '@/constants/trust';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
 import { fetchTrustRentList, type TrustRentRow } from '@/lib/crossub-api/agent-trust-client';
@@ -38,6 +40,7 @@ export function TrustRentTab({
   const [search, setSearch] = useState('');
   const [arrearsOnly, setArrearsOnly] = useState(false);
   const [receiptRow, setReceiptRow] = useState<TrustRentRow | null>(null);
+  const [rentRow, setRentRow] = useState<TrustRentRow | null>(null);
   const query = useDebouncedValue(search.trim());
 
   const { data, error, loading, reload } = useTrustResource(
@@ -149,15 +152,26 @@ export function TrustRentTab({
                     )}
                   </td>
                   <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-right')}>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs"
-                      onClick={() => setReceiptRow(row)}
-                    >
-                      {COPY.receipt}
-                    </Button>
+                    <div className="flex justify-end gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={row.hasRentProfile ? 'ghost' : 'outline'}
+                        className="h-7 text-xs"
+                        onClick={() => setRentRow(row)}
+                      >
+                        {row.hasRentProfile ? RENT_COPY.edit : RENT_COPY.setUp}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => setReceiptRow(row)}
+                      >
+                        {COPY.receipt}
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -174,6 +188,16 @@ export function TrustRentTab({
           row={receiptRow}
           onClose={() => setReceiptRow(null)}
           onReceipted={reload}
+        />
+      ) : null}
+
+      {rentRow ? (
+        <TrustRentProfileDialog
+          key={rentRow.ledgerId}
+          agencyId={agencyId}
+          row={rentRow}
+          onClose={() => setRentRow(null)}
+          onSaved={reload}
         />
       ) : null}
     </div>

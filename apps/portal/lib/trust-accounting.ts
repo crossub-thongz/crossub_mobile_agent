@@ -43,6 +43,11 @@ export function parseDollarsToCents(input: string, allowNegative = false): numbe
   return negative ? -cents : cents;
 }
 
+/** Integer cents as a plain dollars value for an input ("1250.00"); empty for null. */
+export function centsToDollarsInput(cents: number | null | undefined): string {
+  return cents == null ? '' : (cents / 100).toFixed(2);
+}
+
 /** Today in Sydney as YYYY-MM-DD — the API refuses trust postings dated after it. */
 export function trustTodayKey(now: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
