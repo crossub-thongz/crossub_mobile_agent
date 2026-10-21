@@ -125,6 +125,38 @@ export const MAINTENANCE_ISSUE_TRADE_OPTIONS = MAINTENANCE_ISSUE_TYPES.filter(
     type !== MAINTENANCE_ISSUE_TYPE_OTHER,
 ) satisfies readonly MaintenanceIssueTrade[];
 
+export type MaintenanceIssueUrgency = NonNullable<Schemas['UpdateMaintenanceIssueDto']['urgency']>;
+
+export const MAINTENANCE_ISSUE_URGENCY = {
+  NORMAL: 'normal',
+  URGENT: 'urgent',
+  URGENT_CONFIRMED: 'urgent_confirmed',
+  POSSIBLE_URGENT: 'possible_urgent',
+  NON_URGENT: 'non_urgent',
+  INSUFFICIENT_INFORMATION: 'insufficient_information',
+} as const satisfies Record<string, MaintenanceIssueUrgency>;
+
+/** Every urgency a fault may hold: the older normal/urgent pair and the AI's four values. */
+export const MAINTENANCE_ISSUE_URGENCY_VALUES: readonly MaintenanceIssueUrgency[] =
+  Object.values(MAINTENANCE_ISSUE_URGENCY);
+
+/** The four the staff assessment offers when correcting a fault (the AI's own vocabulary). */
+export const MAINTENANCE_ISSUE_URGENCY_EDIT_OPTIONS: readonly MaintenanceIssueUrgency[] = [
+  MAINTENANCE_ISSUE_URGENCY.URGENT_CONFIRMED,
+  MAINTENANCE_ISSUE_URGENCY.POSSIBLE_URGENT,
+  MAINTENANCE_ISSUE_URGENCY.NON_URGENT,
+  MAINTENANCE_ISSUE_URGENCY.INSUFFICIENT_INFORMATION,
+];
+
+export const MAINTENANCE_ISSUE_URGENCY_LABEL: Record<MaintenanceIssueUrgency, string> = {
+  normal: 'Normal',
+  urgent: 'Urgent',
+  urgent_confirmed: 'Urgent — confirmed',
+  possible_urgent: 'Possibly urgent',
+  non_urgent: 'Not urgent',
+  insufficient_information: 'Needs more info',
+};
+
 export const MAINTENANCE_SPLIT_PRIORITY_OPTIONS: readonly {
   value: MaintenanceSplitPriority;
   label: string;
@@ -203,6 +235,8 @@ export const SELF_MANAGED_MAINTENANCE_LIMITS = {
   jobDescriptionMax: 2000,
   issueDescriptionMax: 400,
   issueLocationMax: 200,
+  extraQuestionsMax: 10,
+  extraQuestionMax: 500,
 } as const;
 
 export const SELF_MANAGED_MAINTENANCE_COPY = {
@@ -236,6 +270,13 @@ export const SELF_MANAGED_MAINTENANCE_COPY = {
   answerPlaceholder: 'Tenant’s answer',
   saveAnswers: 'Save answers',
   sendQuestions: 'Email questions to tenant',
+  askTenant: 'Ask the tenant',
+  askTenantHint: 'Tick the questions to email. Untick any you already know the answer to.',
+  askTenantNoSuggested: 'No unsent questions left. Type your own below.',
+  extraQuestions: 'Your own questions (optional, one per line)',
+  extraQuestionsLimit: (max: number, length: number) =>
+    `Up to ${max} questions, ${length} characters each.`,
+  questionsEmailed: 'Questions emailed to the tenant',
   questionsSent: (when: string) => `Questions sent ${when}`,
   answered: 'Answered',
 
@@ -373,6 +414,8 @@ export const SELF_MANAGED_MAINTENANCE_COPY = {
   issueLocation: 'Where (optional)',
   issueTrade: 'Trade',
   issueTradeNone: 'No trade set',
+  issueUrgency: 'Urgency',
+  issueUrgencyNone: 'Not set',
   issueSave: 'Save fault',
   issueAdd: 'Add a fault',
   issueAdded: 'Fault added',

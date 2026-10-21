@@ -7,9 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   MAINTENANCE_ISSUE_TRADE_OPTIONS,
+  MAINTENANCE_ISSUE_URGENCY_EDIT_OPTIONS,
+  MAINTENANCE_ISSUE_URGENCY_LABEL,
   SELF_MANAGED_MAINTENANCE_COPY as COPY,
   SELF_MANAGED_MAINTENANCE_LIMITS as LIMITS,
   type MaintenanceIssueTrade,
+  type MaintenanceIssueUrgency,
 } from '@/constants/self-managed-maintenance';
 
 export interface IssueFormValues {
@@ -17,9 +20,11 @@ export interface IssueFormValues {
   location: string;
   /** Empty when no trade is set. */
   trade: MaintenanceIssueTrade | '';
+  /** Empty when no urgency is set. */
+  urgency: MaintenanceIssueUrgency | '';
 }
 
-/** A fault's description, location and trade — adding one the AI missed, or correcting one. */
+/** A fault's description, location, trade and urgency — adding one the AI missed, or correcting one. */
 export function IssueForm({
   initial,
   submitLabel,
@@ -38,9 +43,20 @@ export function IssueForm({
   const [description, setDescription] = useState(initial.description);
   const [location, setLocation] = useState(initial.location);
   const [trade, setTrade] = useState<MaintenanceIssueTrade | ''>(initial.trade);
+  const [urgency, setUrgency] = useState<MaintenanceIssueUrgency | ''>(initial.urgency);
+  // An older normal/urgent value stays pickable so opening the form doesn't hide it.
+  const urgencyOptions =
+    initial.urgency && !MAINTENANCE_ISSUE_URGENCY_EDIT_OPTIONS.includes(initial.urgency)
+      ? [initial.urgency, ...MAINTENANCE_ISSUE_URGENCY_EDIT_OPTIONS]
+      : MAINTENANCE_ISSUE_URGENCY_EDIT_OPTIONS;
 
   const submit = async () => {
-    const ok = await onSubmit({ description: description.trim(), location: location.trim(), trade });
+    const ok = await onSubmit({
+      description: description.trim(),
+      location: location.trim(),
+      trade,
+      urgency,
+    });
     if (ok) onCancel();
   };
 
@@ -84,6 +100,25 @@ export function IssueForm({
             ))}
           </select>
         </div>
+      </div>
+      <div>
+        <FieldLabel htmlFor={`${id}-urgency`}>{COPY.issueUrgency}</FieldLabel>
+        <select
+          id={`${id}-urgency`}
+          className={SELECT_CLASS}
+          value={urgency}
+          disabled={busy}
+          onChange={(e) => setUrgency(e.target.value as MaintenanceIssueUrgency | '')}
+        >
+          <option value="" disabled={initial.urgency !== ''}>
+            {COPY.issueUrgencyNone}
+          </option>
+          {urgencyOptions.map((option) => (
+            <option key={option} value={option}>
+              {MAINTENANCE_ISSUE_URGENCY_LABEL[option]}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" disabled={busy || !description.trim()} onClick={() => void submit()}>

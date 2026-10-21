@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useState } from 'react';
 
+import { AskTenantForm } from '@/components/agent/maintenance-self-managed/ask-tenant-form';
 import {
   IssueForm,
   type IssueFormValues,
@@ -11,9 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   MAINTENANCE_ISSUE_TRADE_OPTIONS,
+  MAINTENANCE_ISSUE_URGENCY_LABEL,
+  MAINTENANCE_ISSUE_URGENCY_VALUES,
   SELF_MANAGED_MAINTENANCE_COPY as COPY,
   SELF_MANAGED_MAINTENANCE_LIMITS,
   type MaintenanceIssueTrade,
+  type MaintenanceIssueUrgency,
 } from '@/constants/self-managed-maintenance';
 import type { SelfManagedMaintenanceRun } from '@/hooks/use-self-managed-maintenance';
 import {
@@ -21,7 +25,6 @@ import {
   dismissMaintenanceIssue,
   recordMaintenanceAnswers,
   rerunMaintenanceAiReview,
-  sendMaintenanceQuestions,
   updateMaintenanceIssue,
   type AgentMaintenanceIssue,
   type UpdateMaintenanceIssueInput,
@@ -30,11 +33,21 @@ import { formatDateTime } from '@/lib/utils';
 
 const answerKey = (issueId: string, questionKey: string) => `${issueId}:${questionKey}`;
 
-const EMPTY_ISSUE: IssueFormValues = { description: '', location: '', trade: '' };
+const EMPTY_ISSUE: IssueFormValues = { description: '', location: '', trade: '', urgency: '' };
 
 /** A trade the picker does not offer (free text, or a retired one) opens as "no trade set". */
 function knownTrade(trade: string | null): MaintenanceIssueTrade | '' {
   return MAINTENANCE_ISSUE_TRADE_OPTIONS.find((option) => option === trade) ?? '';
+}
+
+/** An urgency the API does not list (none yet, or an old free value) opens as "not set". */
+function knownUrgency(urgency: string | null): MaintenanceIssueUrgency | '' {
+  return MAINTENANCE_ISSUE_URGENCY_VALUES.find((option) => option === urgency) ?? '';
+}
+
+function urgencyLabel(urgency: string | null): string | null {
+  const known = knownUrgency(urgency);
+  return known ? MAINTENANCE_ISSUE_URGENCY_LABEL[known] : null;
 }
 
 function issueFormValues(issue: AgentMaintenanceIssue): IssueFormValues {
@@ -42,6 +55,7 @@ function issueFormValues(issue: AgentMaintenanceIssue): IssueFormValues {
     description: issue.description,
     location: issue.location ?? '',
     trade: knownTrade(issue.trade),
+    urgency: knownUrgency(issue.urgency),
   };
 }
 
@@ -55,6 +69,7 @@ function issueChanges(
     ...(values.description !== before.description ? { description: values.description } : {}),
     ...(values.location !== before.location ? { location: values.location } : {}),
     ...(values.trade !== before.trade ? { trade: values.trade || null } : {}),
+    ...(values.urgency && values.urgency !== before.urgency ? { urgency: values.urgency } : {}),
   };
 }
 
@@ -80,13 +95,13 @@ export function IssueTriageStep({
   const [dismissReason, setDismissReason] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [asking, setAsking] = useState(false);
 
   // Answers are recorded against a round that was emailed, so only a sent question takes one.
   const awaitingAnswers = useMemo(
     () => issues.some((i) => i.questionsSentAt && i.questions.some((q) => !q.answer?.trim())),
     [issues],
   );
-  const neverAsked = issues.some((i) => !i.questionsSentAt && i.questions.length > 0);
   const typedAnswers = issues.flatMap((issue) =>
     (issue.questionsSentAt ? issue.questions : [])
       .map((q) => ({
@@ -129,6 +144,7 @@ export function IssueTriageStep({
           description: values.description,
           ...(values.location ? { location: values.location } : {}),
           ...(values.trade ? { trade: values.trade } : {}),
+          ...(values.urgency ? { urgency: values.urgency } : {}),
         }),
       COPY.issueAdded,
     );
@@ -181,6 +197,9 @@ export function IssueTriageStep({
                 {issue.description}
                 {issue.location ? (
                   <span className="text-muted-foreground"> · {issue.location}</span>
+                ) : null}
+                {urgencyLabel(issue.urgency) ? (
+                  <span className="text-muted-foreground"> · {urgencyLabel(issue.urgency)}</span>
                 ) : null}
               </p>
               <div className="flex shrink-0 gap-1">
@@ -281,28 +300,30 @@ export function IssueTriageStep({
         ))}
       </ol>
 
-      {awaitingAnswers || neverAsked ? (
-        <div className="flex flex-wrap gap-2">
-          {awaitingAnswers ? (
-            <Button
-              size="sm"
-              disabled={busy || typedAnswers.length === 0}
-              onClick={() => void saveAnswers()}
-            >
-              {COPY.saveAnswers}
-            </Button>
-          ) : null}
-          {neverAsked ? (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={busy}
-              onClick={() => void run(() => sendMaintenanceQuestions(requestId, {}), COPY.saved)}
-            >
-              {COPY.sendQuestions}
-            </Button>
-          ) : null}
-        </div>
+      <div className="flex flex-wrap gap-2">
+        {awaitingAnswers ? (
+          <Button
+            size="sm"
+            disabled={busy || typedAnswers.length === 0}
+            onClick={() => void saveAnswers()}
+          >
+            {COPY.saveAnswers}
+          </Button>
+        ) : null}
+        {!asking ? (
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => setAsking(true)}>
+            {COPY.askTenant}
+          </Button>
+        ) : null}
+      </div>
+      {asking ? (
+        <AskTenantForm
+          requestId={requestId}
+          issues={issues}
+          busy={busy}
+          run={run}
+          onDone={() => setAsking(false)}
+        />
       ) : null}
       {addForm}
       {footer}
