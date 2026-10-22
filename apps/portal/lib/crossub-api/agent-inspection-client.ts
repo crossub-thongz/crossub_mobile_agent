@@ -1,5 +1,6 @@
 import type { components } from '@crossub-thongz/api-contract';
 
+import { REPORT_PDF_DOWNLOAD_QUERY } from '@/constants/self-managed-inspections';
 import type { AgencyTeamResponse } from '@/lib/crossub-api/agent-client';
 import { unwrapCrossubResult } from '@/lib/utils/unwrap-crossub-result';
 
@@ -74,18 +75,17 @@ export async function setInspectionConductedBy(
   return unwrapCrossubResult(result, "Couldn't change the inspector");
 }
 
-/** Same-origin report PDF link through the BFF proxy (the session cookie rides along). */
-export function agencyInspectionReportPdfUrl(inspectionId: string): string {
-  return `${CROSSUB_API_V1_BASE}/agent/inspections/${encodeURIComponent(inspectionId)}/report/pdf`;
-}
-
-/** The report PDF as a blob, for a named download. */
-export async function downloadAgencyInspectionReportPdf(inspectionId: string): Promise<Blob> {
-  const result = await crossub.GET('/agent/inspections/{inspectionId}/report/pdf', {
-    params: { path: { inspectionId } },
-    parseAs: 'blob',
-  });
-  return unwrapCrossubResult(result, "Couldn't download the report");
+/**
+ * Same-origin report PDF link through the BFF proxy (the session cookie rides along). Open it
+ * as a navigation: a filed report redirects to a short-lived storage link. `download` asks
+ * for the PDF as a file, named by the API.
+ */
+export function agencyInspectionReportPdfUrl(
+  inspectionId: string,
+  options: { download?: boolean } = {},
+): string {
+  const path = `${CROSSUB_API_V1_BASE}/agent/inspections/${encodeURIComponent(inspectionId)}/report/pdf`;
+  return options.download ? `${path}?${REPORT_PDF_DOWNLOAD_QUERY}` : path;
 }
 
 /** Principal makes a team member an agency inspector; returns the refreshed team. */
