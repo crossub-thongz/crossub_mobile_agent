@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-22
+
+### Fixed
+- Self-Manage inspection report: View report and Download PDF open as links, so a report of hundreds of photos comes straight from storage instead of failing.
+
 ## 2026-10-21
 
 ### Added

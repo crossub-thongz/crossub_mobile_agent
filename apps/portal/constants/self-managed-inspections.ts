@@ -38,18 +38,8 @@ export const AGENCY_REPORT_TENANT_TYPES: readonly AgentInspectionDetailType[] = 
   INSPECTION_TYPE.OUTGOING,
 ];
 
-/** Report download filename kind per inspection type (`buildInspectionReportFilename`). */
-export const INSPECTION_REPORT_FILENAME_KIND: Record<
-  AgentInspectionDetailType,
-  'ingoing' | 'outgoing' | 'routine' | 'open'
-> = {
-  [INSPECTION_TYPE.INGOING]: 'ingoing',
-  [INSPECTION_TYPE.OUTGOING]: 'outgoing',
-  [INSPECTION_TYPE.ROUTINE]: 'routine',
-  [INSPECTION_TYPE.CONDITION]: 'routine',
-  [INSPECTION_TYPE.WARD_ROUND]: 'routine',
-  [INSPECTION_TYPE.OPEN]: 'open',
-};
+/** Query string that asks the report PDF endpoint for an attachment instead of a view. */
+export const REPORT_PDF_DOWNLOAD_QUERY = 'download=1';
 
 export const AGENCY_INSPECTION_OWNER_COPY_STATUS = {
   SENT: 'SENT',
@@ -102,7 +92,6 @@ export const SELF_MANAGED_INSPECTION_COPY = {
     'Read the report, then sign it off. Nothing goes to the owner until you sign off.',
   viewReport: 'View report',
   downloadReport: 'Download PDF',
-  downloadFailed: "Couldn't download the report.",
   signOff: 'Sign off report',
   signOffConfirmTitle: 'Sign off this report?',
   signOffConfirmTenantOwner:

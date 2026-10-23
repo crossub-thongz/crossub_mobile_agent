@@ -2,7 +2,6 @@
 
 import { Download, ExternalLink } from 'lucide-react';
 import { useId, useState } from 'react';
-import { toast } from 'sonner';
 
 import { FieldLabel, StepCard } from '@/components/agent/maintenance-self-managed/step-card';
 import { Button } from '@/components/ui/button';
@@ -10,48 +9,26 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   AGENCY_INSPECTION_OWNER_COPY_STATUS,
   AGENCY_INSPECTION_TENANT_COPY_STATUS,
-  INSPECTION_REPORT_FILENAME_KIND,
   SELF_MANAGED_INSPECTION_COPY as COPY,
   SELF_MANAGED_INSPECTION_LIMITS,
 } from '@/constants/self-managed-inspections';
 import type { SelfManagedInspectionRun } from '@/hooks/use-self-managed-inspection';
 import {
   agencyInspectionReportPdfUrl,
-  downloadAgencyInspectionReportPdf,
   rejectAgencyInspectionReport,
   signOffAgencyInspection,
   type AgentInspectionDetail,
 } from '@/lib/crossub-api/agent-inspection-client';
-import {
-  buildInspectionReportFilename,
-  downloadInspectionReportFromApi,
-} from '@/lib/inspection-report-pdf';
 import type { SelfManagedInspectionSteps } from '@/lib/inspections/self-managed-inspection-steps';
 import { formatDateTime } from '@/lib/utils';
-import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
-/** Open and download the report PDF (reviewable before sign-off on an agency job). */
+/**
+ * Open and download the report PDF (reviewable before sign-off on an agency job). Both are
+ * plain links: the API answers a filed report with a redirect to storage, which a browser
+ * navigation follows but a credentialed fetch cannot, and a report of hundreds of photos is
+ * too large to fetch into the page anyway.
+ */
 function ReportLinks({ detail }: { detail: AgentInspectionDetail }) {
-  const [downloading, setDownloading] = useState(false);
-
-  const download = async () => {
-    setDownloading(true);
-    try {
-      await downloadInspectionReportFromApi(
-        detail.id,
-        buildInspectionReportFilename(
-          detail.propertyAddress,
-          INSPECTION_REPORT_FILENAME_KIND[detail.type],
-        ),
-        downloadAgencyInspectionReportPdf,
-      );
-    } catch (err) {
-      toast.error(apiErrorMessage(err, COPY.downloadFailed));
-    } finally {
-      setDownloading(false);
-    }
-  };
-
   return (
     <div className="flex flex-wrap gap-2">
       <Button asChild size="sm" variant="outline">
@@ -60,9 +37,11 @@ function ReportLinks({ detail }: { detail: AgentInspectionDetail }) {
           {COPY.viewReport}
         </a>
       </Button>
-      <Button size="sm" variant="outline" disabled={downloading} onClick={() => void download()}>
-        <Download className="size-3.5" />
-        {COPY.downloadReport}
+      <Button asChild size="sm" variant="outline">
+        <a href={agencyInspectionReportPdfUrl(detail.id, { download: true })}>
+          <Download className="size-3.5" />
+          {COPY.downloadReport}
+        </a>
       </Button>
     </div>
   );
