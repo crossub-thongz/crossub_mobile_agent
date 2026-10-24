@@ -355,7 +355,9 @@ function notificationCategory(href: string, taskType?: string): PropertyProfileA
     haystack.includes('rent-review') ||
     haystack.includes('leasing') ||
     haystack.includes('tenant-selection') ||
-    haystack.includes('vacating')
+    haystack.includes('vacating') ||
+    haystack.includes('termination-request') ||
+    haystack.includes('termination-notice')
   ) {
     return 'leasing';
   }

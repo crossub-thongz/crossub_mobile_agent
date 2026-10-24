@@ -140,20 +140,19 @@ export type AgentDocumentDto =
 export type UploadAgentDocumentInput =
   components['schemas']['UploadAgentDocumentDto'];
 
-/** Assigned client agencies (`GET /api/v1/agent/agencies`). */
+/**
+ * Assigned client agencies (`GET /api/v1/agent/agencies`).
+ * Goes through `agentFetch`, same as the property book. The typed contract client
+ * on this deployment does not perform the request, so the menu never learned the
+ * agency was Self-Manage and fell back to the inspection-only nav.
+ */
 export async function fetchAgencies(): Promise<AgentAgency[]> {
-  const { data, error } = await crossub.GET('/agent/agencies');
-  if (error || !data) throw new Error('Failed to load agencies');
-  return data.items;
+  return fetchAllPages<AgentAgency>('/agent/agencies');
 }
 
 /** One agency by id (`GET /api/v1/agent/agencies/{agencyId}`). */
 export async function fetchAgency(agencyId: string): Promise<AgentAgency> {
-  const { data, error } = await crossub.GET('/agent/agencies/{agencyId}', {
-    params: { path: { agencyId } },
-  });
-  if (error || !data) throw new Error('Failed to load agency');
-  return data;
+  return agentFetch<AgentAgency>(`/agent/agencies/${encodeURIComponent(agencyId)}`);
 }
 
 /** Agency team (`/api/v1/agent/agencies/{agencyId}/team`), with Self-Manage agency inspectors. */

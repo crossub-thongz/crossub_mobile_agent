@@ -57,7 +57,7 @@ export function PropertyLeasingWorkflowShell({
   focusBond = false,
   onFocusBondHandled,
   emptyTitle = 'No leasing activity yet',
-  emptyDescription = 'Start a new leasing cycle, rent review, or end leasing case for this property.',
+  emptyDescription = 'Start a new leasing cycle, a vacating case, or a termination request for this property.',
 }: {
   cases: PropertyLeasingWorkflowCase[];
   property: Property;

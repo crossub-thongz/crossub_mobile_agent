@@ -32,6 +32,7 @@ export type PropertyWorkflowActionId =
   | 'start_leasing'
   | 'start_rent_review'
   | 'start_end_leasing'
+  | 'lodge_termination'
   | 'start_maintenance'
   | 'schedule_open_inspection'
   | 'schedule_ingoing_inspection'
@@ -131,6 +132,11 @@ export function tabActionsFor(
           id: 'start_end_leasing',
           label: 'Vacating',
           description: 'Open another end leasing / vacating case for this property',
+        },
+        {
+          id: 'lodge_termination',
+          label: 'Termination',
+          description: 'Lodge a termination request. The account manager is notified to issue the notice.',
         },
       ];
     case 'rent_review': {
