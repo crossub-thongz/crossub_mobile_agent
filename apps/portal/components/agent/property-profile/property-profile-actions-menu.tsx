@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
 
 import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
+import { LodgeTerminationRequestDialog } from '@/components/agent/lodge-termination-request-dialog';
 import { PropertyWorkflowCreateDialog } from '@/components/agent/property-workflow-panel';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -157,7 +158,8 @@ export function PropertyProfileActionsMenu({
         open={
           workflowAction != null &&
           workflowAction !== 'open_tribunal' &&
-          workflowAction !== 'open_rent_chasing'
+          workflowAction !== 'open_rent_chasing' &&
+          workflowAction !== 'lodge_termination'
         }
         onOpenChange={(next) => {
           if (!next) setWorkflowAction(null);
@@ -174,6 +176,19 @@ export function PropertyProfileActionsMenu({
           if (isV2 && result && isWorkflowCreatedCase(result)) {
             router.push(createdWorkflowCaseHref(result, propertyId));
           }
+        }}
+      />
+
+      <LodgeTerminationRequestDialog
+        open={workflowAction === 'lodge_termination'}
+        onOpenChange={(next) => {
+          if (!next) setWorkflowAction(null);
+        }}
+        property={property}
+        currentLease={currentLease}
+        onLodged={() => {
+          setWorkflowAction(null);
+          onRefresh?.();
         }}
       />
 

@@ -5,6 +5,7 @@ import { MapPin, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
+import { LodgeTerminationRequestDialog } from '@/components/agent/lodge-termination-request-dialog';
 import { PropertyWorkflowCreateDialog } from '@/components/agent/property-workflow-panel';
 import {
   Dialog,
@@ -28,6 +29,7 @@ import type { PropertyWorkflowCreatedResult } from '@/lib/property-workflow-crea
 const ACTION_TAB: Record<PropertyWorkflowActionId, PropertyWorkflowTab> = {
   start_leasing: 'leasing',
   start_end_leasing: 'leasing',
+  lodge_termination: 'leasing',
   start_rent_review: 'rent_review',
   start_maintenance: 'maintenance',
   schedule_open_inspection: 'inspection',
@@ -43,6 +45,7 @@ const ACTION_TAB: Record<PropertyWorkflowActionId, PropertyWorkflowTab> = {
 const ACTION_LABEL: Partial<Record<PropertyWorkflowActionId, string>> = {
   start_leasing: 'New Leasing / Re-Letting',
   start_end_leasing: 'Vacating',
+  lodge_termination: 'Add termination',
   start_maintenance: 'Add new repair job',
   start_rent_review: 'Rent Review',
   schedule_open_inspection: 'Open inspection',
@@ -290,7 +293,7 @@ export function QuickCreateWorkflowDialog({
         </DialogContent>
       </Dialog>
 
-      {property && propertyId && formOpen && actionId !== 'open_tribunal' && actionId !== 'open_rent_chasing' ? (
+      {property && propertyId && formOpen && actionId !== 'open_tribunal' && actionId !== 'open_rent_chasing' && actionId !== 'lodge_termination' ? (
         <PropertyWorkflowCreateDialog
           actionId={actionId}
           open
@@ -304,6 +307,20 @@ export function QuickCreateWorkflowDialog({
           leasingCycle={propertyLeasingCycles[0]}
           tenantSelections={propertyTenantSelections}
           onSuccess={handleCreated}
+        />
+      ) : null}
+
+      {property && formOpen && actionId === 'lodge_termination' ? (
+        <LodgeTerminationRequestDialog
+          open
+          onOpenChange={(next) => {
+            if (!next) closeAll();
+          }}
+          property={property}
+          currentLease={currentLease}
+          onLodged={() => {
+            void handleCreated();
+          }}
         />
       ) : null}
 

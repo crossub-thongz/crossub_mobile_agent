@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { CreateInspectionWizard, type InspectionCreateResult } from '@/components/inspections/create-inspection-wizard';
 import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
+import { LodgeTerminationRequestDialog } from '@/components/agent/lodge-termination-request-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -179,7 +180,7 @@ export function PropertyWorkflowPanel({
   const description =
     emptyDescription ??
     (tab === 'leasing'
-      ? 'Start a new leasing cycle, rent review, or end leasing case for this property.'
+      ? 'Start a new leasing cycle, a vacating case, or a termination request for this property.'
       : tab === 'maintenance'
         ? 'Log a maintenance job for this property.'
         : tab === 'inspection'
@@ -220,7 +221,12 @@ export function PropertyWorkflowPanel({
 
       <PropertyWorkflowCreateDialog
         actionId={activeAction}
-        open={activeAction != null && activeAction !== 'open_tribunal' && activeAction !== 'open_rent_chasing'}
+        open={
+          activeAction != null &&
+          activeAction !== 'open_tribunal' &&
+          activeAction !== 'open_rent_chasing' &&
+          activeAction !== 'lodge_termination'
+        }
         onOpenChange={(open) => {
           if (!open) setActiveAction(null);
         }}
@@ -233,6 +239,19 @@ export function PropertyWorkflowPanel({
         onSuccess={(result) => {
           setActiveAction(null);
           onCreated?.(result);
+        }}
+      />
+
+      <LodgeTerminationRequestDialog
+        open={activeAction === 'lodge_termination'}
+        onOpenChange={(open) => {
+          if (!open) setActiveAction(null);
+        }}
+        property={property}
+        currentLease={currentLease}
+        onLodged={() => {
+          setActiveAction(null);
+          onCreated?.();
         }}
       />
 
@@ -549,6 +568,7 @@ export function PropertyWorkflowCreateDialog({
     start_leasing: 'New Leasing / Re-Letting',
     start_rent_review: 'Rent Review',
     start_end_leasing: 'Vacating',
+    lodge_termination: 'Add termination',
     start_maintenance: isV2 ? 'Lodge Maintenance' : 'Add new repair job',
     schedule_open_inspection: 'Schedule open inspection',
     schedule_ingoing_inspection: 'Schedule ingoing inspection',

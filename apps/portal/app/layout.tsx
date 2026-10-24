@@ -73,6 +73,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const agentUi = resolveAgentUi(process.env.CROSSUB_AGENT_UI);
+  const emailsVerifiedWithoutMail = (process.env.PORTAL_EMAIL_VERIFIED_WITHOUT_MAIL ?? '')
+    .split(',')
+    .map((email) => email.trim())
+    .filter(Boolean);
 
   return (
     <html
@@ -98,7 +102,7 @@ export default function RootLayout({
         <ChunkReloadGuard />
         <StripEmojisGuard />
         <ThemeProvider>
-          <AuthProvider>
+          <AuthProvider emailsVerifiedWithoutMail={emailsVerifiedWithoutMail}>
             <ProviderErrorBoundary>
               <SystemAccessAgreementGate>
                 <MustChangePasswordGate>

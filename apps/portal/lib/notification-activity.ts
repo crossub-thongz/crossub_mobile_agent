@@ -1,3 +1,7 @@
+import {
+  isTerminationNoticeNotification,
+  terminationNoticeReasonTitle,
+} from '@/lib/termination-request/display';
 import type { AgentNotification } from '@/lib/types';
 
 const HREF_TASK_LABELS: Array<{ pattern: RegExp; label: string }> = [
@@ -44,6 +48,14 @@ export function agentNotificationDisplay(notification: AgentNotification): {
   title: string;
   body: string;
 } {
+  if (isTerminationNoticeNotification(notification)) {
+    const address = notification.propertyAddress?.trim() ?? '';
+    return {
+      title: address || 'Termination',
+      body: terminationNoticeReasonTitle(notification),
+    };
+  }
+
   const rawBody = notification.body?.trim() ?? '';
   const address = notification.propertyAddress?.trim() ?? '';
   const bodyParts = rawBody ? splitBodyPrefix(rawBody) : null;
