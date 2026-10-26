@@ -5,6 +5,8 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { FilterChips } from '@/components/agent/filter-chips';
+import { TrustDisbursementHistory } from '@/components/agent/trust/trust-disbursement-history';
+import { TrustPayoutDialog } from '@/components/agent/trust/trust-payout-dialog';
 import {
   TRUST_TABLE_CELL_CLASS,
   TRUST_TABLE_HEAD_CLASS,
@@ -31,12 +33,14 @@ import {
   TRUST_DISBURSE_COPY as COPY,
   TRUST_DISBURSE_PARTY_COPY,
   TRUST_DISBURSEMENT_BLOCKED_LABEL,
+  TRUST_DISBURSEMENT_BLOCKED_REASON,
   TRUST_DISBURSEMENT_KIND_FOR_TAB,
   TRUST_DISBURSEMENT_TAB,
   TRUST_DISBURSEMENT_TABS,
   TRUST_LEDGERS_COPY,
   TRUST_PAGE_COPY,
   TRUST_PAGE_SIZE_MAX,
+  TRUST_PAYOUT_COPY,
   TRUST_STATEMENT_EMAIL_COPY,
   TRUST_STATEMENT_EMAIL_STATUS,
   type TrustDisbursementTab,
@@ -47,6 +51,7 @@ import {
   fetchTrustDisbursementCandidates,
   type AgentTrustDisbursementResult,
   type AgentTrustStatementEmail,
+  type TrustDisbursementCandidate,
 } from '@/lib/crossub-api/agent-trust-client';
 import {
   formatCents,
@@ -72,6 +77,8 @@ export function TrustDisburseTab({
   const [confirmKey, setConfirmKey] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<AgentTrustDisbursementResult | null>(null);
+  const [payoutFor, setPayoutFor] = useState<TrustDisbursementCandidate['ledger'] | null>(null);
+  const [runs, setRuns] = useState(0);
   const query = useDebouncedValue(search.trim());
   const kind = TRUST_DISBURSEMENT_KIND_FOR_TAB[tab];
   const party = TRUST_DISBURSE_PARTY_COPY[kind];
@@ -125,6 +132,7 @@ export function TrustDisburseTab({
         ledgerIds: selectedIds,
       });
       setResult(next);
+      setRuns((n) => n + 1);
       setSelected(new Set());
       setConfirmKey(null);
       reload();
@@ -234,6 +242,18 @@ export function TrustDisburseTab({
                     {c.blockedReason ? (
                       <p className="mt-0.5 text-xs text-amber-600">
                         {TRUST_DISBURSEMENT_BLOCKED_LABEL[c.blockedReason]}
+                        {c.blockedReason === TRUST_DISBURSEMENT_BLOCKED_REASON.NO_PAYOUT_METHOD ? (
+                          <>
+                            {' · '}
+                            <button
+                              type="button"
+                              className="text-primary font-medium underline-offset-2 hover:underline"
+                              onClick={() => setPayoutFor(c.ledger)}
+                            >
+                              {TRUST_PAYOUT_COPY.add}
+                            </button>
+                          </>
+                        ) : null}
                       </p>
                     ) : null}
                   </td>
@@ -258,6 +278,20 @@ export function TrustDisburseTab({
           </table>
         </div>
       )}
+
+      <TrustDisbursementHistory agencyId={agencyId} bankAccountId={bankAccountId} refreshKey={runs} />
+
+      {payoutFor ? (
+        <TrustPayoutDialog
+          key={payoutFor.id}
+          agencyId={agencyId}
+          ledgerId={payoutFor.id}
+          ledgerName={payoutFor.name}
+          ledgerKind={payoutFor.kind}
+          onClose={() => setPayoutFor(null)}
+          onSaved={reload}
+        />
+      ) : null}
 
       <Dialog
         open={confirmKey !== null}

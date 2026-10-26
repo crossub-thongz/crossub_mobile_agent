@@ -29,13 +29,19 @@ export type TrustReportKind =
   operations['AgentTrustController_reportCsv']['parameters']['path']['kind'];
 export type TrustLedgerFileFormat =
   operations['AgentTrustController_ledgerFile']['parameters']['path']['format'];
+export type TrustPayoutFrequency = Schemas['SetPayoutScheduleDto']['payoutFrequency'];
+export type TrustPayoutRowMethod = Schemas['PayoutMethodRowDto']['method'];
+export type TrustFeeTrigger = Schemas['TrustFeeSettingInputDto']['trigger'];
+export type TrustFeeCalc = Schemas['TrustFeeSettingInputDto']['calc'];
+export type TrustAccountCodeKind = Schemas['CreateAccountCodeDto']['kind'];
+export type TrustOpenableLedgerKind = Schemas['AgentOpenLedgerDto']['kind'];
 export type TrustDisbursementTab = NonNullable<
   NonNullable<
     operations['AgentTrustController_disbursementCandidates']['parameters']['query']
   >['tab']
 >;
 
-/** The API's 404 message when CROSSUB has not created the agency's trust workspace yet. */
+/** The API's 404 message when the agency's trust workspace or bank account is not set up yet. */
 export const TRUST_NOT_SET_UP_MARKER = 'not set up';
 
 /** The API caps every trust list at this page size. */
@@ -45,6 +51,23 @@ export const TRUST_PAGE_SIZE_MAX = 100;
 export const TRUST_INPUT_LIMITS = {
   ledgerNameMax: 160,
   rentNoteMax: 300,
+  workspaceNameMax: 120,
+  bankAccountNameMax: 120,
+  bankNameMax: 120,
+  accountNameMax: 120,
+  accountCodeMax: 30,
+  accountCodeNameMax: 120,
+  abaBankCodeLength: 3,
+  abaUserIdLength: 6,
+  abaRemitterNameMax: 26,
+  payeeNameMax: 160,
+  feeNameMax: 120,
+  withholdReasonMax: 300,
+  reasonMax: 300,
+  bondReferenceMax: 64,
+  takeOnNoteMax: 300,
+  invoiceReferenceMax: 120,
+  billDetailsMax: 300,
 } as const;
 
 export const TRUST_TAB = {
@@ -226,6 +249,10 @@ export const TRUST_DISBURSEMENT_KIND_FOR_TAB: Record<TrustDisbursementTab, Trust
   ALL_SUPPLIERS: TRUST_DISBURSEMENT_KIND.SUPPLIER,
 };
 
+export const TRUST_DISBURSEMENT_BLOCKED_REASON = {
+  NO_PAYOUT_METHOD: 'NO_PAYOUT_METHOD',
+} as const satisfies Record<string, TrustDisbursementBlockedReason>;
+
 export const TRUST_DISBURSEMENT_BLOCKED_LABEL: Record<TrustDisbursementBlockedReason, string> = {
   NO_PAYOUT_METHOD: 'No payout method',
   NOTHING_TO_PAY: 'Nothing to pay',
@@ -284,7 +311,6 @@ export const TRUST_PAGE_COPY = {
   bankAccountLabel: 'Trust account',
   archived: 'archived',
   notSetUpTitle: "Trust isn't set up for this agency yet",
-  notSetUpDescription: 'Ask CROSSUB to create the trust account.',
   loadFailed: "Couldn't load the trust account",
   retry: 'Try again',
   loading: 'Loading…',
@@ -312,6 +338,10 @@ export const TRUST_OVERVIEW_COPY = {
   billsInsufficient: (count: number) => `${count} without enough funds`,
   ownersDue: 'Owners due a payout',
   ownersWithoutPayout: (count: number) => `${count} without a payout method`,
+  addPayoutDetails: 'Add payout details',
+  takeOnPending: 'Opening balances are not posted yet',
+  takeOnPendingHint: 'Post them so the ledgers carry the money already in the trust account.',
+  openTakeOn: 'Enter opening balances',
   invoicesOutstanding: 'Tenant invoices owing',
   invoicesOverdue: (count: number) => `${count} overdue`,
   ledgerCounts: 'Ledgers',
@@ -416,7 +446,7 @@ export const TRUST_RENT_PROFILE_COPY = {
 export const TRUST_SUPPLIER_COPY = {
   add: 'Add supplier',
   title: 'Add supplier',
-  description: 'A tradie or utility you pay bills to from owner ledgers. Payout details are set up by CROSSUB.',
+  description: 'A tradie or utility you pay bills to from owner ledgers. Add their bank details from the ledger.',
   name: 'Supplier name',
   nameRequired: 'Enter the supplier name',
   submit: 'Add supplier',
@@ -468,7 +498,7 @@ export const TRUST_NEW_BILL_COPY = {
   chooseSupplier: 'Choose a supplier',
   chooseCategory: 'Choose a category',
   noSuppliers: 'No supplier ledgers yet. Add the supplier first.',
-  noCategories: 'No expense categories are set up on this trust account. Ask CROSSUB to add them.',
+  noCategories: 'No expense categories are set up on this trust account. Add one in Trust, Settings.',
   billDate: 'Bill date',
   dueDate: 'Due date (optional)',
   details: 'Details',
@@ -727,7 +757,7 @@ export const TRUST_NEW_FEE_COPY = {
   gstInclusive: 'Amount includes GST',
   category: 'Income category',
   chooseCategory: 'Choose a category',
-  noCategories: 'No income categories are set up on this trust account. Ask CROSSUB to add them.',
+  noCategories: 'No income categories are set up on this trust account. Add one in Trust, Settings.',
   date: 'Charge date',
   incomplete: 'Fill in the name, amount, category and date',
   submit: 'Charge fee',
@@ -763,7 +793,7 @@ export const TRUST_BANK_FILES_COPY = {
     `${count} payment${count === 1 ? '' : 's'}, ${amount}`,
   lastFile: (n: number, date: string) => `Last file #${n} on ${date}`,
   chequeCount: (count: number) => `${count} cheque${count === 1 ? '' : 's'} recorded`,
-  abaNotReady: 'An ABA file cannot be built yet. Ask CROSSUB to complete:',
+  abaNotReady: 'An ABA file cannot be built yet. Complete these on the trust bank account in Settings:',
   createAba: 'Create ABA file',
   createBpay: 'Create BPAY file',
   processingDate: 'Processing date',
@@ -923,8 +953,7 @@ export const TRUST_LEDGER_FILE_FORMAT = {
 
 export const TRUST_SETTINGS_SUMMARY_COPY = {
   title: 'Trust account settings',
-  description:
-    'CROSSUB sets up and maintains your trust bank accounts and account codes. Contact CROSSUB to change them.',
+  description: 'Your trust bank accounts and account codes. Change them from Trust, Settings.',
   bankAccounts: 'Trust bank accounts',
   noBankAccounts: 'No trust bank account yet.',
   accountCodes: 'Account codes',
@@ -949,3 +978,454 @@ export const TRUST_ACCOUNT_CODE_KIND_LABEL: Record<
   INCOME: 'Income',
   EXPENSE: 'Expense',
 };
+
+// --------------------------------------------------------------------------- Set-up and settings (D132 amended)
+
+/** Account code kinds the Settings form offers. */
+export const TRUST_ACCOUNT_CODE_KINDS: readonly TrustAccountCodeKind[] = [
+  TRUST_ACCOUNT_CODE_KIND.INCOME,
+  TRUST_ACCOUNT_CODE_KIND.EXPENSE,
+];
+
+/** The ABA bank code is three capitals; the direct entry user ID six digits; a BSB six digits. */
+export const TRUST_ABA_BANK_CODE_PATTERN = /^[A-Z]{3}$/;
+export const TRUST_ABA_USER_ID_PATTERN = /^\d{6}$/;
+export const TRUST_BSB_PATTERN = /^\d{3}-?\d{3}$/;
+/** A trust bank account number: 4 to 10 digits. */
+export const TRUST_BANK_ACCOUNT_NUMBER_PATTERN = /^\d{4,10}$/;
+/** A payee's account number: 4 to 9 digits. */
+export const TRUST_PAYEE_ACCOUNT_NUMBER_PATTERN = /^\d{4,9}$/;
+export const TRUST_BPAY_BILLER_PATTERN = /^\d{3,10}$/;
+export const TRUST_BPAY_REFERENCE_PATTERN = /^\d{2,20}$/;
+
+export const TRUST_SETUP_COPY = {
+  description:
+    'Enter the trust bank account your agency holds. You can change these details later in Settings.',
+  workspaceName: 'Trust workspace name',
+  workspaceNameHint: 'Usually the agency name.',
+  bankSection: 'Trust bank account',
+  abaSection: 'ABA direct entry',
+  abaHint:
+    "From the bank's ABA sample file. An ABA bank file needs the bank code; the user ID defaults to 000000 when the bank issues none.",
+  openingSection: 'Opening balance',
+  openingHint:
+    'The trust account balance on the day you start in CROSSUB. You then share it across the ledgers in Opening balances.',
+  submit: 'Set up trust account',
+  done: 'Trust account set up',
+} as const;
+
+export const TRUST_BANK_ACCOUNT_FORM_COPY = {
+  name: 'Account nickname',
+  namePlaceholder: 'e.g. Main trust account',
+  bankName: 'Bank (optional)',
+  accountName: 'Account name (optional)',
+  bsb: 'BSB',
+  accountNumber: 'Account number',
+  accountNumberKeep: (last4: string) => `Leave blank to keep …${last4}`,
+  openingBalance: 'Opening balance ($)',
+  openingDate: 'Opening date',
+  openingLocked: 'The opening balance and date lock once money has moved on the account.',
+  abaBankCode: 'Bank code',
+  abaBankCodeHint: 'Three letters, e.g. CBA.',
+  abaUserId: 'Direct entry user ID',
+  abaUserIdHint: 'Six digits. Blank uses 000000.',
+  abaRemitter: 'Remitter name',
+  abaRemitterHint: 'Shown on the payee statement. Blank uses the account name.',
+  archived: 'Archived (no longer used)',
+  nameRequired: 'Enter a nickname for the account',
+  bsbInvalid: 'The BSB is 6 digits',
+  accountNumberInvalid: 'The account number is 4 to 10 digits',
+  openingBalanceInvalid: 'Enter the opening balance in dollars, e.g. 1250.00',
+  abaBankCodeInvalid: 'The bank code is three letters',
+  abaUserIdInvalid: 'The direct entry user ID is six digits',
+} as const;
+
+export const TRUST_BANK_ACCOUNT_DIALOG_COPY = {
+  edit: 'Edit',
+  title: (name: string) => `Edit ${name}`,
+  description: 'The trust bank account and the details its ABA bank files use.',
+  submit: 'Save',
+  cancel: 'Cancel',
+  saved: 'Trust bank account saved',
+} as const;
+
+export const TRUST_ACCOUNT_CODE_DIALOG_COPY = {
+  add: 'Add code',
+  edit: 'Edit',
+  addTitle: 'Add account code',
+  editTitle: (code: string) => `Edit ${code}`,
+  description: 'Income codes are for fees and other money in; expense codes for bills.',
+  code: 'Code',
+  codeLocked: 'The code itself cannot change once added.',
+  name: 'Name',
+  kind: 'Kind',
+  gstApplies: 'GST applies',
+  active: 'In use',
+  codeRequired: 'Enter the code and name',
+  submit: 'Save',
+  cancel: 'Cancel',
+  added: (code: string) => `${code} added`,
+  saved: (code: string) => `${code} saved`,
+} as const;
+
+export const TRUST_SETTINGS_TAB_COPY = {
+  title: 'Trust account settings',
+  description: 'Your trust bank accounts, ABA details and account codes.',
+  aba: 'ABA',
+  abaReady: 'Ready',
+  abaMissing: 'Bank code missing',
+} as const;
+
+// --------------------------------------------------------------------------- Opening balances (take-on)
+
+export const TRUST_TAKE_ON_COPY = {
+  title: 'Opening balances',
+  description:
+    'Share the opening balance of the trust account across the ledgers that held the money on the opening date. It posts once, as one transaction with no bank movement.',
+  bankOpening: (amount: string, date: string) => `Bank opening balance ${amount} on ${date}`,
+  noOpeningDate: 'Set the opening date on the trust bank account first.',
+  noLedgers: 'Open the owner, tenant and agency ledgers first (Ledgers, Open missing ledgers).',
+  ledger: 'Ledger',
+  kind: 'Kind',
+  amount: 'Opening amount ($)',
+  total: 'Total',
+  remaining: (amount: string) => `${amount} still to share`,
+  over: (amount: string) => `${amount} over the bank opening balance`,
+  balanced: 'Matches the bank opening balance',
+  tenantNoRent: 'Set the rent first',
+  tenantsWithoutRent: (count: number) =>
+    `${count} tenant ledger${count === 1 ? '' : 's'} need rent set before an amount can go on them.`,
+  note: 'Note (optional)',
+  amountInvalid: 'Enter each amount in dollars, e.g. 1250.00',
+  notBalanced: 'The amounts must add up to the bank opening balance',
+  submit: 'Post opening balances',
+  confirmTitle: 'Post opening balances',
+  confirmBody: 'This posts one opening transaction. A wrong take-on is fixed by reversing it in Transactions.',
+  cancel: 'Cancel',
+  posted: 'Opening balances posted',
+  postedSummary: (n: number | null | undefined, date: string, by: string | null | undefined) =>
+    `Posted${n != null ? ` as #${n}` : ''} on ${date}${by ? ` by ${by}` : ''}.`,
+} as const;
+
+// --------------------------------------------------------------------------- Opening ledgers
+
+export const TRUST_OPENABLE_LEDGER_KINDS: readonly { id: TrustOpenableLedgerKind; label: string }[] = [
+  { id: TRUST_LEDGER_KIND.OWNER, label: 'Owner' },
+  { id: TRUST_LEDGER_KIND.TENANT, label: 'Tenant' },
+  { id: TRUST_LEDGER_KIND.AGENCY, label: 'Agency (your fees)' },
+];
+
+export const TRUST_OPEN_LEDGERS_COPY = {
+  openMissing: 'Open missing ledgers',
+  openOne: 'Open ledger',
+  syncTitle: 'Open missing ledgers',
+  syncDescription:
+    "Every current owner and tenant of your agency's properties that has no ledger yet. They open in one go.",
+  owners: (count: number) => `Owners (${count})`,
+  tenants: (count: number) => `Tenants (${count})`,
+  skipped: (count: number) => `Left out (${count})`,
+  nothingMissing: 'Every current owner and tenant already has a ledger.',
+  truncated: 'Only the first ledgers are listed. Run it again to open the rest.',
+  syncSubmit: (count: number) => `Open ${count} ledger${count === 1 ? '' : 's'}`,
+  synced: (count: number) => `${count} ledger${count === 1 ? '' : 's'} opened`,
+  oneTitle: 'Open ledger',
+  oneDescription: 'An owner or tenant ledger on one of your properties, or the agency ledger your fees go to.',
+  kind: 'Kind',
+  property: 'Property',
+  chooseProperty: 'Choose a property',
+  name: 'Name (optional)',
+  nameHint: "Blank uses the property's landlord or tenant name, or the agency name.",
+  managementStart: 'Management start (optional)',
+  propertyRequired: 'Choose the property',
+  opened: (name: string) => `${name} opened`,
+  submit: 'Open ledger',
+  cancel: 'Cancel',
+} as const;
+
+// --------------------------------------------------------------------------- Ledger upkeep
+
+export const TRUST_LEDGER_ACTIONS_COPY = {
+  rename: 'Rename',
+  renameTitle: 'Rename ledger',
+  name: 'Name',
+  managementStart: 'Management start',
+  managementEnd: 'Management end',
+  nameRequired: 'Enter the ledger name',
+  save: 'Save',
+  saved: 'Ledger saved',
+  close: 'Close ledger',
+  closeTitle: 'Close this ledger?',
+  closeBody: 'A closed ledger takes no new money. Its balance must be $0.00.',
+  closeConfirm: 'Close ledger',
+  closed: 'Ledger closed',
+  closedBadge: 'Closed',
+  cancel: 'Cancel',
+} as const;
+
+export const TRUST_PAYOUT_METHOD = {
+  EFT: 'EFT',
+  BPAY: 'BPAY',
+  CHEQUE: 'CHEQUE',
+} as const satisfies Record<string, TrustPayoutRowMethod>;
+
+export const TRUST_PAYOUT_METHODS: readonly TrustPayoutRowMethod[] = Object.values(TRUST_PAYOUT_METHOD);
+
+export const TRUST_PAYOUT_METHOD_LABEL: Record<TrustPayoutRowMethod, string> = {
+  EFT: 'Bank transfer',
+  BPAY: 'BPAY',
+  CHEQUE: 'Cheque',
+};
+
+/** Basis points in 100%: payout splits add up to this. */
+export const TRUST_SPLIT_FULL_BASIS_POINTS = 10000;
+
+export const TRUST_PAYOUT_FREQUENCY = {
+  WEEKLY: 'WEEKLY',
+  FORTNIGHTLY: 'FORTNIGHTLY',
+  FOUR_WEEKLY: 'FOUR_WEEKLY',
+  MONTHLY: 'MONTHLY',
+  ON_DEMAND: 'ON_DEMAND',
+} as const satisfies Record<string, TrustPayoutFrequency>;
+
+export const TRUST_PAYOUT_FREQUENCIES: readonly TrustPayoutFrequency[] = Object.values(TRUST_PAYOUT_FREQUENCY);
+
+export const TRUST_PAYOUT_FREQUENCY_LABEL: Record<TrustPayoutFrequency, string> = {
+  WEEKLY: 'Weekly',
+  FORTNIGHTLY: 'Fortnightly',
+  FOUR_WEEKLY: 'Every 4 weeks',
+  MONTHLY: 'Monthly',
+  ON_DEMAND: 'On demand',
+};
+
+/** D94: the next payout due date was set by hand (it rolls forward), or worked out from the last payout. */
+export const TRUST_PAYOUT_DUE_SOURCE = {
+  SET: 'SET',
+  COMPUTED: 'COMPUTED',
+} as const satisfies Record<string, NonNullable<Schemas['TrustPayoutMethodsDto']['nextPayoutDueSource']>>;
+
+export const TRUST_PAYOUT_COPY = {
+  title: 'Payout details',
+  edit: 'Edit payout details',
+  add: 'Add payout details',
+  dialogTitle: (name: string) => `Payout details for ${name}`,
+  dialogDescription:
+    'Where the money is paid. Split across more than one method if needed; the shares must add up to 100%.',
+  method: 'Method',
+  payeeName: 'Payee name',
+  bsb: 'BSB',
+  accountNumber: 'Account number',
+  accountNumberKeep: (masked: string) => `Leave blank to keep ${masked}`,
+  billerCode: 'BPAY biller code',
+  reference: 'BPAY reference',
+  share: 'Share (%)',
+  addMethod: 'Add method',
+  remove: 'Remove',
+  frequency: 'Pay out',
+  nextPayoutDue: 'Next payout due (optional)',
+  payeeRequired: 'Enter the payee name for each method',
+  bsbInvalid: 'The BSB is 6 digits',
+  accountNumberInvalid: 'The account number is 4 to 9 digits',
+  billerInvalid: 'The BPAY biller code is 3 to 10 digits',
+  referenceInvalid: 'The BPAY reference is 2 to 20 digits',
+  shareInvalid: 'Each share is above 0% and the shares add up to 100%',
+  submit: 'Save payout details',
+  cancel: 'Cancel',
+  saved: 'Payout details saved',
+} as const;
+
+export const TRUST_FEE_TRIGGER = {
+  EVERY_RENT_RECEIPT: 'EVERY_RENT_RECEIPT',
+  FIRST_RENT_RECEIPT: 'FIRST_RENT_RECEIPT',
+  AGREEMENT_RENEWED: 'AGREEMENT_RENEWED',
+  OWNER_INVOICE_RECEIPT: 'OWNER_INVOICE_RECEIPT',
+  INSPECTION_COMPLETED: 'INSPECTION_COMPLETED',
+  SUPPLIER_BILL_CREATED: 'SUPPLIER_BILL_CREATED',
+  RECURRING: 'RECURRING',
+  MANUAL: 'MANUAL',
+} as const satisfies Record<string, TrustFeeTrigger>;
+
+/** In the order the form offers them; the staff app's order. */
+export const TRUST_FEE_TRIGGERS: readonly TrustFeeTrigger[] = [
+  TRUST_FEE_TRIGGER.EVERY_RENT_RECEIPT,
+  TRUST_FEE_TRIGGER.FIRST_RENT_RECEIPT,
+  TRUST_FEE_TRIGGER.OWNER_INVOICE_RECEIPT,
+  TRUST_FEE_TRIGGER.SUPPLIER_BILL_CREATED,
+  TRUST_FEE_TRIGGER.AGREEMENT_RENEWED,
+  TRUST_FEE_TRIGGER.INSPECTION_COMPLETED,
+  TRUST_FEE_TRIGGER.RECURRING,
+  TRUST_FEE_TRIGGER.MANUAL,
+];
+
+export const TRUST_FEE_TRIGGER_LABEL: Record<TrustFeeTrigger, string> = {
+  EVERY_RENT_RECEIPT: 'Every rent receipt',
+  FIRST_RENT_RECEIPT: 'First rent receipt',
+  AGREEMENT_RENEWED: 'Agreement renewed (not charged yet)',
+  OWNER_INVOICE_RECEIPT: 'Owner invoice paid',
+  INSPECTION_COMPLETED: 'Inspection completed (not charged yet)',
+  SUPPLIER_BILL_CREATED: 'Supplier bill created',
+  RECURRING: 'Recurring (not charged yet)',
+  MANUAL: 'Manual',
+};
+
+export const TRUST_FEE_CALC = {
+  FIXED: 'FIXED',
+  PERCENT: 'PERCENT',
+} as const satisfies Record<string, TrustFeeCalc>;
+
+export const TRUST_FEE_CALC_LABEL: Record<TrustFeeCalc, string> = {
+  FIXED: 'Fixed amount',
+  PERCENT: 'Percent of the money in',
+};
+
+/** Basis points in one percent. */
+export const TRUST_BASIS_POINTS_PER_PERCENT = 100;
+
+export const TRUST_FEE_SETTINGS_COPY = {
+  title: 'Recurring fees',
+  empty: 'No recurring fees. Add the management fee to charge it on every rent receipt.',
+  add: 'Add fee',
+  edit: 'Edit',
+  off: 'off',
+  dialogAddTitle: 'Add recurring fee',
+  dialogEditTitle: (name: string) => `Edit ${name}`,
+  dialogDescription: 'Charged on the owner ledger each time the trigger happens.',
+  name: 'Fee name',
+  namePlaceholder: 'Management fee',
+  trigger: 'When',
+  calc: 'How',
+  amount: 'Amount ($)',
+  rate: 'Rate (%)',
+  gstInclusive: 'Includes GST',
+  category: 'Income category',
+  chooseCategory: 'Choose a category',
+  active: 'Charging',
+  incomplete: 'Fill in the name, amount or rate, and category',
+  rateInvalid: 'Enter a rate above 0%, e.g. 7.7',
+  submit: 'Save fee',
+  cancel: 'Cancel',
+  saved: 'Recurring fees saved',
+  describeFixed: (amount: string, trigger: string) => `${amount} · ${trigger}`,
+  describePercent: (rate: string, trigger: string) => `${rate}% · ${trigger}`,
+} as const;
+
+export const TRUST_BOND_COPY = {
+  title: 'Bond',
+  edit: 'Edit bond',
+  dialogTitle: (tenant: string) => `Bond for ${tenant}`,
+  dialogDescription: 'A record of the bond only. It never goes into a ledger balance.',
+  required: 'Bond required ($)',
+  dueOn: 'Due by',
+  received: 'Received by the agency ($)',
+  paidDirect: 'Paid straight to the bond authority ($)',
+  reference: 'Bond lodgement number',
+  held: (amount: string) => `${amount} held`,
+  outstanding: (amount: string) => `${amount} outstanding`,
+  none: 'No bond recorded.',
+  amountInvalid: 'Enter each amount in dollars, e.g. 2400.00',
+  submit: 'Save bond',
+  cancel: 'Cancel',
+  saved: 'Bond saved',
+} as const;
+
+export const TRUST_RENT_RESET_COPY = {
+  action: 'Reset paid-to',
+  title: (tenant: string) => `Reset paid-to for ${tenant}`,
+  description: 'Correct the paid-to date by hand, for example after a take-on. The note is kept with the change.',
+  paidTo: 'Paid to',
+  partPayment: 'Part payment held ($)',
+  note: 'Why',
+  noteRequired: 'Say why the paid-to date changes',
+  amountInvalid: 'Enter the part payment in dollars, e.g. 0.00',
+  submit: 'Reset',
+  cancel: 'Cancel',
+  saved: 'Paid-to date reset',
+} as const;
+
+export const TRUST_WITHHOLDS_COPY = {
+  title: 'Held back',
+  empty: 'Nothing held back.',
+  activeTotal: (amount: string) => `${amount} held back from payouts`,
+  hold: 'Hold amount',
+  release: 'Release',
+  holdTitle: 'Hold back an amount',
+  holdDescription: 'Kept on the owner ledger at the next disbursements until you release it.',
+  amount: 'Amount ($)',
+  reason: 'Reason',
+  amountInvalid: 'Enter an amount above $0.00',
+  reasonRequired: 'Give a reason',
+  submit: 'Hold amount',
+  cancel: 'Cancel',
+  held: 'Amount held back',
+  releasedToast: 'Amount released',
+} as const;
+
+// --------------------------------------------------------------------------- Bill upkeep
+
+export const TRUST_EDIT_BILL_COPY = {
+  edit: 'Edit',
+  cancelBill: 'Cancel bill',
+  attachment: 'Invoice',
+  title: (n: number) => `Edit bill #${n}`,
+  description: 'Only a bill not yet paid can be changed. The amount and parties stay as entered.',
+  details: 'Details',
+  dueDate: 'Due date (optional)',
+  invoiceReference: 'Supplier invoice no. (optional)',
+  priority: 'Priority',
+  category: 'Category',
+  detailsRequired: 'Enter the details',
+  submit: 'Save bill',
+  cancel: 'Cancel',
+  saved: (n: number) => `Bill #${n} saved`,
+  cancelTitle: (n: number) => `Cancel bill #${n}`,
+  cancelDescription: 'The bill will not be paid. This cannot be undone.',
+  cancelReason: 'Reason',
+  cancelReasonRequired: 'Give a reason',
+  cancelSubmit: 'Cancel bill',
+  cancelKeep: 'Keep bill',
+  cancelled: (n: number) => `Bill #${n} cancelled`,
+  attachmentFailed: "Couldn't open the invoice",
+} as const;
+
+export const TRUST_BILL_STATUS = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+  CANCELLED: 'CANCELLED',
+} as const satisfies Record<string, Schemas['TrustBillDto']['status']>;
+
+// --------------------------------------------------------------------------- Disbursement history
+
+export const TRUST_DISBURSEMENT_KIND_LABEL: Record<TrustDisbursementKind, string> = {
+  OWNER: 'Owners',
+  SUPPLIER: 'Suppliers',
+};
+
+export const TRUST_DISBURSEMENT_HISTORY_COPY = {
+  title: 'Past disbursements',
+  empty: 'No disbursements yet.',
+  run: (n: number) => `Run #${n}`,
+  summary: (paid: number, skipped: number, payout: string) => `${paid} paid, ${skipped} skipped, ${payout}`,
+  by: (name: string) => `by ${name}`,
+} as const;
+
+// --------------------------------------------------------------------------- Reconciliation upkeep
+
+export const TRUST_RECONCILIATION_UPKEEP_COPY = {
+  revoke: 'Revoke',
+  revokeTitle: (label: string) => `Revoke ${label}`,
+  revokeDescription:
+    'Unlocks the month so postings on or before its end are allowed again. Only the latest locked month can be revoked.',
+  reason: 'Reason',
+  reasonRequired: 'Give a reason',
+  revokeSubmit: 'Revoke',
+  cancel: 'Cancel',
+  revoked: (label: string) => `${label} unlocked`,
+  balancesTitle: 'Recorded bank balances',
+  balancesEmpty: 'No bank balances recorded in the last three months.',
+  date: 'Date',
+  balance: 'Balance',
+  status: 'Result',
+  reconciled: 'Reconciled',
+  outBy: (amount: string) => `Out by ${amount}`,
+  remove: 'Remove',
+  removed: 'Bank balance removed',
+} as const;

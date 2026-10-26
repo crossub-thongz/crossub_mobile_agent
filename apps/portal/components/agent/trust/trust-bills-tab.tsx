@@ -2,8 +2,10 @@
 
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 import { FilterChips } from '@/components/agent/filter-chips';
+import { TrustEditBillDialog } from '@/components/agent/trust/trust-edit-bill-dialog';
 import { TrustNewBillDialog } from '@/components/agent/trust/trust-new-bill-dialog';
 import { TrustPayBillDialog } from '@/components/agent/trust/trust-pay-bill-dialog';
 import {
@@ -11,7 +13,9 @@ import {
   TRUST_TABLE_HEAD_CLASS,
   TrustLoadError,
   TrustLoading,
+  TrustDownloadButton,
   TrustPill,
+  TrustReasonDialog,
   TrustSearchInput,
 } from '@/components/agent/trust/trust-ui';
 import { Button } from '@/components/ui/button';
@@ -21,13 +25,17 @@ import {
   TRUST_BILL_DISPLAY_STATUS_TONE,
   TRUST_BILL_STAGE,
   TRUST_BILL_STAGE_ALL,
+  TRUST_BILL_STATUS,
   TRUST_BILLS_COPY as COPY,
+  TRUST_EDIT_BILL_COPY,
   TRUST_PAGE_COPY,
   TRUST_PAGE_SIZE_MAX,
   type TrustBillStageFilter,
 } from '@/constants/trust';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
 import {
+  cancelTrustBill,
+  downloadTrustBillAttachment,
   fetchTrustBills,
   type TrustAccountCode,
   type TrustBill,
@@ -59,6 +67,8 @@ export function TrustBillsTab({
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [payBill, setPayBill] = useState<TrustBill | null>(null);
+  const [editBill, setEditBill] = useState<TrustBill | null>(null);
+  const [cancelBill, setCancelBill] = useState<TrustBill | null>(null);
   const query = useDebouncedValue(search.trim());
 
   const { data, error, loading, reload } = useTrustResource(
@@ -140,17 +150,49 @@ export function TrustBillsTab({
                     ) : null}
                   </td>
                   <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-right')}>
-                    {bill.displayStatus === TRUST_BILL_DISPLAY_STATUS.PENDING ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs"
-                        onClick={() => setPayBill(bill)}
-                      >
-                        {COPY.pay}
-                      </Button>
-                    ) : null}
+                    <div className="flex flex-wrap justify-end gap-1.5">
+                      {bill.displayStatus === TRUST_BILL_DISPLAY_STATUS.PENDING ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => setPayBill(bill)}
+                        >
+                          {COPY.pay}
+                        </Button>
+                      ) : null}
+                      {bill.status === TRUST_BILL_STATUS.PENDING ? (
+                        <>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs"
+                            onClick={() => setEditBill(bill)}
+                          >
+                            {TRUST_EDIT_BILL_COPY.edit}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs"
+                            onClick={() => setCancelBill(bill)}
+                          >
+                            {TRUST_EDIT_BILL_COPY.cancelBill}
+                          </Button>
+                        </>
+                      ) : null}
+                      {bill.attachment ? (
+                        <TrustDownloadButton
+                          label={TRUST_EDIT_BILL_COPY.attachment}
+                          filename={bill.attachment.fileName}
+                          fetchBlob={() => downloadTrustBillAttachment(agencyId, bill.id)}
+                          failedMessage={TRUST_EDIT_BILL_COPY.attachmentFailed}
+                        />
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -166,6 +208,34 @@ export function TrustBillsTab({
           accountCodes={accountCodes}
           onClose={() => setCreating(false)}
           onCreated={reload}
+        />
+      ) : null}
+      {editBill ? (
+        <TrustEditBillDialog
+          key={editBill.id}
+          agencyId={agencyId}
+          bill={editBill}
+          accountCodes={accountCodes}
+          onClose={() => setEditBill(null)}
+          onSaved={reload}
+        />
+      ) : null}
+      {cancelBill ? (
+        <TrustReasonDialog
+          key={cancelBill.id}
+          title={TRUST_EDIT_BILL_COPY.cancelTitle(cancelBill.billNumber)}
+          description={TRUST_EDIT_BILL_COPY.cancelDescription}
+          reasonLabel={TRUST_EDIT_BILL_COPY.cancelReason}
+          reasonRequired={TRUST_EDIT_BILL_COPY.cancelReasonRequired}
+          submitLabel={TRUST_EDIT_BILL_COPY.cancelSubmit}
+          cancelLabel={TRUST_EDIT_BILL_COPY.cancelKeep}
+          destructive
+          onSubmit={async (reason) => {
+            await cancelTrustBill(agencyId, cancelBill.id, { reason });
+            toast.success(TRUST_EDIT_BILL_COPY.cancelled(cancelBill.billNumber));
+            reload();
+          }}
+          onClose={() => setCancelBill(null)}
         />
       ) : null}
       {payBill ? (

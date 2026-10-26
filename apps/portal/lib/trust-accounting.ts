@@ -68,7 +68,7 @@ export function newTrustIdempotencyKey(): string {
   return crypto.randomUUID();
 }
 
-/** True when the API says CROSSUB has not created this agency's trust workspace yet. */
+/** True when the API says this agency's trust workspace is not set up yet (the set-up form shows). */
 export function isTrustNotSetUpError(err: unknown): boolean {
   return (
     err instanceof ApiError &&
