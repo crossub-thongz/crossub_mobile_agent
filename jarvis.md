@@ -57,7 +57,7 @@ Review items: AI-003, AI-012, AI-013.
 
 - [x] Prisma: `GiiConversation` (officer, title, property, messages as JSON, last activity); one table, transcript saved whole each turn. `crossub_web` 594b01d84, additive migration `20261026120000_gii_conversations`.
 - [x] Agent routes: `GET /agent/gii/conversations`, `GET/PUT/DELETE /agent/gii/conversations/{id}` (contract 0.47.0). PUT creates or replaces; app mints the id. Scoped to the calling officer (another officer's chat reads as not found); property must be in scope; latest 50 kept.
-- [~] Older turns summarised instead of dropped past `GII_MAX_HISTORY_MESSAGES`: `POST /agent/gii/summarise` folds them into notes sent back as `context.earlierSummary` (contract 0.48.0). Portal folds between turns once 16 lines follow the notes, keeping the last 8 word for word; a failed fold drops the oldest as before. Notes carry no figures and are not saved with the chat. Staging check pending.
+- [x] Older turns summarised instead of dropped past `GII_MAX_HISTORY_MESSAGES`: `POST /agent/gii/summarise` folds them into notes sent back as `context.earlierSummary` (contract 0.48.0). Portal folds between turns once 16 lines follow the notes, keeping the last 8 word for word; a failed fold drops the oldest as before. Notes quote each officer request word for word, numbered and carried forward, with one model line per request; no figures, not saved with the chat. Staging check passed: after 11 questions Cros quoted the first (MR-00195) word for word.
 - [~] Portal: History loads from the server, saves after every settled turn, reopens and deletes. Words only; cards and attachments are not saved. Staging check pending.
 
 ### 1.3 Confirm card and AI log
@@ -165,3 +165,5 @@ Review items: AI-016 (spoken English first).
 | 2026-10-26 | 1.3 | Cros mentions a card only when one was made, never says updated before Confirm (crossub_web ab94087f6); staging retest still showed "press Confirm there" with no card after a typed yes |
 | 2026-10-26 | 1.3 | Agent app: a property replacement goes straight to the card showing what it replaces (crossub_web 347d7e728); staging retest passed, ledger one row per Confirm |
 | 2026-10-26 | 1.3 | A card turn with no sentence from Cros says the card is waiting instead of "could not complete" (crossub_web 524de54b1, on staging; card flow rechecked, Cancel wrote nothing) |
+| 2026-10-26 | 1.2 | Notes quote the officer's requests word for word, numbered and carried forward (crossub_web 1f4e8ead5); staging recall check passed |
+| 2026-10-26 | 1.2 | A long model line no longer fails the fold with 503 (crossub_web e45ed11d5); staging replay 6 of 6 and a carried fold passed |
