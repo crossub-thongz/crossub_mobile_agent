@@ -31,6 +31,7 @@ import {
   trustTodayKey,
 } from '@/lib/trust-accounting';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { trustIdempotencyKeyAfterError } from '@/utils/trust-transactions';
 
 /** Move a tenant's held deposit to rent: a journal to the owner that moves paid-to on. Mount per open. */
 export function TrustTransferDepositDialog({
@@ -97,7 +98,7 @@ export function TrustTransferDepositDialog({
       onClose();
     } catch (err) {
       toast.error(apiErrorMessage(err));
-      setIdempotencyKey(newTrustIdempotencyKey());
+      setIdempotencyKey((current) => trustIdempotencyKeyAfterError(err, current));
     } finally {
       setPending(false);
     }

@@ -30,6 +30,7 @@
 - Self-Manage Trust: opening balances, open ledgers, payout details and schedule, recurring fees, held-back amounts, bond and paid-to reset, bill edit and cancel, past disbursement runs, revoke a locked month and recorded bank balances.
 
 ### Fixed
+- Self-Manage Trust: a receipt, withdrawal, journal or deposit transfer retried after a server or network error reuses its key, so it cannot post twice.
 - A termination notice in the bell opens the property it is about, and shows the reason title only (Wayne, PR #1).
 - Self-Manage vacating: the agent confirming the comparison completes the Compare step, even with no linked ingoing or outgoing report and no damage items.
 - Self-Manage leasing: an open inspection no longer books itself, runs itself or jumps the letting to the end; it stays in Scheduling until the agent runs it.

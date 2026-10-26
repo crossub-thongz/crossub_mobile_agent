@@ -17,6 +17,12 @@ export type TrustPaymentStage = NonNullable<
 >;
 
 /** The API's limits on a manual transaction (TRUST_LIMITS on the API). */
+/**
+ * HTTP statuses that prove the API refused a post without writing it (4xx). A 5xx, the BFF's 502
+ * or a network failure may follow a commit whose answer was lost, so the key is kept for those.
+ */
+export const TRUST_REFUSED_STATUS = { min: 400, maxExclusive: 500 } as const;
+
 export const TRUST_TRANSACTION_LIMITS = {
   descriptionMax: 200,
   partyNameMax: 160,

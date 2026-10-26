@@ -8,6 +8,7 @@ import {
 import {
   TRUST_FOLIO_WITHDRAWAL_COPY as WITHDRAWAL_COPY,
   TRUST_NEW_TRANSACTION_COPY as COPY,
+  TRUST_REFUSED_STATUS,
   TRUST_TRANSACTION_LIMITS as LIMITS,
   TRUST_WITHDRAWAL_METHOD,
   type TrustWithdrawalMethod,
@@ -22,12 +23,17 @@ const fail = <T>(error: string): TrustFormResult<T> => ({ ok: false, error });
 const pass = <T>(value: T): TrustFormResult<T> => ({ ok: true, value });
 
 /**
- * The idempotency key for the next try after a failed post: a fresh one when the API answered
- * (nothing was posted, so a corrected form must not replay the refused one), the same one when
- * the request may not have reached it (a retry must not post twice).
+ * The idempotency key for the next try after a failed post: a fresh one only when the API refused
+ * it with a 4xx (nothing was posted, so a corrected form must not replay the refused one); the
+ * same one after a 5xx, the BFF's 502 or a network failure, where the post may have committed and
+ * only its answer was lost (a retry must replay it, not post twice).
  */
 export function trustIdempotencyKeyAfterError(err: unknown, current: string): string {
-  return err instanceof ApiError ? newTrustIdempotencyKey() : current;
+  const refused =
+    err instanceof ApiError &&
+    err.status >= TRUST_REFUSED_STATUS.min &&
+    err.status < TRUST_REFUSED_STATUS.maxExclusive;
+  return refused ? newTrustIdempotencyKey() : current;
 }
 
 /** A ledger as one picker option: "OWN00001 · Jo Owner · 1 Main St". */
