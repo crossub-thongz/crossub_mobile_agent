@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-26
+
+### Added
+- Cros knows which screen the agent is on (module, record screen and property) with every message.
+- Cros is told when the agent moved to a different property mid-conversation.
+- On a maintenance job, inspection, leasing, tenant selection, rent review, vacate, tribunal or message screen, Cros knows the record and its property without being told the address.
+- jarvis.md tracker for the Cros v2 plan.
+- Before Cros changes anything it shows a Confirm card with the exact details; Confirm makes that change, Cancel leaves everything as it was.
+
 ## 2026-10-22
 
 ### Fixed

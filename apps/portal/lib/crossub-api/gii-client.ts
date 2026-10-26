@@ -1,5 +1,6 @@
 import type { components } from '@crossub-thongz/api-contract';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import type { GiiPageContext } from '@/utils/gii-page-context';
 
 import { crossub } from './client';
 
@@ -29,6 +30,8 @@ export type GiiChatResponse = components['schemas']['GiiChatResponseDto'] & {
   jobCases?: GiiJobCaseLink[];
 };
 export type GiiAssessment = components['schemas']['GiiAssessmentDto'];
+/** A change Cros proposed and has not made — shown as a Confirm card. */
+export type GiiProposal = components['schemas']['GiiProposalDto'];
 export type GiiTermProgress = components['schemas']['GiiTermProgressDto'];
 export type GiiBreakFee = components['schemas']['GiiBreakFeeDto'];
 export type GiiNotice = components['schemas']['GiiNoticeDto'];
@@ -63,15 +66,19 @@ export type GiiChatResponseWithPending = GiiChatResponse & {
 /**
  * Send a turn. The whole transcript is resent each time; `context` echoes the previous
  * assessment's property (and any pending ambiguous candidates) so Gii keeps the subject
- * instead of re-asking for the address.
+ * instead of re-asking for the address. `page` names the screen the agent is on, and
+ * `propertyChanged` says they navigated to another property since the last turn.
  */
 export async function sendGiiMessage(args: {
   messages: GiiChatMessage[];
   context?: GiiContext | null;
+  page?: GiiPageContext | null;
+  propertyChanged?: boolean;
 }): Promise<GiiChatResponseWithPending> {
   const ctx = args.context;
-  const apiContext =
-    ctx?.propertyId || (ctx?.pendingPropertyCandidates?.length ?? 0) > 0
+  const hasSubject = Boolean(ctx?.propertyId) || (ctx?.pendingPropertyCandidates?.length ?? 0) > 0;
+  const apiContext: components['schemas']['GiiChatContextDto'] | undefined =
+    hasSubject || args.page
       ? {
           ...(ctx?.propertyId ? { propertyId: ctx.propertyId } : {}),
           ...(ctx?.propertyLabel ? { propertyLabel: ctx.propertyLabel } : {}),
@@ -79,6 +86,8 @@ export async function sendGiiMessage(args: {
           ...(ctx?.pendingPropertyCandidates?.length
             ? { pendingPropertyCandidates: ctx.pendingPropertyCandidates }
             : {}),
+          ...(args.page ? { pageModule: args.page.pageModule, pageLabel: args.page.pageLabel } : {}),
+          ...(args.propertyChanged ? { propertyChanged: true } : {}),
         }
       : undefined;
 
@@ -93,6 +102,34 @@ export async function sendGiiMessage(args: {
   });
   if (error || !data) throw new Error(`${CROS_ASSISTANT_NAME} is unavailable`);
   return data as GiiChatResponseWithPending;
+}
+
+export type GiiConfirmResult = {
+  done: boolean;
+  message: string;
+  jobCases: GiiJobCaseLink[];
+};
+
+/**
+ * Confirm a Cros proposal: the server runs exactly the proposal behind `token`, for this
+ * agent, if their permissions still allow it. A refusal the server explains (expired,
+ * not permitted) comes back as `done: false` with its reason; only an unreachable server
+ * throws.
+ */
+export async function confirmGiiProposal(token: string): Promise<GiiConfirmResult> {
+  const { data, error } = await crossub.POST('/agent/gii/confirm', { body: { token } });
+  if (data) {
+    return {
+      done: data.done,
+      message: data.message,
+      jobCases: data.jobCases as GiiJobCaseLink[],
+    };
+  }
+  const reason = (error as { message?: unknown } | undefined)?.message;
+  if (typeof reason === 'string' && reason.trim()) {
+    return { done: false, message: reason, jobCases: [] };
+  }
+  throw new Error(`${CROS_ASSISTANT_NAME} could not confirm`);
 }
 
 /**
