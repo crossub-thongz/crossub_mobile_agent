@@ -5,10 +5,12 @@ import {
   type AgencyTenancyLeaseType,
   type AgencyTenancyRentPeriod,
 } from '@/constants/self-managed-tenancy';
+import type { AgentPropertyContact } from '@/lib/crossub-api/agent-client';
 import type {
   CreateSelfManagedTenancyInput,
   SelfManagedTenancyParty,
 } from '@/lib/crossub-api/agent-workflow-client';
+import { PROPERTY_CONTACT_ROLE } from '@/constants/property-contact';
 import { LEASING_AGENT_DECISION } from '@/lib/leasing/constants';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 
@@ -121,7 +123,10 @@ export function hasApprovedApplicant(detail: LeasingPropertyDetail): boolean {
   );
 }
 
+export type RecordedTenant = { name: string; email?: string };
+
 export type RecordedTenancySummary = {
+  tenants: RecordedTenant[];
   tenantNames: string[];
   weeklyRent?: number;
   bond?: number;
@@ -133,14 +138,39 @@ export type RecordedTenancySummary = {
 /** What the agency recorded, read back from the closed letting. */
 export function recordedTenancySummary(detail: LeasingPropertyDetail): RecordedTenancySummary {
   const contract = detail.onboarding.agreement.contract;
+  const tenants = (detail.applicationsDetail ?? [])
+    .filter((app) => app.agentDecision === LEASING_AGENT_DECISION.APPROVED)
+    .map((app) => ({ name: app.applicant, email: app.email }));
   return {
-    tenantNames: (detail.applicationsDetail ?? [])
-      .filter((app) => app.agentDecision === LEASING_AGENT_DECISION.APPROVED)
-      .map((app) => app.applicant),
+    tenants,
+    tenantNames: tenants.map((tenant) => tenant.name),
     weeklyRent: contract.weeklyRent ?? detail.rental.rentPerWeek,
     bond: contract.bond ?? detail.rental.bond,
     leaseTerm: contract.leaseTerm || detail.rental.leaseTerm,
     startDate: contract.startDate ?? detail.rental.moveInDate,
     endDate: contract.endDate,
   };
+}
+
+const sameText = (a: string | null | undefined, b: string | null | undefined): boolean =>
+  Boolean(a?.trim() && b?.trim() && a.trim().toLowerCase() === b.trim().toLowerCase());
+
+/**
+ * The property's TENANT contacts that are the recorded tenants — Create tenancy adds one per
+ * tenant. Matched by email where both have one, otherwise by name, so an outgoing household's
+ * contacts are never offered an invite to the new tenancy.
+ */
+export function recordedTenantContacts(
+  contacts: readonly AgentPropertyContact[],
+  tenants: readonly RecordedTenant[],
+): AgentPropertyContact[] {
+  return contacts.filter(
+    (contact) =>
+      contact.role === PROPERTY_CONTACT_ROLE.TENANT &&
+      tenants.some((tenant) =>
+        tenant.email && contact.email
+          ? sameText(tenant.email, contact.email)
+          : sameText(tenant.name, contact.name),
+      ),
+  );
 }

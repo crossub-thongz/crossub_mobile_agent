@@ -23,6 +23,9 @@ import {
   AGENCY_TENANCY_LEASE_TYPE_LABEL,
   AGENCY_TENANCY_MAX_TENANTS,
   AGENCY_TENANCY_RENT_PERIOD_LABEL,
+  AGENCY_TENANCY_RENT_PROFILE_MESSAGE,
+  AGENCY_TENANCY_RENT_PROFILE_STATUS,
+  type AgencyTenancyRentProfileStatus,
   CREATE_TENANCY_COPY as COPY,
   type AgencyTenancyLeaseType,
   type AgencyTenancyRentPeriod,
@@ -84,13 +87,23 @@ export function LeasingSelfManagedCreateTenancy({
       toast.error(built.error);
       return;
     }
+    const outcome: { rentProfile?: AgencyTenancyRentProfileStatus } = {};
     const ok = await run(
       CREATE_ACTION,
-      (id) => createSelfManagedTenancy(detail.propertyId, id, built.input),
+      async (id) => {
+        const result = await createSelfManagedTenancy(detail.propertyId, id, built.input);
+        outcome.rentProfile = result.rentProfileStatus;
+        return result;
+      },
       COPY.created,
     );
     if (!ok) return;
     setOpen(false);
+    if (outcome.rentProfile) {
+      const message = AGENCY_TENANCY_RENT_PROFILE_MESSAGE[outcome.rentProfile];
+      if (outcome.rentProfile === AGENCY_TENANCY_RENT_PROFILE_STATUS.SET) toast.success(message);
+      else toast.message(message);
+    }
     // The property, its People and the letting lists all read the portfolio.
     void refresh();
   };

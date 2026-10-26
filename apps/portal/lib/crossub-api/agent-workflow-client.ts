@@ -366,12 +366,13 @@ export async function skipSelfManagedApplicationScreening(
 
 export type CreateSelfManagedTenancyInput = components['schemas']['RecordAgencyTenancyDto'];
 export type SelfManagedTenancyParty = components['schemas']['ManualApplicantPartyDto'];
+export type CreateSelfManagedTenancyResult = components['schemas']['AgentCreateTenancyResultDto'];
 
 export async function createSelfManagedTenancy(
   propertyId: string,
   cycleId: string,
   body: CreateSelfManagedTenancyInput,
-): Promise<AgentWorkflowCreateResultDto> {
+): Promise<CreateSelfManagedTenancyResult> {
   const result = await crossub.POST(
     '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/tenancy',
     { params: { path: lettingPath(propertyId, cycleId) }, body },

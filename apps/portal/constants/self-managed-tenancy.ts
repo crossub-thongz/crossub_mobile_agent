@@ -7,6 +7,8 @@
 import type { components } from '@crossub-thongz/api-contract';
 
 type RecordAgencyTenancy = components['schemas']['RecordAgencyTenancyDto'];
+export type AgencyTenancyRentProfileStatus =
+  components['schemas']['AgentCreateTenancyResultDto']['rentProfileStatus'];
 
 export type AgencyTenancyLeaseType = RecordAgencyTenancy['leaseType'];
 export type AgencyTenancyRentPeriod = RecordAgencyTenancy['rentPeriod'];
@@ -31,6 +33,28 @@ export const AGENCY_TENANCY_RENT_PERIOD_LABEL: Record<AgencyTenancyRentPeriod, s
   [AGENCY_TENANCY_RENT_PERIOD.WEEKLY]: 'Per week',
   [AGENCY_TENANCY_RENT_PERIOD.FORTNIGHTLY]: 'Per fortnight',
   [AGENCY_TENANCY_RENT_PERIOD.MONTHLY]: 'Per month',
+};
+
+export const AGENCY_TENANCY_RENT_PROFILE_STATUS = {
+  SET: 'SET',
+  NOT_TRUST_TIER: 'NOT_TRUST_TIER',
+  TRUST_NOT_SET_UP: 'TRUST_NOT_SET_UP',
+  NO_TENANT_LEDGER: 'NO_TENANT_LEDGER',
+  ALREADY_SET: 'ALREADY_SET',
+  FAILED: 'FAILED',
+} as const satisfies Record<string, AgencyTenancyRentProfileStatus>;
+
+/** What Create tenancy did with the tenant ledger's rent in Trust. */
+export const AGENCY_TENANCY_RENT_PROFILE_MESSAGE: Record<AgencyTenancyRentProfileStatus, string> = {
+  [AGENCY_TENANCY_RENT_PROFILE_STATUS.SET]: 'The rent is set on the tenant ledger in Trust.',
+  [AGENCY_TENANCY_RENT_PROFILE_STATUS.NOT_TRUST_TIER]:
+    'Ask the agency principal or accountant to set the rent in Trust.',
+  [AGENCY_TENANCY_RENT_PROFILE_STATUS.TRUST_NOT_SET_UP]:
+    'Trust is not set up for this agency, so the rent was not set there.',
+  [AGENCY_TENANCY_RENT_PROFILE_STATUS.NO_TENANT_LEDGER]:
+    'No tenant ledger opened in Trust yet. Open it from Trust, then set the rent.',
+  [AGENCY_TENANCY_RENT_PROFILE_STATUS.ALREADY_SET]: 'The tenant ledger already had a rent; it was kept.',
+  [AGENCY_TENANCY_RENT_PROFILE_STATUS.FAILED]: 'The rent could not be set in Trust. Set it there.',
 };
 
 /** The primary tenant plus as many co-tenants as the server accepts. */
@@ -83,6 +107,15 @@ export const CREATE_TENANCY_COPY = {
     'Receipt the bond and the first rent in Trust.',
     'Book the ingoing inspection from Inspections.',
   ],
+  invitesTitle: 'Tenant app',
+  invitesHint: 'Nobody is emailed until you invite them. Each invite emails that tenant a login.',
+  invite: 'Invite to tenant app',
+  inviting: 'Inviting…',
+  invited: 'Invited',
+  inviteSent: (email: string) => `Tenant app login emailed to ${email}`,
+  noEmail: 'No email on file',
+  invitesLoading: 'Loading tenants…',
+  invitesNone: 'No tenant contacts on the property for this tenancy.',
   tenancyWaiting: 'No tenancy yet. Create it under Results once you have found your tenant.',
   goToResults: 'Go to Results',
 
