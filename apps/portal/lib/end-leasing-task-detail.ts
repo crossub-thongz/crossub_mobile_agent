@@ -1,5 +1,9 @@
-import type { AgentCopyVariant } from '@/constants/agent-copy-variant';
-import { TERMINATION_CASE_STATUS, TERMINATION_TYPE } from '@/constants/end-leasing';
+import { AGENT_COPY_VARIANT, type AgentCopyVariant } from '@/constants/agent-copy-variant';
+import {
+  SELF_MANAGED_VACATING_COMPLETE_COPY,
+  TERMINATION_CASE_STATUS,
+  TERMINATION_TYPE,
+} from '@/constants/end-leasing';
 import {
   buildEndLeasingAgentWorkflow,
   endLeasingVacateDate,
@@ -220,9 +224,28 @@ export type EndLeasingWhatsNextCard = {
   status: 'upcoming' | 'in_progress' | 'pending' | 'complete';
 };
 
+/** Self-Manage ends with Complete vacating instead of Bond processing (Daniel, 26 Oct 2026). */
+function selfManagedCompleteCard(
+  caseData: TerminationCaseDetail,
+  workflow: EndLeasingAgentWorkflowModel,
+): EndLeasingWhatsNextCard {
+  const copy = SELF_MANAGED_VACATING_COMPLETE_COPY;
+  if (caseData.status === TERMINATION_CASE_STATUS.COMPLETED) {
+    return { id: 'complete', title: copy.upcomingCardTitle, detail: copy.upcomingCardDone, status: 'complete' };
+  }
+  const ready = workflow.liveStepId === END_LEASING_AGENT_STEP.COMPLETE;
+  return {
+    id: 'complete',
+    title: copy.upcomingCardTitle,
+    detail: ready ? copy.upcomingCardReady : copy.upcomingCardPending,
+    status: ready ? 'in_progress' : 'pending',
+  };
+}
+
 export function buildEndLeasingWhatsNextCards(
   caseData: TerminationCaseDetail,
   workflow: EndLeasingAgentWorkflowModel,
+  copyVariant: AgentCopyVariant = AGENT_COPY_VARIANT.SERVICED,
 ): EndLeasingWhatsNextCard[] {
   const cards: EndLeasingWhatsNextCard[] = [];
   const inspection = caseData.inspection;
@@ -256,6 +279,11 @@ export function buildEndLeasingWhatsNextCards(
         ? 'upcoming'
         : 'pending',
   });
+
+  if (copyVariant === AGENT_COPY_VARIANT.SELF_MANAGED) {
+    cards.push(selfManagedCompleteCard(caseData, workflow));
+    return cards;
+  }
 
   cards.push({
     id: 'bond',
