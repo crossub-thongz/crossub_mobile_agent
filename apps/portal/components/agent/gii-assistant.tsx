@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 
 import { CrosAssistantLogo, CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
+import { GiiProposalCard } from '@/components/agent/gii-proposal-card';
+import { GII_PROPOSAL_COPY } from '@/constants/gii-proposal';
 import {
   CrosPortfolioBody,
   CrosPortfolioTabs,
@@ -73,11 +75,13 @@ import {
 } from '@/lib/portfolio-case-dialog';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import {
+  confirmGiiProposal,
   sendGiiMessage,
   type GiiAssessment,
   type GiiChatMessage,
   type GiiContext,
   type GiiJobCaseLink,
+  type GiiProposal,
 } from '@/lib/crossub-api/gii-client';
 import {
   createPendingAttachment,
@@ -122,11 +126,21 @@ type ChatLine = {
   briefing?: GiiBriefing | null;
   lodgedRef?: string | null;
   jobCases?: GiiJobCaseLink[];
+  /** A change Cros proposed on this turn, until the agent confirms, cancels or moves on. */
+  proposal?: GiiProposal | null;
   pending?: boolean;
   attachments?: GiiChatAttachmentView[];
   /** Base64 payloads resent with history so Gii can keep reading prior attachments. */
   sentAttachments?: GiiApiAttachment[];
 };
+
+/**
+ * A proposal is only good for the turn it was made on: once the agent sends anything else,
+ * an old card could run a change the conversation has since moved past.
+ */
+function withoutProposals(lines: ChatLine[]): ChatLine[] {
+  return lines.map((l) => (l.proposal ? { ...l, proposal: null } : l));
+}
 
 /** Only the transcript goes to the server — local search results are a client concern. */
 const MAX_HISTORY = 20;
@@ -335,6 +349,8 @@ export function GiiAssistant({
   /** Live mic level (0–1) driving the waveform, so a dead input is visible immediately. */
   const [voiceLevel, setVoiceLevel] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
+  /** The chat line whose proposal is being confirmed — one at a time. */
+  const [confirmingLineId, setConfirmingLineId] = useState<string | null>(null);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const voiceCaptureRef = useRef<GiiVoiceCapture | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -699,7 +715,7 @@ export function GiiAssistant({
       .slice(-MAX_HISTORY);
 
     setLines((prev) => [
-      ...prev,
+      ...withoutProposals(prev),
       userLine,
       { id: pendingId, role: 'assistant', text: 'Thinking…', pending: true },
     ]);
@@ -789,6 +805,7 @@ export function GiiAssistant({
                 assessment: res.assessment,
                 lodgedRef: res.lodged?.caseRef ?? null,
                 jobCases,
+                proposal: res.proposal ?? null,
                 pending: false,
               }
             : l,
@@ -813,6 +830,42 @@ export function GiiAssistant({
       setSending(false);
     }
   }, [lines, pendingAttachments, refreshPortfolio, sending]);
+
+  /**
+   * The answer to a Confirm card goes into the chat as Cros's own line, so the model reads
+   * what happened on the next turn exactly as if it had made the change itself.
+   */
+  const settleProposal = useCallback(
+    (lineId: string, reply: Pick<ChatLine, 'text' | 'jobCases'>) => {
+      setLines((prev) => [
+        ...prev.map((l) => (l.id === lineId ? { ...l, proposal: null } : l)),
+        { id: `a-${idSeq()}`, role: 'assistant', ...reply },
+      ]);
+    },
+    [],
+  );
+
+  const confirmProposal = useCallback(
+    async (lineId: string, proposal: GiiProposal) => {
+      if (confirmingLineId) return;
+      setConfirmingLineId(lineId);
+      try {
+        const result = await confirmGiiProposal(proposal.token);
+        settleProposal(lineId, { text: result.message, jobCases: result.jobCases });
+        if (result.done) void refreshPortfolio();
+      } catch {
+        settleProposal(lineId, { text: GII_PROPOSAL_COPY.UNREACHABLE });
+      } finally {
+        setConfirmingLineId(null);
+      }
+    },
+    [confirmingLineId, refreshPortfolio, settleProposal],
+  );
+
+  const cancelProposal = useCallback(
+    (lineId: string) => settleProposal(lineId, { text: GII_PROPOSAL_COPY.CANCELLED }),
+    [settleProposal],
+  );
 
   // Launch prompt from property hub / phone book — runs once when Gii opens.
   useEffect(() => {
@@ -997,6 +1050,14 @@ export function GiiAssistant({
                     portfolioData={portfolioData}
                     onOpen={openJob}
                     onOpenMissing={openJobCaseLink}
+                  />
+                ) : null}
+                {line.proposal ? (
+                  <GiiProposalCard
+                    proposal={line.proposal}
+                    busy={confirmingLineId === line.id}
+                    onConfirm={() => void confirmProposal(line.id, line.proposal!)}
+                    onCancel={() => cancelProposal(line.id)}
                   />
                 ) : null}
               </div>
@@ -1426,6 +1487,15 @@ export function GiiAssistant({
                 portfolioData={portfolioData}
                 onOpen={openJob}
                 onOpenMissing={openJobCaseLink}
+              />
+            ) : null}
+
+            {line.proposal ? (
+              <GiiProposalCard
+                proposal={line.proposal}
+                busy={confirmingLineId === line.id}
+                onConfirm={() => void confirmProposal(line.id, line.proposal!)}
+                onCancel={() => cancelProposal(line.id)}
               />
             ) : null}
 

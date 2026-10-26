@@ -62,9 +62,9 @@ Review items: AI-003, AI-012, AI-013.
 
 ### 1.3 Confirm card and AI log
 
-- [ ] One confirm card for every write tool (exact change, Confirm, Cancel), generalising the email draft.
-- [ ] Write an `AiDecision` row for every Gii write (action, risk, source record, approver, result).
-- [ ] Raise `GII_MAX_TURNS` from 6 to about 12; route multi step requests to Sonnet 5.5, quick reads to Haiku.
+- [~] One confirm card for every write tool (exact change, Confirm, Cancel), generalising the email draft. Backend `crossub_web` 439e96a33 (contract 0.46.0): unconfirmed write calls return a signed proposal (15 min, bound to the officer); `POST /v1/agent/gii/confirm` runs exactly that call. Portal `GiiProposalCard`; a new message clears an open card. A maintenance job with photos still confirms in words. Staging check pending.
+- [~] Write an `AiDecision` row for every Gii write (action, risk, source record, approver, result). `crossub_web` e18596a68: `GiiActionLedgerService`, outcome RECOMMENDED + new reason `USER_CONFIRMED`, resolved ACCEPTED by the officer, effects and property timeline. Staging check pending.
+- [~] `GII_MAX_TURNS` 6 to 12 done (e18596a68). Model: `AI_GII_MODEL` setting added, default still Haiku 4.5; switching to Sonnet 5.5 waits on the model budget question.
 
 ### 1.4 Read tools
 
@@ -155,3 +155,5 @@ Review items: AI-016 (spoken English first).
 | 2026-10-26 | Plan | Plan agreed; tracker created |
 | 2026-10-26 | 1.1 | Portal sends screen module and label on every turn; property change only counts navigation, reset on a new chat |
 | 2026-10-26 | 1.1 | Record screens scope Cros to the record's property; contract record field moved to 2.1 |
+| 2026-10-26 | 1.3 | AI decision log rows for confirmed Cros writes, 12 tool steps, `AI_GII_MODEL` (crossub_web e18596a68) |
+| 2026-10-26 | 1.3 | Confirm card: signed proposals and `POST /agent/gii/confirm` (crossub_web 439e96a33, contract 0.46.0); portal card |

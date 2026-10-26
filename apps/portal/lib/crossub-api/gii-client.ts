@@ -30,6 +30,8 @@ export type GiiChatResponse = components['schemas']['GiiChatResponseDto'] & {
   jobCases?: GiiJobCaseLink[];
 };
 export type GiiAssessment = components['schemas']['GiiAssessmentDto'];
+/** A change Cros proposed and has not made — shown as a Confirm card. */
+export type GiiProposal = components['schemas']['GiiProposalDto'];
 export type GiiTermProgress = components['schemas']['GiiTermProgressDto'];
 export type GiiBreakFee = components['schemas']['GiiBreakFeeDto'];
 export type GiiNotice = components['schemas']['GiiNoticeDto'];
@@ -100,6 +102,34 @@ export async function sendGiiMessage(args: {
   });
   if (error || !data) throw new Error(`${CROS_ASSISTANT_NAME} is unavailable`);
   return data as GiiChatResponseWithPending;
+}
+
+export type GiiConfirmResult = {
+  done: boolean;
+  message: string;
+  jobCases: GiiJobCaseLink[];
+};
+
+/**
+ * Confirm a Cros proposal: the server runs exactly the proposal behind `token`, for this
+ * agent, if their permissions still allow it. A refusal the server explains (expired,
+ * not permitted) comes back as `done: false` with its reason; only an unreachable server
+ * throws.
+ */
+export async function confirmGiiProposal(token: string): Promise<GiiConfirmResult> {
+  const { data, error } = await crossub.POST('/agent/gii/confirm', { body: { token } });
+  if (data) {
+    return {
+      done: data.done,
+      message: data.message,
+      jobCases: data.jobCases as GiiJobCaseLink[],
+    };
+  }
+  const reason = (error as { message?: unknown } | undefined)?.message;
+  if (typeof reason === 'string' && reason.trim()) {
+    return { done: false, message: reason, jobCases: [] };
+  }
+  throw new Error(`${CROS_ASSISTANT_NAME} could not confirm`);
 }
 
 /**
