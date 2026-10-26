@@ -385,40 +385,63 @@ export async function reopenMaintenanceInvoiceMatch(
   return unwrapAgentMaintenance(result, "Couldn't withdraw the dispute");
 }
 
-export type AgentMaintenanceManualControl =
-  components['schemas']['AgentMaintenanceManualControlDto'];
-export type TakeMaintenanceControlInput = components['schemas']['TakeControlDto'];
-export type ResumeMaintenanceAutomationInput = components['schemas']['ResumeAutomationDto'];
 export type UpdateMaintenanceJobInput = components['schemas']['AgentSelfManagedUpdateJobDto'];
 export type AddMaintenanceIssueInput = components['schemas']['CreateMaintenanceIssueDto'];
 export type UpdateMaintenanceIssueInput = components['schemas']['UpdateMaintenanceIssueDto'];
 export type MaintenanceQuoteFormLinkInput = components['schemas']['IssueQuoteRequestLinkDto'];
 export type MaintenanceQuoteFormLink = components['schemas']['AgentQuoteRequestLinkDto'];
+export type SetMaintenanceResponsibilityInput =
+  components['schemas']['AgentSelfManagedSetResponsibilityDto'];
+export type AgentMaintenanceResponsibilityRecommendation =
+  components['schemas']['AgentMaintenanceResponsibilityRecommendationDto'];
+export type AgentMaintenanceJobTenant = components['schemas']['AgentMaintenanceJobTenantDto'];
+export type AgentMaintenanceOwnerQuoteApproval =
+  components['schemas']['AgentMaintenanceOwnerQuoteApprovalDto'];
+export type SendQuoteToOwnerInput = components['schemas']['AgentSelfManagedSendQuoteToOwnerDto'];
+export type OwnerQuoteReplyInput = components['schemas']['AgentSelfManagedOwnerQuoteReplyDto'];
 
-/** Hold the job in manual control: no automatic chasers or steps until it is resumed. */
-export async function takeMaintenanceControl(
+/**
+ * Set or change who pays for the repair. A change of an applied party returns the job to review
+ * first; the server refuses it once a contractor is engaged.
+ */
+export async function setSelfManagedResponsibility(
   requestId: string,
-  body: TakeMaintenanceControlInput,
+  body: SetMaintenanceResponsibilityInput,
 ): Promise<AgentMaintenanceDetail> {
-  const result = await crossub.POST('/agent/maintenance/{requestId}/take-control', {
+  const result = await crossub.PATCH('/agent/maintenance/{requestId}/responsibility', {
     params: { path: { requestId } },
     body,
   });
-  return unwrapAgentMaintenance(result, "Couldn't take control of the job");
+  return unwrapAgentMaintenance(result, "Couldn't save who pays");
 }
 
-export async function resumeMaintenanceAutomation(
+/** Email one submitted quote to the owner for approval, from the agency's address. */
+export async function sendMaintenanceQuoteToOwner(
   requestId: string,
-  body: ResumeMaintenanceAutomationInput = {},
+  quotationId: string,
+  body: SendQuoteToOwnerInput = {},
 ): Promise<AgentMaintenanceDetail> {
-  const result = await crossub.POST('/agent/maintenance/{requestId}/resume', {
-    params: { path: { requestId } },
-    body,
-  });
-  return unwrapAgentMaintenance(result, "Couldn't resume automation");
+  const result = await crossub.POST(
+    '/agent/maintenance/{requestId}/quotes/{quotationId}/send-to-owner',
+    { params: { path: { requestId, quotationId } }, body },
+  );
+  return unwrapAgentMaintenance(result, "Couldn't email the quote to the owner");
 }
 
-/** Correct the job's issue type, description or urgency. */
+/** Record the owner's answer: approved approves the quote and issues the work order. */
+export async function recordMaintenanceOwnerQuoteReply(
+  requestId: string,
+  quotationId: string,
+  body: OwnerQuoteReplyInput,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST(
+    '/agent/maintenance/{requestId}/quotes/{quotationId}/owner-reply',
+    { params: { path: { requestId, quotationId } }, body },
+  );
+  return unwrapAgentMaintenance(result, "Couldn't record the owner's answer");
+}
+
+/** Correct the job's issue type, description, urgency or tenant contact. */
 export async function updateMaintenanceJob(
   requestId: string,
   body: UpdateMaintenanceJobInput,

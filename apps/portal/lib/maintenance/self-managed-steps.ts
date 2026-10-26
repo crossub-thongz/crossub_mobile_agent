@@ -1,5 +1,6 @@
 import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 import {
+  ESCALATION_REASONS_HANDLED_IN_STEPS,
   ESCALATION_STATUS,
   INVOICE_MATCH_NEEDS_DECISION,
   INVOICE_MATCH_STATUS,
@@ -20,7 +21,7 @@ export interface SelfManagedMaintenanceSteps {
   urgent: boolean;
   /** The job is still live (not completed or cancelled). */
   open: boolean;
-  /** Open escalations the agency has to decide, oldest first. */
+  /** Open escalations the agency has to decide, oldest first (less those a step answers). */
   escalations: AgentMaintenanceDetail['escalations'];
   /** Live issues extracted from the report. */
   issues: AgentMaintenanceDetail['issues'];
@@ -40,6 +41,8 @@ export interface SelfManagedMaintenanceSteps {
   payment: boolean;
   /** The work is under way or done, and a completion gate is still open. */
   completion: boolean;
+  /** A work order has been issued to the tradie. */
+  workOrder: boolean;
 }
 
 const CLOSED_STATUSES: readonly string[] = [
@@ -75,7 +78,11 @@ export function selfManagedMaintenanceSteps(
     urgent: open && detail.urgent && !hasActiveAuthorisation,
     open,
     escalations: open
-      ? detail.escalations.filter((e) => e.status === ESCALATION_STATUS.OPEN)
+      ? detail.escalations.filter(
+          (e) =>
+            e.status === ESCALATION_STATUS.OPEN &&
+            !ESCALATION_REASONS_HANDLED_IN_STEPS.includes(e.reason),
+        )
       : [],
     issues: detail.issues.filter((i) => MAINTENANCE_ISSUE_LIVE.includes(i.status)),
     triage: open && !hasApprovedQuote && TRIAGE_STATUSES.includes(detail.status),
@@ -97,7 +104,23 @@ export function selfManagedMaintenanceSteps(
         detail.tenantApprovalReceived &&
         detail.agentApprovalReceived
       ),
+    workOrder: open && detail.workOrder !== null,
   };
+}
+
+/**
+ * The owner-approval email still waiting on the owner's answer for this quote, or null when the
+ * quote was never emailed or the answer is recorded.
+ */
+export function awaitingOwnerQuoteApproval(
+  detail: Pick<AgentMaintenanceDetail, 'ownerQuoteApprovals'>,
+  quotationId: string,
+): AgentMaintenanceDetail['ownerQuoteApprovals'][number] | null {
+  return (
+    detail.ownerQuoteApprovals.find(
+      (entry) => entry.quotationId === quotationId && entry.outcome === null,
+    ) ?? null
+  );
 }
 
 /**

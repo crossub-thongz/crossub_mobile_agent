@@ -11,11 +11,14 @@ import { StepCard } from '@/components/agent/maintenance-self-managed/step-card'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  MAINTENANCE_ISSUE_RESPONSIBILITY_LABEL,
+  MAINTENANCE_ISSUE_RESPONSIBILITY_VALUES,
   MAINTENANCE_ISSUE_TRADE_OPTIONS,
   MAINTENANCE_ISSUE_URGENCY_LABEL,
   MAINTENANCE_ISSUE_URGENCY_VALUES,
   SELF_MANAGED_MAINTENANCE_COPY as COPY,
   SELF_MANAGED_MAINTENANCE_LIMITS,
+  type MaintenanceIssueResponsibility,
   type MaintenanceIssueTrade,
   type MaintenanceIssueUrgency,
 } from '@/constants/self-managed-maintenance';
@@ -33,7 +36,13 @@ import { formatDateTime } from '@/lib/utils';
 
 const answerKey = (issueId: string, questionKey: string) => `${issueId}:${questionKey}`;
 
-const EMPTY_ISSUE: IssueFormValues = { description: '', location: '', trade: '', urgency: '' };
+const EMPTY_ISSUE: IssueFormValues = {
+  description: '',
+  location: '',
+  trade: '',
+  urgency: '',
+  responsibility: '',
+};
 
 /** A trade the picker does not offer (free text, or a retired one) opens as "no trade set". */
 function knownTrade(trade: string | null): MaintenanceIssueTrade | '' {
@@ -50,12 +59,23 @@ function urgencyLabel(urgency: string | null): string | null {
   return known ? MAINTENANCE_ISSUE_URGENCY_LABEL[known] : null;
 }
 
+/** A responsibility the API does not list (none yet) opens as "not set". */
+function knownResponsibility(responsibility: string | null): MaintenanceIssueResponsibility | '' {
+  return MAINTENANCE_ISSUE_RESPONSIBILITY_VALUES.find((option) => option === responsibility) ?? '';
+}
+
+function responsibilityLabel(responsibility: string | null): string | null {
+  const known = knownResponsibility(responsibility);
+  return known ? MAINTENANCE_ISSUE_RESPONSIBILITY_LABEL[known] : null;
+}
+
 function issueFormValues(issue: AgentMaintenanceIssue): IssueFormValues {
   return {
     description: issue.description,
     location: issue.location ?? '',
     trade: knownTrade(issue.trade),
     urgency: knownUrgency(issue.urgency),
+    responsibility: knownResponsibility(issue.responsibility),
   };
 }
 
@@ -70,6 +90,9 @@ function issueChanges(
     ...(values.location !== before.location ? { location: values.location } : {}),
     ...(values.trade !== before.trade ? { trade: values.trade || null } : {}),
     ...(values.urgency && values.urgency !== before.urgency ? { urgency: values.urgency } : {}),
+    ...(values.responsibility && values.responsibility !== before.responsibility
+      ? { responsibility: values.responsibility }
+      : {}),
   };
 }
 
@@ -145,6 +168,7 @@ export function IssueTriageStep({
           ...(values.location ? { location: values.location } : {}),
           ...(values.trade ? { trade: values.trade } : {}),
           ...(values.urgency ? { urgency: values.urgency } : {}),
+          ...(values.responsibility ? { responsibility: values.responsibility } : {}),
         }),
       COPY.issueAdded,
     );
@@ -200,6 +224,12 @@ export function IssueTriageStep({
                 ) : null}
                 {urgencyLabel(issue.urgency) ? (
                   <span className="text-muted-foreground"> · {urgencyLabel(issue.urgency)}</span>
+                ) : null}
+                {responsibilityLabel(issue.responsibility) ? (
+                  <span className="text-muted-foreground">
+                    {' '}
+                    · {COPY.issueResponsibility}: {responsibilityLabel(issue.responsibility)}
+                  </span>
                 ) : null}
               </p>
               <div className="flex shrink-0 gap-1">

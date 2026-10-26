@@ -21,6 +21,7 @@ import {
   MAINTENANCE_PAYMENT_STATUS_LABEL,
   MAINTENANCE_PAYMENT_STATUS_TONE,
 } from '@/constants/maintenance-v2';
+import { SELF_MANAGED_MAINTENANCE_COPY } from '@/constants/self-managed-maintenance';
 import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { SelfManagedMaintenanceCard } from '@/components/agent/maintenance-self-managed/self-managed-maintenance-card';
 import type { AgentMaintenanceDetail } from '@/lib/crossub-api/maintenance-client';
@@ -610,7 +611,9 @@ export function MaintenanceWorkspace({
                             {contractorName ?? 'Awaiting contractor assignment'}
                           </p>
                           <p className="text-muted-foreground mt-1 text-xs">
-                            {remindersSent > 0 ? (
+                            {selfManaged ? (
+                              SELF_MANAGED_MAINTENANCE_COPY.awaitingQuoteSelfManaged
+                            ) : remindersSent > 0 ? (
                               <>
                                 {remindersSent} reminder{remindersSent === 1 ? '' : 's'} sent.
                                 {reminderEta ? ` Next reminder ${reminderEta}.` : ' '}
