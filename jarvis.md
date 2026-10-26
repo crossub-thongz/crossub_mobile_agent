@@ -68,9 +68,9 @@ Review items: AI-003, AI-012, AI-013.
 
 ### 1.4 Read tools
 
-- [ ] Conversations: list threads, read and summarise a thread.
-- [ ] Arrears: arrears list and per tenancy detail.
-- [ ] Tasks and notifications: read the agent's open tasks and notifications.
+- [~] Conversations: `list_inbox` and `read_conversation` over the Self-Manage Conversations inbox (`AgentConversationService`); a thread Cros reads stays unread for the officer (`peek`). Backend `crossub_web` 54102dedf, no contract change. Staging check pending.
+- [~] Arrears: `list_arrears`, the Arrears screen's rows (`AgentPortfolioService.listAccountingForAgent`), most owed first with the total; with a propertyId, each open case split into rent, bills and bond. 54102dedf. Staging check pending.
+- [~] Tasks and notifications: `list_notifications`, unread by default, read without marking read (54102dedf). Tasks stay with the existing `list_actionable_cases` (quotes awaiting approval, rent reviews, routines due); vacating, leasing and tribunal tasks are not in it yet. Staging check pending.
 
 ### 1.5 Fixes before new tools
 
@@ -160,3 +160,4 @@ Review items: AI-016 (spoken English first).
 | 2026-10-26 | 1.5 | Dropped: the routes already exist on main |
 | 2026-10-26 | 1.2 | Saved chats: `GiiConversation` table and routes (crossub_web 594b01d84, contract 0.47.0); portal History on the server |
 | 2026-10-26 | 1.2 | Long chats: older turns folded into notes, `POST /agent/gii/summarise` (contract 0.48.0) |
+| 2026-10-26 | 1.4 | Read tools: inbox, arrears, notifications on the agent chat (crossub_web 54102dedf) |
