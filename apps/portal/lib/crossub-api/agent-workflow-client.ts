@@ -365,7 +365,7 @@ export async function skipSelfManagedApplicationScreening(
 // Create tenancy: the agency records the tenants and lease it agreed; the letting closes onto it.
 
 export type CreateSelfManagedTenancyInput = components['schemas']['RecordAgencyTenancyDto'];
-export type SelfManagedTenancyParty = components['schemas']['ManualApplicantPartyDto'];
+export type SelfManagedTenancyParty = components['schemas']['AgencyTenancyTenantDto'];
 export type CreateSelfManagedTenancyResult = components['schemas']['AgentCreateTenancyResultDto'];
 
 export async function createSelfManagedTenancy(
