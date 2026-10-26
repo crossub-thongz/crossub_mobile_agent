@@ -9,6 +9,7 @@ import { OpenInspectionReportStage } from '@/components/open-inspection/open-ins
 import { OpenInspectionScheduledStage } from '@/components/open-inspection/open-inspection-scheduled-stage';
 import { Button } from '@/components/ui/button';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import {
   OPEN_SESSION_RAIL_STEP,
   canCompleteOpenSessionReview,
@@ -29,6 +30,8 @@ export function OpenInspectionStagePanel({
   onSessionChange: (session: OpenInspectionSession) => void;
   fieldInspectorName?: string | null;
 }) {
+  // Self-Manage leasing takes no applications: the agent records the tenancy instead.
+  const selfManaged = useIsPropertySelfManaged(session.propertyId);
   const reportReady = session.openReportGenerated === true;
   const canCompleteReview = canCompleteOpenSessionReview(session);
   const applicantsWithApplications = (session.visitors ?? []).filter((v) => v.application);
@@ -53,7 +56,11 @@ export function OpenInspectionStagePanel({
 
       {viewedStep === OPEN_SESSION_RAIL_STEP.OPEN ? (
         <>
-          <OpenInspectionOpenStage session={session} onSessionChange={onSessionChange} />
+          <OpenInspectionOpenStage
+            session={session}
+            onSessionChange={onSessionChange}
+            hideApplyLink={selfManaged}
+          />
           {applicantsWithApplications.length > 0 || !reportReady ? (
             <section className="rounded-2xl border bg-card p-4">
               <h2 className="mb-3 text-sm font-semibold">
