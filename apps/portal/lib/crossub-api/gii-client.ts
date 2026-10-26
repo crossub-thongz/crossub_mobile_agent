@@ -132,6 +132,46 @@ export async function confirmGiiProposal(token: string): Promise<GiiConfirmResul
   throw new Error(`${CROS_ASSISTANT_NAME} could not confirm`);
 }
 
+/** A saved Cros chat in the officer's list. */
+export type GiiConversationSummary = components['schemas']['GiiConversationSummaryDto'];
+export type GiiConversation = components['schemas']['GiiConversationDto'];
+export type GiiConversationSave = components['schemas']['GiiConversationSaveDto'];
+
+/** The officer's saved chats, newest first. Only their own; the server keeps the latest 50. */
+export async function listGiiConversations(): Promise<GiiConversationSummary[]> {
+  const { data, error } = await crossub.GET('/agent/gii/conversations');
+  if (error || !data) throw new Error(`${CROS_ASSISTANT_NAME} chats could not be loaded`);
+  return data;
+}
+
+export async function getGiiConversation(id: string): Promise<GiiConversation> {
+  const { data, error } = await crossub.GET('/agent/gii/conversations/{id}', {
+    params: { path: { id } },
+  });
+  if (error || !data) throw new Error(`${CROS_ASSISTANT_NAME} chat could not be opened`);
+  return data;
+}
+
+/** Save the whole transcript under `id` (minted by the app); replaces what was saved before. */
+export async function saveGiiConversation(
+  id: string,
+  body: GiiConversationSave,
+): Promise<GiiConversationSummary> {
+  const { data, error } = await crossub.PUT('/agent/gii/conversations/{id}', {
+    params: { path: { id } },
+    body,
+  });
+  if (error || !data) throw new Error(`${CROS_ASSISTANT_NAME} chat could not be saved`);
+  return data;
+}
+
+export async function deleteGiiConversation(id: string): Promise<void> {
+  const { error, response } = await crossub.DELETE('/agent/gii/conversations/{id}', {
+    params: { path: { id } },
+  });
+  if (error || !response.ok) throw new Error(`${CROS_ASSISTANT_NAME} chat could not be deleted`);
+}
+
 /**
  * Can this environment transcribe hold-to-talk audio?
  *

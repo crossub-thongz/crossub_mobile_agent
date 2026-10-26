@@ -55,10 +55,10 @@ Review items: AI-003, AI-012, AI-013.
 
 ### 1.2 Saved conversations
 
-- [ ] Prisma: `GiiConversation` and `GiiConversationMessage` (agent user, title, last activity, messages, context).
-- [ ] Agent routes: list, get, create, append, delete; scoped to the calling user.
+- [x] Prisma: `GiiConversation` (officer, title, property, messages as JSON, last activity); one table, transcript saved whole each turn. `crossub_web` 594b01d84, additive migration `20261026120000_gii_conversations`.
+- [x] Agent routes: `GET /agent/gii/conversations`, `GET/PUT/DELETE /agent/gii/conversations/{id}` (contract 0.47.0). PUT creates or replaces; app mints the id. Scoped to the calling officer (another officer's chat reads as not found); property must be in scope; latest 50 kept.
 - [ ] Older turns summarised instead of dropped past `GII_MAX_HISTORY_MESSAGES`.
-- [ ] Portal: replace `sessionStorage` history with server conversations; resume on any device.
+- [~] Portal: History loads from the server, saves after every settled turn, reopens and deletes. Words only; cards and attachments are not saved. Staging check pending.
 
 ### 1.3 Confirm card and AI log
 
@@ -74,7 +74,7 @@ Review items: AI-003, AI-012, AI-013.
 
 ### 1.5 Fixes before new tools
 
-- [ ] Portal calls with no backend route: `/agent/agencies/{id}/people`, `/agent/properties/{id}/tenancy/{archive,restore,current}`, `/agent/properties/{id}/contacts/{contactId}`.
+- [-] Dropped: all three exist on current `crossub_web` main (`agent-people.controller.ts`, `agent-portal.controller.ts`); the audit read a stale local checkout. Portal calls checked: `/agent/agencies/{id}/people`, `/agent/properties/{id}/tenancy/{archive,restore,current}`, `/agent/properties/{id}/contacts/{contactId}`.
 
 ---
 
@@ -157,3 +157,5 @@ Review items: AI-016 (spoken English first).
 | 2026-10-26 | 1.1 | Record screens scope Cros to the record's property; contract record field moved to 2.1 |
 | 2026-10-26 | 1.3 | AI decision log rows for confirmed Cros writes, 12 tool steps, `AI_GII_MODEL` (crossub_web e18596a68) |
 | 2026-10-26 | 1.3 | Confirm card: signed proposals and `POST /agent/gii/confirm` (crossub_web 439e96a33, contract 0.46.0); portal card |
+| 2026-10-26 | 1.5 | Dropped: the routes already exist on main |
+| 2026-10-26 | 1.2 | Saved chats: `GiiConversation` table and routes (crossub_web 594b01d84, contract 0.47.0); portal History on the server |

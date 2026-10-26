@@ -10,12 +10,15 @@ import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
 import { GiiProposalCard } from '@/components/agent/gii-proposal-card';
 import { GII_PROPOSAL_COPY } from '@/constants/gii-proposal';
 import {
+  GII_CONVERSATION_COPY,
+  GII_CONVERSATION_SAVE_TOAST_ID,
+  GII_PENDING_TEXT,
+} from '@/constants/gii-conversation';
+import { giiConversationLines, giiConversationSaveInput } from '@/utils/gii-conversation';
+import {
   CrosPortfolioBody,
   CrosPortfolioTabs,
-  readCrosHistory,
   useCrosPortfolioModel,
-  writeCrosHistory,
-  type CrosHistoryEntry,
   type CrosPortfolioView,
 } from '@/components/agent/cros-portfolio-views';
 import { GiiBriefingCard } from '@/components/agent/gii-briefing-card';
@@ -76,10 +79,15 @@ import {
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import {
   confirmGiiProposal,
+  deleteGiiConversation,
+  getGiiConversation,
+  listGiiConversations,
+  saveGiiConversation,
   sendGiiMessage,
   type GiiAssessment,
   type GiiChatMessage,
   type GiiContext,
+  type GiiConversationSummary,
   type GiiJobCaseLink,
   type GiiProposal,
 } from '@/lib/crossub-api/gii-client';
@@ -406,8 +414,11 @@ export function GiiAssistant({
   const isPortfolioCros = (isPanel || isModal) && isV2 && !scopedProperty && !messageScoped;
   const isFrostedV2Panel = isPanel && isV2 && !isPortfolioCros;
   const [crosView, setCrosView] = useState<CrosPortfolioView>('discover');
-  const [crosHistory, setCrosHistory] = useState<CrosHistoryEntry[]>([]);
+  const [crosHistory, setCrosHistory] = useState<GiiConversationSummary[]>([]);
+  /** The open chat's server id, minted on its first save. Null until something is asked. */
   const crosHistoryIdRef = useRef<string | null>(null);
+  /** The last transcript saved for the open chat, so an unchanged render does not save again. */
+  const crosSavedKeyRef = useRef<string | null>(null);
   const portfolioCrosRef = useRef(false);
   portfolioCrosRef.current = isPortfolioCros;
   const portfolioModel = useCrosPortfolioModel();
@@ -571,6 +582,9 @@ export function GiiAssistant({
     setLines([]);
     // A fresh chat has no earlier property to have navigated away from.
     lastTurnScreenPropertyIdRef.current = null;
+    // Nor is it the saved chat that was open, which must not be overwritten by this one.
+    crosHistoryIdRef.current = null;
+    crosSavedKeyRef.current = null;
     setPendingAttachments((prev) => {
       revokePendingAttachments(prev);
       return [];
@@ -717,7 +731,7 @@ export function GiiAssistant({
     setLines((prev) => [
       ...withoutProposals(prev),
       userLine,
-      { id: pendingId, role: 'assistant', text: 'Thinking…', pending: true },
+      { id: pendingId, role: 'assistant', text: GII_PENDING_TEXT, pending: true },
     ]);
     setQuery('');
     setPendingAttachments((prev) =>
@@ -896,44 +910,70 @@ export function GiiAssistant({
     }
   }, [open]);
 
+  const refreshCrosHistory = useCallback(() => {
+    listGiiConversations()
+      .then(setCrosHistory)
+      .catch((err: unknown) => console.warn('[cros] chats could not be loaded', err));
+  }, []);
+
   useEffect(() => {
     if (!user?.id) return;
-    setCrosHistory(readCrosHistory(user.id));
-  }, [user?.id]);
+    setCrosHistory([]);
+    refreshCrosHistory();
+  }, [refreshCrosHistory, user?.id]);
 
   useEffect(() => {
+    if (isPortfolioCros && crosView === 'history') refreshCrosHistory();
+  }, [crosView, isPortfolioCros, refreshCrosHistory]);
+
+  // Save the portfolio chat after every settled turn, so it can be reopened on any device.
+  useEffect(() => {
     if (!isPortfolioCros || !user?.id) return;
-    const settled = lines.filter((line) => !line.pending && line.text && line.text !== 'Thinking…');
-    const firstUser = settled.find((line) => line.role === 'user');
-    if (!firstUser) return;
-    if (!crosHistoryIdRef.current) crosHistoryIdRef.current = `cros-${firstUser.id}`;
-    const entry: CrosHistoryEntry = {
-      id: crosHistoryIdRef.current,
-      title: firstUser.text.slice(0, 80),
-      at: new Date().toISOString(),
-      lines: settled.map((line) => ({ id: line.id, role: line.role, text: line.text })),
-    };
-    setCrosHistory((prev) => {
-      const next = [entry, ...prev.filter((item) => item.id !== entry.id)].slice(0, 20);
-      writeCrosHistory(user.id, next);
-      return next;
-    });
+    const input = giiConversationSaveInput(lines);
+    if (!input || input.key === crosSavedKeyRef.current) return;
+    if (!crosHistoryIdRef.current) crosHistoryIdRef.current = crypto.randomUUID();
+    const chatId = crosHistoryIdRef.current;
+    crosSavedKeyRef.current = input.key;
+    saveGiiConversation(chatId, { title: input.title, messages: input.messages })
+      .then((summary) => {
+        setCrosHistory((prev) => [summary, ...prev.filter((item) => item.id !== summary.id)]);
+      })
+      .catch(() => {
+        if (crosSavedKeyRef.current === input.key) crosSavedKeyRef.current = null;
+        toast.error(GII_CONVERSATION_COPY.SAVE_FAILED, { id: GII_CONVERSATION_SAVE_TOAST_ID });
+      });
   }, [isPortfolioCros, lines, user?.id]);
 
-  const openCrosHistory = (entry: CrosHistoryEntry) => {
-    crosHistoryIdRef.current = entry.id;
-    setLines(
-      entry.lines.map((line) => ({
-        id: line.id,
-        role: line.role,
-        text: line.text,
-      })),
-    );
-    setCrosView('chat');
+  const openCrosHistory = async (entry: GiiConversationSummary) => {
+    try {
+      const chat = await getGiiConversation(entry.id);
+      const opened = giiConversationLines(chat.id, chat.messages);
+      crosHistoryIdRef.current = chat.id;
+      crosSavedKeyRef.current = giiConversationSaveInput(opened)?.key ?? null;
+      lastTurnScreenPropertyIdRef.current = null;
+      setLines(opened);
+      setCrosView('chat');
+    } catch {
+      toast.error(GII_CONVERSATION_COPY.OPEN_FAILED);
+    }
+  };
+
+  const deleteCrosHistory = async (entry: GiiConversationSummary) => {
+    try {
+      await deleteGiiConversation(entry.id);
+      setCrosHistory((prev) => prev.filter((item) => item.id !== entry.id));
+      if (crosHistoryIdRef.current === entry.id) {
+        crosHistoryIdRef.current = null;
+        crosSavedKeyRef.current = null;
+      }
+    } catch {
+      toast.error(GII_CONVERSATION_COPY.DELETE_FAILED);
+    }
   };
 
   const startCrosChat = () => {
     crosHistoryIdRef.current = null;
+    crosSavedKeyRef.current = null;
     setLines([]);
     lastTurnScreenPropertyIdRef.current = null;
     setCrosView('discover');
@@ -1417,7 +1457,8 @@ export function GiiAssistant({
             wide={workspace}
             onAsk={(prompt) => void runQuery(prompt)}
             history={crosHistory}
-            onOpenHistory={openCrosHistory}
+            onOpenHistory={(entry) => void openCrosHistory(entry)}
+            onDeleteHistory={(entry) => void deleteCrosHistory(entry)}
             onNewChat={startCrosChat}
           />
         ) : null}

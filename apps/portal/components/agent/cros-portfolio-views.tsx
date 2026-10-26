@@ -8,71 +8,26 @@ import {
   Home,
   MessageSquare,
   Sparkles,
+  Trash2,
   Wrench,
 } from 'lucide-react';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import { GII_CONVERSATION_COPY } from '@/constants/gii-conversation';
 import {
   inspectionDetail,
   maintenanceDetail,
   rentReviewDetail,
   vacatingDetail,
 } from '@/constants/routes';
+import type { GiiConversationSummary } from '@/lib/crossub-api/gii-client';
 import { buildDashboardBoard, type DashboardEvent } from '@/lib/dashboard-board';
 import type { PropertyNeedAction } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export type CrosPortfolioView = 'discover' | 'chat' | 'insights' | 'history';
-
-export type CrosHistoryLine = {
-  id: string;
-  role: 'user' | 'assistant';
-  text: string;
-};
-
-export type CrosHistoryEntry = {
-  id: string;
-  title: string;
-  at: string;
-  lines: CrosHistoryLine[];
-};
-
-const HISTORY_LIMIT = 20;
-
-export function crosHistoryKey(userId: string): string {
-  return `crossub-cros-history:${userId}`;
-}
-
-export function readCrosHistory(userId: string): CrosHistoryEntry[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = window.sessionStorage.getItem(crosHistoryKey(userId));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as CrosHistoryEntry[];
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(
-        (entry) =>
-          entry &&
-          typeof entry.id === 'string' &&
-          typeof entry.title === 'string' &&
-          Array.isArray(entry.lines) &&
-          entry.lines.length > 0,
-      )
-      .slice(0, HISTORY_LIMIT);
-  } catch {
-    return [];
-  }
-}
-
-export function writeCrosHistory(userId: string, entries: CrosHistoryEntry[]): void {
-  window.sessionStorage.setItem(
-    crosHistoryKey(userId),
-    JSON.stringify(entries.slice(0, HISTORY_LIMIT)),
-  );
-}
 
 type InsightRow = {
   id: string;
@@ -406,13 +361,15 @@ export function CrosPortfolioBody({
   onAsk,
   history,
   onOpenHistory,
+  onDeleteHistory,
   onNewChat,
 }: {
   view: Exclude<CrosPortfolioView, 'chat'>;
   wide?: boolean;
   onAsk: (prompt: string) => void;
-  history: CrosHistoryEntry[];
-  onOpenHistory: (entry: CrosHistoryEntry) => void;
+  history: GiiConversationSummary[];
+  onOpenHistory: (entry: GiiConversationSummary) => void;
+  onDeleteHistory: (entry: GiiConversationSummary) => void;
   onNewChat: () => void;
 }) {
   const model = useCrosPortfolioModel();
@@ -518,20 +475,32 @@ export function CrosPortfolioBody({
         </button>
       </div>
       {history.length === 0 ? (
-        <p className="text-sm text-slate-500">
-          Conversations you have with {CROS_ASSISTANT_NAME} in this session appear here.
-        </p>
+        <p className="text-sm text-slate-500">{GII_CONVERSATION_COPY.EMPTY}</p>
       ) : (
         history.map((entry) => (
-          <button
+          <div
             key={entry.id}
-            type="button"
-            onClick={() => onOpenHistory(entry)}
-            className="block w-full rounded-2xl border border-[#d7eee6] bg-white p-3 text-left hover:border-[#00bd85]"
+            className="flex items-center gap-2 rounded-2xl border border-[#d7eee6] bg-white hover:border-[#00bd85]"
           >
-            <p className="truncate text-sm font-bold text-slate-900">{entry.title}</p>
-            <p className="mt-0.5 text-xs text-slate-500">{formatHistoryTime(entry.at)}</p>
-          </button>
+            <button
+              type="button"
+              onClick={() => onOpenHistory(entry)}
+              className="min-w-0 flex-1 p-3 text-left"
+            >
+              <p className="truncate text-sm font-bold text-slate-900">{entry.title}</p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {formatHistoryTime(entry.lastMessageAt)}
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => onDeleteHistory(entry)}
+              aria-label={`${GII_CONVERSATION_COPY.DELETE} ${entry.title}`}
+              className="mr-2 rounded-lg p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </div>
         ))
       )}
     </div>
