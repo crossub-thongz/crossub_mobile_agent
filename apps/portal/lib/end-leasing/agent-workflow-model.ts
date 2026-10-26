@@ -21,7 +21,10 @@ import {
   quoteStepTenantQuotationSent,
 } from '@/lib/end-leasing/quote-step-gates.util';
 
-/** Six-stage end-leasing flow (manager spec). */
+/**
+ * Six-stage end-leasing flow (manager spec). Self-Manage runs four: Vacate, Outgoing, Compare,
+ * then Complete — no quote, confirm or bond steps (Daniel, 26 Oct 2026).
+ */
 export const END_LEASING_AGENT_STEP = {
   VACATE_CONFIRMED: 'vacate_confirmed',
   OUTGOING_INSPECTION: 'outgoing_inspection',
@@ -29,11 +32,14 @@ export const END_LEASING_AGENT_STEP = {
   GET_QUOTE: 'get_quote',
   RESULT_CONFIRMED: 'result_confirmed',
   BOND_RELEASED: 'bond_released',
+  /** Self-Manage only: the agency completes the vacate after Compare. */
+  COMPLETE: 'complete',
 } as const;
 
 export type EndLeasingAgentStep =
   (typeof END_LEASING_AGENT_STEP)[keyof typeof END_LEASING_AGENT_STEP];
 
+/** Inspection Only and Full Service: the six CROSSUB-serviced steps. */
 export const END_LEASING_AGENT_STEP_ORDER: EndLeasingAgentStep[] = [
   END_LEASING_AGENT_STEP.VACATE_CONFIRMED,
   END_LEASING_AGENT_STEP.OUTGOING_INSPECTION,
@@ -43,6 +49,20 @@ export const END_LEASING_AGENT_STEP_ORDER: EndLeasingAgentStep[] = [
   END_LEASING_AGENT_STEP.BOND_RELEASED,
 ];
 
+/** Self-Manage: the rail ends after Compare, and the agency completes the case from there. */
+export const END_LEASING_SELF_MANAGED_STEP_ORDER: EndLeasingAgentStep[] = [
+  END_LEASING_AGENT_STEP.VACATE_CONFIRMED,
+  END_LEASING_AGENT_STEP.OUTGOING_INSPECTION,
+  END_LEASING_AGENT_STEP.REPORT_COMPARISON,
+  END_LEASING_AGENT_STEP.COMPLETE,
+];
+
+export function endLeasingAgentStepOrder(copyVariant: AgentCopyVariant): EndLeasingAgentStep[] {
+  return copyVariant === AGENT_COPY_VARIANT.SELF_MANAGED
+    ? END_LEASING_SELF_MANAGED_STEP_ORDER
+    : END_LEASING_AGENT_STEP_ORDER;
+}
+
 export const END_LEASING_AGENT_STEP_LABEL: Record<EndLeasingAgentStep, string> = {
   [END_LEASING_AGENT_STEP.VACATE_CONFIRMED]: 'Vacate',
   [END_LEASING_AGENT_STEP.OUTGOING_INSPECTION]: 'Outgoing',
@@ -50,6 +70,7 @@ export const END_LEASING_AGENT_STEP_LABEL: Record<EndLeasingAgentStep, string> =
   [END_LEASING_AGENT_STEP.GET_QUOTE]: 'Quote',
   [END_LEASING_AGENT_STEP.RESULT_CONFIRMED]: 'Confirm',
   [END_LEASING_AGENT_STEP.BOND_RELEASED]: 'Bond',
+  [END_LEASING_AGENT_STEP.COMPLETE]: 'Complete',
 };
 
 export interface EndLeasingSubProgressItem {
@@ -67,6 +88,8 @@ export interface EndLeasingAgentStepState {
 }
 
 export interface EndLeasingAgentWorkflowModel {
+  /** The rail's steps in order: six on the serviced plans, four on Self-Manage. */
+  order: EndLeasingAgentStep[];
   steps: EndLeasingAgentStepState[];
   liveStepId: EndLeasingAgentStep;
   progressFillIndex: number;
@@ -269,18 +292,14 @@ function reportComparisonSubProgress(
   ];
 }
 
-/** Self-Manage has no CROSSUB handoffs to the agent: only the tenant quotation. */
-function getQuoteSubProgress(
-  caseData: TerminationCaseDetail,
-  copyVariant: AgentCopyVariant,
-): EndLeasingSubProgressItem[] {
+/** CROSSUB-serviced plans only: Self-Manage has no Quote step (it ends after Compare). */
+function getQuoteSubProgress(caseData: TerminationCaseDetail): EndLeasingSubProgressItem[] {
   const rc = caseData.reportComparison;
   const tenantQuote: EndLeasingSubProgressItem = {
     id: 'tenant_quote',
     label: 'Quotation sent to tenant',
     done: quoteStepTenantQuotationSent(rc),
   };
-  if (copyVariant === AGENT_COPY_VARIANT.SELF_MANAGED) return [tenantQuote];
   const hasLandlord = quoteStepHasLandlordItems(rc);
   const items: EndLeasingSubProgressItem[] = [
     { id: 'bond_agent', label: 'Bond deduction sent to agent', done: quoteStepBondSentToAgent(rc) },
@@ -330,6 +349,38 @@ function bondReleasedSubProgress(caseData: TerminationCaseDetail): EndLeasingSub
   ];
 }
 
+function completeSubProgress(caseData: TerminationCaseDetail): EndLeasingSubProgressItem[] {
+  return [
+    {
+      id: 'job_completed',
+      label: 'Vacate completed',
+      done: caseData.status === TERMINATION_CASE_STATUS.COMPLETED,
+    },
+  ];
+}
+
+function subProgressForStep(
+  step: EndLeasingAgentStep,
+  caseData: TerminationCaseDetail,
+): EndLeasingSubProgressItem[] {
+  switch (step) {
+    case END_LEASING_AGENT_STEP.VACATE_CONFIRMED:
+      return vacateConfirmedSubProgress(caseData);
+    case END_LEASING_AGENT_STEP.OUTGOING_INSPECTION:
+      return outgoingInspectionSubProgress(caseData);
+    case END_LEASING_AGENT_STEP.REPORT_COMPARISON:
+      return reportComparisonSubProgress(caseData);
+    case END_LEASING_AGENT_STEP.GET_QUOTE:
+      return getQuoteSubProgress(caseData);
+    case END_LEASING_AGENT_STEP.RESULT_CONFIRMED:
+      return resultConfirmedSubProgress(caseData);
+    case END_LEASING_AGENT_STEP.BOND_RELEASED:
+      return bondReleasedSubProgress(caseData);
+    case END_LEASING_AGENT_STEP.COMPLETE:
+      return completeSubProgress(caseData);
+  }
+}
+
 function subProgressRatio(items: EndLeasingSubProgressItem[]): number {
   if (items.length === 0) return 0;
   return items.filter((i) => i.done).length / items.length;
@@ -370,6 +421,9 @@ function workflowNameForStep(
       if (caseData.status === TERMINATION_CASE_STATUS.COMPLETED) return 'Job completed';
       if (caseData.bond.refundPaid) return 'Bond released';
       return 'Calculate deductions & release bond';
+    case END_LEASING_AGENT_STEP.COMPLETE:
+      if (caseData.status === TERMINATION_CASE_STATUS.COMPLETED) return 'Vacate completed';
+      return 'Complete vacating';
     default:
       return caseData.nextAction;
   }
@@ -405,36 +459,35 @@ function stepComplete(
         caseData.tenantConfirmation.status === TENANT_SETTLEMENT_CONFIRMATION.ACCEPTED
       );
     case END_LEASING_AGENT_STEP.BOND_RELEASED:
+    case END_LEASING_AGENT_STEP.COMPLETE:
       return caseData.status === TERMINATION_CASE_STATUS.COMPLETED;
     default:
       return false;
   }
 }
 
-function resolveLiveStep(steps: EndLeasingAgentStepState[]): EndLeasingAgentStep {
+function resolveLiveStep(
+  steps: EndLeasingAgentStepState[],
+  order: EndLeasingAgentStep[],
+): EndLeasingAgentStep {
   const active = steps.find((s) => s.status === 'active');
   if (active) return active.id;
   const firstUpcoming = steps.find((s) => s.status === 'upcoming');
   if (firstUpcoming) return firstUpcoming.id;
-  return END_LEASING_AGENT_STEP.BOND_RELEASED;
+  return order[order.length - 1];
 }
 
-/** `copyVariant` — Self-Manage step names speak to the agent; defaults to the CROSSUB-serviced copy. */
+/**
+ * `copyVariant` — Self-Manage runs its own four steps ({@link endLeasingAgentStepOrder}) and its
+ * step names speak to the agent; defaults to the CROSSUB-serviced flow.
+ */
 export function buildEndLeasingAgentWorkflow(
   caseData: TerminationCaseDetail,
   copyVariant: AgentCopyVariant = AGENT_COPY_VARIANT.SERVICED,
 ): EndLeasingAgentWorkflowModel {
-  const subByStep: Record<EndLeasingAgentStep, EndLeasingSubProgressItem[]> = {
-    [END_LEASING_AGENT_STEP.VACATE_CONFIRMED]: vacateConfirmedSubProgress(caseData),
-    [END_LEASING_AGENT_STEP.OUTGOING_INSPECTION]: outgoingInspectionSubProgress(caseData),
-    [END_LEASING_AGENT_STEP.REPORT_COMPARISON]: reportComparisonSubProgress(caseData),
-    [END_LEASING_AGENT_STEP.GET_QUOTE]: getQuoteSubProgress(caseData, copyVariant),
-    [END_LEASING_AGENT_STEP.RESULT_CONFIRMED]: resultConfirmedSubProgress(caseData),
-    [END_LEASING_AGENT_STEP.BOND_RELEASED]: bondReleasedSubProgress(caseData),
-  };
-
-  const rawSteps = END_LEASING_AGENT_STEP_ORDER.map((id) => {
-    const subProgress = subByStep[id];
+  const order = endLeasingAgentStepOrder(copyVariant);
+  const rawSteps = order.map((id) => {
+    const subProgress = subProgressForStep(id, caseData);
     const complete = stepComplete(id, caseData, subProgress, copyVariant);
     return {
       id,
@@ -458,8 +511,8 @@ export function buildEndLeasingAgentWorkflow(
     return { ...step, status: 'upcoming' as const };
   });
 
-  const liveStepId = resolveLiveStep(steps);
-  const liveIndex = END_LEASING_AGENT_STEP_ORDER.indexOf(liveStepId);
+  const liveStepId = resolveLiveStep(steps, order);
+  const liveIndex = order.indexOf(liveStepId);
   const liveStep = rawSteps[liveIndex];
   const partial = liveStep && !liveStep.complete ? liveStep.ratio * 0.99 : 0;
   const lastDoneIndex = steps.reduce(
@@ -469,6 +522,7 @@ export function buildEndLeasingAgentWorkflow(
   const progressFillIndex = Math.max(lastDoneIndex, liveIndex - 1 + partial);
 
   return {
+    order,
     steps,
     liveStepId,
     progressFillIndex,

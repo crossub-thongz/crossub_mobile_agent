@@ -10,11 +10,12 @@ import { EndLeasingBondReleasedPanel } from '@/components/end-leasing/end-leasin
 import { EndLeasingOutgoingInspectionPanel } from '@/components/end-leasing/end-leasing-outgoing-inspection-panel';
 import { EndLeasingReportComparisonPanel } from '@/components/end-leasing/end-leasing-report-comparison-panel';
 import { EndLeasingResultConfirmedPanel } from '@/components/end-leasing/end-leasing-result-confirmed-panel';
+import { EndLeasingSelfManagedCompletePanel } from '@/components/end-leasing/end-leasing-self-managed-complete-panel';
 import { EndLeasingVacateConfirmedPanel } from '@/components/end-leasing/end-leasing-vacate-confirmed-panel';
+import { SELF_MANAGED_VACATING_COMPLETE_COPY } from '@/constants/end-leasing';
 import {
   END_LEASING_AGENT_STEP,
   END_LEASING_AGENT_STEP_LABEL,
-  END_LEASING_AGENT_STEP_ORDER,
   buildEndLeasingAgentWorkflow,
   endLeasingEmailRecordsForStep,
   type EndLeasingAgentStep,
@@ -43,6 +44,8 @@ function StepContent({
       return <EndLeasingResultConfirmedPanel caseData={caseData} />;
     case END_LEASING_AGENT_STEP.BOND_RELEASED:
       return <EndLeasingBondReleasedPanel caseData={caseData} showAgentActions />;
+    case END_LEASING_AGENT_STEP.COMPLETE:
+      return <EndLeasingSelfManagedCompletePanel caseData={caseData} />;
     default:
       return null;
   }
@@ -93,6 +96,7 @@ export function EndLeasingAgentWorkflowPanel({
     [END_LEASING_AGENT_STEP.GET_QUOTE]: 'Repair quotes',
     [END_LEASING_AGENT_STEP.RESULT_CONFIRMED]: 'Confirm tenant responsibility',
     [END_LEASING_AGENT_STEP.BOND_RELEASED]: 'Bond settlement',
+    [END_LEASING_AGENT_STEP.COMPLETE]: SELF_MANAGED_VACATING_COMPLETE_COPY.stepTitle,
   };
 
   const showEmailHistory =
@@ -111,7 +115,7 @@ export function EndLeasingAgentWorkflowPanel({
     <div className="space-y-4">
       <TaskWorkflowRailPortal>
       <WorkflowMobileStepChips
-        steps={END_LEASING_AGENT_STEP_ORDER}
+        steps={workflow.order}
         labels={END_LEASING_AGENT_STEP_LABEL}
         currentStep={viewingStepId}
         onStepClick={handleStepClick}
@@ -124,7 +128,7 @@ export function EndLeasingAgentWorkflowPanel({
 
       <div className="hidden md:block">
         <WorkflowProgressRail
-          steps={END_LEASING_AGENT_STEP_ORDER}
+          steps={workflow.order}
           labels={END_LEASING_AGENT_STEP_LABEL}
           currentStep={viewingStepId}
           progressFillIndex={isLiveStep ? workflow.progressFillIndex : undefined}

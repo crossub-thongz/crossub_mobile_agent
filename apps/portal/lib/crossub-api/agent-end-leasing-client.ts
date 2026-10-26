@@ -65,6 +65,14 @@ export async function editSelfManagedSettlement(
   return unwrapCrossubResult(result, "Couldn't update the settlement");
 }
 
+/** Close the vacate once Compare is confirmed; no money is posted. 409 before Compare, or on a closed case. */
+export async function completeSelfManagedVacating(caseId: string) {
+  const result = await crossub.POST('/agent/end-leasing/{caseId}/complete', {
+    params: casePath(caseId),
+  });
+  return unwrapCrossubResult(result, "Couldn't complete the vacate");
+}
+
 export async function confirmSelfManagedSettlement(caseId: string) {
   const result = await crossub.POST('/agent/end-leasing/{caseId}/settlement/confirm', {
     params: casePath(caseId),

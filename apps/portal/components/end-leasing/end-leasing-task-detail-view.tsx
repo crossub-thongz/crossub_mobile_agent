@@ -156,8 +156,8 @@ export function EndLeasingTaskDetailView({
   );
   const leaseRows = useMemo(() => buildEndLeasingLeaseDetailRows(caseData), [caseData]);
   const whatsNext = useMemo(
-    () => buildEndLeasingWhatsNextCards(caseData, workflow),
-    [caseData, workflow],
+    () => buildEndLeasingWhatsNextCards(caseData, workflow, copyVariant),
+    [caseData, workflow, copyVariant],
   );
   const activityEntries = useMemo(
     () =>

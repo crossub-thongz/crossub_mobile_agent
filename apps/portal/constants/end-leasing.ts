@@ -502,8 +502,8 @@ export const TENANT_REPAIR_RESPONSE = {
 } as const
 
 export const SELF_MANAGED_SETTLEMENT_COPY = {
-  title: "Bond settlement",
-  intro: "You set the bond held, the tenant's deductions and how they are paid, then confirm. The owner gets a copy by email.",
+  title: "Bond settlement (optional)",
+  intro: "Optional: set the bond held, the tenant's deductions and how they are paid, then confirm. The owner gets a copy by email. You can complete the vacate without it.",
   confirmed: "Settlement confirmed. The tenant has been asked to accept it. The owner copy and whether it sent are under Owner decisions.",
   tenantDeclined: "The tenant declined the settlement. Revise the figures or method, then confirm again.",
   editTitle: "Bond and deductions",
@@ -516,6 +516,31 @@ export const SELF_MANAGED_SETTLEMENT_COPY = {
   noDeductions: "No deductions yet.",
   methodTitle: "Settlement method",
   methodSaved: "Settlement method updated",
+} as const
+
+/**
+ * Self-Manage vacating ends after Compare (Daniel, 26 Oct 2026): the agency completes the case
+ * from the rail's last step. No quote, confirm or bond steps; the bond refund is Trust work.
+ */
+export const SELF_MANAGED_VACATING_COMPLETE_COPY = {
+  stepTitle: 'Complete vacating',
+  intro:
+    'Compare is confirmed. Completing closes this vacate: the tenancy ends on the property and the case moves to completed. Handle any bond refund in Trust.',
+  compareFirst: 'Confirm the ingoing / outgoing comparison first.',
+  settlementPending:
+    "The bond settlement is confirmed and waiting on the tenant. Wait for their answer: accepting it refunds the bond and completes the vacate.",
+  button: 'Complete vacating',
+  confirmTitle: 'Complete this vacate?',
+  confirmBody:
+    'The case closes and leaves your open tasks. No money is posted; record any bond refund in Trust.',
+  confirm: 'Complete vacating',
+  cancel: 'Cancel',
+  completedToast: 'Vacate completed',
+  completed: 'This vacate is completed.',
+  upcomingCardTitle: 'Complete vacating',
+  upcomingCardPending: 'After the comparison is confirmed',
+  upcomingCardReady: 'Ready to complete',
+  upcomingCardDone: 'Vacate completed',
 } as const
 
 /** The confirm dialog's summary line, by settlement method. Amounts come in formatted. */

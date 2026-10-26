@@ -30,11 +30,15 @@ export interface SelfManagedInspectionSteps {
   signedOffAt: string | null;
   /** The tenant gets a copy on sign-off (ingoing and outgoing). */
   tenantCopyApplies: boolean;
+  /** The report is in, so the owner copy card shows (whether or not it can be sent now). */
+  ownerCopyApplies: boolean;
+  /** The caller can email the owner this report now (not already sent for this version). */
+  sendOwnerCopy: boolean;
   /** When the tenant copy was emailed. */
   tenantSentAt: string | null;
   /** The tenant copy outcome on sign-off; null before sign-off and on jobs signed off before it was recorded. */
   tenantCopyStatus: AgencyInspectionTenantCopyStatus | null;
-  /** The owner copy sent on sign-off. */
+  /** The owner copy the agency sent with Send to owner; null until first sent. */
   ownerCopy: AgentInspectionOwnerCopy | null;
 }
 
@@ -59,6 +63,8 @@ export function selfManagedInspectionSteps(
     declineReason: live && signedOffAt === null ? declineReason : null,
     signedOffAt: agencyJob ? signedOffAt : null,
     tenantCopyApplies,
+    ownerCopyApplies: live && submitted,
+    sendOwnerCopy: live && detail.canSendOwnerCopy,
     tenantSentAt: detail.tenantReportSentAt ?? null,
     tenantCopyStatus: detail.tenantCopyStatus ?? null,
     ownerCopy: detail.ownerCopy,

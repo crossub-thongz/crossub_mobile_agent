@@ -4,6 +4,8 @@ import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import {
   END_LEASING_AGENT_STEP,
   END_LEASING_AGENT_STEP_ORDER,
+  END_LEASING_SELF_MANAGED_STEP_ORDER,
+  type EndLeasingAgentStep,
 } from '@/lib/end-leasing/agent-workflow-model';
 import {
   MAINTENANCE_AGENT_STEP,
@@ -99,7 +101,30 @@ const END_LEASING_STAGE_COPY: Record<string, Pick<WorkflowTourStage, 'descriptio
     agentAction:
       'Approve bond settlement when prompted. Mark vacate complete after keys and bond are finalised.',
   },
+  [END_LEASING_AGENT_STEP.COMPLETE]: {
+    description:
+      'Once the comparison is confirmed, you complete the vacate. Any bond refund is handled in Trust.',
+    agentAction: 'Select Complete vacating in the Workflow panel to close the case.',
+  },
 };
+
+const END_LEASING_STAGE_TITLE: Record<EndLeasingAgentStep, string> = {
+  [END_LEASING_AGENT_STEP.VACATE_CONFIRMED]: 'Vacate confirmed',
+  [END_LEASING_AGENT_STEP.OUTGOING_INSPECTION]: 'Outgoing inspection',
+  [END_LEASING_AGENT_STEP.REPORT_COMPARISON]: 'Report comparison',
+  [END_LEASING_AGENT_STEP.GET_QUOTE]: 'Get quote',
+  [END_LEASING_AGENT_STEP.RESULT_CONFIRMED]: 'Result confirmed',
+  [END_LEASING_AGENT_STEP.BOND_RELEASED]: 'Bond released',
+  [END_LEASING_AGENT_STEP.COMPLETE]: 'Complete vacating',
+};
+
+function endLeasingTourStages(order: EndLeasingAgentStep[]): WorkflowTourStage[] {
+  return order.map((stepId) => ({
+    id: stepId,
+    title: END_LEASING_STAGE_TITLE[stepId],
+    ...END_LEASING_STAGE_COPY[stepId],
+  }));
+}
 
 const LEASING_STAGE_COPY: Record<string, Pick<WorkflowTourStage, 'description' | 'agentAction'>> = {
   order_created: {
@@ -204,22 +229,7 @@ export const WORKFLOW_TOUR_STAGES: Record<AgentWorkflowTourId, WorkflowTourStage
     title: MAINTENANCE_AGENT_STEP_TITLE[stepId],
     ...MAINTENANCE_STAGE_COPY[stepId],
   })),
-  end_leasing: END_LEASING_AGENT_STEP_ORDER.map((stepId) => ({
-    id: stepId,
-    title:
-      stepId === END_LEASING_AGENT_STEP.VACATE_CONFIRMED
-        ? 'Vacate confirmed'
-        : stepId === END_LEASING_AGENT_STEP.OUTGOING_INSPECTION
-          ? 'Outgoing inspection'
-          : stepId === END_LEASING_AGENT_STEP.REPORT_COMPARISON
-            ? 'Report comparison'
-            : stepId === END_LEASING_AGENT_STEP.GET_QUOTE
-              ? 'Get quote'
-              : stepId === END_LEASING_AGENT_STEP.RESULT_CONFIRMED
-                ? 'Result confirmed'
-                : 'Bond released',
-    ...END_LEASING_STAGE_COPY[stepId],
-  })),
+  end_leasing: endLeasingTourStages(END_LEASING_AGENT_STEP_ORDER),
   new_leasing: UNIFIED_LEASING_RAIL_STEP_ORDER.map((stepId) => ({
     id: stepId,
     title: UNIFIED_LEASING_RAIL_STEP_LABEL[stepId],
@@ -278,6 +288,11 @@ const SELF_MANAGED_STAGE_OVERRIDES: Partial<
   },
 };
 
+/** Self-Manage tours whose steps differ: vacating ends after Compare (its own four-step rail). */
+const SELF_MANAGED_STAGE_LISTS: Partial<Record<AgentWorkflowTourId, WorkflowTourStage[]>> = {
+  end_leasing: endLeasingTourStages(END_LEASING_SELF_MANAGED_STEP_ORDER),
+};
+
 /** Stage steps for the copy set. Inspection Only and Full Service keep today's copy. */
 export function workflowTourStages(
   id: AgentWorkflowTourId,
@@ -285,7 +300,8 @@ export function workflowTourStages(
 ): WorkflowTourStage[] {
   if (variant === AGENT_COPY_VARIANT.SERVICED) return WORKFLOW_TOUR_STAGES[id];
   const overrides = SELF_MANAGED_STAGE_OVERRIDES[id] ?? {};
-  return WORKFLOW_TOUR_STAGES[id].map((stage) => ({
+  const stages = SELF_MANAGED_STAGE_LISTS[id] ?? WORKFLOW_TOUR_STAGES[id];
+  return stages.map((stage) => ({
     ...stage,
     ...(stage.agentAction === CROS_WAIT ? { agentAction: SELF_MANAGED_WAIT } : {}),
     ...overrides[stage.id],
