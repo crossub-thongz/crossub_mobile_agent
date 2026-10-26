@@ -58,10 +58,13 @@ export function TrustBillsTab({
   agencyId,
   bankAccountId,
   accountCodes,
+  onChanged,
 }: {
   agencyId: string;
   bankAccountId: string;
   accountCodes: readonly TrustAccountCode[];
+  /** After a bill is added, edited, cancelled or paid (the summary tiles reload). */
+  onChanged?: () => void;
 }) {
   const [stage, setStage] = useState<TrustBillStageFilter>(TRUST_BILL_STAGE.DUE);
   const [search, setSearch] = useState('');
@@ -80,6 +83,10 @@ export function TrustBillsTab({
         search: query || undefined,
       }),
   );
+  const afterChange = () => {
+    reload();
+    onChanged?.();
+  };
 
   return (
     <div className="space-y-3">
@@ -207,7 +214,7 @@ export function TrustBillsTab({
           bankAccountId={bankAccountId}
           accountCodes={accountCodes}
           onClose={() => setCreating(false)}
-          onCreated={reload}
+          onCreated={afterChange}
         />
       ) : null}
       {editBill ? (
@@ -217,7 +224,7 @@ export function TrustBillsTab({
           bill={editBill}
           accountCodes={accountCodes}
           onClose={() => setEditBill(null)}
-          onSaved={reload}
+          onSaved={afterChange}
         />
       ) : null}
       {cancelBill ? (
@@ -233,7 +240,7 @@ export function TrustBillsTab({
           onSubmit={async (reason) => {
             await cancelTrustBill(agencyId, cancelBill.id, { reason });
             toast.success(TRUST_EDIT_BILL_COPY.cancelled(cancelBill.billNumber));
-            reload();
+            afterChange();
           }}
           onClose={() => setCancelBill(null)}
         />
@@ -244,7 +251,7 @@ export function TrustBillsTab({
           agencyId={agencyId}
           bill={payBill}
           onClose={() => setPayBill(null)}
-          onPaid={reload}
+          onPaid={afterChange}
         />
       ) : null}
     </div>

@@ -6,7 +6,7 @@ import { FilterChips } from '@/components/agent/filter-chips';
 import { SELECT_CLASS } from '@/components/agent/maintenance-self-managed/step-card';
 import { TrustBankFilesTab } from '@/components/agent/trust/trust-bank-files-tab';
 import { TrustBankStatementTab } from '@/components/agent/trust/trust-bank-statement-tab';
-import { TrustBillsTab } from '@/components/agent/trust/trust-bills-tab';
+import { TrustBillsInvoicesTab } from '@/components/agent/trust/trust-bills-invoices-tab';
 import { TrustDisburseTab } from '@/components/agent/trust/trust-disburse-tab';
 import { TrustLedgersTab } from '@/components/agent/trust/trust-ledgers-tab';
 import { TrustOverviewTab } from '@/components/agent/trust/trust-overview-tab';
@@ -72,7 +72,7 @@ function TrustTabContent({
     case TRUST_TAB.RENT:
       return <TrustRentTab {...props} />;
     case TRUST_TAB.BILLS:
-      return <TrustBillsTab {...props} accountCodes={accountCodes} />;
+      return <TrustBillsInvoicesTab {...props} accountCodes={accountCodes} />;
     case TRUST_TAB.DISBURSE:
       return <TrustDisburseTab {...props} />;
     case TRUST_TAB.BANK_FILES:

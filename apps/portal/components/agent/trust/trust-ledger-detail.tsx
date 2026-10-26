@@ -5,6 +5,8 @@ import { ArrowLeft } from 'lucide-react';
 import { TrustFeeSettingsPanel } from '@/components/agent/trust/trust-fee-settings-panel';
 import { TrustFeesPanel } from '@/components/agent/trust/trust-fees-panel';
 import { TrustLedgerActions } from '@/components/agent/trust/trust-ledger-actions';
+import { TrustLedgerSummaryPanel } from '@/components/agent/trust/trust-ledger-summary-panel';
+import { TrustTenantExtras } from '@/components/agent/trust/trust-tenant-extras';
 import { TrustTenantPanel } from '@/components/agent/trust/trust-tenant-panel';
 import { TrustWithholdsPanel } from '@/components/agent/trust/trust-withholds-panel';
 import {
@@ -76,6 +78,14 @@ export function TrustLedgerDetail({
       ) : (
         <>
           <LedgerHeader agencyId={agencyId} ledger={ledger.data} onChanged={ledger.reload} />
+          {ledger.data.kind !== TRUST_LEDGER_KIND.TENANT ? (
+            <TrustLedgerSummaryPanel
+              agencyId={agencyId}
+              ledgerId={ledgerId}
+              kind={ledger.data.kind}
+              reloadKey={`${ledger.data.balanceCents}:${ledger.data.entryCount}`}
+            />
+          ) : null}
           <div className={cn('grid gap-4', hasSideColumn(ledger.data) && 'lg:grid-cols-[3fr_2fr]')}>
             <LedgerEntries agencyId={agencyId} ledgerId={ledgerId} />
             {ledger.data.kind === TRUST_LEDGER_KIND.OWNER ? (
@@ -101,6 +111,14 @@ export function TrustLedgerDetail({
               </div>
             ) : null}
           </div>
+          {ledger.data.kind === TRUST_LEDGER_KIND.TENANT ? (
+            <TrustTenantExtras
+              agencyId={agencyId}
+              ledger={ledger.data}
+              accountCodes={accountCodes}
+              onChanged={ledger.reload}
+            />
+          ) : null}
         </>
       )}
     </div>
