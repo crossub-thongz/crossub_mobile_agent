@@ -23,6 +23,7 @@ import {
   TRUST_SETTINGS_SUMMARY_COPY as COPY,
   TRUST_SETTINGS_TAB_COPY,
 } from '@/constants/trust';
+import { TRUST_ADD_BANK_ACCOUNT_COPY } from '@/constants/trust-settings';
 import { useTrustResource } from '@/hooks/use-trust-resource';
 import {
   fetchTrustWorkspace,
@@ -37,6 +38,7 @@ import type { Agency } from '@/lib/types';
 
 /** What the Trust page Settings tab can change; without it the tables are read-only. */
 export type TrustSettingsEditActions = {
+  onAddBankAccount: () => void;
   onEditBankAccount: (account: TrustBankAccount) => void;
   onAddCode: () => void;
   onEditCode: (code: TrustAccountCode) => void;
@@ -63,7 +65,15 @@ export function TrustWorkspaceSettingsTables({
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div>
-        <p className="mb-1 text-sm font-semibold">{COPY.bankAccounts}</p>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold">{COPY.bankAccounts}</p>
+          {edit ? (
+            <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={edit.onAddBankAccount}>
+              <Plus className="size-3.5" />
+              {TRUST_ADD_BANK_ACCOUNT_COPY.add}
+            </Button>
+          ) : null}
+        </div>
         {workspace.bankAccounts.length === 0 ? (
           <p className="text-muted-foreground text-sm">{COPY.noBankAccounts}</p>
         ) : (

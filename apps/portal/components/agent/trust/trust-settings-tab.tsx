@@ -3,6 +3,8 @@
 import { useState } from 'react';
 
 import { TrustAccountCodeDialog } from '@/components/agent/trust/trust-account-code-dialog';
+import { TrustAddBankAccountDialog } from '@/components/agent/trust/trust-add-bank-account-dialog';
+import { TrustAuditLogPanel } from '@/components/agent/trust/trust-audit-log-panel';
 import { TrustBankAccountDialog } from '@/components/agent/trust/trust-bank-account-dialog';
 import { TrustWorkspaceSettingsTables } from '@/components/agent/trust/trust-settings-summary';
 import { TrustTakeOnPanel } from '@/components/agent/trust/trust-take-on-panel';
@@ -18,8 +20,9 @@ import type {
 type CodeDialog = { open: false } | { open: true; code: TrustAccountCode | null };
 
 /**
- * Trust, Settings (D132 as amended 26 Oct 2026): the agency keeps its own trust bank account
- * (ABA details included) and account codes, and posts its opening balances.
+ * Trust, Settings (D132 as amended 26 Oct 2026): the agency keeps its own trust bank accounts
+ * (ABA details included, D135 adds further ones) and account codes, posts its opening balances,
+ * and reads its audit log (D135).
  */
 export function TrustSettingsTab({
   agencyId,
@@ -33,6 +36,7 @@ export function TrustSettingsTab({
   onChanged: () => void;
 }) {
   const [editingAccount, setEditingAccount] = useState<TrustBankAccount | null>(null);
+  const [addingAccount, setAddingAccount] = useState(false);
   const [codeDialog, setCodeDialog] = useState<CodeDialog>({ open: false });
 
   return (
@@ -42,6 +46,7 @@ export function TrustSettingsTab({
         <TrustWorkspaceSettingsTables
           workspace={workspace}
           edit={{
+            onAddBankAccount: () => setAddingAccount(true),
             onEditBankAccount: setEditingAccount,
             onAddCode: () => setCodeDialog({ open: true, code: null }),
             onEditCode: (code) => setCodeDialog({ open: true, code }),
@@ -49,6 +54,7 @@ export function TrustSettingsTab({
         />
       </TrustPanel>
       <TrustTakeOnPanel agencyId={agencyId} bankAccountId={bankAccountId} />
+      <TrustAuditLogPanel agencyId={agencyId} />
 
       {editingAccount ? (
         <TrustBankAccountDialog
@@ -58,6 +64,9 @@ export function TrustSettingsTab({
           onClose={() => setEditingAccount(null)}
           onSaved={onChanged}
         />
+      ) : null}
+      {addingAccount ? (
+        <TrustAddBankAccountDialog agencyId={agencyId} onClose={() => setAddingAccount(false)} onSaved={onChanged} />
       ) : null}
       {codeDialog.open ? (
         <TrustAccountCodeDialog
