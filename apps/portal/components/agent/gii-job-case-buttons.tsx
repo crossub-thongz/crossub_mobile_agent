@@ -18,11 +18,13 @@ export function GiiJobCaseButtons({
   cases: GiiJobCaseLink[];
   onOpen: (link: GiiJobCaseLink) => void | Promise<void>;
 }) {
-  if (cases.length === 0) return null;
+  // A kind this build does not know (a newer API) is skipped, never drawn without an icon.
+  const known = cases.filter((link) => link.kind in GII_RECORD_LINK_ICON);
+  if (known.length === 0) return null;
 
   return (
     <div className="mr-auto flex w-[92%] flex-col gap-1.5">
-      {cases.map((link) => {
+      {known.map((link) => {
         const Icon = GII_RECORD_LINK_ICON[link.kind];
         return (
           <button

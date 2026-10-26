@@ -35,6 +35,7 @@
 ### Fixed
 - Cros on a job screen is told the job's reference (MR-00196), so it answers about that job instead of asking which one.
 - Cros History times are shown in Sydney time, like the rest of the app.
+- A Cros Open button of a kind the app does not know is skipped instead of crashing the app.
 - Self-Manage Trust: a receipt, withdrawal, journal or deposit transfer retried after a server or network error reuses its key, so it cannot post twice.
 - A termination notice in the bell opens the property it is about, and shows the reason title only (Wayne, PR #1).
 - Self-Manage vacating: the agent confirming the comparison completes the Compare step, even with no linked ingoing or outgoing report and no damage items.
