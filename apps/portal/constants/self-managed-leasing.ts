@@ -125,9 +125,8 @@ export const SELF_MANAGED_LEASING_COPY = {
   // Open report / ingoing
   ingoingOrdered: 'Ingoing inspection ordered — opening job case',
 
-  // Results (no reference check notice on Self-Manage)
+  // Results (no reference check notice on Self-Manage; the tenancy is created here)
   resultsClosed: 'This leasing case is closed.',
-  resultsEmptyDescription: 'Applicants appear here once they are added in the Application step.',
 
   // Shared
   cancel: 'Cancel',
@@ -252,4 +251,6 @@ export const TENANT_SELECTION_COPY = {
   approved: (name: string) => `${name} approved`,
   declined: (reason: string) => `Declined: ${reason}`,
   decisionFailed: 'Could not record the decision',
+  selfManagedHidden:
+    'Self-Manage properties are not listed: you record the tenancy under the letting’s Results.',
 } as const;

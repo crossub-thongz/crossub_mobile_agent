@@ -2,16 +2,28 @@
 
 import Link from 'next/link';
 import { ChevronRight, UserCheck } from 'lucide-react';
+import { useMemo } from 'react';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES, tenantSelectionDetail } from '@/constants/routes';
+import { TENANT_SELECTION_COPY } from '@/constants/self-managed-leasing';
+import { useSelfManagedPropertyIds } from '@/hooks/use-self-managed-access';
 import { formatCurrency } from '@/lib/utils';
 
 export default function TenantSelectionListPage() {
-  const { tenantSelections, apiConnected, apiError, loading, refresh } = useAgentData();
+  const { tenantSelections: allSelections, apiConnected, apiError, loading, refresh } =
+    useAgentData();
+  // Self-Manage has no application path: the agency records the tenancy under the letting's
+  // Results instead, so its properties' applications are not queued here.
+  const selfManagedIds = useSelfManagedPropertyIds();
+  const tenantSelections = useMemo(
+    () => allSelections.filter((t) => !selfManagedIds.has(t.propertyId)),
+    [allSelections, selfManagedIds],
+  );
+  const hiddenSelfManaged = allSelections.length - tenantSelections.length;
 
   return (
     <AgentShell title="Tenant selection" backHref={ROUTES.TASKS}>
@@ -20,6 +32,10 @@ export default function TenantSelectionListPage() {
           Applicants from the tenant app and CROSSUB leasing shortlist — loaded from{' '}
           <code className="text-xs">GET /api/v1/agent/portfolio</code> (staging).
         </p>
+
+        {hiddenSelfManaged > 0 ? (
+          <p className="text-muted-foreground text-xs">{TENANT_SELECTION_COPY.selfManagedHidden}</p>
+        ) : null}
 
         {!loading && !apiConnected && (
           <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">

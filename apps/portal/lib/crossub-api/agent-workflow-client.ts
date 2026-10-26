@@ -362,6 +362,23 @@ export async function skipSelfManagedApplicationScreening(
   return unwrapCrossubResult(result, "Couldn't skip screening");
 }
 
+// Create tenancy: the agency records the tenants and lease it agreed; the letting closes onto it.
+
+export type CreateSelfManagedTenancyInput = components['schemas']['RecordAgencyTenancyDto'];
+export type SelfManagedTenancyParty = components['schemas']['ManualApplicantPartyDto'];
+
+export async function createSelfManagedTenancy(
+  propertyId: string,
+  cycleId: string,
+  body: CreateSelfManagedTenancyInput,
+): Promise<AgentWorkflowCreateResultDto> {
+  const result = await crossub.POST(
+    '/agent/properties/{propertyId}/workflows/leasing-cycle/{cycleId}/tenancy',
+    { params: { path: lettingPath(propertyId, cycleId) }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't create the tenancy");
+}
+
 // Money: holding deposit and bond. "Mark paid" posts the receipt to the property ledger.
 
 export async function markSelfManagedDepositPaid(
