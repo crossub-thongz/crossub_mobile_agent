@@ -22,6 +22,10 @@
 - Self-Manage Leasing page: Lettings and Tenancy reviews; Run this review covers choosing rent review or lease renewal, market research, notice and lease extension uploads, negotiation, postpone and close, with nothing sent to CROSSUB.
 - Self-Manage inspection: Send to owner emails the owner a copy of the report, separately from sign-off.
 - Self-Manage vacating: Complete vacating closes the case after Compare.
+- Self-Manage Trust: New transaction on Transactions posts a folio receipt, a withdrawal (bank transfer, BPAY or cheque) or a journal; Bank files lists bank payments.
+- Self-Manage Trust: Bills & Invoices covers tenant invoices (raise, view, cancel, attachment) with summary tiles; a tenant receipt can pay an open invoice and previews fees.
+- Self-Manage Trust: tenant folios show invoices, payment history and Transfer deposit; owner and other folios show this month's money in and out.
+- Self-Manage Trust: Settings adds a further trust bank account and shows the audit log; a folio can check its balance against its entries.
 - Self-Manage Trust: the agency sets up its own trust account (workspace, account codes, first bank account with ABA details) instead of asking CROSSUB.
 - Self-Manage Trust: opening balances, open ledgers, payout details and schedule, recurring fees, held-back amounts, bond and paid-to reset, bill edit and cancel, past disbursement runs, revoke a locked month and recorded bank balances.
 
