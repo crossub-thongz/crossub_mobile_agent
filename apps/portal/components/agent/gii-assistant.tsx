@@ -93,6 +93,11 @@ import {
   type GiiPendingAttachment,
 } from '@/lib/gii-attachments';
 import { propertyIdFromPath } from '@/lib/property-path';
+import {
+  giiPageContextFor,
+  giiPropertyChanged,
+  type GiiPageContext,
+} from '@/utils/gii-page-context';
 import { useShellDockStore, type GiiScope } from '@/lib/shell-dock-store';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -509,6 +514,17 @@ export function GiiAssistant({
 
   propertyContextRef.current = propertyContext;
 
+  /** The screen the agent is on, read at send time so a turn always names the current one. */
+  const pageContextRef = useRef<GiiPageContext | null>(null);
+  pageContextRef.current = giiPageContextFor({ pathname, propertyLabel: scopedAddress });
+  /**
+   * The property on screen, and the one on screen at the previous turn. Only navigation
+   * counts as a change: a property Cros resolved from the agent's words is not.
+   */
+  const screenPropertyIdRef = useRef<string | null>(null);
+  screenPropertyIdRef.current = scopedProperty?.id ?? effectiveLaunch.propertyId ?? null;
+  const lastTurnScreenPropertyIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (scopedProperty?.id) {
       contextRef.current = {
@@ -530,6 +546,8 @@ export function GiiAssistant({
   useEffect(() => {
     if (!scopedProperty?.id) return;
     setLines([]);
+    // A fresh chat has no earlier property to have navigated away from.
+    lastTurnScreenPropertyIdRef.current = null;
     setPendingAttachments((prev) => {
       revokePendingAttachments(prev);
       return [];
@@ -726,7 +744,18 @@ export function GiiAssistant({
         );
       }
 
-      const res = await sendGiiMessage({ messages: history, context: contextRef.current });
+      const screenPropertyId = screenPropertyIdRef.current;
+      const propertyChanged = giiPropertyChanged(
+        lastTurnScreenPropertyIdRef.current,
+        screenPropertyId,
+      );
+      lastTurnScreenPropertyIdRef.current = screenPropertyId;
+      const res = await sendGiiMessage({
+        messages: history,
+        context: contextRef.current,
+        page: pageContextRef.current,
+        propertyChanged,
+      });
       if (res.assessment?.propertyId) {
         contextRef.current = {
           propertyId: res.assessment.propertyId,
@@ -846,6 +875,7 @@ export function GiiAssistant({
   const startCrosChat = () => {
     crosHistoryIdRef.current = null;
     setLines([]);
+    lastTurnScreenPropertyIdRef.current = null;
     setCrosView('discover');
   };
 

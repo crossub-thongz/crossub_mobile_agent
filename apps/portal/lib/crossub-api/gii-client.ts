@@ -1,5 +1,6 @@
 import type { components } from '@crossub-thongz/api-contract';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import type { GiiPageContext } from '@/utils/gii-page-context';
 
 import { crossub } from './client';
 
@@ -63,15 +64,19 @@ export type GiiChatResponseWithPending = GiiChatResponse & {
 /**
  * Send a turn. The whole transcript is resent each time; `context` echoes the previous
  * assessment's property (and any pending ambiguous candidates) so Gii keeps the subject
- * instead of re-asking for the address.
+ * instead of re-asking for the address. `page` names the screen the agent is on, and
+ * `propertyChanged` says they navigated to another property since the last turn.
  */
 export async function sendGiiMessage(args: {
   messages: GiiChatMessage[];
   context?: GiiContext | null;
+  page?: GiiPageContext | null;
+  propertyChanged?: boolean;
 }): Promise<GiiChatResponseWithPending> {
   const ctx = args.context;
-  const apiContext =
-    ctx?.propertyId || (ctx?.pendingPropertyCandidates?.length ?? 0) > 0
+  const hasSubject = Boolean(ctx?.propertyId) || (ctx?.pendingPropertyCandidates?.length ?? 0) > 0;
+  const apiContext: components['schemas']['GiiChatContextDto'] | undefined =
+    hasSubject || args.page
       ? {
           ...(ctx?.propertyId ? { propertyId: ctx.propertyId } : {}),
           ...(ctx?.propertyLabel ? { propertyLabel: ctx.propertyLabel } : {}),
@@ -79,6 +84,8 @@ export async function sendGiiMessage(args: {
           ...(ctx?.pendingPropertyCandidates?.length
             ? { pendingPropertyCandidates: ctx.pendingPropertyCandidates }
             : {}),
+          ...(args.page ? { pageModule: args.page.pageModule, pageLabel: args.page.pageLabel } : {}),
+          ...(args.propertyChanged ? { propertyChanged: true } : {}),
         }
       : undefined;
 

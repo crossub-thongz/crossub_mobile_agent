@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-26
+
+### Added
+- Cros knows which screen the agent is on (module, record screen and property) with every message.
+- Cros is told when the agent moved to a different property mid-conversation.
+- jarvis.md tracker for the Cros v2 plan.
+
 ## 2026-10-22
 
 ### Fixed
