@@ -44,3 +44,6 @@ Thumbs.db
 .cursor/*
 !.cursor/rules/
 !.cursor/rules/**
+
+# Claude Code personal settings
+.claude/settings.local.json
