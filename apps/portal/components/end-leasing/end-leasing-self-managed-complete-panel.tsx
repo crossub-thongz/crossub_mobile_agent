@@ -16,9 +16,11 @@ import {
 } from '@/components/ui/dialog';
 import {
   SELF_MANAGED_VACATING_COMPLETE_COPY as COPY,
+  TENANT_SETTLEMENT_CONFIRMATION,
   TERMINATION_CASE_STATUS,
 } from '@/constants/end-leasing';
 import { completeSelfManagedVacating } from '@/lib/crossub-api/agent-end-leasing-client';
+import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
@@ -45,6 +47,17 @@ export function EndLeasingSelfManagedCompletePanel({ caseData }: { caseData: Ter
 
   const compareConfirmed = caseData.reportComparison?.agentAcknowledged === true;
   const open = caseData.status === TERMINATION_CASE_STATUS.OPEN;
+  // Matches the API's 409: the tenant's acceptance refunds the bond and completes the case.
+  const tenantAnswer = caseData.tenantConfirmation.status;
+  const settlementPending =
+    caseData.settlement.status === LEASING_ITEM_STATUS.DONE &&
+    tenantAnswer !== TENANT_SETTLEMENT_CONFIRMATION.ACCEPTED &&
+    tenantAnswer !== TENANT_SETTLEMENT_CONFIRMATION.DECLINED;
+  const reason = !compareConfirmed
+    ? COPY.compareFirst
+    : settlementPending
+      ? COPY.settlementPending
+      : COPY.intro;
 
   const complete = async () => {
     setBusy(true);
@@ -64,12 +77,12 @@ export function EndLeasingSelfManagedCompletePanel({ caseData }: { caseData: Ter
   return (
     <section className="space-y-3">
       <p className="text-muted-foreground text-xs leading-relaxed">
-        {compareConfirmed ? COPY.intro : COPY.compareFirst}
+        {reason}
       </p>
       <Button
         type="button"
         size="sm"
-        disabled={busy || !open || !compareConfirmed}
+        disabled={busy || !open || !compareConfirmed || settlementPending}
         onClick={() => setConfirmOpen(true)}
       >
         {COPY.button}
