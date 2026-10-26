@@ -78,6 +78,7 @@ export const OWNER_DECISION_MODULE = {
   MAINTENANCE: 'maintenance',
   INSPECTIONS: 'inspections',
   LEASING: 'leasing',
+  TENANCY_REVIEW: 'tenancy_review',
 } as const;
 export type OwnerDecisionModule = (typeof OWNER_DECISION_MODULE)[keyof typeof OWNER_DECISION_MODULE];
 
@@ -85,6 +86,7 @@ export const OWNER_DECISION_MODULE_CASE_TYPE: Record<OwnerDecisionModule, AgentO
   maintenance: OWNER_DECISION_CASE_TYPE.MAINTENANCE,
   inspections: OWNER_DECISION_CASE_TYPE.INSPECTION,
   leasing: OWNER_DECISION_CASE_TYPE.LEASING,
+  tenancy_review: OWNER_DECISION_CASE_TYPE.RENT_REVIEW,
 };
 
 export const OWNER_DECISION_MODULE_OPTIONS: Record<OwnerDecisionModule, readonly OwnerDecisionOption[]> = {
@@ -146,6 +148,26 @@ export const OWNER_DECISION_MODULE_OPTIONS: Record<OwnerDecisionModule, readonly
       label: 'Note',
       decision: 'Leasing update',
       summary: 'An update on this letting.',
+    },
+  ],
+  tenancy_review: [
+    {
+      id: 'approved',
+      label: 'Approve',
+      decision: 'Tenancy review approved',
+      summary: 'We have approved the new rent and lease terms.',
+    },
+    {
+      id: 'declined',
+      label: 'Decline',
+      decision: 'Tenancy review declined',
+      summary: 'We have declined the proposed rent change.',
+    },
+    {
+      id: 'noted',
+      label: 'Note',
+      decision: 'Tenancy review update',
+      summary: 'An update on this tenancy review.',
     },
   ],
 };

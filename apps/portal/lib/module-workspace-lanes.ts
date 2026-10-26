@@ -7,19 +7,21 @@ import {
   LEASING_STEP_ID_LANE,
   MAINTENANCE_LANE,
   MAINTENANCE_STATUS_LANE,
+  TENANCY_REVIEW_STATE_LANE,
   type InspectionApiStatus,
   type InspectionLane,
   type LeasingLane,
   type MaintenanceApiStatus,
   type MaintenanceLane,
   type ModuleLaneDefinition,
+  type TenancyReviewLane,
 } from '@/constants/module-workspace';
 import { INSPECTION_STATUS } from '@/constants/api-enums';
 import { leasingLifecycleProgress } from '@/lib/case-workflows/leasing';
 import { isDeletedInspection } from '@/lib/open-inspection-delete';
 import { isCompletedLeasingCycle } from '@/lib/property-leasing-history';
 import { isTenantRejectedMaintenance } from '@/lib/maintenance/tenant-rejected';
-import type { Inspection, LeasingCycle, MaintenanceRequest } from '@/lib/types';
+import type { Inspection, LeasingCycle, MaintenanceRequest, RentReviewCase } from '@/lib/types';
 
 function hasKey<K extends string>(map: Record<K, unknown>, key: string | undefined): key is K {
   return key !== undefined && Object.prototype.hasOwnProperty.call(map, key);
@@ -81,6 +83,14 @@ export function leasingCycleLane(cycle: LeasingCycle): LeasingLane {
   const stepId = leasingLifecycleProgress(cycle).currentStepId;
   if (hasKey(LEASING_STEP_ID_LANE, stepId)) return LEASING_STEP_ID_LANE[stepId];
   throw new Error(`Leasing cycle ${cycle.id} has an unmapped lifecycle step "${stepId}"`);
+}
+
+/** Self-Manage tenancy review lane, by the review's workflow state. */
+export function tenancyReviewLane(review: RentReviewCase): TenancyReviewLane {
+  if (hasKey(TENANCY_REVIEW_STATE_LANE, review.workflowState)) {
+    return TENANCY_REVIEW_STATE_LANE[review.workflowState];
+  }
+  throw new Error(`Rent review ${review.id} has an unmapped workflow state "${review.workflowState}"`);
 }
 
 /** The lane definition for an id; throws on an id the lane list does not carry. */

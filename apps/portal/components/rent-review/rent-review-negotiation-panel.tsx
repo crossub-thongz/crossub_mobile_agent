@@ -25,7 +25,13 @@ import {
   resolveInitialNoticeWeeklyRent,
 } from '@/lib/rent-review/negotiation-display';
 import { formatRentReviewTermLabel } from '@/lib/rent-review-lease-helpers';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
+import {
+  resolveTenancyReviewNegotiation,
+  type TenancyReviewResolveInput,
+} from '@/lib/crossub-api/agent-tenancy-review-client';
 import { rentReviewApi } from '@/lib/rent-review-api';
+import { runSelfManagedReviewWrite } from '@/lib/rent-review/self-managed-review';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import { toDateOnly } from '@/lib/rent-review/scheduling';
 import {
@@ -66,6 +72,7 @@ export function RentReviewNegotiationPanel({
   readOnly?: boolean;
 }) {
   const runMutation = useRentReviewStore((s) => s.runMutation);
+  const selfManaged = useIsPropertySelfManaged(detail.propertyId);
   const [busy, setBusy] = useState(false);
   const [declineOpen, setDeclineOpen] = useState(false);
   const [agentCounterRent, setAgentCounterRent] = useState('');
@@ -102,11 +109,14 @@ export function RentReviewNegotiationPanel({
     }
   };
 
+  /** Self-Manage resolves through the agent facade; other plans keep the staff route. */
+  const resolve = (input: TenancyReviewResolveInput): Promise<RentReviewWorkflowDetail> =>
+    selfManaged
+      ? runSelfManagedReviewWrite(detail, (p, r) => resolveTenancyReviewNegotiation(p, r, input))
+      : rentReviewApi.resolveNegotiation(detail.id, input, detail.leaseEndDate);
+
   const acceptOffer = () => {
-    void run(
-      () => rentReviewApi.resolveNegotiation(detail.id, { action: 'accept_counter' }, detail.leaseEndDate),
-      'Tenant offer accepted',
-    );
+    void run(() => resolve({ action: 'accept_counter' }), 'Tenant offer accepted');
   };
 
   const sendAgentCounter = () => {
@@ -117,30 +127,18 @@ export function RentReviewNegotiationPanel({
     }
     void run(
       () =>
-        rentReviewApi.resolveNegotiation(
-          detail.id,
-          {
-            action: 'repropose',
-            resolvedWeekly: weekly,
-            effectiveDate,
-            rentNegotiable: true,
-          },
-          detail.leaseEndDate,
-        ),
+        resolve({
+          action: 'repropose',
+          resolvedWeekly: weekly,
+          effectiveDate,
+          rentNegotiable: true,
+        }),
       'Counter-offer sent to tenant',
     );
   };
 
   const markNonNegotiable = () => {
-    void run(
-      () =>
-        rentReviewApi.resolveNegotiation(
-          detail.id,
-          { action: 'mark_non_negotiable' },
-          detail.leaseEndDate,
-        ),
-      'Marked non-negotiable',
-    );
+    void run(() => resolve({ action: 'mark_non_negotiable' }), 'Marked non-negotiable');
   };
 
   const noticeAudit = [...detail.auditLog].reverse().find((e) => e.kind === 'tenant_notices_dispatched');

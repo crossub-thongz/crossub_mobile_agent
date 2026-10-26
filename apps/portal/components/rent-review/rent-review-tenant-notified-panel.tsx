@@ -24,7 +24,13 @@ import {
   RENT_REVIEW_STATUTORY_NOTICE_DAYS,
 } from '@/lib/rent-review/scheduling';
 import { listTenantResponseReminders } from '@/lib/rent-review/tenant-reminders';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
+import {
+  sendTenancyReviewNotice,
+  type TenancyReviewNoticeInput,
+} from '@/lib/crossub-api/agent-tenancy-review-client';
 import { rentReviewApi } from '@/lib/rent-review-api';
+import { runSelfManagedReviewWrite } from '@/lib/rent-review/self-managed-review';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
@@ -40,8 +46,15 @@ export function RentReviewTenantNotifiedPanel({
   readOnly?: boolean;
 }) {
   const runMutation = useRentReviewStore((s) => s.runMutation);
+  const selfManaged = useIsPropertySelfManaged(detail.propertyId);
   const [busy, setBusy] = useState(false);
   const [effectiveDate, setEffectiveDate] = useState('');
+
+  /** Self-Manage serves the notice through the agent facade; other plans keep the staff route. */
+  const sendNotice = (input: TenancyReviewNoticeInput): Promise<RentReviewWorkflowDetail> =>
+    selfManaged
+      ? runSelfManagedReviewWrite(detail, (p, r) => sendTenancyReviewNotice(p, r, input))
+      : rentReviewApi.sendTenantNotice(detail.id, input);
   const [remindersOpen, setRemindersOpen] = useState(false);
   const [auditExpanded, setAuditExpanded] = useState(false);
 
@@ -138,7 +151,7 @@ export function RentReviewTenantNotifiedPanel({
             onClick={() =>
               void run(
                 () =>
-                  rentReviewApi.sendTenantNotice(detail.id, {
+                  sendNotice({
                     weekly: detail.proposedWeeklyRent ?? undefined,
                     effectiveDate: effectiveDate || undefined,
                   }),

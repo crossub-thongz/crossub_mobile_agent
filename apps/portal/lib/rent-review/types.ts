@@ -75,6 +75,8 @@ export interface RentReviewWorkflowDetail {
   propertyAddress: string;
   tenantName: string;
   workflowState: RentReviewWorkflowState;
+  /** Tenancy Review pathway (Rent Review or Lease Renewal); null until it is chosen. */
+  reviewKind: 'rent_review' | 'lease_renewal' | null;
   legacyStatus: 'OPEN' | 'COMPLETED';
   currentWeeklyRent: number;
   proposedWeeklyRent: number | null;

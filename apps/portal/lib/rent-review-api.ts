@@ -48,6 +48,7 @@ export function mapRentReviewWorkflowDetail(
     propertyAddress: d.propertyAddress ?? '—',
     tenantName: d.tenantName ?? '—',
     workflowState: d.workflowState,
+    reviewKind: d.reviewKind ?? null,
     legacyStatus: d.status,
     currentWeeklyRent: d.currentWeeklyRent ?? 0,
     proposedWeeklyRent: d.proposedWeeklyRent,
