@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 
 import {
@@ -28,7 +29,7 @@ import { Button } from '@/components/ui/button';
 import { SELF_MANAGED_MAINTENANCE_COPY as COPY } from '@/constants/self-managed-maintenance';
 import { useSelfManagedMaintenance } from '@/hooks/use-self-managed-maintenance';
 import { selfManagedMaintenanceSteps } from '@/lib/maintenance/self-managed-steps';
-import { formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 /**
  * Self-Manage maintenance actions on one job (Phase 1): the steps a CROSSUB Account Manager runs,
@@ -39,10 +40,15 @@ export function SelfManagedMaintenancePanel({
   requestId,
   agencyId,
   onChanged,
+  heading,
+  className,
 }: {
   requestId: string;
   agencyId: string | null;
   onChanged?: () => void;
+  /** Shown above the steps when the panel stands alone (the full job page). */
+  heading?: ReactNode;
+  className?: string;
 }) {
   const { detail, error, busy, reload, run } = useSelfManagedMaintenance(requestId, onChanged);
 
@@ -75,7 +81,8 @@ export function SelfManagedMaintenancePanel({
   );
 
   return (
-    <div className="space-y-3">
+    <div className={cn('space-y-3', className)}>
+      {heading}
       <p className="text-muted-foreground text-xs">
         {detail.spendThreshold === null
           ? COPY.ownerCopyNoLimit

@@ -22,6 +22,7 @@ import {
   MAINTENANCE_PAYMENT_STATUS_TONE,
 } from '@/constants/maintenance-v2';
 import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
+import { SelfManagedMaintenanceCard } from '@/components/agent/maintenance-self-managed/self-managed-maintenance-card';
 import type { AgentMaintenanceDetail } from '@/lib/crossub-api/maintenance-client';
 import type {
   ApiMaintenanceAttachment,
@@ -734,7 +735,17 @@ export function MaintenanceWorkspace({
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="min-h-0 flex-1 overflow-y-auto">{mainContent}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {item ? (
+              <SelfManagedMaintenanceCard
+                requestId={item.id}
+                propertyId={item.propertyId}
+                onCaseUpdated={onCaseUpdated}
+                className="m-4"
+              />
+            ) : null}
+            {mainContent}
+          </div>
         </div>
       </div>
 

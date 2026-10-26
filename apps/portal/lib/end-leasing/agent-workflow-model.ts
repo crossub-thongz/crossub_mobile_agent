@@ -379,6 +379,7 @@ function stepComplete(
   step: EndLeasingAgentStep,
   caseData: TerminationCaseDetail,
   subProgress: EndLeasingSubProgressItem[],
+  copyVariant: AgentCopyVariant,
 ): boolean {
   switch (step) {
     case END_LEASING_AGENT_STEP.VACATE_CONFIRMED:
@@ -386,6 +387,14 @@ function stepComplete(
     case END_LEASING_AGENT_STEP.OUTGOING_INSPECTION:
       return caseData.inspection?.status === DONE;
     case END_LEASING_AGENT_STEP.REPORT_COMPARISON:
+      // Self-Manage: the agency's own confirmation closes Compare, with or without linked
+      // ingoing/outgoing reports or responsibility items (a no-damage vacate has none).
+      if (
+        copyVariant === AGENT_COPY_VARIANT.SELF_MANAGED &&
+        caseData.reportComparison?.agentAcknowledged
+      ) {
+        return true;
+      }
       return subProgress.every((i) => i.done) || caseData.makeGood.status === DONE;
     case END_LEASING_AGENT_STEP.GET_QUOTE:
       return subProgress.every((i) => i.done);
@@ -426,7 +435,7 @@ export function buildEndLeasingAgentWorkflow(
 
   const rawSteps = END_LEASING_AGENT_STEP_ORDER.map((id) => {
     const subProgress = subByStep[id];
-    const complete = stepComplete(id, caseData, subProgress);
+    const complete = stepComplete(id, caseData, subProgress, copyVariant);
     return {
       id,
       label: END_LEASING_AGENT_STEP_LABEL[id],

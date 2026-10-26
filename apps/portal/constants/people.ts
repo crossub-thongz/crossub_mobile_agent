@@ -162,6 +162,20 @@ export const PEOPLE_COPY = {
   noPhone: 'No phone',
 } as const;
 
+/** People → Add supplier: saves a preferred contractor the agency can invite to quote. */
+export const PEOPLE_ADD_SUPPLIER_COPY = {
+  open: 'Add supplier',
+  title: 'Add supplier',
+  description: 'Add your own tradie or supplier. You can then invite them to quote on a maintenance job.',
+  name: 'Name',
+  email: 'Email',
+  phone: 'Phone (optional)',
+  required: 'Enter a name and an email.',
+  cancel: 'Cancel',
+  submit: 'Add supplier',
+  added: (name: string) => `${name} added`,
+} as const;
+
 export const PERSON_PROFILE_COPY = {
   backLabel: 'People',
   loading: 'Loading profile…',

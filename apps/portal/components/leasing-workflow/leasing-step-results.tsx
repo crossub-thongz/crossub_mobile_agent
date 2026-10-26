@@ -7,6 +7,8 @@ import { EmptyState } from '@/components/agent/empty-state';
 import { LeasingReferenceCheckApplicantCard } from '@/components/leasing-workflow/leasing-reference-check-applicant-card';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
+import { SELF_MANAGED_LEASING_COPY } from '@/constants/self-managed-leasing';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { resolveOpenInspectionSessionId } from '@/lib/leasing/resolve-open-inspection-session';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { openViewingsApi } from '@/lib/open-viewings-api';
@@ -23,6 +25,7 @@ export function LeasingStepResults({
   const cycleId = detail.cycleId ?? cycle?.id;
   const [chosenApplicantId, setChosenApplicantId] = useState<string | null>(null);
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
+  const selfManaged = useIsPropertySelfManaged(detail.propertyId);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,26 +59,38 @@ export function LeasingStepResults({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border bg-card px-4 py-3">
-        <p className="text-sm font-semibold">Reference check</p>
-        <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
-          For each applicant, add reference-check notes and mark Recommend or Reject. Select one
-          applicant to approve, confirm rent / lease start / lease term, and notify them. Under each
-          applicant you will see email history from this leasing case so far (open inspection through
-          reference check), plus that applicant's audit trail.
-        </p>
-        {detail.cycleActive === false ? (
-          <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-            This new leasing case is closed — all applicant results were sent.
+      {selfManaged ? (
+        detail.cycleActive === false ? (
+          <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            {SELF_MANAGED_LEASING_COPY.resultsClosed}
           </p>
-        ) : null}
-      </div>
+        ) : null
+      ) : (
+        <div className="rounded-xl border bg-card px-4 py-3">
+          <p className="text-sm font-semibold">Reference check</p>
+          <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
+            For each applicant, add reference-check notes and mark Recommend or Reject. Select one
+            applicant to approve, confirm rent / lease start / lease term, and notify them. Under each
+            applicant you will see email history from this leasing case so far (open inspection through
+            reference check), plus that applicant's audit trail.
+          </p>
+          {detail.cycleActive === false ? (
+            <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+              This new leasing case is closed — all applicant results were sent.
+            </p>
+          ) : null}
+        </div>
+      )}
 
       {applicants.length === 0 ? (
         <EmptyState
           icon={Users}
           title="No applicants yet"
-          description="Reference check will appear here once applicants are added in the Application step."
+          description={
+            selfManaged
+              ? SELF_MANAGED_LEASING_COPY.resultsEmptyDescription
+              : 'Reference check will appear here once applicants are added in the Application step.'
+          }
         />
       ) : (
         <ul className="space-y-3">

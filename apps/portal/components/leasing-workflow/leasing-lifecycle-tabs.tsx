@@ -21,12 +21,16 @@ import {
   leasingStageEmailsWithOpenSupplement,
 } from '@/lib/open-inspection/linked-case-history';
 import {
+  SELF_MANAGED_LEASING_RAIL_MOBILE_LABEL,
+  SELF_MANAGED_LEASING_RAIL_STEP_LABEL,
+  SELF_MANAGED_LEASING_RAIL_STEP_ORDER,
   resolveLeasingWorkflowContentStep,
 } from '@/lib/leasing/letting-rail-progress';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { resolveRentReviewAgentEmail } from '@/lib/rent-review/agent-email';
 import { useOpenInspectionEmailSources } from '@/hooks/use-open-inspection-email-sources';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { useLivePoll } from '@/lib/use-live-poll';
 
 export function LeasingLifecycleTabs({
@@ -46,6 +50,8 @@ export function LeasingLifecycleTabs({
   const activeStep = useLeasingWorkflowStore((s) => s.getActiveStep(detail.propertyId));
   const setActiveStep = useLeasingWorkflowStore((s) => s.setActiveStep);
   const liveDetail = useLeasingWorkflowStore((s) => s.getDetail(detail.propertyId)) ?? detail;
+  // Self-Manage gets one rail with the letting phases folded in (no "Letting phases" box).
+  const selfManaged = useIsPropertySelfManaged(detail.propertyId);
   const [now, setNow] = useState(() => new Date());
   const tickNow = useCallback(() => {
     setNow(new Date());
@@ -64,7 +70,16 @@ export function LeasingLifecycleTabs({
 
   return (
     <div className="min-w-0 space-y-4">
-      {unifiedRail ? (
+      {selfManaged ? (
+        <LeasingUnifiedWorkflowRail
+          detail={liveDetail}
+          currentStep={activeStep}
+          onStepClick={(step) => setActiveStep(detail.propertyId, step)}
+          steps={SELF_MANAGED_LEASING_RAIL_STEP_ORDER}
+          labels={SELF_MANAGED_LEASING_RAIL_STEP_LABEL}
+          mobileLabels={SELF_MANAGED_LEASING_RAIL_MOBILE_LABEL}
+        />
+      ) : unifiedRail ? (
         <LeasingUnifiedWorkflowRail
           detail={liveDetail}
           currentStep={activeStep}
@@ -90,7 +105,7 @@ export function LeasingLifecycleTabs({
         </div>
       ) : null}
 
-      {unifiedRail ? null : (
+      {unifiedRail || selfManaged ? null : (
         <LeasingLifecyclePhaseNav
           detail={liveDetail}
           activeStep={activeStep}

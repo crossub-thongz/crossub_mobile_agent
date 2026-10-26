@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import { WorkspaceChatPanel } from '@/components/maintenance-workspace/workspace-chat-panel';
+import { SelfManagedMaintenanceCard } from '@/components/agent/maintenance-self-managed/self-managed-maintenance-card';
 import { MaintenanceAgentWorkflowPanel } from '@/components/maintenance/maintenance-agent-workflow-panel';
 import { MaintenanceCloseJobDialog } from '@/components/maintenance/maintenance-close-job-dialog';
 import { MaintenanceGetQuotePanel } from '@/components/maintenance/maintenance-get-quote-panel';
@@ -460,7 +461,12 @@ export function MaintenanceTaskDetailView({
             </div>
           </div>
 
-          <div className={activeTab === 'workflow' ? undefined : 'hidden'}>
+          <div className={activeTab === 'workflow' ? 'space-y-5' : 'hidden'}>
+            <SelfManagedMaintenanceCard
+              requestId={item.id}
+              propertyId={propertyId}
+              onCaseUpdated={onCaseUpdated}
+            />
             <MaintenanceAgentWorkflowPanel
               ctx={workflowCtx}
               item={item}

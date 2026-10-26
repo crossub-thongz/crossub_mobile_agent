@@ -11,12 +11,20 @@
 - Agents can lodge a termination request for an NSW property from the property workflow, New Task or the property menu. It records the request and notifies the account manager; it does not open a vacating case (Wayne, PR #1).
 - Cros chats can be deleted from History.
 - Long Cros chats keep their start: older turns are summarised for Cros instead of dropped after 20 messages.
+- Self-Manage: the full maintenance job page shows the job actions (edit details and issues, invite tradies, approve quotes and issue the work order), not only the Maintenance list side pane.
+- Self-Manage People: Add supplier saves the agency's own tradie or supplier, ready to invite to quote.
 
 ### Fixed
 - A termination notice in the bell opens the property it is about, and shows the reason title only (Wayne, PR #1).
+- Self-Manage vacating: the agent confirming the comparison completes the Compare step, even with no linked ingoing or outgoing report and no damage items.
 
 ### Changed
 - Cros History is saved to the officer's account after every reply and reopens on any device, instead of only in the browser tab.
+- Self-Manage leasing: one step rail with Application, Results and Onboarding after the open report, instead of a separate Letting phases box.
+
+### Removed
+- Creating a Vacating task no longer creates a new leasing order or offers End management; the form shows only the vacating details (all plans).
+- Self-Manage leasing Results: the reference check notice.
 
 ## 2026-10-22
 

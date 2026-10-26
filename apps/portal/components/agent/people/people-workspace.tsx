@@ -1,12 +1,13 @@
 'use client';
 
-import { ChevronRight, Loader2, Mail, Phone, Search, Users } from 'lucide-react';
+import { ChevronRight, Loader2, Mail, Phone, Plus, Search, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
+import { PeopleAddSupplierDialog } from '@/components/agent/people/people-add-supplier-dialog';
 import { SELECT_CLASS } from '@/components/agent/maintenance-self-managed/step-card';
 import {
   PeopleLoadError,
@@ -18,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  PEOPLE_ADD_SUPPLIER_COPY,
   PEOPLE_COPY,
   PEOPLE_ROLE_FILTER_ALL,
   PEOPLE_ROLE_FILTERS,
@@ -80,6 +82,7 @@ export function PeopleWorkspace({
   const search = useDebouncedValue(searchInput, PEOPLE_SEARCH_DEBOUNCE_MS);
   const people = useAgencyPeople(agencyId || null, { search, role });
   const filtered = search.trim() !== '' || role !== PEOPLE_ROLE_FILTER_ALL;
+  const [addingSupplier, setAddingSupplier] = useState(false);
 
   if (agencies.length === 0) {
     return (
@@ -125,7 +128,25 @@ export function PeopleWorkspace({
             onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
+        <Button
+          type="button"
+          size="sm"
+          className="h-9 gap-1.5 lg:ml-auto"
+          disabled={!agencyId}
+          onClick={() => setAddingSupplier(true)}
+        >
+          <Plus className="size-4" />
+          {PEOPLE_ADD_SUPPLIER_COPY.open}
+        </Button>
       </div>
+
+      {addingSupplier && agencyId ? (
+        <PeopleAddSupplierDialog
+          agencyId={agencyId}
+          onClose={() => setAddingSupplier(false)}
+          onAdded={() => void people.reload()}
+        />
+      ) : null}
 
       <FilterChips options={PEOPLE_ROLE_FILTERS} value={role} onChange={setRole} />
 

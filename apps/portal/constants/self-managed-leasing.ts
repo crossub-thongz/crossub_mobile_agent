@@ -125,6 +125,10 @@ export const SELF_MANAGED_LEASING_COPY = {
   // Open report / ingoing
   ingoingOrdered: 'Ingoing inspection ordered — opening job case',
 
+  // Results (no reference check notice on Self-Manage)
+  resultsClosed: 'This leasing case is closed.',
+  resultsEmptyDescription: 'Applicants appear here once they are added in the Application step.',
+
   // Shared
   cancel: 'Cancel',
   sending: 'Sending…',

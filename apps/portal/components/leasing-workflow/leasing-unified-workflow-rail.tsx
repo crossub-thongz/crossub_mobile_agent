@@ -28,10 +28,16 @@ export function LeasingUnifiedWorkflowRail({
   detail,
   currentStep,
   onStepClick,
+  steps = UNIFIED_LEASING_RAIL_STEP_ORDER,
+  labels = UNIFIED_LEASING_RAIL_STEP_LABEL,
+  mobileLabels = UNIFIED_LEASING_RAIL_MOBILE_LABEL,
 }: {
   detail: LeasingPropertyDetail;
   currentStep: LeasingLifecycleStep;
   onStepClick: (step: LeasingLifecycleStep) => void;
+  steps?: UnifiedLeasingRailStep[];
+  labels?: Record<UnifiedLeasingRailStep, string>;
+  mobileLabels?: Record<UnifiedLeasingRailStep, string>;
 }) {
   const [now, setNow] = useState(() => new Date());
   const [viewingRailStep, setViewingRailStep] = useState<UnifiedLeasingRailStep | null>(null);
@@ -41,7 +47,7 @@ export function LeasingUnifiedWorkflowRail({
   useLivePoll(tickNow);
 
   const { currentRailStep: liveRailStep } = deriveLettingRailProgress(detail, now);
-  const { fillIndex } = deriveUnifiedLeasingRailProgress(detail, currentStep, now);
+  const { fillIndex } = deriveUnifiedLeasingRailProgress(detail, currentStep, now, steps);
 
   useEffect(() => {
     setViewingRailStep((prev) => {
@@ -65,8 +71,8 @@ export function LeasingUnifiedWorkflowRail({
   return (
     <TaskWorkflowRailPortal>
       <WorkflowMobileStepChips
-        steps={UNIFIED_LEASING_RAIL_STEP_ORDER}
-        labels={UNIFIED_LEASING_RAIL_MOBILE_LABEL}
+        steps={steps}
+        labels={mobileLabels}
         currentStep={displayRailStep}
         onStepClick={handleRailStepClick}
         isStepCompleted={(step) => isUnifiedLeasingRailStepCompleted(detail, step, now)}
@@ -76,8 +82,8 @@ export function LeasingUnifiedWorkflowRail({
       <div className="hidden overflow-x-auto md:block">
         <div className="min-w-[44rem]">
           <WorkflowProgressRail
-            steps={UNIFIED_LEASING_RAIL_STEP_ORDER}
-            labels={UNIFIED_LEASING_RAIL_STEP_LABEL}
+            steps={steps}
+            labels={labels}
             currentStep={displayRailStep}
             liveStep={contentStepToUnifiedRailStep(currentStep, liveRailStep)}
             progressFillIndex={fillIndex}

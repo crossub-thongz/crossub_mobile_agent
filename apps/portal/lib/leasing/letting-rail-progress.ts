@@ -278,6 +278,30 @@ export const UNIFIED_LEASING_RAIL_MOBILE_LABEL: Record<UnifiedLeasingRailStep, s
   [UNIFIED_LEASING_RAIL_STEP.ONBOARDING]: 'Onboarding',
 };
 
+/**
+ * Self-Manage: one rail with the letting phases folded in after the open report, so there is no
+ * separate "Letting phases" box. Results is the applicant results step (`RESULTS` content).
+ */
+export const SELF_MANAGED_LEASING_RAIL_STEP_ORDER: UnifiedLeasingRailStep[] = [
+  UNIFIED_LEASING_RAIL_STEP.ORDER_CREATED,
+  UNIFIED_LEASING_RAIL_STEP.SCHEDULING,
+  UNIFIED_LEASING_RAIL_STEP.SCHEDULED,
+  UNIFIED_LEASING_RAIL_STEP.REPORT_AVAILABLE,
+  UNIFIED_LEASING_RAIL_STEP.APPLICATION,
+  UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK,
+  UNIFIED_LEASING_RAIL_STEP.ONBOARDING,
+];
+
+export const SELF_MANAGED_LEASING_RAIL_STEP_LABEL: Record<UnifiedLeasingRailStep, string> = {
+  ...UNIFIED_LEASING_RAIL_STEP_LABEL,
+  [UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK]: 'Results',
+};
+
+export const SELF_MANAGED_LEASING_RAIL_MOBILE_LABEL: Record<UnifiedLeasingRailStep, string> = {
+  ...UNIFIED_LEASING_RAIL_MOBILE_LABEL,
+  [UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK]: 'Results',
+};
+
 export function unifiedRailStepToContentStep(
   railStep: UnifiedLeasingRailStep,
 ): LeasingLifecycleStep {
@@ -331,13 +355,12 @@ export function deriveUnifiedLeasingRailProgress(
   detail: LeasingPropertyDetail,
   activeStep: LeasingLifecycleStep,
   now: Date = new Date(),
+  stepOrder: UnifiedLeasingRailStep[] = UNIFIED_LEASING_RAIL_STEP_ORDER,
 ): { fillIndex: number } {
   const inspection = deriveLettingRailProgress(detail, now);
   const phase = deriveLeasingPhaseRailProgress(detail, activeStep);
-  const lastIndex = UNIFIED_LEASING_RAIL_STEP_ORDER.length - 1;
-  const phaseOffset = UNIFIED_LEASING_RAIL_STEP_ORDER.indexOf(
-    UNIFIED_LEASING_RAIL_STEP.APPLICATION,
-  );
+  const lastIndex = stepOrder.length - 1;
+  const phaseOffset = stepOrder.indexOf(UNIFIED_LEASING_RAIL_STEP.APPLICATION);
   const fillIndex = isLeasingPhaseStep(activeStep)
     ? phaseOffset + phase.fillIndex
     : inspection.fillIndex;
