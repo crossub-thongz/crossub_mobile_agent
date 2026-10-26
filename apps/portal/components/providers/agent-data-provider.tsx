@@ -107,6 +107,10 @@ import { buildSectionStatus } from '@/lib/section-status';
 import { buildTaskStatusList } from '@/lib/task-status-list';
 import { enrichPropertyAddresses, resolvePropertyDisplayAddress } from '@/lib/property-address';
 import {
+  terminationNoticeHref,
+  terminationNoticeVisibleToAgent,
+} from '@/lib/termination-request/display';
+import {
   fetchAgentInspections,
   fetchOpenInspectionSessions,
   mergeOpenSessionsIntoInspections,
@@ -1495,13 +1499,16 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   const notifications = useMemo<AgentNotification[]>(() => {
     const base: AgentNotification[] = apiNotifications ?? [];
-    const mapped = base.map((n) => ({
-      ...n,
-      read: n.read || readIds.has(n.id),
-      propertyAddress: n.propertyAddress
-        ? resolvePropertyDisplayAddress(properties, undefined, n.propertyAddress)
-        : n.propertyAddress,
-    }));
+    const mapped = base
+      .map((n) => ({
+        ...n,
+        href: terminationNoticeHref(n, properties),
+        read: n.read || readIds.has(n.id),
+        propertyAddress: n.propertyAddress
+          ? resolvePropertyDisplayAddress(properties, undefined, n.propertyAddress)
+          : n.propertyAddress,
+      }))
+      .filter((n) => terminationNoticeVisibleToAgent(n, properties));
     if (!platformBillingDisabled) return mapped;
     return mapped.filter((n) => !isAgentPaymentNotification(n));
   }, [apiNotifications, readIds, properties, platformBillingDisabled]);

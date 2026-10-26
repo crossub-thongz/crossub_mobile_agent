@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { LodgeTerminationRequestDialog } from '@/components/agent/lodge-termination-request-dialog';
 import { PropertyWorkflowCreateDialog } from '@/components/agent/property-workflow-panel';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
@@ -96,7 +97,7 @@ export function PropertyLeasingWorkflowActions({
   const description =
     tab === 'rent_review'
       ? 'Open a rent review case for this property.'
-      : 'Add new leasing cycles and end leasing cases for this property.';
+      : 'Add a new leasing cycle, a vacating case, or a termination request for this property.';
 
   return (
     <>
@@ -136,7 +137,7 @@ export function PropertyLeasingWorkflowActions({
 
       <PropertyWorkflowCreateDialog
         actionId={activeAction}
-        open={activeAction != null}
+        open={activeAction != null && activeAction !== 'lodge_termination'}
         onOpenChange={(open) => {
           if (!open) setActiveAction(null);
         }}
@@ -149,6 +150,19 @@ export function PropertyLeasingWorkflowActions({
         onSuccess={(result) => {
           setActiveAction(null);
           onCreated?.(result);
+        }}
+      />
+
+      <LodgeTerminationRequestDialog
+        open={activeAction === 'lodge_termination'}
+        onOpenChange={(open) => {
+          if (!open) setActiveAction(null);
+        }}
+        property={property}
+        currentLease={currentLease}
+        onLodged={() => {
+          setActiveAction(null);
+          onCreated?.();
         }}
       />
     </>
