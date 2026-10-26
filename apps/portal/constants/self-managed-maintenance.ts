@@ -167,6 +167,48 @@ export const MAINTENANCE_SPLIT_PRIORITY_OPTIONS: readonly {
   { value: 'critical', label: 'Critical (urgent)' },
 ];
 
+export type MaintenanceResponsibility = Schemas['AgentSelfManagedSetResponsibilityDto']['responsibility'];
+
+/** Who can pay for a repair. The landlord is the owner in this app's words. */
+export const MAINTENANCE_RESPONSIBILITY = {
+  LANDLORD: 'landlord',
+  TENANT: 'tenant',
+  STRATA: 'strata',
+} as const satisfies Record<string, MaintenanceResponsibility>;
+
+export const MAINTENANCE_RESPONSIBILITY_OPTIONS: readonly MaintenanceResponsibility[] =
+  Object.values(MAINTENANCE_RESPONSIBILITY);
+
+export const MAINTENANCE_RESPONSIBILITY_LABEL: Record<MaintenanceResponsibility, string> = {
+  landlord: 'Owner',
+  tenant: 'Tenant',
+  strata: 'Strata',
+};
+
+/** A fault's own responsibility, which can also be left unclear. */
+export type MaintenanceIssueResponsibility = NonNullable<
+  Schemas['UpdateMaintenanceIssueDto']['responsibility']
+>;
+
+export const MAINTENANCE_ISSUE_RESPONSIBILITY_LABEL: Record<MaintenanceIssueResponsibility, string> = {
+  landlord: 'Owner',
+  tenant: 'Tenant',
+  strata: 'Strata',
+  unclear: 'Unclear',
+};
+
+export const MAINTENANCE_ISSUE_RESPONSIBILITY_VALUES = Object.keys(
+  MAINTENANCE_ISSUE_RESPONSIBILITY_LABEL,
+) as MaintenanceIssueResponsibility[];
+
+export type OwnerQuoteOutcome = Schemas['AgentSelfManagedOwnerQuoteReplyDto']['outcome'];
+
+/** The owner's answer to a quote the agency emailed them, as the agency records it. */
+export const OWNER_QUOTE_OUTCOME = {
+  APPROVED: 'approved',
+  DECLINED: 'declined',
+} as const satisfies Record<string, OwnerQuoteOutcome>;
+
 export type EscalationStatus = Schemas['AgentMaintenanceEscalationDto']['status'];
 export type EscalationResolutionAction = Schemas['ResolveMaintenanceEscalationDto']['action'];
 export type EscalationOverrideReason = NonNullable<
@@ -177,6 +219,21 @@ export const ESCALATION_STATUS = {
   OPEN: 'open',
   RESOLVED: 'resolved',
 } as const satisfies Record<string, EscalationStatus>;
+
+export type EscalationReason = Schemas['AgentMaintenanceEscalationDto']['reason'];
+
+export const ESCALATION_REASON = {
+  /** Cros named who pays; on Self-Manage it is a recommendation the agency confirms. */
+  RESPONSIBILITY_RECOMMENDED: 'responsibility_recommended',
+} as const satisfies Record<string, EscalationReason>;
+
+/**
+ * Escalations another step answers, so the escalation list leaves them out: Cros's recommended
+ * party is confirmed or changed in Who pays, which resolves it on the server.
+ */
+export const ESCALATION_REASONS_HANDLED_IN_STEPS: readonly EscalationReason[] = [
+  ESCALATION_REASON.RESPONSIBILITY_RECOMMENDED,
+];
 
 export const ESCALATION_RESOLUTION_ACTION = {
   OVERRIDE: 'override',
@@ -230,13 +287,18 @@ export const MAINTENANCE_CASE_EMAIL_INTENT = {
 export const SELF_MANAGED_MAINTENANCE_LIMITS = {
   dismissReasonMin: 3,
   splitDescriptionMin: 3,
-  takeControlReasonMin: 3,
   jobDescriptionMin: 5,
   jobDescriptionMax: 2000,
   issueDescriptionMax: 400,
   issueLocationMax: 200,
   extraQuestionsMax: 10,
   extraQuestionMax: 500,
+  tenantNameMax: 160,
+  tenantEmailMax: 160,
+  tenantPhoneMax: 40,
+  responsibilityReasonMax: 500,
+  ownerMessageMax: 2000,
+  ownerNoteMax: 600,
 } as const;
 
 export const SELF_MANAGED_MAINTENANCE_COPY = {
@@ -320,7 +382,25 @@ export const SELF_MANAGED_MAINTENANCE_COPY = {
   quoteSaved: 'Quote saved',
 
   compareTitle: 'Compare quotes',
-  compareHint: 'Approve one to issue the work order. Declining needs a reason.',
+  compareHint:
+    'Approve one to issue the work order, or email it to the owner first. Declining needs a reason.',
+  sendToOwner: 'Send to owner',
+  sendToOwnerTitle: 'Email this quote to the owner for approval',
+  sendToOwnerHint: (email: string) =>
+    `Goes to ${email} from your agency’s address, with the quote document if the tradie sent one. The owner replies to you; record their answer here.`,
+  ownerEmailLabel: 'Owner email',
+  ownerEmailMissing: 'No owner email on file. Add it to send the quote; it is saved on the property.',
+  ownerMessage: 'Note to the owner (optional)',
+  sendToOwnerConfirm: 'Email quote',
+  sentToOwner: 'Quote emailed to the owner',
+  ownerAwaiting: (when: string) => `Sent to the owner ${when}. Awaiting their reply.`,
+  ownerResent: 'Send again',
+  ownerApprovedAction: 'Owner approved: approve & issue work order',
+  ownerDeclinedAction: 'Owner declined',
+  ownerDeclineNote: 'What the owner said',
+  ownerDeclineConfirm: 'Record decline',
+  ownerApproved: 'Owner’s approval recorded. Work order issued',
+  ownerDeclined: 'Owner’s decline recorded',
   lowest: 'Lowest',
   ownerCopied: 'Owner copied',
   approve: 'Approve',
@@ -390,21 +470,43 @@ export const SELF_MANAGED_MAINTENANCE_COPY = {
   escalationResolved: 'Escalation resolved',
   escalationRaised: (at: string) => `Raised ${at}`,
 
-  manualTitle: 'Automation',
-  manualAutoHint:
-    'The system chases tradies and the tenant and moves the job on by itself. Take control to stop that.',
-  manualHeldHint: (when: string) =>
-    `You took control ${when}. Nothing is sent or moved on automatically until you resume.`,
-  manualReason: 'Why are you taking control?',
-  takeControl: 'Take control',
-  controlTaken: 'You have control of this job',
-  resumeAutomation: 'Resume automation',
-  automationResumed: 'Automation resumed',
+  awaitingQuoteSelfManaged:
+    'Awaiting the tradie’s quote. Nothing is chased automatically on your jobs; follow up with them yourself.',
+  quoteListSelfManagedHint:
+    'Expand a tradie to approve, negotiate or decline their quote. Nothing chases tradies on your jobs automatically, so follow up with them yourself.',
+  advisoryHint:
+    'Nothing on this job is decided or sent automatically. Cros recommends who pays and how to split the report; every step is yours.',
+
+  responsibilityTitle: 'Who pays',
+  responsibilityNone: 'Not decided yet.',
+  responsibilityCurrent: (party: string) => `${party} pays for this repair.`,
+  responsibilityRecommended: (party: string, confidence: number) =>
+    `Cros recommends ${party} (${confidence}% confident).`,
+  responsibilityConfirm: (party: string) => `Confirm ${party}`,
+  responsibilityChange: 'Change',
+  responsibilityChoose: 'Choose who pays',
+  responsibilityParty: 'Who pays',
+  responsibilityReason: 'Why (optional)',
+  responsibilitySave: 'Save',
+  responsibilityHint:
+    'The tenant or strata gets the responsibility notice. Changing it after quotes are out sends the job back to review; it can’t change once a tradie is booked.',
+  responsibilitySaved: 'Responsibility saved',
+
+  workOrderTitle: 'Work order',
+  workOrderIssued: (number: string, name: string | null) =>
+    `${number} issued${name ? ` to ${name}` : ''}.`,
+  workOrderAmount: (amount: string) => `Authorised up to ${amount}.`,
+  workOrderStatus: 'Status',
 
   jobTitle: 'Job details',
   jobEdit: 'Edit job',
   jobDescription: 'Description',
   jobUrgent: 'Urgent',
+  jobTenantTitle: 'Tenant on this job',
+  jobTenantName: 'Tenant name',
+  jobTenantEmail: 'Tenant email',
+  jobTenantPhone: 'Tenant phone',
+  jobTenantNone: 'No tenant on this job.',
   jobSave: 'Save job',
   jobSaved: 'Job updated',
   cancel: 'Cancel',
@@ -416,12 +518,14 @@ export const SELF_MANAGED_MAINTENANCE_COPY = {
   issueTradeNone: 'No trade set',
   issueUrgency: 'Urgency',
   issueUrgencyNone: 'Not set',
+  issueResponsibility: 'Who pays',
+  issueResponsibilityNone: 'Not set',
   issueSave: 'Save fault',
   issueAdd: 'Add a fault',
   issueAdded: 'Fault added',
   aiReview: 'Read the report again with AI',
   aiReviewConfirm:
-    'Read the report again? The faults are picked out afresh; ones you edited are kept. Faults needing different trades become their own jobs.',
+    'Read the report again? The faults are picked out afresh; ones you edited are kept. If they need different trades, Cros suggests separate jobs for you to split.',
   aiReviewDone: 'Report read again',
 
   withdrawTradie: 'Withdraw',

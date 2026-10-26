@@ -6,11 +6,14 @@ import { FieldLabel, SELECT_CLASS } from '@/components/agent/maintenance-self-ma
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  MAINTENANCE_ISSUE_RESPONSIBILITY_LABEL,
+  MAINTENANCE_ISSUE_RESPONSIBILITY_VALUES,
   MAINTENANCE_ISSUE_TRADE_OPTIONS,
   MAINTENANCE_ISSUE_URGENCY_EDIT_OPTIONS,
   MAINTENANCE_ISSUE_URGENCY_LABEL,
   SELF_MANAGED_MAINTENANCE_COPY as COPY,
   SELF_MANAGED_MAINTENANCE_LIMITS as LIMITS,
+  type MaintenanceIssueResponsibility,
   type MaintenanceIssueTrade,
   type MaintenanceIssueUrgency,
 } from '@/constants/self-managed-maintenance';
@@ -22,9 +25,14 @@ export interface IssueFormValues {
   trade: MaintenanceIssueTrade | '';
   /** Empty when no urgency is set. */
   urgency: MaintenanceIssueUrgency | '';
+  /** Empty when nobody is set to pay for this fault. */
+  responsibility: MaintenanceIssueResponsibility | '';
 }
 
-/** A fault's description, location, trade and urgency — adding one the AI missed, or correcting one. */
+/**
+ * A fault's description, location, trade, urgency and who pays — adding one the AI missed, or
+ * correcting one.
+ */
 export function IssueForm({
   initial,
   submitLabel,
@@ -44,6 +52,9 @@ export function IssueForm({
   const [location, setLocation] = useState(initial.location);
   const [trade, setTrade] = useState<MaintenanceIssueTrade | ''>(initial.trade);
   const [urgency, setUrgency] = useState<MaintenanceIssueUrgency | ''>(initial.urgency);
+  const [responsibility, setResponsibility] = useState<MaintenanceIssueResponsibility | ''>(
+    initial.responsibility,
+  );
   // An older normal/urgent value stays pickable so opening the form doesn't hide it.
   const urgencyOptions =
     initial.urgency && !MAINTENANCE_ISSUE_URGENCY_EDIT_OPTIONS.includes(initial.urgency)
@@ -56,6 +67,7 @@ export function IssueForm({
       location: location.trim(),
       trade,
       urgency,
+      responsibility,
     });
     if (ok) onCancel();
   };
@@ -101,24 +113,47 @@ export function IssueForm({
           </select>
         </div>
       </div>
-      <div>
-        <FieldLabel htmlFor={`${id}-urgency`}>{COPY.issueUrgency}</FieldLabel>
-        <select
-          id={`${id}-urgency`}
-          className={SELECT_CLASS}
-          value={urgency}
-          disabled={busy}
-          onChange={(e) => setUrgency(e.target.value as MaintenanceIssueUrgency | '')}
-        >
-          <option value="" disabled={initial.urgency !== ''}>
-            {COPY.issueUrgencyNone}
-          </option>
-          {urgencyOptions.map((option) => (
-            <option key={option} value={option}>
-              {MAINTENANCE_ISSUE_URGENCY_LABEL[option]}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <FieldLabel htmlFor={`${id}-urgency`}>{COPY.issueUrgency}</FieldLabel>
+          <select
+            id={`${id}-urgency`}
+            className={SELECT_CLASS}
+            value={urgency}
+            disabled={busy}
+            onChange={(e) => setUrgency(e.target.value as MaintenanceIssueUrgency | '')}
+          >
+            <option value="" disabled={initial.urgency !== ''}>
+              {COPY.issueUrgencyNone}
             </option>
-          ))}
-        </select>
+            {urgencyOptions.map((option) => (
+              <option key={option} value={option}>
+                {MAINTENANCE_ISSUE_URGENCY_LABEL[option]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <FieldLabel htmlFor={`${id}-responsibility`}>{COPY.issueResponsibility}</FieldLabel>
+          <select
+            id={`${id}-responsibility`}
+            className={SELECT_CLASS}
+            value={responsibility}
+            disabled={busy}
+            onChange={(e) =>
+              setResponsibility(e.target.value as MaintenanceIssueResponsibility | '')
+            }
+          >
+            <option value="" disabled={initial.responsibility !== ''}>
+              {COPY.issueResponsibilityNone}
+            </option>
+            {MAINTENANCE_ISSUE_RESPONSIBILITY_VALUES.map((option) => (
+              <option key={option} value={option}>
+                {MAINTENANCE_ISSUE_RESPONSIBILITY_LABEL[option]}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" disabled={busy || !description.trim()} onClick={() => void submit()}>

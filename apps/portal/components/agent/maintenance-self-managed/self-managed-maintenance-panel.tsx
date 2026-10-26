@@ -14,7 +14,6 @@ import { InviteTradiesStep } from '@/components/agent/maintenance-self-managed/i
 import { InvitedTradiesStep } from '@/components/agent/maintenance-self-managed/invited-tradies-step';
 import { IssueTriageStep } from '@/components/agent/maintenance-self-managed/issue-triage-step';
 import { JobDetailsStep } from '@/components/agent/maintenance-self-managed/job-details-step';
-import { ManualControlStep } from '@/components/agent/maintenance-self-managed/manual-control-step';
 import { QuoteCompareStep } from '@/components/agent/maintenance-self-managed/quote-compare-step';
 import {
   EnterQuoteStep,
@@ -24,7 +23,9 @@ import {
   CombineJobStep,
   SplitJobStep,
 } from '@/components/agent/maintenance-self-managed/split-combine-step';
+import { ResponsibilityStep } from '@/components/agent/maintenance-self-managed/responsibility-step';
 import { UrgentDecisionStep } from '@/components/agent/maintenance-self-managed/urgent-decision-step';
+import { WorkOrderStep } from '@/components/agent/maintenance-self-managed/work-order-step';
 import { Button } from '@/components/ui/button';
 import { SELF_MANAGED_MAINTENANCE_COPY as COPY } from '@/constants/self-managed-maintenance';
 import { useSelfManagedMaintenance } from '@/hooks/use-self-managed-maintenance';
@@ -34,7 +35,8 @@ import { cn, formatCurrency } from '@/lib/utils';
 /**
  * Self-Manage maintenance actions on one job (Phase 1): the steps a CROSSUB Account Manager runs,
  * shown only when they apply to the job's current stage. The server copies the owner on quote
- * decisions above the repair limit, and on sign-off.
+ * decisions above the repair limit, and on sign-off. Nothing on the job runs by itself: the
+ * server records Cros's calls as recommendations (who pays, separate jobs) for the agent to take.
  */
 export function SelfManagedMaintenancePanel({
   requestId,
@@ -88,13 +90,8 @@ export function SelfManagedMaintenancePanel({
           ? COPY.ownerCopyNoLimit
           : COPY.ownerCopyLimit(formatCurrency(detail.spendThreshold))}
       </p>
+      <p className="text-muted-foreground text-xs">{COPY.advisoryHint}</p>
 
-      <ManualControlStep
-        requestId={requestId}
-        manualControl={detail.manualControl}
-        busy={busy}
-        run={run}
-      />
       {steps.escalations.length > 0 ? (
         <EscalationStep
           requestId={requestId}
@@ -127,6 +124,8 @@ export function SelfManagedMaintenancePanel({
         />
       ) : null}
       {steps.compareQuotes ? <QuoteCompareStep detail={detail} busy={busy} run={run} /> : null}
+      {steps.workOrder && detail.workOrder ? <WorkOrderStep workOrder={detail.workOrder} /> : null}
+      <ResponsibilityStep detail={detail} busy={busy} run={run} />
       <JobDetailsStep detail={detail} busy={busy} run={run} />
       {steps.triage ? (
         <IssueTriageStep requestId={requestId} issues={steps.issues} busy={busy} run={run} />

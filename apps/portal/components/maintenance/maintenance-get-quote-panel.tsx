@@ -44,6 +44,8 @@ import { MaintenanceContractorRfqReminderCountdown } from '@/components/maintena
 import { MaintenanceQuotationApprovalReminderCountdown } from '@/components/maintenance/maintenance-quotation-approval-reminder-countdown';
 import { MaintenanceContractorEvidenceRequestsPanel } from '@/components/maintenance/maintenance-contractor-evidence-requests-panel';
 import { mergeQuotationsForCase } from '@/lib/maintenance/fetch-maintenance-case';
+import { SELF_MANAGED_MAINTENANCE_COPY } from '@/constants/self-managed-maintenance';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 
 function reviewForContractor(
   reviews: QuotationReviewRecord[] | undefined,
@@ -97,6 +99,7 @@ function ContractorQuoteCollapsible({
   onCaseUpdated,
   workflowRequest,
   maintenanceReminders,
+  chasesAutomatically,
 }: {
   contractorName: string;
   contractorId: string;
@@ -110,6 +113,8 @@ function ContractorQuoteCollapsible({
   onCaseUpdated?: () => Promise<void>;
   workflowRequest?: ApiMaintenanceRequest | null;
   maintenanceReminders?: ApiMaintenanceState['maintenanceReminders'];
+  /** False on Self-Manage, where nothing chases the tradie on a timer. */
+  chasesAutomatically: boolean;
 }) {
   const [viewingPreviousId, setViewingPreviousId] = useState<string | null>(null);
   const requotedAwaitingAgent = isContractorRequotedAwaitingAgent(review, submitted);
@@ -191,7 +196,7 @@ function ContractorQuoteCollapsible({
         >
           <p className="truncate text-sm font-semibold">{contractorName}</p>
           <p className="text-muted-foreground mt-0.5 text-xs">{statusLabel}</p>
-          {!submitted && workflowRequest ? (
+          {!submitted && workflowRequest && chasesAutomatically ? (
             <MaintenanceContractorRfqReminderCountdown
               contractorId={contractorId}
               request={workflowRequest}
@@ -307,6 +312,8 @@ export function MaintenanceGetQuotePanel({
 }) {
   const [suggestions, setSuggestions] = useState<MaintenanceContractorSuggestion[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
+  // Self-Manage: the server sends no chasers and re-sources nobody, so no countdown is shown.
+  const chasesAutomatically = !useIsPropertySelfManaged(ctx.item.propertyId);
 
   const quotes = useMemo(
     () =>
@@ -431,10 +438,16 @@ export function MaintenanceGetQuotePanel({
       <section className="rounded-xl border bg-card p-4">
         <p className="text-sm font-semibold">Repair quotations</p>
         <p className="text-muted-foreground mt-1 text-xs">
-          Expand a contractor to approve, negotiate, reject, or send the quotation to the landlord.
-          Reminders are sent every 4 hours (up to 3 per contractor) until they respond; if none reply, the system auto-reselects 3 new contractors.
+          {chasesAutomatically ? (
+            <>
+              Expand a contractor to approve, negotiate, reject, or send the quotation to the landlord.
+              Reminders are sent every 4 hours (up to 3 per contractor) until they respond; if none reply, the system auto-reselects 3 new contractors.
+            </>
+          ) : (
+            SELF_MANAGED_MAINTENANCE_COPY.quoteListSelfManagedHint
+          )}
         </p>
-        {workflowRequest?.status === 'pending_approval' ? (
+        {workflowRequest?.status === 'pending_approval' && chasesAutomatically ? (
           <MaintenanceQuotationApprovalReminderCountdown
             request={workflowRequest}
             reminders={maintenanceReminders}
@@ -474,6 +487,7 @@ export function MaintenanceGetQuotePanel({
                   onCaseUpdated={onCaseUpdated}
                   workflowRequest={workflowRequest}
                   maintenanceReminders={maintenanceReminders}
+                  chasesAutomatically={chasesAutomatically}
                 />
               );
             })}
