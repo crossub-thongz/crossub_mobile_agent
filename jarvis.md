@@ -62,7 +62,7 @@ Review items: AI-003, AI-012, AI-013.
 
 ### 1.3 Confirm card and AI log
 
-- [x] One confirm card for every write tool (exact change, Confirm, Cancel), generalising the email draft. Backend `crossub_web` 439e96a33 (contract 0.46.0): unconfirmed write calls return a signed proposal (15 min, bound to the officer); `POST /v1/agent/gii/confirm` runs exactly that call. Portal `GiiProposalCard`; a new message clears an open card. On the agent app every write in chat only proposes, so Confirm is the only way a change runs (d007cb942); a property update checks clashes when proposing and the card shows the value it replaces. A maintenance job with photos still confirms in words. Staging check passed on d007cb94.
+- [x] One confirm card for every write tool (exact change, Confirm, Cancel), generalising the email draft. Backend `crossub_web` 439e96a33 (contract 0.46.0): unconfirmed write calls return a signed proposal (15 min, bound to the officer); `POST /v1/agent/gii/confirm` runs exactly that call. Portal `GiiProposalCard`; a new message clears an open card. On the agent app every write in chat only proposes, so Confirm is the only way a change runs (d007cb942); a property update checks clashes when proposing and the card shows the value it replaces. On the agent app a replacement goes straight to the card, "2 (replaces 1)", with no question in words first (347d7e728). A maintenance job with photos still confirms in words. Staging check passed on d007cb94; card wording passed on 347d7e72. A card turn where Cros writes no sentence showed "Sorry, I could not complete that"; fixed in 524de54b1, not yet on staging.
 - [x] Write an `AiDecision` row for every Gii write (action, risk, source record, approver, result). `crossub_web` e18596a68: `GiiActionLedgerService`, outcome RECOMMENDED + new reason `USER_CONFIRMED`, resolved ACCEPTED by the officer, effects and property timeline. Staging check passed: one row per Confirm, none for a typed yes or a Cancel.
 - [x] `GII_MAX_TURNS` 6 to 12 done (e18596a68). Model: `AI_GII_MODEL` setting added, default still Haiku 4.5; switching to Sonnet 5.5 is under Open questions (model budget).
 
@@ -162,4 +162,6 @@ Review items: AI-016 (spoken English first).
 | 2026-10-26 | 1.2 | Long chats: older turns folded into notes, `POST /agent/gii/summarise` (contract 0.48.0) |
 | 2026-10-26 | 1.4 | Read tools: inbox, arrears, notifications on the agent chat (crossub_web 54102dedf) |
 | 2026-10-26 | 1.3 | Done. Agent app changes run only from Confirm; clash checked at proposal, card shows the value replaced (crossub_web d007cb942); staging retest passed |
-| 2026-10-26 | 1.3 | Cros mentions a card only when one was made, never says updated before Confirm (crossub_web ab94087f6) |
+| 2026-10-26 | 1.3 | Cros mentions a card only when one was made, never says updated before Confirm (crossub_web ab94087f6); staging retest still showed "press Confirm there" with no card after a typed yes |
+| 2026-10-26 | 1.3 | Agent app: a property replacement goes straight to the card showing what it replaces (crossub_web 347d7e728); staging retest passed, ledger one row per Confirm |
+| 2026-10-26 | 1.3 | A card turn with no sentence from Cros says the card is waiting instead of "could not complete" (crossub_web 524de54b1, not pushed) |
