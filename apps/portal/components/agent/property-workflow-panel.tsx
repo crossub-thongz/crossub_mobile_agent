@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { useEmailVerificationGuard } from '@/hooks/use-email-verification-guard';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import {
   createAgentLeasingCycle,
   createAgentMaintenanceRequest,
@@ -319,6 +320,7 @@ export function PropertyWorkflowCreateDialog({
 }) {
   const { refresh, apiConnected } = useAgentData();
   const isV2 = useIsAgentUiV2();
+  const selfManaged = useIsPropertySelfManaged(propertyId);
   const inspectionOnly = isInspectionOnlyLevel(
     resolvePortalServiceLevel(agency?.portalServiceLevel),
   );
@@ -620,7 +622,8 @@ export function PropertyWorkflowCreateDialog({
             const store = useLeasingWorkflowStore.getState();
             store.ensureDetail(propertyId, formatPropertyFullAddress(property), rent);
             store.applyCycleView(propertyId, view);
-            const nextStep = crossubConductsOpen
+            // Self-Manage: the agency schedules its opens next, so stay on Scheduling.
+            const nextStep = crossubConductsOpen || selfManaged
               ? LEASING_LIFECYCLE_STEP.OPEN_INSPECTION
               : LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL;
             store.resetActiveStepToHint(propertyId, nextStep);
