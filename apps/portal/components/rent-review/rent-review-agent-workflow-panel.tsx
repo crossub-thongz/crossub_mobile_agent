@@ -11,6 +11,7 @@ import type { CommSendDraft } from '@/components/rent-review/rent-review-email-l
 import { RentReviewAgentConfirmedPanel } from '@/components/rent-review/rent-review-agent-confirmed-panel';
 import { RentReviewCompletedPanel } from '@/components/rent-review/rent-review-completed-panel';
 import { RentReviewResearchPanel } from '@/components/rent-review/rent-review-research-panel';
+import { RentReviewSelfManagedActions } from '@/components/rent-review/rent-review-self-managed-actions';
 import { RentReviewStageEmailHistory } from '@/components/rent-review/rent-review-email-log';
 import { RentReviewNegotiationPanel } from '@/components/rent-review/rent-review-negotiation-panel';
 import { RentReviewTenantDecisionPanel } from '@/components/rent-review/rent-review-tenant-decision-panel';
@@ -29,6 +30,7 @@ import {
   applyManagingAgentFromEmail,
   resolveRentReviewAgentEmail,
 } from '@/lib/rent-review/agent-email';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { buildPropertyWorkflowEmailContacts } from '@/lib/job-case-email-recipients';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
@@ -84,6 +86,7 @@ export function RentReviewAgentWorkflowPanel({
   const { properties, agencies } = useAgentData();
   const { user } = useAuth();
   const runMutation = useRentReviewStore((s) => s.runMutation);
+  const selfManaged = useIsPropertySelfManaged(detail.propertyId);
   const property = properties.find((p) => p.id === detail.propertyId);
   const agency = agencies.find((a) => a.id === property?.agencyId);
   const agentEmail = resolveRentReviewAgentEmail({
@@ -258,6 +261,8 @@ export function RentReviewAgentWorkflowPanel({
         />
       </div>
       </TaskWorkflowRailPortal>
+
+      {selfManaged ? <RentReviewSelfManagedActions detail={detail} onUpdated={onUpdated} /> : null}
 
       <div className="rounded-xl border bg-card">
         <div className="border-b px-3 py-3 md:px-4">

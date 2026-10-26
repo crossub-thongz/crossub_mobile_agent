@@ -11,6 +11,7 @@ import {
   INSPECTION_STATUS,
   LEASING_LIFECYCLE_STEP,
   MAINTENANCE_STATUS,
+  RENT_REVIEW_WORKFLOW_STATE,
 } from '@/constants/api-enums';
 import { LEASING_MAIN_STATUS } from '@/constants/leasing-relet-decision';
 import type { Inspection } from '@/lib/types';
@@ -234,7 +235,71 @@ export const LEASING_WORKSPACE_COPY: ModuleWorkspaceCopy = {
 export const LEASING_WORKSPACE_PANE_COPY = {
   title: 'Letting workspace',
   loading: 'Loading the letting…',
-  closed: 'This letting is closed. Open the full job for its history.',
+  closed: 'This letting is closed. Open the full job for its history and the tenancy.',
+} as const;
+
+// ---------------------------------------------------------------------------
+// Leasing — tenancy reviews (rent reviews and lease renewals) by workflow state
+// ---------------------------------------------------------------------------
+
+export const TENANCY_REVIEW_LANE = {
+  AWAITING_YOU: 'awaiting_you',
+  AWAITING_TENANT: 'awaiting_tenant',
+  FINALISING: 'finalising',
+  COMPLETED: 'completed',
+  CLOSED: 'closed',
+} as const;
+export type TenancyReviewLane = (typeof TENANCY_REVIEW_LANE)[keyof typeof TENANCY_REVIEW_LANE];
+
+export const TENANCY_REVIEW_LANES: readonly ModuleLaneDefinition<TenancyReviewLane>[] = [
+  { id: TENANCY_REVIEW_LANE.AWAITING_YOU, label: 'Awaiting you', tone: MODULE_LANE_TONE.ATTENTION },
+  { id: TENANCY_REVIEW_LANE.AWAITING_TENANT, label: 'Awaiting tenant', tone: MODULE_LANE_TONE.WAITING },
+  { id: TENANCY_REVIEW_LANE.FINALISING, label: 'Finalising', tone: MODULE_LANE_TONE.ACTIVE },
+  { id: TENANCY_REVIEW_LANE.COMPLETED, label: 'Completed', tone: MODULE_LANE_TONE.DONE },
+  { id: TENANCY_REVIEW_LANE.CLOSED, label: 'Closed', tone: MODULE_LANE_TONE.MUTED },
+];
+
+export type RentReviewApiState =
+  (typeof RENT_REVIEW_WORKFLOW_STATE)[keyof typeof RENT_REVIEW_WORKFLOW_STATE];
+
+export const TENANCY_REVIEW_STATE_LANE: Record<RentReviewApiState, TenancyReviewLane> = {
+  [RENT_REVIEW_WORKFLOW_STATE.PENDING_CONFIRMATION]: TENANCY_REVIEW_LANE.AWAITING_YOU,
+  [RENT_REVIEW_WORKFLOW_STATE.AGENT_REVIEW]: TENANCY_REVIEW_LANE.AWAITING_YOU,
+  // A counter or a decline is back with the agency for the owner's instruction.
+  [RENT_REVIEW_WORKFLOW_STATE.NEGOTIATION]: TENANCY_REVIEW_LANE.AWAITING_YOU,
+  [RENT_REVIEW_WORKFLOW_STATE.TENANT_REJECTED]: TENANCY_REVIEW_LANE.AWAITING_YOU,
+  [RENT_REVIEW_WORKFLOW_STATE.TENANT_NOTIFIED]: TENANCY_REVIEW_LANE.AWAITING_TENANT,
+  [RENT_REVIEW_WORKFLOW_STATE.TENANT_ACCEPTED]: TENANCY_REVIEW_LANE.FINALISING,
+  [RENT_REVIEW_WORKFLOW_STATE.ACCOUNTING]: TENANCY_REVIEW_LANE.FINALISING,
+  [RENT_REVIEW_WORKFLOW_STATE.COMPLETED]: TENANCY_REVIEW_LANE.COMPLETED,
+  [RENT_REVIEW_WORKFLOW_STATE.CANCELLED]: TENANCY_REVIEW_LANE.CLOSED,
+  [RENT_REVIEW_WORKFLOW_STATE.POSTPONED]: TENANCY_REVIEW_LANE.CLOSED,
+};
+
+export const TENANCY_REVIEW_WORKSPACE_COPY: ModuleWorkspaceCopy = {
+  title: 'Tenancy reviews',
+  description: 'Rent reviews and lease renewals you run, from the pathway to the new rent.',
+  searchPlaceholder: 'Search address or tenant…',
+  emptyTitle: 'No tenancy reviews yet',
+  emptyDescription: 'Start a rent review from a property to see it here.',
+  noMatchTitle: 'No reviews match',
+  detailPlaceholder: 'Select a review to work on it here.',
+};
+
+/** The Leasing page's two lists: lettings and tenancy reviews. */
+export const LEASING_PAGE_VIEW = {
+  LETTINGS: 'lettings',
+  TENANCY_REVIEWS: 'tenancy_reviews',
+} as const;
+export type LeasingPageView = (typeof LEASING_PAGE_VIEW)[keyof typeof LEASING_PAGE_VIEW];
+
+export const LEASING_PAGE_VIEW_LABEL: Record<LeasingPageView, string> = {
+  [LEASING_PAGE_VIEW.LETTINGS]: 'Lettings',
+  [LEASING_PAGE_VIEW.TENANCY_REVIEWS]: 'Tenancy reviews',
+};
+
+export const TENANCY_REVIEW_PANE_COPY = {
+  title: 'Review workspace',
 } as const;
 
 export const MODULE_WORKSPACE_LABELS = {
@@ -270,4 +335,6 @@ export const MODULE_FIELD_LABELS = {
   completed: 'Completed',
   description: 'Description',
   report: 'Report',
+  tenant: 'Tenant',
+  reviewDue: 'Review due',
 } as const;

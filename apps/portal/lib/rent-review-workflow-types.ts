@@ -75,6 +75,8 @@ export interface ServerRentReviewWorkflowView {
   orderNumber: string | null;
   status: ServerRentReviewLegacyStatus;
   workflowState: ServerRentReviewWorkflowState;
+  /** Tenancy Review pathway; null until it is chosen. */
+  reviewKind?: 'rent_review' | 'lease_renewal' | null;
   agentDecision: ServerRentReviewAgentDecision | null;
   tenantName: string | null;
   currentWeeklyRent: number | null;

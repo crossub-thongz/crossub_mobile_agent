@@ -10,6 +10,9 @@ import { RentReviewEmailToLandlordDialog } from '@/components/rent-review/rent-r
 import { RentReviewNoticePayableFromField } from '@/components/rent-review/rent-review-notice-payable-from-field';
 import { RentReviewResearchResultSection } from '@/components/rent-review/rent-review-research-result-section';
 import { RentResearchPlatformsPanel } from '@/components/rent-review/rent-research-platforms-panel';
+import { TENANCY_REVIEW_COPY } from '@/constants/self-managed-tenancy-review';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
+import { runTenancyReviewMarketResearch } from '@/lib/crossub-api/agent-tenancy-review-client';
 import {
   buildPropertyWorkflowEmailContacts,
   landlordWorkflowEmailContacts,
@@ -25,6 +28,7 @@ import {
   needsRentReviewPathwayConfirm,
 } from '@/lib/rent-review/agent-workflow-model';
 import { rentReviewApi } from '@/lib/rent-review-api';
+import { runSelfManagedReviewWrite } from '@/lib/rent-review/self-managed-review';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
@@ -55,9 +59,13 @@ export function RentReviewResearchPanel({
       ? property.homeOwnerName
       : landlordFromContacts?.name;
 
+  const selfManaged = useIsPropertySelfManaged(detail.propertyId);
   const researchRequested = hasResearchRequested(detail);
   const researchComplete = hasMarketResearchComplete(detail);
-  const canViewResults = canAgentViewResearchResults(detail);
+  // Self-Manage runs the research itself, so the result is the agent's as soon as it lands;
+  // other plans see it once CROSSUB sends the research pack.
+  const canViewResults =
+    canAgentViewResearchResults(detail) || (selfManaged && researchComplete);
   const landlordEmailed = hasLandlordResearchPackSent(detail);
   const landlordSkipped = hasLandlordResearchPackSkipped(detail);
   // The pack has gone but quotes a rate the agent has since changed. This re-opens the send
@@ -142,10 +150,14 @@ export function RentReviewResearchPanel({
     try {
       const updated = await runMutation(
         detail.id,
-        rentReviewApi.requestMarketResearch(detail.id, detail.propertyId!, detail.leaseEndDate),
+        selfManaged
+          ? runSelfManagedReviewWrite(detail, (p, r) => runTenancyReviewMarketResearch(p, r))
+          : rentReviewApi.requestMarketResearch(detail.id, detail.propertyId!, detail.leaseEndDate),
       );
       onUpdated?.(updated);
-      toast.success('Admin notified to conduct market research');
+      toast.success(
+        selfManaged ? TENANCY_REVIEW_COPY.researchDone : 'Admin notified to conduct market research',
+      );
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
@@ -155,14 +167,17 @@ export function RentReviewResearchPanel({
 
   return (
     <div className="space-y-4">
-      {!researchRequested && !researchComplete ? (
+      {!researchComplete && (selfManaged || !researchRequested) ? (
         <section className="rounded-xl border border-primary/30 bg-primary/5 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-semibold">Request market research</p>
+              <p className="text-sm font-semibold">
+                {selfManaged ? TENANCY_REVIEW_COPY.researchTitle : 'Request market research'}
+              </p>
               <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                Notify the admin portal to run NSW Fair Trading, RP Data, and REA.com.au research for
-                this property.
+                {selfManaged
+                  ? TENANCY_REVIEW_COPY.researchHint
+                  : 'Notify the admin portal to run NSW Fair Trading, RP Data, and REA.com.au research for this property.'}
               </p>
             </div>
             <Button
@@ -172,7 +187,7 @@ export function RentReviewResearchPanel({
               onClick={() => void requestResearch()}
             >
               {requesting ? <Loader2 className="size-4 animate-spin" /> : <Bell className="size-4" />}
-              Notify admin
+              {selfManaged ? TENANCY_REVIEW_COPY.runResearch : 'Notify admin'}
             </Button>
           </div>
         </section>
@@ -193,7 +208,7 @@ export function RentReviewResearchPanel({
         </section>
       ) : null}
 
-      {researchRequested && !researchComplete && !canViewResults ? (
+      {researchRequested && !researchComplete && !canViewResults && !selfManaged ? (
         <section className="rounded-xl border border-dashed border-border/80 bg-muted/20 p-4">
           <div className="flex items-start gap-3">
             <Clock className="text-muted-foreground mt-0.5 size-5 shrink-0" />

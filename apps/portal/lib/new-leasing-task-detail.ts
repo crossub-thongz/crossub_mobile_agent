@@ -27,6 +27,9 @@ export type NewLeasingTaskTab =
   | 'documents'
   | 'notes';
 
+/** The leasing job's Applicants tab — not shown on Self-Manage, which has no application path. */
+export const NEW_LEASING_APPLICANTS_TAB: NewLeasingTaskTab = 'applicants';
+
 export type NewLeasingTaskStageState = 'complete' | 'current' | 'pending';
 
 function leasingApplications(detail: LeasingPropertyDetail): LeasingApplicationDetail[] {

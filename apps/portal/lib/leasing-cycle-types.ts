@@ -314,6 +314,8 @@ export interface ServerLeasingCycleView extends ServerLeasingCycleSummary {
   tenancyAgreementId: string | null
   timeline: ServerLeasingTimelineEvent[]
   applicationScreeningSkipped: boolean
+  /** Self-Manage "Create tenancy": the agency recorded the tenancy and the letting closed onto it. */
+  tenancyRecordedByAgency?: boolean
   relet?: ServerLeasingRelet
   lettingTerms?: ServerLeasingLettingTerms
 }

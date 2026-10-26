@@ -17,15 +17,19 @@ export function OpenInspectionOpenStage({
   onSessionChange,
   apiConnected = true,
   inspectionId: inspectionIdOverride,
+  hideApplyLink = false,
 }: {
   session: OpenInspectionSession;
   onSessionChange?: (session: OpenInspectionSession) => void;
   apiConnected?: boolean;
   /** Fallback when the session payload has not yet resolved the pool inspection id. */
   inspectionId?: string | null;
+  /** Self-Manage has no application path: the agency records the tenancy under Results. */
+  hideApplyLink?: boolean;
 }) {
   const checkInUrl = useMemo(() => resolveOpenInspectionCheckInUrl(session), [session]);
-  const applyUrl = useMemo(() => resolveOpenInspectionApplyUrl(session), [session]);
+  const resolvedApplyUrl = useMemo(() => resolveOpenInspectionApplyUrl(session), [session]);
+  const applyUrl = hideApplyLink ? null : resolvedApplyUrl;
   const inspectionComplete = session.sessionStatus === SessionStatusEnum.CLOSED;
   const resolvedInspectionId = inspectionIdOverride ?? session.inspectionId;
 

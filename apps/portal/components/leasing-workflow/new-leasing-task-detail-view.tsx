@@ -47,6 +47,7 @@ import {
   buildNewLeasingWhatsNextCards,
   newLeasingTaskReference,
   resolveNewLeasingStatusBanner,
+  NEW_LEASING_APPLICANTS_TAB,
   type NewLeasingTaskTab,
 } from '@/lib/new-leasing-task-detail';
 import {
@@ -351,7 +352,10 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
 
             <div className="border-b" data-tour="workflow-tabs">
               <div className="flex gap-1 overflow-x-auto">
-                {TABS.map((tab) => (
+                {(selfManaged
+                  ? TABS.filter((tab) => tab.id !== NEW_LEASING_APPLICANTS_TAB)
+                  : TABS
+                ).map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
@@ -456,7 +460,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
               </div>
             ) : null}
 
-            {activeTab === 'applicants' ? (
+            {activeTab === NEW_LEASING_APPLICANTS_TAB && !selfManaged ? (
               <section className="space-y-3">
                 {applications.length ? (
                   applications.map((application) => (

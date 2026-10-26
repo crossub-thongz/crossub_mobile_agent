@@ -280,14 +280,15 @@ export const UNIFIED_LEASING_RAIL_MOBILE_LABEL: Record<UnifiedLeasingRailStep, s
 
 /**
  * Self-Manage: one rail with the letting phases folded in after the open report, so there is no
- * separate "Letting phases" box. Results is the applicant results step (`RESULTS` content).
+ * separate "Letting phases" box. There is no Application step: the agency records the tenancy it
+ * let itself under Results ("Create tenancy", `RESULTS` content), and the last step shows that
+ * tenancy (`ONBOARDING` content, labelled Tenancy).
  */
 export const SELF_MANAGED_LEASING_RAIL_STEP_ORDER: UnifiedLeasingRailStep[] = [
   UNIFIED_LEASING_RAIL_STEP.ORDER_CREATED,
   UNIFIED_LEASING_RAIL_STEP.SCHEDULING,
   UNIFIED_LEASING_RAIL_STEP.SCHEDULED,
   UNIFIED_LEASING_RAIL_STEP.REPORT_AVAILABLE,
-  UNIFIED_LEASING_RAIL_STEP.APPLICATION,
   UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK,
   UNIFIED_LEASING_RAIL_STEP.ONBOARDING,
 ];
@@ -295,12 +296,52 @@ export const SELF_MANAGED_LEASING_RAIL_STEP_ORDER: UnifiedLeasingRailStep[] = [
 export const SELF_MANAGED_LEASING_RAIL_STEP_LABEL: Record<UnifiedLeasingRailStep, string> = {
   ...UNIFIED_LEASING_RAIL_STEP_LABEL,
   [UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK]: 'Results',
+  [UNIFIED_LEASING_RAIL_STEP.ONBOARDING]: 'Tenancy',
 };
 
 export const SELF_MANAGED_LEASING_RAIL_MOBILE_LABEL: Record<UnifiedLeasingRailStep, string> = {
   ...UNIFIED_LEASING_RAIL_MOBILE_LABEL,
   [UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK]: 'Results',
+  [UNIFIED_LEASING_RAIL_STEP.ONBOARDING]: 'Tenancy',
 };
+
+/** Self-Manage letting phases on the rail, in order (no Application step). */
+const SELF_MANAGED_PHASE_STEP_ORDER: LeasingLifecycleStep[] = [
+  LEASING_LIFECYCLE_STEP.RESULTS,
+  LEASING_LIFECYCLE_STEP.ONBOARDING,
+];
+
+/**
+ * Self-Manage has no Application step, so a letting the server still holds at application
+ * approval opens on Results, where the agency creates the tenancy.
+ */
+export function selfManagedLeasingContentStep(step: LeasingLifecycleStep): LeasingLifecycleStep {
+  return step === LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL ? LEASING_LIFECYCLE_STEP.RESULTS : step;
+}
+
+/** A phase step is done on its own terms, or once a Self-Manage agency recorded the tenancy. */
+function isLettingPhaseStepDone(
+  detail: LeasingPropertyDetail,
+  step: LeasingLifecycleStep,
+): boolean {
+  return detail.tenancyRecordedByAgency === true || isLeasingPhaseStepCompleted(detail, step);
+}
+
+function selfManagedRailFillIndex(
+  detail: LeasingPropertyDetail,
+  activeStep: LeasingLifecycleStep,
+  inspectionFillIndex: number,
+  stepOrder: UnifiedLeasingRailStep[],
+): number {
+  const lastIndex = stepOrder.length - 1;
+  if (detail.tenancyRecordedByAgency === true) return lastIndex;
+  const phaseStep = selfManagedLeasingContentStep(activeStep);
+  const phaseIndex = SELF_MANAGED_PHASE_STEP_ORDER.indexOf(phaseStep);
+  if (phaseIndex < 0) return Math.min(inspectionFillIndex, lastIndex);
+  const offset = stepOrder.indexOf(UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK);
+  const fill = offset + phaseIndex + (isLettingPhaseStepDone(detail, phaseStep) ? 0 : 0.5);
+  return Math.min(fill, lastIndex);
+}
 
 export function unifiedRailStepToContentStep(
   railStep: UnifiedLeasingRailStep,
@@ -358,6 +399,12 @@ export function deriveUnifiedLeasingRailProgress(
   stepOrder: UnifiedLeasingRailStep[] = UNIFIED_LEASING_RAIL_STEP_ORDER,
 ): { fillIndex: number } {
   const inspection = deriveLettingRailProgress(detail, now);
+  // A rail without the Application step is the Self-Manage one.
+  if (!stepOrder.includes(UNIFIED_LEASING_RAIL_STEP.APPLICATION)) {
+    return {
+      fillIndex: selfManagedRailFillIndex(detail, activeStep, inspection.fillIndex, stepOrder),
+    };
+  }
   const phase = deriveLeasingPhaseRailProgress(detail, activeStep);
   const lastIndex = stepOrder.length - 1;
   const phaseOffset = stepOrder.indexOf(UNIFIED_LEASING_RAIL_STEP.APPLICATION);
@@ -376,9 +423,9 @@ export function isUnifiedLeasingRailStepCompleted(
     case UNIFIED_LEASING_RAIL_STEP.APPLICATION:
       return isLeasingPhaseStepCompleted(detail, LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL);
     case UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK:
-      return isLeasingPhaseStepCompleted(detail, LEASING_LIFECYCLE_STEP.RESULTS);
+      return isLettingPhaseStepDone(detail, LEASING_LIFECYCLE_STEP.RESULTS);
     case UNIFIED_LEASING_RAIL_STEP.ONBOARDING:
-      return isLeasingPhaseStepCompleted(detail, LEASING_LIFECYCLE_STEP.ONBOARDING);
+      return isLettingPhaseStepDone(detail, LEASING_LIFECYCLE_STEP.ONBOARDING);
     default:
       return isLettingRailStepCompleted(detail, step, now);
   }

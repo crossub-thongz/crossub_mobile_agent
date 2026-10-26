@@ -251,6 +251,8 @@ export interface LeasingPropertyDetail {
   cycleId?: string;
   /** False when the agent NL case closed after applicant results were sent. */
   cycleActive?: boolean;
+  /** Self-Manage: the agency recorded the tenancy itself ("Create tenancy"). */
+  tenancyRecordedByAgency?: boolean;
   agentInfo: LeasingAgentInfo;
   rental: LeasingRentalInfo;
   activeStepHint: LeasingLifecycleStep;

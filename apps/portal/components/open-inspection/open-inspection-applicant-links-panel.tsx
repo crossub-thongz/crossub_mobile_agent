@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { OpenInspectionOpenStage } from '@/components/open-inspection/open-inspection-open-stage';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 
 export function OpenInspectionApplicantLinksPanel({
@@ -17,6 +18,7 @@ export function OpenInspectionApplicantLinksPanel({
   apiConnected: boolean;
   inspectionId?: string | null;
 }) {
+  const selfManaged = useIsPropertySelfManaged(propertyId);
   const [session, setSession] = useState<OpenInspectionSession>(
     () => ({ id: viewingSessionId, propertyId }) as OpenInspectionSession,
   );
@@ -37,6 +39,7 @@ export function OpenInspectionApplicantLinksPanel({
       onSessionChange={setSession}
       apiConnected={apiConnected}
       inspectionId={inspectionId}
+      hideApplyLink={selfManaged}
     />
   );
 }
