@@ -13,18 +13,38 @@
 - Long Cros chats keep their start: older turns are summarised for Cros instead of dropped after 20 messages.
 - Self-Manage: the full maintenance job page shows the job actions (edit details and issues, invite tradies, approve quotes and issue the work order), not only the Maintenance list side pane.
 - Self-Manage People: Add supplier saves the agency's own tradie or supplier, ready to invite to quote.
+- Self-Manage maintenance: Who pays shows the decided party and Cros's recommendation, and the agent confirms or changes it at any open stage; each fault has its own Who pays.
+- Self-Manage maintenance: Job details edits the tenant contact.
+- Self-Manage maintenance: Send to owner emails one quote to the owner for approval; Owner approved approves it and issues the work order, Owner declined declines it with the owner's words.
+- Self-Manage maintenance: Work order step shows the issued work order.
+- Self-Manage leasing: several open inspections per letting until the property is leased, each with Start, Finish, Cancel, its own links and its own report.
+- Self-Manage leasing: + Create tenancy under Results records the tenants and the lease, syncs them to the property and closes the letting; each tenant can then be invited to the tenant app, and the Trust rent is set when Trust is used.
+- Self-Manage Leasing page: Lettings and Tenancy reviews; Run this review covers choosing rent review or lease renewal, market research, notice and lease extension uploads, negotiation, postpone and close, with nothing sent to CROSSUB.
+- Self-Manage inspection: Send to owner emails the owner a copy of the report, separately from sign-off.
+- Self-Manage vacating: Complete vacating closes the case after Compare.
+- Self-Manage Trust: the agency sets up its own trust account (workspace, account codes, first bank account with ABA details) instead of asking CROSSUB.
+- Self-Manage Trust: opening balances, open ledgers, payout details and schedule, recurring fees, held-back amounts, bond and paid-to reset, bill edit and cancel, past disbursement runs, revoke a locked month and recorded bank balances.
 
 ### Fixed
 - A termination notice in the bell opens the property it is about, and shows the reason title only (Wayne, PR #1).
 - Self-Manage vacating: the agent confirming the comparison completes the Compare step, even with no linked ingoing or outgoing report and no damage items.
+- Self-Manage leasing: an open inspection no longer books itself, runs itself or jumps the letting to the end; it stays in Scheduling until the agent runs it.
+- Self-Manage inspection: a submitted report counts as complete, so the task no longer stays open waiting for sign-off.
+- Self-Manage vacating: Complete vacating waits while a confirmed bond settlement is with the tenant, so the bond refund is not skipped.
 
 ### Changed
 - Cros History is saved to the officer's account after every reply and reopens on any device, instead of only in the browser tab.
 - Self-Manage leasing: one step rail with Application, Results and Onboarding after the open report, instead of a separate Letting phases box.
+- Self-Manage maintenance: automation only recommends; take control and resume are replaced by a note that nothing is decided or sent automatically.
+- Self-Manage vacating: steps are Vacate, Outgoing inspection, Compare and Complete; bond settlement is an optional card.
+- Self-Manage leasing: steps are Order Created, Scheduling, Scheduled, Report Available, Results and Tenancy.
+- Self-Manage Trust: built-in account codes take only a GST change.
 
 ### Removed
 - Creating a Vacating task no longer creates a new leasing order or offers End management; the form shows only the vacating details (all plans).
 - Self-Manage leasing Results: the reference check notice.
+- Self-Manage leasing: applications (Application step, Applicants tab, apply links and QR codes); + Create tenancy replaces them.
+- Self-Manage vacating: Quote, Confirm and Bond steps and the Bond processing card.
 
 ## 2026-10-22
 
