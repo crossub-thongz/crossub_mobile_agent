@@ -31,7 +31,10 @@ import {
 } from '@/lib/crossub-api/agent-trust-client';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
-/** Add an account code, or edit one (`code` null adds). The code and kind are fixed once added. */
+/**
+ * Add an account code, or edit one (`code` null adds). The code and kind are fixed once added; a
+ * built-in (system) code takes only a GST change, as the API enforces.
+ */
 export function TrustAccountCodeDialog({
   agencyId,
   code,
@@ -49,6 +52,7 @@ export function TrustAccountCodeDialog({
   const [gstApplies, setGstApplies] = useState(code?.gstApplies ?? false);
   const [isActive, setIsActive] = useState(code?.isActive ?? true);
   const [pending, setPending] = useState(false);
+  const systemLocked = code?.isSystem ?? false;
 
   async function onSubmit() {
     const trimmedCode = codeValue.trim();
@@ -60,7 +64,11 @@ export function TrustAccountCodeDialog({
     setPending(true);
     try {
       if (code) {
-        await updateTrustAccountCode(agencyId, code.id, { name: trimmedName, gstApplies, isActive });
+        await updateTrustAccountCode(
+          agencyId,
+          code.id,
+          systemLocked ? { gstApplies } : { name: trimmedName, gstApplies, isActive },
+        );
         toast.success(COPY.saved(code.code));
       } else {
         await createTrustAccountCode(agencyId, { code: trimmedCode, name: trimmedName, kind, gstApplies });
@@ -105,12 +113,14 @@ export function TrustAccountCodeDialog({
                 id="trust-code-name"
                 value={name}
                 maxLength={TRUST_INPUT_LIMITS.accountCodeNameMax}
-                disabled={pending}
+                disabled={pending || systemLocked}
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
           </div>
-          {code ? <p className="text-muted-foreground text-xs">{COPY.codeLocked}</p> : null}
+          {code ? (
+            <p className="text-muted-foreground text-xs">{systemLocked ? COPY.systemLocked : COPY.codeLocked}</p>
+          ) : null}
           <div className="space-y-1.5">
             <Label htmlFor="trust-code-kind">{COPY.kind}</Label>
             <select
@@ -144,7 +154,7 @@ export function TrustAccountCodeDialog({
                   type="checkbox"
                   className="size-4"
                   checked={isActive}
-                  disabled={pending}
+                  disabled={pending || systemLocked}
                   onChange={(e) => setIsActive(e.target.checked)}
                 />
                 {COPY.active}

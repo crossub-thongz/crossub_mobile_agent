@@ -1057,6 +1057,7 @@ export const TRUST_ACCOUNT_CODE_DIALOG_COPY = {
   description: 'Income codes are for fees and other money in; expense codes for bills.',
   code: 'Code',
   codeLocked: 'The code itself cannot change once added.',
+  systemLocked: 'A built-in code: only its GST can change. Add your own code for anything else.',
   name: 'Name',
   kind: 'Kind',
   gstApplies: 'GST applies',
