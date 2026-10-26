@@ -106,7 +106,10 @@ import { buildRemindingQueue, getPropertyNeedActions } from '@/lib/property-acti
 import { buildSectionStatus } from '@/lib/section-status';
 import { buildTaskStatusList } from '@/lib/task-status-list';
 import { enrichPropertyAddresses, resolvePropertyDisplayAddress } from '@/lib/property-address';
-import { terminationNoticeVisibleToAgent } from '@/lib/termination-request/display';
+import {
+  terminationNoticeHref,
+  terminationNoticeVisibleToAgent,
+} from '@/lib/termination-request/display';
 import {
   fetchAgentInspections,
   fetchOpenInspectionSessions,
@@ -1499,6 +1502,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     const mapped = base
       .map((n) => ({
         ...n,
+        href: terminationNoticeHref(n, properties),
         read: n.read || readIds.has(n.id),
         propertyAddress: n.propertyAddress
           ? resolvePropertyDisplayAddress(properties, undefined, n.propertyAddress)

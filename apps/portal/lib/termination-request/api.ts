@@ -1,73 +1,63 @@
 import { agentFetch } from '@/lib/crossub-api/agent-client';
 
 import {
-  NSW_TERMINATION_REASONS,
   TERMINATION_REQUEST_JURISDICTION,
-  TERMINATION_REQUEST_SOURCE_AGENT,
   type TerminationReasonOption,
 } from '@/lib/termination-request/constants';
 
+/**
+ * These two routes are on the API's agent facade but not yet in the published mobile
+ * contract, so the shapes below are written by hand. They match
+ * `crossub_web/apps/api/src/modules/termination-requests` — keep them in step until the
+ * contract carries them.
+ */
+
+/** Body of `POST /agent/properties/:propertyId/termination-requests`. The API rejects any other field. */
 export type CreateAgentTerminationRequestInput = {
   reasonCode: string;
   jurisdictionCode?: string;
-  tenantReferenceId: string;
-  tenantName: string;
 };
 
-export type AgentTerminationRequestResult = {
+/** The part of the API's `TerminationRequestView` the agent app reads back. */
+export type AgentTerminationRequest = {
   id: string;
+  propertyId: string;
+  reasonCode: string;
+  reasonTitle: string;
   status: string;
+  notifiedAccountManager: boolean;
 };
 
-/**
- * Reasons for one jurisdiction. Falls back to the active AU-NSW list when the
- * Reason API is not published yet. Other jurisdictions stay empty until the API
- * returns them — the form never offers a country or state picker.
- */
+/** `GET /agent/termination-reasons`. Throws when the API refuses or is unreachable. */
 export async function fetchTerminationReasons(
   jurisdictionCode: string = TERMINATION_REQUEST_JURISDICTION,
 ): Promise<TerminationReasonOption[]> {
-  try {
-    const data = await agentFetch<{
-      reasons?: Array<{ code?: string | null; label?: string | null }>;
-    }>(
-      `/agent/termination-reasons?jurisdictionCode=${encodeURIComponent(jurisdictionCode)}`,
-    );
-    const reasons = (data.reasons ?? [])
-      .map((reason) => ({
-        code: reason.code?.trim() ?? '',
-        label: reason.label?.trim() ?? '',
-      }))
-      .filter((reason) => reason.code && reason.label);
-    if (reasons.length > 0) return reasons;
-  } catch {
-    // The route lands with the admin module. AU-NSW is the only active list.
-  }
-  if (jurisdictionCode === TERMINATION_REQUEST_JURISDICTION) {
-    return [...NSW_TERMINATION_REASONS];
-  }
-  return [];
+  const data = await agentFetch<{
+    jurisdictionCode: string;
+    reasons: TerminationReasonOption[];
+  }>(`/agent/termination-reasons?jurisdictionCode=${encodeURIComponent(jurisdictionCode)}`);
+  return data.reasons
+    .map((reason) => ({ code: reason.code.trim(), title: reason.title.trim() }))
+    .filter((reason) => reason.code && reason.title);
 }
 
 /**
- * Lodge a record-only termination request. `requestSource` is always the agent
- * path. Assigned account manager is chosen on the admin side.
+ * Lodge a record-only termination request. The API stamps the source, the assigned
+ * account manager and the primary tenant itself; none of them is sent from here.
  */
 export async function createAgentTerminationRequest(
   propertyId: string,
   input: CreateAgentTerminationRequestInput,
-): Promise<AgentTerminationRequestResult> {
-  return agentFetch<AgentTerminationRequestResult>(
+): Promise<AgentTerminationRequest> {
+  const data = await agentFetch<{ request: AgentTerminationRequest }>(
     `/agent/properties/${encodeURIComponent(propertyId)}/termination-requests`,
     {
       method: 'POST',
       body: JSON.stringify({
         reasonCode: input.reasonCode,
         jurisdictionCode: input.jurisdictionCode ?? TERMINATION_REQUEST_JURISDICTION,
-        requestSource: TERMINATION_REQUEST_SOURCE_AGENT,
-        tenantReferenceId: input.tenantReferenceId,
-        tenantName: input.tenantName,
       }),
     },
   );
+  return data.request;
 }

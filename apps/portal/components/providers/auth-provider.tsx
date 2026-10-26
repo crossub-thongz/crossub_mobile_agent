@@ -10,7 +10,6 @@ import {
 
 import { api, ApiError } from '@/lib/api';
 import { clearAddToHomeScreenDismissedForSession } from '@/lib/add-to-home-screen-state';
-import { accountVerifiedForPortal } from '@/lib/email-verification';
 import type { AuthUser } from '@/lib/auth-types';
 import {
   clearLocalSession,
@@ -32,33 +31,23 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export function AuthProvider({
-  children,
-  emailsVerifiedWithoutMail = [],
-}: {
-  children: React.ReactNode;
-  emailsVerifiedWithoutMail?: readonly string[];
-}) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>('loading');
-  const present = useCallback(
-    (next: AuthUser) => accountVerifiedForPortal(next, emailsVerifiedWithoutMail),
-    [emailsVerifiedWithoutMail],
-  );
 
   const refresh = useCallback(async (): Promise<AuthStatus> => {
     clearOrphanLocalAccessCookie();
 
     try {
       const data = await api.get<{ user: AuthUser }>('/auth/me');
-      setUser(present(data.user));
+      setUser(data.user);
       setStatus('authed');
       return 'authed';
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         const localUser = getLocalSessionUser();
         if (localUser && hasLocalAccessCookie()) {
-          setUser(present(localUser));
+          setUser(localUser);
           setStatus('authed');
           return 'authed';
         }
@@ -70,7 +59,7 @@ export function AuthProvider({
 
     const localUser = getLocalSessionUser();
     if (localUser && hasLocalAccessCookie()) {
-      setUser(present(localUser));
+      setUser(localUser);
       setStatus('authed');
       return 'authed';
     }
@@ -78,12 +67,12 @@ export function AuthProvider({
     setUser(null);
     setStatus('guest');
     return 'guest';
-  }, [present]);
+  }, []);
 
   const adoptUser = useCallback((next: AuthUser) => {
-    setUser(present(next));
+    setUser(next);
     setStatus('authed');
-  }, [present]);
+  }, []);
 
   const logout = useCallback(async () => {
     clearLocalSession();

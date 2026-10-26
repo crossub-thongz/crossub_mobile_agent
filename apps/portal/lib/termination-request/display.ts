@@ -1,5 +1,10 @@
+import { propertyDetail, ROUTES } from '@/constants/routes';
 import { findPropertyForAddress } from '@/lib/property-address';
-import { NSW_TERMINATION_REASONS } from '@/lib/termination-request/constants';
+import {
+  NSW_TERMINATION_REASONS,
+  TERMINATION_NOTIFICATION_HREF_PREFIX,
+  TERMINATION_NOTIFICATION_TITLE,
+} from '@/lib/termination-request/constants';
 import type { AgentNotification, Property } from '@/lib/types';
 
 const MONEY_OR_QUANTITY =
@@ -12,10 +17,11 @@ export function isTerminationNoticeNotification(
   notification: Pick<AgentNotification, 'href' | 'title' | 'taskType'>,
 ): boolean {
   const href = notification.href.toLowerCase();
+  if (href.startsWith(TERMINATION_NOTIFICATION_HREF_PREFIX)) return true;
   if (href.includes('termination-request') || href.includes('termination-notice')) return true;
   const title = notification.title.trim().toLowerCase();
   if (
-    title === 'termination' ||
+    title === TERMINATION_NOTIFICATION_TITLE.toLowerCase() ||
     title.startsWith('termination notice') ||
     title.startsWith('termination sent')
   ) {
@@ -32,12 +38,12 @@ export function terminationNoticeReasonTitle(
     .filter((part): part is string => Boolean(part?.trim()))
     .join('\n');
   const lower = source.toLowerCase();
-  const byLength = [...NSW_TERMINATION_REASONS].sort((a, b) => b.label.length - a.label.length);
+  const byLength = [...NSW_TERMINATION_REASONS].sort((a, b) => b.title.length - a.title.length);
   for (const reason of byLength) {
-    if (lower.includes(reason.label.toLowerCase())) return reason.label;
+    if (lower.includes(reason.title.toLowerCase())) return reason.title;
   }
   for (const reason of NSW_TERMINATION_REASONS) {
-    if (source.includes(reason.code)) return reason.label;
+    if (source.includes(reason.code)) return reason.title;
   }
 
   const first = (notification.body ?? '')
@@ -48,7 +54,25 @@ export function terminationNoticeReasonTitle(
     ?.replace(/^[\s,.:;\-–—]+|[\s,.:;\-–—]+$/g, '')
     .trim();
   if (first && first.length <= 60 && !/\d/.test(first) && !first.includes('$')) return first;
-  return 'Termination';
+  return TERMINATION_NOTIFICATION_TITLE;
+}
+
+/**
+ * Where a termination bell opens. The API links it to `/termination/<requestId>`,
+ * which is the staff page and has no agent route, so it opens the property the
+ * notice is about instead, or the notification list when that property is not on
+ * this agent's book. Other notifications keep their link.
+ */
+export function terminationNoticeHref(
+  notification: AgentNotification,
+  properties: Property[],
+): string {
+  if (!isTerminationNoticeNotification(notification)) return notification.href;
+  if (PROPERTY_PATH.test(notification.href)) return notification.href;
+  const address = notification.propertyAddress?.trim();
+  const property =
+    address && address !== '—' ? findPropertyForAddress(properties, null, address) : undefined;
+  return property ? propertyDetail(property.id) : ROUTES.NOTIFICATIONS;
 }
 
 function propertyIdFromHref(href: string): string | undefined {

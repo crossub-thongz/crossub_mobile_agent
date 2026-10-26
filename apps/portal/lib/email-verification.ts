@@ -34,24 +34,6 @@ export function needsEmailVerification(
   return Boolean(user && user.emailVerified === false);
 }
 
-/**
- * Mailboxes that cannot receive a verification message. The API has no field to
- * mark them verified without that message, so the portal treats the listed
- * addresses as verified. Nothing is emailed.
- */
-export function accountVerifiedForPortal(
-  user: AuthUser,
-  emailsVerifiedWithoutMail: readonly string[],
-): AuthUser {
-  const email = user.email?.trim().toLowerCase();
-  if (!email || user.emailVerified !== false) return user;
-  const allowed = emailsVerifiedWithoutMail.some(
-    (entry) => entry.trim().toLowerCase() === email,
-  );
-  if (!allowed) return user;
-  return { ...user, emailVerified: true };
-}
-
 export function isEmailVerificationBlockedRoute(pathname: string): boolean {
   return EMAIL_VERIFICATION_BLOCKED_ROUTE_PATTERNS.some((rx) => rx.test(pathname));
 }

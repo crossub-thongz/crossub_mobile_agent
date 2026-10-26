@@ -17,8 +17,8 @@ import { Label } from '@/components/ui/label';
 import { usePropertyTenantContacts } from '@/lib/use-property-tenant-contacts';
 import { createAgentTerminationRequest, fetchTerminationReasons } from '@/lib/termination-request/api';
 import {
-  NSW_TERMINATION_REASONS,
   TERMINATION_REQUEST_JURISDICTION,
+  TERMINATION_REQUEST_STATE,
   type TerminationReasonOption,
 } from '@/lib/termination-request/constants';
 import { primaryTenantForTermination } from '@/lib/termination-request/primary-tenant';
@@ -45,9 +45,15 @@ export function LodgeTerminationRequestDialog({
 }) {
   const contactsByProperty = usePropertyTenantContacts(open ? [property.id] : []);
   const contacts = contactsByProperty[property.id];
-  const [reasons, setReasons] = useState<TerminationReasonOption[]>([...NSW_TERMINATION_REASONS]);
+  const [reasons, setReasons] = useState<TerminationReasonOption[]>([]);
+  const [reasonsError, setReasonsError] = useState<string | null>(null);
   const [reasonCode, setReasonCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // The reasons are NSW notice grounds. A property with a state on file outside NSW
+  // is refused here; one with no state is left to the API, which explains it.
+  const propertyState = property.state?.trim().toUpperCase() ?? '';
+  const outsideNsw = Boolean(propertyState) && propertyState !== TERMINATION_REQUEST_STATE;
 
   const tenant = useMemo(
     () =>
@@ -63,13 +69,24 @@ export function LodgeTerminationRequestDialog({
   useEffect(() => {
     if (!open) {
       setReasonCode('');
-      setReasons([...NSW_TERMINATION_REASONS]);
+      setReasons([]);
+      setReasonsError(null);
       return;
     }
     let cancelled = false;
-    void fetchTerminationReasons(TERMINATION_REQUEST_JURISDICTION).then((next) => {
-      if (!cancelled && next.length > 0) setReasons(next);
-    });
+    fetchTerminationReasons(TERMINATION_REQUEST_JURISDICTION)
+      .then((next) => {
+        if (cancelled) return;
+        setReasons(next);
+        setReasonsError(next.length > 0 ? null : 'No termination reasons are available.');
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setReasons([]);
+        setReasonsError(
+          err instanceof Error ? err.message : 'Could not load the termination reasons.',
+        );
+      });
     return () => {
       cancelled = true;
     };
@@ -86,13 +103,15 @@ export function LodgeTerminationRequestDialog({
     }
     setSubmitting(true);
     try {
-      await createAgentTerminationRequest(property.id, {
+      const created = await createAgentTerminationRequest(property.id, {
         reasonCode,
         jurisdictionCode: TERMINATION_REQUEST_JURISDICTION,
-        tenantReferenceId: tenant.referenceId,
-        tenantName: tenant.name,
       });
-      toast.success('Termination request lodged. Your account manager has been notified.');
+      toast.success(
+        created.notifiedAccountManager
+          ? 'Termination request lodged. Your account manager has been notified.'
+          : 'Termination request lodged.',
+      );
       onOpenChange(false);
       onLodged?.();
     } catch (err) {
@@ -123,6 +142,11 @@ export function LodgeTerminationRequestDialog({
             ) : (
               <p className="text-sm text-amber-700 dark:text-amber-400">No current tenant</p>
             )}
+            {outsideNsw ? (
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                Termination requests are for NSW properties. This property is in {propertyState}.
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-1.5">
@@ -138,13 +162,17 @@ export function LodgeTerminationRequestDialog({
               <option value="">Select a reason</option>
               {reasons.map((reason) => (
                 <option key={reason.code} value={reason.code}>
-                  {reason.label}
+                  {reason.title}
                 </option>
               ))}
             </select>
-            <p className="text-muted-foreground text-[12px]">
-              The request records the reason title only.
-            </p>
+            {reasonsError ? (
+              <p className="text-sm text-destructive">{reasonsError}</p>
+            ) : (
+              <p className="text-muted-foreground text-[12px]">
+                The request records the reason title only.
+              </p>
+            )}
           </div>
         </div>
 
@@ -152,7 +180,7 @@ export function LodgeTerminationRequestDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancel
           </Button>
-          <Button type="button" onClick={() => void handleSubmit()} disabled={submitting || !tenant || !reasonCode}>
+          <Button type="button" onClick={() => void handleSubmit()} disabled={submitting || !tenant || !reasonCode || outsideNsw}>
             {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
             Lodge request
           </Button>

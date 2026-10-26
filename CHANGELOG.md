@@ -8,6 +8,10 @@
 - On a maintenance job, inspection, leasing, tenant selection, rent review, vacate, tribunal or message screen, Cros knows the record and its property without being told the address.
 - jarvis.md tracker for the Cros v2 plan.
 - Before Cros changes anything it shows a Confirm card with the exact details; Confirm makes that change, Cancel leaves everything as it was.
+- Agents can lodge a termination request for an NSW property from the property workflow, New Task or the property menu. It records the request and notifies the account manager; it does not open a vacating case (Wayne, PR #1).
+
+### Fixed
+- A termination notice in the bell opens the property it is about, and shows the reason title only (Wayne, PR #1).
 
 ## 2026-10-22
 
