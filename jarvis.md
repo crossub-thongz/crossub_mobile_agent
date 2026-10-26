@@ -62,9 +62,9 @@ Review items: AI-003, AI-012, AI-013.
 
 ### 1.3 Confirm card and AI log
 
-- [~] One confirm card for every write tool (exact change, Confirm, Cancel), generalising the email draft. Backend `crossub_web` 439e96a33 (contract 0.46.0): unconfirmed write calls return a signed proposal (15 min, bound to the officer); `POST /v1/agent/gii/confirm` runs exactly that call. Portal `GiiProposalCard`; a new message clears an open card. A maintenance job with photos still confirms in words. Staging check pending.
-- [~] Write an `AiDecision` row for every Gii write (action, risk, source record, approver, result). `crossub_web` e18596a68: `GiiActionLedgerService`, outcome RECOMMENDED + new reason `USER_CONFIRMED`, resolved ACCEPTED by the officer, effects and property timeline. Staging check pending.
-- [~] `GII_MAX_TURNS` 6 to 12 done (e18596a68). Model: `AI_GII_MODEL` setting added, default still Haiku 4.5; switching to Sonnet 5.5 waits on the model budget question.
+- [x] One confirm card for every write tool (exact change, Confirm, Cancel), generalising the email draft. Backend `crossub_web` 439e96a33 (contract 0.46.0): unconfirmed write calls return a signed proposal (15 min, bound to the officer); `POST /v1/agent/gii/confirm` runs exactly that call. Portal `GiiProposalCard`; a new message clears an open card. On the agent app every write in chat only proposes, so Confirm is the only way a change runs (d007cb942); a property update checks clashes when proposing and the card shows the value it replaces. A maintenance job with photos still confirms in words. Staging check passed on d007cb94.
+- [x] Write an `AiDecision` row for every Gii write (action, risk, source record, approver, result). `crossub_web` e18596a68: `GiiActionLedgerService`, outcome RECOMMENDED + new reason `USER_CONFIRMED`, resolved ACCEPTED by the officer, effects and property timeline. Staging check passed: one row per Confirm, none for a typed yes or a Cancel.
+- [x] `GII_MAX_TURNS` 6 to 12 done (e18596a68). Model: `AI_GII_MODEL` setting added, default still Haiku 4.5; switching to Sonnet 5.5 is under Open questions (model budget).
 
 ### 1.4 Read tools
 
@@ -161,3 +161,5 @@ Review items: AI-016 (spoken English first).
 | 2026-10-26 | 1.2 | Saved chats: `GiiConversation` table and routes (crossub_web 594b01d84, contract 0.47.0); portal History on the server |
 | 2026-10-26 | 1.2 | Long chats: older turns folded into notes, `POST /agent/gii/summarise` (contract 0.48.0) |
 | 2026-10-26 | 1.4 | Read tools: inbox, arrears, notifications on the agent chat (crossub_web 54102dedf) |
+| 2026-10-26 | 1.3 | Done. Agent app changes run only from Confirm; clash checked at proposal, card shows the value replaced (crossub_web d007cb942); staging retest passed |
+| 2026-10-26 | 1.3 | Cros mentions a card only when one was made, never says updated before Confirm (crossub_web ab94087f6) |
