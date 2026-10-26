@@ -4,6 +4,7 @@ import { FileDown, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { TrustPaymentsPanel } from '@/components/agent/trust/trust-payments-panel';
 import {
   TRUST_TABLE_CELL_CLASS,
   TRUST_TABLE_HEAD_CLASS,
@@ -319,6 +320,8 @@ export function TrustBankFilesTab({
           </div>
         )}
       </TrustPanel>
+
+      <TrustPaymentsPanel agencyId={agencyId} bankAccountId={bankAccountId} refreshKey={batches.data?.total} />
 
       <TrustPanel title={COPY.batches}>
         {!batches.data ? (

@@ -68,7 +68,7 @@ function TrustTabContent({
     case TRUST_TAB.LEDGERS:
       return <TrustLedgersTab {...props} accountCodes={accountCodes} />;
     case TRUST_TAB.TRANSACTIONS:
-      return <TrustTransactionsTab {...props} />;
+      return <TrustTransactionsTab {...props} accountCodes={accountCodes} />;
     case TRUST_TAB.RENT:
       return <TrustRentTab {...props} />;
     case TRUST_TAB.BILLS:

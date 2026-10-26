@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { FilterChips } from '@/components/agent/filter-chips';
+import { TrustNewTransactionMenu } from '@/components/agent/trust/trust-new-transaction-menu';
 import { TrustTransactionDialog } from '@/components/agent/trust/trust-transaction-dialog';
 import {
   TRUST_TABLE_CELL_CLASS,
@@ -28,17 +29,22 @@ import {
   type TrustTransactionCategoryFilter,
 } from '@/constants/trust';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
-import { fetchTrustTransactions } from '@/lib/crossub-api/agent-trust-client';
+import { fetchTrustTransactions, type TrustAccountCode } from '@/lib/crossub-api/agent-trust-client';
 import { formatCents, formatTrustDate, trustTodayKey } from '@/lib/trust-accounting';
 import { cn } from '@/lib/utils';
 
-/** Every transaction on the trust account, newest first; open one to see its entries or reverse it. */
+/**
+ * Every transaction on the trust account, newest first; open one to see its entries or reverse it.
+ * "New transaction" posts a receipt, a withdrawal or a journal by hand.
+ */
 export function TrustTransactionsTab({
   agencyId,
   bankAccountId,
+  accountCodes,
 }: {
   agencyId: string;
   bankAccountId: string;
+  accountCodes: readonly TrustAccountCode[];
 }) {
   const [category, setCategory] = useState<TrustTransactionCategoryFilter>(
     TRUST_TRANSACTION_CATEGORY_ALL,
@@ -99,6 +105,14 @@ export function TrustTransactionsTab({
             options={TRUST_TRANSACTION_CATEGORY_FILTERS}
             value={category}
             onChange={setCategory}
+          />
+        </div>
+        <div className="shrink-0">
+          <TrustNewTransactionMenu
+            agencyId={agencyId}
+            bankAccountId={bankAccountId}
+            accountCodes={accountCodes}
+            onPosted={reload}
           />
         </div>
       </div>
