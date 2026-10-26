@@ -91,7 +91,7 @@ export const MAINTENANCE_STATUS_LANE: Record<MaintenanceApiStatus, MaintenanceLa
 };
 
 // ---------------------------------------------------------------------------
-// Inspections — Upcoming, In progress, Awaiting sign-off, Published (+ Cancelled)
+// Inspections — Upcoming, In progress, Awaiting sign-off, Completed (+ Cancelled)
 // ---------------------------------------------------------------------------
 
 export const INSPECTION_LANE = {
@@ -111,15 +111,16 @@ export const INSPECTION_LANES: readonly ModuleLaneDefinition<InspectionLane>[] =
     label: 'Awaiting sign-off',
     tone: MODULE_LANE_TONE.ATTENTION,
   },
-  { id: INSPECTION_LANE.PUBLISHED, label: 'Published', tone: MODULE_LANE_TONE.DONE },
+  // Published reports and finished agency jobs (their sign-off is optional, 26 Oct 2026).
+  { id: INSPECTION_LANE.PUBLISHED, label: 'Completed', tone: MODULE_LANE_TONE.DONE },
   { id: INSPECTION_LANE.CANCELLED, label: 'Cancelled', tone: MODULE_LANE_TONE.MUTED },
 ];
 
 export type InspectionApiStatus = (typeof INSPECTION_STATUS)[keyof typeof INSPECTION_STATUS];
 
 /**
- * A COMPLETED job that has also been approved moves on to Published (see the lane helper). An
- * agency-conducted Self-Manage job reads the agency principal's sign-off the same way.
+ * A COMPLETED job that has also been approved moves on to Completed (see the lane helper), and
+ * so does an agency-conducted Self-Manage job as soon as its report is in.
  */
 export const INSPECTION_STATUS_LANE: Record<InspectionApiStatus, InspectionLane> = {
   [INSPECTION_STATUS.DRAFT]: INSPECTION_LANE.UPCOMING,

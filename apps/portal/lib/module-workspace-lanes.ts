@@ -45,16 +45,18 @@ export function maintenanceLane(request: MaintenanceRequest): MaintenanceLane {
   return base ?? MAINTENANCE_LANE.IN_PROGRESS;
 }
 
-/** Approved: by CROSSUB, or by the agency principal on an agency-conducted job. */
-function isInspectionApproved(inspection: Inspection): boolean {
-  if (inspection.approvedAt) return true;
-  return inspection.conductedByAgency === true && Boolean(inspection.approvedByAgencyAt);
+/**
+ * A COMPLETED job is done once CROSSUB approves it; an agency-conducted job as soon as its
+ * report is in, since the agency's sign-off is optional (Daniel, 26 Oct 2026).
+ */
+function isCompletedInspectionDone(inspection: Inspection): boolean {
+  return Boolean(inspection.approvedAt) || inspection.conductedByAgency === true;
 }
 
 /**
  * Self-Manage Inspections lane. Cancelled (including refunded and deleted opens) first; a
- * COMPLETED job that has been approved is as good as published, and one that has not waits on
- * sign-off (the agency's own, on an agency-conducted job); session rows use the report.
+ * COMPLETED job that is done (see {@link isCompletedInspectionDone}) is Completed, and a CROSSUB
+ * job not yet approved waits on CROSSUB's sign-off; session rows use the report.
  */
 export function inspectionLane(inspection: Inspection): InspectionLane {
   if (inspection.unacceptedRefunded || isDeletedInspection(inspection)) {
@@ -63,7 +65,7 @@ export function inspectionLane(inspection: Inspection): InspectionLane {
   const status = inspection.apiStatus;
   if (hasKey<InspectionApiStatus>(INSPECTION_STATUS_LANE, status)) {
     if (status === INSPECTION_STATUS.COMPLETED) {
-      return isInspectionApproved(inspection)
+      return isCompletedInspectionDone(inspection)
         ? INSPECTION_LANE.PUBLISHED
         : INSPECTION_LANE.AWAITING_SIGN_OFF;
     }

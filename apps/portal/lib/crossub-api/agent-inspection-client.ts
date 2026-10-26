@@ -8,7 +8,8 @@ import { CROSSUB_API_V1_BASE, crossub } from './client';
 
 // ---------------------------------------------------------------------------------------------
 // Self-Manage inspections (Phase 1): the agency's own inspectors conduct ingoing, outgoing and
-// routine jobs, and the principal signs the report off. Self-Manage properties only — the server
+// routine jobs; the principal signs the report off (tenant copy) and any agent can send the owner
+// a copy. Self-Manage properties only — the server
 // returns 403 for every other plan. Each action returns the refreshed inspection detail.
 // ---------------------------------------------------------------------------------------------
 
@@ -41,7 +42,7 @@ export async function createAgencyInspection(
   return unwrapCrossubResult(result, "Couldn't book the inspection");
 }
 
-/** Principal approves the report; the server emails the tenant (ingoing/outgoing) and the owner. */
+/** Principal approves the report; the server emails the tenant (ingoing/outgoing), not the owner. */
 export async function signOffAgencyInspection(
   inspectionId: string,
 ): Promise<AgentInspectionDetail> {
@@ -49,6 +50,19 @@ export async function signOffAgencyInspection(
     params: { path: { inspectionId } },
   });
   return unwrapCrossubResult(result, "Couldn't sign the report off");
+}
+
+/**
+ * Email the owner the agency's report with the PDF, from the agency address. Any agent, once the
+ * report is in; sign-off is not needed. 409 while the owner already has this version.
+ */
+export async function sendAgencyInspectionOwnerCopy(
+  inspectionId: string,
+): Promise<AgentInspectionDetail> {
+  const result = await crossub.POST('/agent/inspections/{inspectionId}/owner-copy', {
+    params: { path: { inspectionId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't send the report to the owner");
 }
 
 /** Principal sends an ingoing or outgoing report back to the inspector to redo. */

@@ -46,6 +46,9 @@ export function isInspectionDone(inspection: Inspection): boolean {
     api === INSPECTION_STATUS.COMPLETED.toLowerCase() ||
     api === 'completed'
   ) {
+    // Self-Manage: the agency's own job is done once its report is in; the principal's
+    // sign-off (tenant copy) and the owner copy are optional extras (Daniel, 26 Oct 2026).
+    if (inspection.conductedByAgency === true) return true;
     if (inspection.type === 'INGOING' || inspection.type === 'OUTGOING') {
       return hasLeftTaskPool({
         completedAt: inspection.completedAt,

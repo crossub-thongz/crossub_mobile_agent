@@ -1,8 +1,9 @@
 /**
  * Self-Manage inspections (Phase 1): the agency's own inspectors conduct ingoing, outgoing and
- * routine jobs, booked by the agent with a time and an inspector, and the principal signs the
- * report off. Value sets are typed off the contract DTOs, so a new server value fails the
- * type-check here.
+ * routine jobs, booked by the agent with a time and an inspector. The job is complete once the
+ * report is in; the principal may sign it off (tenant copy), and Send to owner is its own action
+ * (Daniel, 26 Oct 2026). Value sets are typed off the contract DTOs, so a new server value fails
+ * the type-check here.
  */
 
 import type { components } from '@crossub-thongz/api-contract';
@@ -87,22 +88,23 @@ export const SELF_MANAGED_INSPECTION_COPY = {
 
   reviewTitle: 'Review and sign off',
   reviewHint:
-    'Read the report, then sign it off or send it back. Nothing goes to the tenant or owner until you sign off.',
+    'The inspection is complete. Sign the report off to email the tenant their copy, or send it back to the inspector.',
   reviewHintRoutine:
-    'Read the report, then sign it off. Nothing goes to the owner until you sign off.',
+    'The inspection is complete. Sign the report off to record your approval.',
   viewReport: 'View report',
   downloadReport: 'Download PDF',
   signOff: 'Sign off report',
   signOffConfirmTitle: 'Sign off this report?',
-  signOffConfirmTenantOwner:
-    'Signing off emails the tenant their copy now and emails the owner a copy with the PDF from your agency address.',
-  signOffConfirmOwner:
-    'Signing off emails the owner a copy with the PDF from your agency address.',
+  signOffConfirmTenant:
+    'Signing off emails the tenant their copy now. The owner is not emailed; use Send to owner for that.',
+  signOffConfirmRoutine:
+    'Signing off records your approval. Nobody is emailed; use Send to owner to email the owner a copy.',
   confirmSignOff: 'Confirm sign-off',
   cancel: 'Cancel',
   signedOffToast: 'Report signed off',
   awaitingPrincipalTitle: 'Waiting for your principal',
-  awaitingPrincipalHint: 'Only an agency principal can sign this report off.',
+  awaitingPrincipalHint:
+    'The inspection is complete. Only an agency principal can sign the report off.',
 
   reject: 'Send back to inspector',
   rejectReason: 'What must the inspector fix?',
@@ -117,9 +119,20 @@ export const SELF_MANAGED_INSPECTION_COPY = {
   tenantCopyPending: 'Tenant copy not emailed yet.',
   tenantCopyFailed: "The tenant copy didn't send. Email the tenant the report yourself.",
   tenantCopySkipped: 'No tenant email on file, so no tenant copy was sent.',
+
+  ownerCopyTitle: 'Owner copy',
+  ownerCopyHint: 'Email the owner a copy of the report with the PDF from your agency address.',
+  ownerCopyResendHint: 'The report changed since the owner was emailed. Send them the new copy.',
+  sendOwnerCopy: 'Send to owner',
+  sendOwnerCopyAgain: 'Send again',
+  sendOwnerCopyConfirmTitle: 'Send this report to the owner?',
+  sendOwnerCopyConfirmBody:
+    'The owner gets an email from your agency address with the report PDF attached.',
+  confirmSendOwnerCopy: 'Send to owner',
+  ownerCopySentToast: 'Report sent to the owner',
   ownerCopySent: (when: string) => `Owner copy emailed ${when}.`,
-  ownerCopyFailed: "The owner copy didn't send. Email the owner the report yourself.",
-  ownerCopySkipped: 'No owner email on file, so no owner copy was sent.',
+  ownerCopyFailed: "The owner copy didn't send. Try again, or email the owner the report yourself.",
+  ownerCopySkipped: 'No owner email on file, so no owner copy was sent. Add one, then try again.',
 } as const;
 
 /** Wizard copy when a Self-Manage agent books an agency-conducted job. */

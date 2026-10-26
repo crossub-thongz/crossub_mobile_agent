@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 
 import { ConductedByStep } from '@/components/agent/inspection-self-managed/conducted-by-step';
 import {
+  OwnerCopyStep,
   ReportReviewStep,
   SignedOffStep,
 } from '@/components/agent/inspection-self-managed/report-review-step';
@@ -15,8 +16,8 @@ import { selfManagedInspectionSteps } from '@/lib/inspections/self-managed-inspe
 
 /**
  * Self-Manage inspection actions on one agency-conducted job (Phase 1): who attends, review and
- * sign-off of the report, and where the tenant and owner copies stand after it. Shows nothing on
- * a CROSSUB-conducted job or off Self-Manage — the server refuses these actions there.
+ * sign-off of the report (the tenant copy), and Send to owner. Shows nothing on a CROSSUB-conducted
+ * job or off Self-Manage — the server refuses these actions there.
  */
 export function SelfManagedInspectionPanel({
   inspectionId,
@@ -74,6 +75,8 @@ export function SelfManagedInspectionPanel({
       ) : null}
 
       <SignedOffStep detail={detail} steps={steps} />
+
+      <OwnerCopyStep detail={detail} steps={steps} busy={busy} run={run} />
     </div>
   );
 }

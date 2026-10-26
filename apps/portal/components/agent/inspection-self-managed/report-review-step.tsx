@@ -16,6 +16,7 @@ import type { SelfManagedInspectionRun } from '@/hooks/use-self-managed-inspecti
 import {
   agencyInspectionReportPdfUrl,
   rejectAgencyInspectionReport,
+  sendAgencyInspectionOwnerCopy,
   signOffAgencyInspection,
   type AgentInspectionDetail,
 } from '@/lib/crossub-api/agent-inspection-client';
@@ -47,7 +48,10 @@ function ReportLinks({ detail }: { detail: AgentInspectionDetail }) {
   );
 }
 
-/** The principal reads the agency inspector's report, then signs it off or sends it back. */
+/**
+ * The principal reads the agency inspector's report, then signs it off (the tenant copy) or
+ * sends it back. The job is already complete; sign-off never emails the owner.
+ */
 export function ReportReviewStep({
   detail,
   steps,
@@ -100,7 +104,7 @@ export function ReportReviewStep({
         <div className="space-y-2 rounded-md border border-dashed p-2.5">
           <p className="text-sm font-medium">{COPY.signOffConfirmTitle}</p>
           <p className="text-muted-foreground text-xs">
-            {steps.tenantCopyApplies ? COPY.signOffConfirmTenantOwner : COPY.signOffConfirmOwner}
+            {steps.tenantCopyApplies ? COPY.signOffConfirmTenant : COPY.signOffConfirmRoutine}
           </p>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" disabled={busy} onClick={() => void signOff()}>
@@ -175,7 +179,7 @@ function tenantCopyLine(steps: SelfManagedInspectionSteps): string {
     : COPY.tenantCopyPending;
 }
 
-/** After sign-off: when it was signed, and where the tenant and owner copies stand. */
+/** After sign-off: when it was signed, and where the tenant copy stands. */
 export function SignedOffStep({
   detail,
   steps,
@@ -184,8 +188,6 @@ export function SignedOffStep({
   steps: SelfManagedInspectionSteps;
 }) {
   if (!steps.signedOffAt) return null;
-  const owner = ownerCopyLine(steps.ownerCopy);
-  const ownerFailed = steps.ownerCopy?.status === AGENCY_INSPECTION_OWNER_COPY_STATUS.FAILED;
   const tenantFailed = steps.tenantCopyStatus === AGENCY_INSPECTION_TENANT_COPY_STATUS.FAILED;
   return (
     <StepCard title={COPY.sentTitle}>
@@ -196,11 +198,72 @@ export function SignedOffStep({
             {tenantCopyLine(steps)}
           </li>
         ) : null}
-        {owner ? (
-          <li className={ownerFailed ? 'text-destructive' : 'text-muted-foreground'}>{owner}</li>
-        ) : null}
       </ul>
       {detail.reportPdfPath !== null ? <ReportLinks detail={detail} /> : null}
+    </StepCard>
+  );
+}
+
+/**
+ * Send to owner, its own action once the report is in (Daniel, 26 Oct 2026): any agent, with or
+ * without sign-off. Shows when the last copy went; offered again after a failed or skipped send,
+ * or when the report was resubmitted since.
+ */
+export function OwnerCopyStep({
+  detail,
+  steps,
+  busy,
+  run,
+}: {
+  detail: AgentInspectionDetail;
+  steps: SelfManagedInspectionSteps;
+  busy: boolean;
+  run: SelfManagedInspectionRun;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  if (!steps.ownerCopyApplies) return null;
+
+  const line = ownerCopyLine(steps.ownerCopy);
+  const failed = steps.ownerCopy?.status === AGENCY_INSPECTION_OWNER_COPY_STATUS.FAILED;
+  const sentBefore = steps.ownerCopy?.status === AGENCY_INSPECTION_OWNER_COPY_STATUS.SENT;
+  const hint = !steps.sendOwnerCopy
+    ? null
+    : sentBefore
+      ? COPY.ownerCopyResendHint
+      : steps.ownerCopy
+        ? null
+        : COPY.ownerCopyHint;
+
+  const send = async () => {
+    const ok = await run(() => sendAgencyInspectionOwnerCopy(detail.id), COPY.ownerCopySentToast);
+    if (ok) setConfirming(false);
+  };
+
+  return (
+    <StepCard title={COPY.ownerCopyTitle} hint={hint ?? undefined}>
+      {line ? (
+        <p className={failed ? 'text-destructive text-xs' : 'text-muted-foreground text-xs'}>{line}</p>
+      ) : null}
+      {steps.sendOwnerCopy ? (
+        confirming ? (
+          <div className="space-y-2 rounded-md border border-dashed p-2.5">
+            <p className="text-sm font-medium">{COPY.sendOwnerCopyConfirmTitle}</p>
+            <p className="text-muted-foreground text-xs">{COPY.sendOwnerCopyConfirmBody}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" disabled={busy} onClick={() => void send()}>
+                {COPY.confirmSendOwnerCopy}
+              </Button>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirming(false)}>
+                {COPY.cancel}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirming(true)}>
+            {steps.ownerCopy ? COPY.sendOwnerCopyAgain : COPY.sendOwnerCopy}
+          </Button>
+        )
+      ) : null}
     </StepCard>
   );
 }
