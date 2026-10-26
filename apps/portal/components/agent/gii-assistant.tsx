@@ -11,10 +11,18 @@ import { GiiProposalCard } from '@/components/agent/gii-proposal-card';
 import { GII_PROPOSAL_COPY } from '@/constants/gii-proposal';
 import {
   GII_CONVERSATION_COPY,
+  GII_CHAT_MAX_MESSAGES,
   GII_CONVERSATION_SAVE_TOAST_ID,
   GII_PENDING_TEXT,
 } from '@/constants/gii-conversation';
+import { truncateGiiChatContent } from '@/utils/gii-chat-content';
 import { giiConversationLines, giiConversationSaveInput } from '@/utils/gii-conversation';
+import {
+  giiEarlierSummaryFor,
+  giiLinesAfterSummary,
+  giiNextSummaryFold,
+  type GiiEarlierSummary,
+} from '@/utils/gii-earlier-summary';
 import {
   CrosPortfolioBody,
   CrosPortfolioTabs,
@@ -83,6 +91,7 @@ import {
   getGiiConversation,
   listGiiConversations,
   saveGiiConversation,
+  summariseGiiConversation,
   sendGiiMessage,
   type GiiAssessment,
   type GiiChatMessage,
@@ -150,9 +159,6 @@ function withoutProposals(lines: ChatLine[]): ChatLine[] {
   return lines.map((l) => (l.proposal ? { ...l, proposal: null } : l));
 }
 
-/** Only the transcript goes to the server — local search results are a client concern. */
-const MAX_HISTORY = 20;
-
 /** Composer grows with typed content so longer questions stay visible. */
 const COMPOSER_MIN_PX = 96;
 const COMPOSER_MAX_PX = 220;
@@ -213,14 +219,6 @@ function multilingualHint(): string {
   if (lang.startsWith('zh')) return `${CROS_ASSISTANT_NAME} 支持中文语音和文字输入。`;
   if (lang.startsWith('ms')) return `${CROS_ASSISTANT_NAME} menyokong input suara dan teks dalam Bahasa Melayu.`;
   return 'Type a question, or tap the mic to speak.';
-}
-
-/** API cap — keep invisible context payloads under this (see GiiChatMessageDto @MaxLength). */
-const GII_CHAT_MESSAGE_MAX_CHARS = 4000;
-
-function truncateGiiChatContent(content: string): string {
-  if (content.length <= GII_CHAT_MESSAGE_MAX_CHARS) return content;
-  return `${content.slice(0, GII_CHAT_MESSAGE_MAX_CHARS - 40).trimEnd()}\n\n[…truncated]`;
 }
 
 /** True when the agent's message is predominantly CJK (Chinese, etc.). */
@@ -360,6 +358,9 @@ export function GiiAssistant({
   /** The chat line whose proposal is being confirmed — one at a time. */
   const [confirmingLineId, setConfirmingLineId] = useState<string | null>(null);
   const [lines, setLines] = useState<ChatLine[]>([]);
+  /** Notes on a long chat's older lines; ignored once the chat they were made for is gone. */
+  const [earlierSummary, setEarlierSummary] = useState<GiiEarlierSummary | null>(null);
+  const summarisingRef = useRef(false);
   const voiceCaptureRef = useRef<GiiVoiceCapture | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -724,9 +725,11 @@ export function GiiAssistant({
     };
     const pendingId = `a-${idSeq()}`;
 
-    const historyBase = [...lines, userLine]
+    // Lines the notes cover go as the notes; the rest word for word.
+    const earlier = giiEarlierSummaryFor(lines, earlierSummary);
+    const historyBase = [...giiLinesAfterSummary(lines, earlier), userLine]
       .filter((l) => !l.pending)
-      .slice(-MAX_HISTORY);
+      .slice(-GII_CHAT_MAX_MESSAGES);
 
     setLines((prev) => [
       ...withoutProposals(prev),
@@ -771,7 +774,7 @@ export function GiiAssistant({
       const history: GiiChatMessage[] = [
         ...(contextSeed ? [contextSeed] : []),
         ...mapped,
-      ].slice(-MAX_HISTORY);
+      ].slice(-GII_CHAT_MAX_MESSAGES);
 
       if (apiAttachments?.length) {
         setLines((prev) =>
@@ -792,6 +795,7 @@ export function GiiAssistant({
         context: contextRef.current,
         page: pageContextRef.current,
         propertyChanged,
+        earlierSummary: earlier?.text,
       });
       if (res.assessment?.propertyId) {
         contextRef.current = {
@@ -843,7 +847,27 @@ export function GiiAssistant({
     } finally {
       setSending(false);
     }
-  }, [lines, pendingAttachments, refreshPortfolio, sending]);
+  }, [earlierSummary, lines, pendingAttachments, refreshPortfolio, sending]);
+
+  // Fold a long chat's older lines into notes between turns, so they reach Cros as notes
+  // instead of being dropped from the 20 it reads. A failed fold leaves the chat as before
+  // (oldest lines dropped) and is tried again after the next reply.
+  useEffect(() => {
+    if (sending || summarisingRef.current) return;
+    const fold = giiNextSummaryFold(lines, earlierSummary);
+    if (!fold) return;
+    summarisingRef.current = true;
+    summariseGiiConversation({ summary: fold.summary, messages: fold.messages })
+      .then((text) => {
+        // Cleared before the new notes land, so a reopened long chat folds its next step.
+        summarisingRef.current = false;
+        setEarlierSummary({ text, through: fold.through, anchorId: fold.anchorId });
+      })
+      .catch((err: unknown) => {
+        summarisingRef.current = false;
+        console.warn('[cros] older turns could not be summarised', err);
+      });
+  }, [earlierSummary, lines, sending]);
 
   /**
    * The answer to a Confirm card goes into the chat as Cros's own line, so the model reads

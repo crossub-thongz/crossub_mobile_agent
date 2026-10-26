@@ -10,6 +10,7 @@
 - Before Cros changes anything it shows a Confirm card with the exact details; Confirm makes that change, Cancel leaves everything as it was.
 - Agents can lodge a termination request for an NSW property from the property workflow, New Task or the property menu. It records the request and notifies the account manager; it does not open a vacating case (Wayne, PR #1).
 - Cros chats can be deleted from History.
+- Long Cros chats keep their start: older turns are summarised for Cros instead of dropped after 20 messages.
 
 ### Fixed
 - A termination notice in the bell opens the property it is about, and shows the reason title only (Wayne, PR #1).

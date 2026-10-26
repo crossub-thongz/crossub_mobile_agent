@@ -68,17 +68,19 @@ export type GiiChatResponseWithPending = GiiChatResponse & {
  * assessment's property (and any pending ambiguous candidates) so Gii keeps the subject
  * instead of re-asking for the address. `page` names the screen the agent is on, and
  * `propertyChanged` says they navigated to another property since the last turn.
+ * `earlierSummary` covers a long chat's turns that are no longer in `messages`.
  */
 export async function sendGiiMessage(args: {
   messages: GiiChatMessage[];
   context?: GiiContext | null;
   page?: GiiPageContext | null;
   propertyChanged?: boolean;
+  earlierSummary?: string | null;
 }): Promise<GiiChatResponseWithPending> {
   const ctx = args.context;
   const hasSubject = Boolean(ctx?.propertyId) || (ctx?.pendingPropertyCandidates?.length ?? 0) > 0;
   const apiContext: components['schemas']['GiiChatContextDto'] | undefined =
-    hasSubject || args.page
+    hasSubject || args.page || args.earlierSummary
       ? {
           ...(ctx?.propertyId ? { propertyId: ctx.propertyId } : {}),
           ...(ctx?.propertyLabel ? { propertyLabel: ctx.propertyLabel } : {}),
@@ -88,6 +90,7 @@ export async function sendGiiMessage(args: {
             : {}),
           ...(args.page ? { pageModule: args.page.pageModule, pageLabel: args.page.pageLabel } : {}),
           ...(args.propertyChanged ? { propertyChanged: true } : {}),
+          ...(args.earlierSummary ? { earlierSummary: args.earlierSummary } : {}),
         }
       : undefined;
 
@@ -130,6 +133,19 @@ export async function confirmGiiProposal(token: string): Promise<GiiConfirmResul
     return { done: false, message: reason, jobCases: [] };
   }
   throw new Error(`${CROS_ASSISTANT_NAME} could not confirm`);
+}
+
+/**
+ * Fold a long chat's older lines into its notes: `summary` is the last one returned, if any,
+ * and `messages` the lines after it, oldest first. Returns the notes for the whole chat so far.
+ */
+export async function summariseGiiConversation(body: {
+  summary?: string;
+  messages: { role: 'user' | 'assistant'; content: string }[];
+}): Promise<string> {
+  const { data, error } = await crossub.POST('/agent/gii/summarise', { body });
+  if (error || !data) throw new Error(`${CROS_ASSISTANT_NAME} could not summarise this chat`);
+  return data.summary;
 }
 
 /** A saved Cros chat in the officer's list. */
