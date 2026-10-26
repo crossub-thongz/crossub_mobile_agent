@@ -379,8 +379,9 @@ export function CreateInspectionWizard({
    */
   const [agencyConductedByUserId, setAgencyConductedByUserId] = useState('');
   const [agencyScheduledLocal, setAgencyScheduledLocal] = useState('');
+  const propertySelfManaged = property ? isPropertySelfManaged(agencies, property.agencyId) : false;
   const agencyBookingType = resolveAgencyBookingType({
-    selfManaged: property ? isPropertySelfManaged(agencies, property.agencyId) : false,
+    selfManaged: propertySelfManaged,
     type: inspectionType,
     routineFlow: routine.flow,
   });
@@ -561,7 +562,13 @@ export function CreateInspectionWizard({
         const store = useLeasingWorkflowStore.getState();
         store.ensureDetail(property!.id, formatPropertyFullAddress(property!), rentPerWeek);
         store.applyCycleView(property!.id, view);
-        store.setActiveStep(property!.id, LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL);
+        // Self-Manage: the open is scheduled, not done, so the letting stays on Scheduling.
+        store.setActiveStep(
+          property!.id,
+          propertySelfManaged
+            ? LEASING_LIFECYCLE_STEP.OPEN_INSPECTION
+            : LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL,
+        );
         const sessionId = view.openInspection?.viewingSessionId;
         if (sessionId) {
           try {

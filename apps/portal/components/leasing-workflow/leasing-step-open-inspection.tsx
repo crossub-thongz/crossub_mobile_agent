@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { CreateInspectionWizard, type InspectionCreateResult } from '@/components/inspections/create-inspection-wizard';
 import { OpenLeasingGenerateReportButton } from '@/components/leasing-workflow/open-leasing-generate-report-button';
 import { OpenLeasingInspectionReportPanel } from '@/components/leasing-workflow/open-leasing-inspection-report-panel';
+import { LeasingSelfManagedOpenInspections } from '@/components/leasing-workflow/leasing-self-managed-open-inspections';
 import { OpenInspectionApplicantLinksPanel } from '@/components/open-inspection/open-inspection-applicant-links-panel';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
 import { OpenInspectionKeyCustodySection } from '@/components/open-inspection/open-inspection-key-custody-section';
@@ -95,6 +96,8 @@ export function LeasingStepOpenInspection({
   const crossubManagedOpen = !oi.agentConducted;
   /** The server 409s every open-inspection request until the re-let is confirmed. */
   const awaitingRelet = isAwaitingReletConfirmation(detail);
+  /** Self-Manage, agency-run: a list of opens, each with its own links and report. */
+  const selfManagedOpens = selfManaged && Boolean(oi.agentConducted) && Boolean(cycleId);
 
   const linkedInspection = useMemo(
     () =>
@@ -182,7 +185,7 @@ export function LeasingStepOpenInspection({
         openInspectionStartReached(oi, now)));
 
   useEffect(() => {
-    if (!apiConnected || !oi.viewingSessionId) {
+    if (!apiConnected || !oi.viewingSessionId || selfManagedOpens) {
       setOpenSession(null);
       return;
     }
@@ -195,7 +198,7 @@ export function LeasingStepOpenInspection({
     load();
     const id = window.setInterval(load, 5000);
     return () => window.clearInterval(id);
-  }, [apiConnected, oi.viewingSessionId]);
+  }, [apiConnected, oi.viewingSessionId, selfManagedOpens]);
 
   const allowCancel = canCancelLetting(detail, linkedInspection);
 
@@ -308,162 +311,172 @@ export function LeasingStepOpenInspection({
         </div>
       ) : null}
 
-      {hasOpenInspection ? (
-        <div className="space-y-3 rounded-xl border bg-card p-4">
-          <div className="flex items-start gap-3">
-            <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
-              <CalendarClock className="size-4" />
-            </span>
-            <div className="min-w-0 flex-1 space-y-1">
-              <p className="text-sm font-semibold">Open inspection</p>
-              <p className="text-muted-foreground text-xs">
-                {inspectionTimeLabel} ·{' '}
-                <span className="text-foreground font-medium">{inspectionTime}</span>
-                {inspectionDuration ? (
-                  <>
-                    {' '}
-                    · <span className="text-foreground font-medium">{inspectionDuration}</span>
-                  </>
-                ) : null}
-              </p>
-              {isRequested && oi.preferredNotes ? (
-                <p className="text-muted-foreground text-xs leading-relaxed">
-                  Notes: {oi.preferredNotes}
-                </p>
-              ) : null}
-              {crossubOrderPlaced ? (
-                <p className="text-muted-foreground text-xs leading-relaxed">
-                  Choose a Saturday for CROSSUB to conduct the open inspection.
-                </p>
-              ) : null}
-              {oi.pushedToAgentApp ? (
-                <p className="text-muted-foreground text-xs leading-relaxed">
-                  Advertise the property, run the viewing, and submit applicants when ready.
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {canStartOpenNow && cycleId ? (
-              <StartCrossubOpenNowButton
-                propertyId={detail.propertyId}
-                cycleId={cycleId}
-                inspectionId={oi.inspectionId}
-                onStarted={(inspectionId) => {
-                  if (inspectionId) onOpenInspectionCreated?.(inspectionId);
-                }}
-              />
-            ) : null}
-            {canOpenJobCase ? (
-              <Button
-                size="sm"
-                className={cn('h-8 gap-1.5 text-xs', LEASING_UI.btnSecondary)}
-                variant="outline"
-                onClick={() => void openJobCase()}
-              >
-                <ExternalLink className="size-3.5" />
-                Open job case
-              </Button>
-            ) : null}
-            {/* {staffOpenInspectionHref ? (
-              <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
-                <a href={staffOpenInspectionHref} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="size-3.5" />
-                  Open in staff portal
-                </a>
-              </Button>
-            ) : null} */}
-          </div>
-        </div>
-      ) : crossubManagedOpen ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 text-center">
-          <div className="bg-secondary flex size-11 items-center justify-center rounded-full">
-            <DoorOpen className="text-muted-foreground size-5" />
-          </div>
-          <p className="mt-3 text-sm font-medium">Open inspection order placed</p>
-          <p className="text-muted-foreground mt-1 max-w-sm text-xs">
-            CROSSUB will arrange the open inspection and contact the tenant or listing contacts on
-            your behalf. Applicants who apply via the viewing QR code are linked here automatically.
-          </p>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 text-center">
-          <div className="bg-secondary flex size-11 items-center justify-center rounded-full">
-            <DoorOpen className="text-muted-foreground size-5" />
-          </div>
-          <p className="mt-3 text-sm font-medium">No open inspection yet</p>
-          <p className="text-muted-foreground mt-1 max-w-sm text-xs">
-            Schedule an open inspection for prospects, or wait for CROSSUB to arrange one for you.
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            className="mt-4 h-9 gap-1.5"
-            disabled={awaitingRelet}
-            title={awaitingRelet ? LEASING_RELET_COPY.openInspectionBlockedHint : undefined}
-            onClick={() => setCreateOpen(true)}
-          >
-            Create open inspection
-          </Button>
-        </div>
-      )}
-
-      {needsScheduleRequest && cycleId && !awaitingRelet ? (
-        <OpenInspectionScheduleRequestPanel
-          propertyId={detail.propertyId}
-          cycleId={cycleId}
-          onScheduled={(inspectionId) => {
-            if (inspectionId) onOpenInspectionCreated?.(inspectionId);
-          }}
-        />
-      ) : null}
-
-      {oi.agentConducted && oi.viewingSessionId ? (
-        <OpenInspectionApplicantLinksPanel
-          propertyId={detail.propertyId}
-          viewingSessionId={oi.viewingSessionId}
-          apiConnected={apiConnected}
-          inspectionId={oi.inspectionId ?? linkedInspection?.id}
-        />
-      ) : null}
-
-      {openSession && (isScheduled || isScheduledStep || showOpenReport) && !oi.agentConducted ? (
-        <>
-          <OpenInspectionKeyCustodySection
-            inspectionId={
-              openSession.inspectionId ?? oi.inspectionId ?? linkedInspection?.id
-            }
-            apiConnected={apiConnected}
-            inspectionComplete={openSession.sessionStatus === 'closed'}
-          />
-            <OpenInspectionApplicantPanel
-            session={openSession}
-            onSessionChange={setOpenSession}
-            readOnly
-          />
-        </>
-      ) : null}
-
-      {canShowGenerateReport ? (
-        <OpenLeasingGenerateReportButton
-          cycleId={cycleId}
-          propertyId={detail.propertyId}
-          selfManaged={selfManaged}
-          sessionId={oi.viewingSessionId ?? undefined}
-          reportReady={reportReady}
-          onCycleView={(view) => applyCycleView(detail.propertyId, view)}
-          onSessionUpdated={setOpenSession}
-        />
-      ) : null}
-
-      {showOpenReport && hasOpenInspection ? (
-        <OpenLeasingInspectionReportPanel
+      {selfManagedOpens && cycleId ? (
+        <LeasingSelfManagedOpenInspections
           detail={detail}
-          openSession={openSession}
-          showPending
-          onSessionChange={setOpenSession}
+          cycleId={cycleId}
+          addDisabledReason={awaitingRelet ? LEASING_RELET_COPY.openInspectionBlockedHint : undefined}
         />
-      ) : null}
+      ) : (
+        <>
+          {hasOpenInspection ? (
+            <div className="space-y-3 rounded-xl border bg-card p-4">
+              <div className="flex items-start gap-3">
+                <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
+                  <CalendarClock className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="text-sm font-semibold">Open inspection</p>
+                  <p className="text-muted-foreground text-xs">
+                    {inspectionTimeLabel} ·{' '}
+                    <span className="text-foreground font-medium">{inspectionTime}</span>
+                    {inspectionDuration ? (
+                      <>
+                        {' '}
+                        · <span className="text-foreground font-medium">{inspectionDuration}</span>
+                      </>
+                    ) : null}
+                  </p>
+                  {isRequested && oi.preferredNotes ? (
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      Notes: {oi.preferredNotes}
+                    </p>
+                  ) : null}
+                  {crossubOrderPlaced ? (
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      Choose a Saturday for CROSSUB to conduct the open inspection.
+                    </p>
+                  ) : null}
+                  {oi.pushedToAgentApp ? (
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      Advertise the property, run the viewing, and submit applicants when ready.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {canStartOpenNow && cycleId ? (
+                  <StartCrossubOpenNowButton
+                    propertyId={detail.propertyId}
+                    cycleId={cycleId}
+                    inspectionId={oi.inspectionId}
+                    onStarted={(inspectionId) => {
+                      if (inspectionId) onOpenInspectionCreated?.(inspectionId);
+                    }}
+                  />
+                ) : null}
+                {canOpenJobCase ? (
+                  <Button
+                    size="sm"
+                    className={cn('h-8 gap-1.5 text-xs', LEASING_UI.btnSecondary)}
+                    variant="outline"
+                    onClick={() => void openJobCase()}
+                  >
+                    <ExternalLink className="size-3.5" />
+                    Open job case
+                  </Button>
+                ) : null}
+                {/* {staffOpenInspectionHref ? (
+                  <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
+                    <a href={staffOpenInspectionHref} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="size-3.5" />
+                      Open in staff portal
+                    </a>
+                  </Button>
+                ) : null} */}
+              </div>
+            </div>
+          ) : crossubManagedOpen ? (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 text-center">
+              <div className="bg-secondary flex size-11 items-center justify-center rounded-full">
+                <DoorOpen className="text-muted-foreground size-5" />
+              </div>
+              <p className="mt-3 text-sm font-medium">Open inspection order placed</p>
+              <p className="text-muted-foreground mt-1 max-w-sm text-xs">
+                CROSSUB will arrange the open inspection and contact the tenant or listing contacts on
+                your behalf. Applicants who apply via the viewing QR code are linked here automatically.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 text-center">
+              <div className="bg-secondary flex size-11 items-center justify-center rounded-full">
+                <DoorOpen className="text-muted-foreground size-5" />
+              </div>
+              <p className="mt-3 text-sm font-medium">No open inspection yet</p>
+              <p className="text-muted-foreground mt-1 max-w-sm text-xs">
+                Schedule an open inspection for prospects, or wait for CROSSUB to arrange one for you.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                className="mt-4 h-9 gap-1.5"
+                disabled={awaitingRelet}
+                title={awaitingRelet ? LEASING_RELET_COPY.openInspectionBlockedHint : undefined}
+                onClick={() => setCreateOpen(true)}
+              >
+                Create open inspection
+              </Button>
+            </div>
+          )}
+
+          {needsScheduleRequest && cycleId && !awaitingRelet ? (
+            <OpenInspectionScheduleRequestPanel
+              propertyId={detail.propertyId}
+              cycleId={cycleId}
+              onScheduled={(inspectionId) => {
+                if (inspectionId) onOpenInspectionCreated?.(inspectionId);
+              }}
+            />
+          ) : null}
+
+          {oi.agentConducted && oi.viewingSessionId ? (
+            <OpenInspectionApplicantLinksPanel
+              propertyId={detail.propertyId}
+              viewingSessionId={oi.viewingSessionId}
+              apiConnected={apiConnected}
+              inspectionId={oi.inspectionId ?? linkedInspection?.id}
+            />
+          ) : null}
+
+          {openSession && (isScheduled || isScheduledStep || showOpenReport) && !oi.agentConducted ? (
+            <>
+              <OpenInspectionKeyCustodySection
+                inspectionId={
+                  openSession.inspectionId ?? oi.inspectionId ?? linkedInspection?.id
+                }
+                apiConnected={apiConnected}
+                inspectionComplete={openSession.sessionStatus === 'closed'}
+              />
+                <OpenInspectionApplicantPanel
+                session={openSession}
+                onSessionChange={setOpenSession}
+                readOnly
+              />
+            </>
+          ) : null}
+
+          {canShowGenerateReport ? (
+            <OpenLeasingGenerateReportButton
+              cycleId={cycleId}
+              propertyId={detail.propertyId}
+              selfManaged={selfManaged}
+              sessionId={oi.viewingSessionId ?? undefined}
+              reportReady={reportReady}
+              onCycleView={(view) => applyCycleView(detail.propertyId, view)}
+              onSessionUpdated={setOpenSession}
+            />
+          ) : null}
+
+          {showOpenReport && hasOpenInspection ? (
+            <OpenLeasingInspectionReportPanel
+              detail={detail}
+              openSession={openSession}
+              showPending
+              onSessionChange={setOpenSession}
+            />
+          ) : null}
+        </>
+      )}
 
       {allowCancel ? (
         <Button
