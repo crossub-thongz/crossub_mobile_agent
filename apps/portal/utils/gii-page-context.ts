@@ -41,6 +41,8 @@ export type GiiScreenRecord = {
   propertyAddress: string | null;
   /** What the record is about (job title, thread subject), when it has one. */
   title: string | null;
+  /** The reference the agent sees on screen (MR-00196, a tribunal case number), when it has one. */
+  reference: string | null;
 };
 
 function matchRoute(pathname: string): { page: GiiPageRoute; rest: string[] } | null {
@@ -74,10 +76,15 @@ function findRecord(
     ('title' in row && typeof row.title === 'string' && row.title.trim()) ||
     ('subject' in row && typeof row.subject === 'string' && row.subject.trim()) ||
     null;
+  const reference =
+    ('trackingNumber' in row && typeof row.trackingNumber === 'string' && row.trackingNumber.trim()) ||
+    ('caseNumber' in row && typeof row.caseNumber === 'string' && row.caseNumber.trim()) ||
+    null;
   return {
     propertyId: row.propertyId || null,
     propertyAddress: row.propertyAddress?.trim() || null,
     title,
+    reference,
   };
 }
 
@@ -98,8 +105,9 @@ export function giiScreenRecordFor(
 
 /**
  * The screen the agent is on, as Cros's `pageModule` and `pageLabel`. A record opened under
- * a module (`/maintenance/[id]`) reads as its detail label; the property on screen, when
- * there is one, is appended so the label alone names the subject.
+ * a module (`/maintenance/[id]`) reads as its detail label with its reference and title
+ * ("Maintenance job MR-00196: Sink tap leaking"), so "this job" needs no lookup; the
+ * property on screen, when there is one, is appended so the label alone names the subject.
  *
  * Null on a route Cros has no name for (auth, legal) — the turn then carries no screen.
  */
@@ -108,6 +116,8 @@ export function giiPageContextFor(args: {
   propertyLabel?: string | null;
   /** The open record's title, appended to the record screen's name. */
   recordTitle?: string | null;
+  /** The open record's reference, put after the record screen's name. */
+  recordReference?: string | null;
 }): GiiPageContext | null {
   const match = matchRoute(args.pathname);
   if (!match) return null;
@@ -115,8 +125,10 @@ export function giiPageContextFor(args: {
   const onRecord = rest.length > 0 && !GII_PAGE_NON_RECORD_SEGMENTS.has(rest[0]);
   const screen = onRecord ? (page.detailLabel ?? page.label) : page.label;
   const title = onRecord ? args.recordTitle?.trim() : null;
+  const reference = onRecord ? args.recordReference?.trim() : null;
+  const named = reference ? `${screen} ${reference}` : screen;
   const property = args.propertyLabel?.trim();
-  const label = [title ? `${screen}: ${title}` : screen, property]
+  const label = [title ? `${named}: ${title}` : named, property]
     .filter(Boolean)
     .join(GII_PAGE_LABEL_SEPARATOR);
   return { pageModule: page.module, pageLabel: label.slice(0, GII_PAGE_LABEL_MAX_LENGTH) };

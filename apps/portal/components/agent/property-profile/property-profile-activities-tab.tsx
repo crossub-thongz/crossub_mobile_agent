@@ -18,6 +18,7 @@ import {
   listAgentChargeHistory,
   type AgentBillingCharge,
 } from '@/lib/crossub-api/agent-billing-client';
+import { listGiiChanges, type GiiChange } from '@/lib/crossub-api/gii-client';
 import { fromProperty } from '@/lib/detail-navigation';
 import {
   buildPropertyProfileActivities,
@@ -150,6 +151,25 @@ export function PropertyProfileActivitiesTab({
   const [filter, setFilter] = useState<PropertyProfileActivityFilter>('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const [billingCharges, setBillingCharges] = useState<AgentBillingCharge[]>([]);
+  const [crosChanges, setCrosChanges] = useState<GiiChange[]>([]);
+
+  useEffect(() => {
+    if (!apiConnected) {
+      setCrosChanges([]);
+      return;
+    }
+    let cancelled = false;
+    void listGiiChanges(propertyId)
+      .then((rows) => {
+        if (!cancelled) setCrosChanges(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setCrosChanges([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [apiConnected, propertyId]);
 
   useEffect(() => {
     if (!apiConnected) {
@@ -191,6 +211,7 @@ export function PropertyProfileActivitiesTab({
         tribunalHref: (id) => tribunalDetail(id, navContext),
         financialsHref: `/properties/${propertyId}?section=financials`,
         billingCharges,
+        crosChanges,
       }),
     [
       property,
@@ -207,6 +228,7 @@ export function PropertyProfileActivitiesTab({
       sync.accounting,
       navContext,
       billingCharges,
+      crosChanges,
     ],
   );
 

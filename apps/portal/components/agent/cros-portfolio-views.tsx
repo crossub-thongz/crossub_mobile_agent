@@ -24,6 +24,7 @@ import {
 } from '@/constants/routes';
 import type { GiiConversationSummary } from '@/lib/crossub-api/gii-client';
 import { buildDashboardBoard, type DashboardEvent } from '@/lib/dashboard-board';
+import { formatPropertyDateTime } from '@/lib/format-datetime';
 import type { PropertyNeedAction } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -489,7 +490,7 @@ export function CrosPortfolioBody({
             >
               <p className="truncate text-sm font-bold text-slate-900">{entry.title}</p>
               <p className="mt-0.5 text-xs text-slate-500">
-                {formatHistoryTime(entry.lastMessageAt)}
+                {formatPropertyDateTime(entry.lastMessageAt)}
               </p>
             </button>
             <button
@@ -573,15 +574,4 @@ function InsightSection({
       )}
     </section>
   );
-}
-
-function formatHistoryTime(iso: string): string {
-  const parsed = Date.parse(iso);
-  if (Number.isNaN(parsed)) return '';
-  return new Intl.DateTimeFormat(undefined, {
-    day: 'numeric',
-    month: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(parsed);
 }

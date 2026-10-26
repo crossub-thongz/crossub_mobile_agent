@@ -1,6 +1,7 @@
 'use client';
 
 import { Loader2, MessagesSquare, Plus } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ConversationContextPane } from '@/components/agent/conversations/conversation-context-pane';
@@ -21,6 +22,7 @@ import {
   CONVERSATIONS_COPY,
   type ConversationMobileView,
 } from '@/constants/conversations';
+import { CONVERSATION_THREAD_PARAM } from '@/constants/routes';
 import { useAgencyTeamMembers } from '@/hooks/use-agency-team-members';
 import {
   useAgentConversationDetail,
@@ -56,6 +58,14 @@ export function ConversationsWorkspace() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<ConversationMobileView>(CONVERSATION_MOBILE_VIEW.LIST);
   const [composeOpen, setComposeOpen] = useState(false);
+
+  // A link to one thread (Cros's Open button) opens it, on mobile straight to the thread.
+  const linkedThreadId = useSearchParams().get(CONVERSATION_THREAD_PARAM);
+  useEffect(() => {
+    if (!linkedThreadId) return;
+    setSelectedId(linkedThreadId);
+    setMobileView(CONVERSATION_MOBILE_VIEW.THREAD);
+  }, [linkedThreadId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setSearch(searchInput), CONVERSATION_SEARCH_DEBOUNCE_MS);

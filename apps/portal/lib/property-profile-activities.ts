@@ -1,5 +1,7 @@
 import { jobCaseFocusHref } from '@/lib/billing/job-case-focus';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import type { AgentBillingCharge } from '@/lib/crossub-api/agent-billing-client';
+import type { GiiChange } from '@/lib/crossub-api/gii-client';
 import { dayKey, formatDate, formatTime } from '@/lib/format-datetime';
 import { agentNotificationDisplay } from '@/lib/notification-activity';
 import type { PropertyPortalAccounting, PropertyPortalLedgerEntry } from '@/lib/property-registry-api';
@@ -22,7 +24,8 @@ export type PropertyProfileActivityCategory =
   | 'inspection'
   | 'leasing'
   | 'financial'
-  | 'message';
+  | 'message'
+  | 'cros';
 
 export type PropertyProfileActivityFilter = 'all' | PropertyProfileActivityCategory;
 
@@ -51,6 +54,7 @@ export const PROPERTY_PROFILE_ACTIVITY_FILTERS: {
   { id: 'leasing', label: 'Leasing' },
   { id: 'financial', label: 'Financial' },
   { id: 'message', label: 'Messages' },
+  { id: 'cros', label: CROS_ASSISTANT_NAME },
 ];
 
 function atSortValue(at: string): number {
@@ -386,6 +390,8 @@ export function buildPropertyProfileActivities(input: {
   tribunalHref: (id: string) => string;
   financialsHref?: string;
   billingCharges?: AgentBillingCharge[];
+  /** Changes Cros made after an officer pressed Confirm, from the AI decision log. */
+  crosChanges?: GiiChange[];
 }): PropertyProfileActivity[] {
   const rows: PropertyProfileActivity[] = [];
   const propertyAddress = formatPropertyFullAddress(input.property);
@@ -564,6 +570,22 @@ export function buildPropertyProfileActivities(input: {
       actorLabel: 'CROS System',
       category: notificationCategory(notification.href, notification.taskType),
       href: notification.href,
+    });
+  }
+
+  for (const change of input.crosChanges ?? []) {
+    rows.push({
+      id: `cros-${change.id}`,
+      at: change.at,
+      atSort: atSortValue(change.at),
+      timeLabel: formatTime(change.at),
+      dayKey: dayKey(change.at),
+      title: `Changed by ${CROS_ASSISTANT_NAME}`,
+      subtitle: change.summary,
+      actorLabel: change.confirmedBy
+        ? `${CROS_ASSISTANT_NAME}, confirmed by ${change.confirmedBy}`
+        : CROS_ASSISTANT_NAME,
+      category: 'cros',
     });
   }
 

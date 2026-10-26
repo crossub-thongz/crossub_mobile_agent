@@ -18,17 +18,10 @@ export type GiiChatMessage = components['schemas']['GiiChatMessageDto'] & {
   attachments?: GiiChatAttachment[];
 };
 
-/** Job-case Open buttons — present once the API contract ships `jobCases` on chat. */
-export type GiiJobCaseLink = {
-  id: string;
-  kind: 'maintenance' | 'rent_review' | 'inspection';
-  reference: string | null;
-  label: string;
-};
+/** A record a Cros reply talked about, shown as an Open button under it. */
+export type GiiJobCaseLink = components['schemas']['GiiJobCaseLinkDto'];
 
-export type GiiChatResponse = components['schemas']['GiiChatResponseDto'] & {
-  jobCases?: GiiJobCaseLink[];
-};
+export type GiiChatResponse = components['schemas']['GiiChatResponseDto'];
 export type GiiAssessment = components['schemas']['GiiAssessmentDto'];
 /** A change Cros proposed and has not made — shown as a Confirm card. */
 export type GiiProposal = components['schemas']['GiiProposalDto'];
@@ -125,7 +118,7 @@ export async function confirmGiiProposal(token: string): Promise<GiiConfirmResul
     return {
       done: data.done,
       message: data.message,
-      jobCases: data.jobCases as GiiJobCaseLink[],
+      jobCases: data.jobCases,
     };
   }
   const reason = (error as { message?: unknown } | undefined)?.message;
@@ -179,6 +172,18 @@ export async function saveGiiConversation(
   });
   if (error || !data) throw new Error(`${CROS_ASSISTANT_NAME} chat could not be saved`);
   return data;
+}
+
+/** A change Cros made on a property after an officer pressed Confirm. */
+export type GiiChange = components['schemas']['GiiChangeDto'];
+
+/** Cros's confirmed changes on a property, newest first (the AI decision log). */
+export async function listGiiChanges(propertyId: string): Promise<GiiChange[]> {
+  const { data, error } = await crossub.GET('/agent/gii/changes', {
+    params: { query: { propertyId } },
+  });
+  if (error || !data) throw new Error(`${CROS_ASSISTANT_NAME} changes could not be loaded`);
+  return data.changes;
 }
 
 export async function deleteGiiConversation(id: string): Promise<void> {

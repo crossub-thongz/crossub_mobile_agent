@@ -152,6 +152,10 @@ export const messagesForProperty = (propertyId: string) =>
   `/messages?property=${encodeURIComponent(propertyId)}`;
 export const needActionsForProperty = (propertyId: string) =>
   `/tasks?property=${encodeURIComponent(propertyId)}`;
+/** A Self-Manage Conversations thread, opened on load (the inbox has no per-thread route). */
+export const CONVERSATION_THREAD_PARAM = 'thread';
+export const conversationThread = (conversationId: string) =>
+  `${ROUTES.CONVERSATIONS}?${CONVERSATION_THREAD_PARAM}=${encodeURIComponent(conversationId)}`;
 export const communicationsThread = (threadId: string) =>
   `${ROUTES.COMMUNICATIONS}?threadId=${encodeURIComponent(threadId)}`;
 export const messageDetailParty = (id: string, party: 'tenant' | 'owner') =>

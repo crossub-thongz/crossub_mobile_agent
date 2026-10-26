@@ -41,6 +41,7 @@ import { GiiPropertyJobsCard } from '@/components/agent/gii-property-jobs-card';
 import { MessageCompose } from '@/components/agent/message-compose';
 import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useAgentNotificationDialog } from '@/components/providers/agent-notification-dialog-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Button } from '@/components/ui/button';
@@ -78,12 +79,7 @@ import { buildNeedActionGroups } from '@/lib/need-action-groups';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import { useAgentStore } from '@/lib/store';
 import type { PropertyNeedAction } from '@/lib/types';
-import {
-  inspectionToJobRow,
-  maintenanceToJobRow,
-  needActionToJobRow,
-  rentReviewToJobRow,
-} from '@/lib/portfolio-case-dialog';
+import { needActionToJobRow } from '@/lib/portfolio-case-dialog';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import {
   confirmGiiProposal,
@@ -120,6 +116,7 @@ import {
   giiScreenRecordFor,
   type GiiPageContext,
 } from '@/utils/gii-page-context';
+import { giiRecordLinkTarget } from '@/utils/gii-record-link';
 import { useShellDockStore, type GiiScope } from '@/lib/shell-dock-store';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -301,38 +298,30 @@ export function GiiAssistant({
   const refreshPortfolio = data.refresh;
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
 
-  const resolveJobCaseLink = useCallback(
-    (link: GiiJobCaseLink): PropertyJobRow | null => {
-      if (link.kind === 'maintenance') {
-        const item =
-          portfolioData.maintenanceAll.find((row) => row.id === link.id) ??
-          (link.reference
-            ? portfolioData.maintenanceAll.find((row) => row.trackingNumber === link.reference)
-            : undefined);
-        return item ? maintenanceToJobRow(item) : null;
-      }
-      if (link.kind === 'rent_review') {
-        const item = portfolioData.rentReviews.find((row) => row.id === link.id);
-        return item ? rentReviewToJobRow(item, portfolioData.rentReviewDecisions) : null;
-      }
-      const item = portfolioData.inspections.find((row) => row.id === link.id);
-      return item ? inspectionToJobRow(item) : null;
-    },
-    [portfolioData],
-  );
+  const { openNotification } = useAgentNotificationDialog();
+  const { notifications, markNotificationRead } = data;
 
   const openJobCaseLink = useCallback(
     async (link: GiiJobCaseLink) => {
-      const existing = resolveJobCaseLink(link);
-      if (existing) {
-        openJob(existing);
+      const target = giiRecordLinkTarget(link, portfolioData, notifications);
+      if (!target) {
+        // A record raised this turn may not be in the loaded data yet.
+        await refreshPortfolio();
+        toast.message('Refreshing… tap Open again in a moment.');
         return;
       }
-      // Newly created jobs may not be in the portfolio snapshot yet.
-      await refreshPortfolio();
-      toast.message('Refreshing jobs… tap Open again in a moment.');
+      if ('row' in target) {
+        openJob(target.row);
+        return;
+      }
+      if ('href' in target) {
+        router.push(target.href);
+        return;
+      }
+      markNotificationRead(target.notification.id);
+      if (!openNotification(target.notification)) router.push(target.notification.href);
     },
-    [openJob, refreshPortfolio, resolveJobCaseLink],
+    [markNotificationRead, notifications, openJob, openNotification, portfolioData, refreshPortfolio, router],
   );
   const [query, setQueryState] = useState('');
   const setQuery = useCallback<Dispatch<SetStateAction<string>>>(
@@ -551,6 +540,7 @@ export function GiiAssistant({
     pathname,
     propertyLabel: scopedAddress,
     recordTitle: screenRecord?.title,
+    recordReference: screenRecord?.reference,
   });
   /**
    * The property on screen, and the one on screen at the previous turn. Only navigation
@@ -1109,12 +1099,7 @@ export function GiiAssistant({
                 <GiiChatLine role={line.role} text={line.text} pending={line.pending} />
                 {line.assessment ? <GiiAssessmentCard assessment={line.assessment} /> : null}
                 {line.jobCases?.length ? (
-                  <GiiJobCaseButtons
-                    cases={line.jobCases}
-                    portfolioData={portfolioData}
-                    onOpen={openJob}
-                    onOpenMissing={openJobCaseLink}
-                  />
+                  <GiiJobCaseButtons cases={line.jobCases} onOpen={openJobCaseLink} />
                 ) : null}
                 {line.proposal ? (
                   <GiiProposalCard
@@ -1547,12 +1532,7 @@ export function GiiAssistant({
             {line.assessment ? <GiiAssessmentCard assessment={line.assessment} /> : null}
 
             {line.jobCases?.length ? (
-              <GiiJobCaseButtons
-                cases={line.jobCases}
-                portfolioData={portfolioData}
-                onOpen={openJob}
-                onOpenMissing={openJobCaseLink}
-              />
+              <GiiJobCaseButtons cases={line.jobCases} onOpen={openJobCaseLink} />
             ) : null}
 
             {line.proposal ? (

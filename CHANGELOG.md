@@ -3,6 +3,9 @@
 ## 2026-10-26
 
 ### Added
+- Cros Open buttons for leasing, End Leasing cases, conversations, notifications, arrears and properties, as well as jobs, rent reviews and inspections.
+- A property's Activities lists the changes Cros made there, with what changed and who confirmed it.
+- A Conversations link can open one thread (`/conversations?thread=`).
 - Cros knows which screen the agent is on (module, record screen and property) with every message.
 - Cros is told when the agent moved to a different property mid-conversation.
 - On a maintenance job, inspection, leasing, tenant selection, rent review, vacate, tribunal or message screen, Cros knows the record and its property without being told the address.
@@ -30,6 +33,8 @@
 - Self-Manage Trust: opening balances, open ledgers, payout details and schedule, recurring fees, held-back amounts, bond and paid-to reset, bill edit and cancel, past disbursement runs, revoke a locked month and recorded bank balances.
 
 ### Fixed
+- Cros on a job screen is told the job's reference (MR-00196), so it answers about that job instead of asking which one.
+- Cros History times are shown in Sydney time, like the rest of the app.
 - Self-Manage Trust: a receipt, withdrawal, journal or deposit transfer retried after a server or network error reuses its key, so it cannot post twice.
 - A termination notice in the bell opens the property it is about, and shows the reason title only (Wayne, PR #1).
 - Self-Manage vacating: the agent confirming the comparison completes the Compare step, even with no linked ingoing or outgoing report and no damage items.
