@@ -27,6 +27,7 @@ import type {
   TrustPayoutMethodRowInput,
   UpdateTrustBankAccountInput,
 } from '@/lib/crossub-api/agent-trust-client';
+import type { CreateTrustBankAccountInput } from '@/lib/crossub-api/agent-trust-settings-client';
 import { centsToDollarsInput, parseDollarsToCents } from '@/lib/trust-accounting';
 
 /** A form's checked output, or the first message to show. */
@@ -111,16 +112,14 @@ function checkBankAccountDraft(draft: TrustBankAccountDraft): TrustFormResult<Ch
   });
 }
 
-/** The set-up body: the workspace name (when the workspace is created) and the first bank account. */
-export function trustSetupInput(
+/** A new trust bank account's body: the checked fields, blanks left out. */
+export function trustBankAccountCreateInput(
   draft: TrustBankAccountDraft,
-  workspaceName: string | null,
-): TrustFormResult<TrustAccountSetupInput> {
+): TrustFormResult<CreateTrustBankAccountInput> {
   const checked = checkBankAccountDraft(draft);
   if (!checked.ok) return checked;
   const v = checked.value;
   return pass({
-    workspaceName: workspaceName?.trim() || undefined,
     name: v.name,
     bankName: v.bankName || undefined,
     accountName: v.accountName || undefined,
@@ -132,6 +131,16 @@ export function trustSetupInput(
     abaUserId: v.abaUserId || undefined,
     abaRemitterName: v.abaRemitterName || undefined,
   });
+}
+
+/** The set-up body: the workspace name (when the workspace is created) and the first bank account. */
+export function trustSetupInput(
+  draft: TrustBankAccountDraft,
+  workspaceName: string | null,
+): TrustFormResult<TrustAccountSetupInput> {
+  const checked = trustBankAccountCreateInput(draft);
+  if (!checked.ok) return checked;
+  return pass({ workspaceName: workspaceName?.trim() || undefined, ...checked.value });
 }
 
 /**

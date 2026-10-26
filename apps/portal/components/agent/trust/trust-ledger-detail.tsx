@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { TrustFeeSettingsPanel } from '@/components/agent/trust/trust-fee-settings-panel';
 import { TrustFeesPanel } from '@/components/agent/trust/trust-fees-panel';
 import { TrustLedgerActions } from '@/components/agent/trust/trust-ledger-actions';
+import { TrustLedgerBalanceCheck } from '@/components/agent/trust/trust-ledger-balance-check';
 import { TrustLedgerSummaryPanel } from '@/components/agent/trust/trust-ledger-summary-panel';
 import { TrustTenantExtras } from '@/components/agent/trust/trust-tenant-extras';
 import { TrustTenantPanel } from '@/components/agent/trust/trust-tenant-panel';
@@ -164,6 +165,7 @@ function LedgerHeader({
           <p className="text-muted-foreground text-xs">{COPY.balance}</p>
           <p className="text-xl font-semibold tabular-nums">{formatCents(ledger.balanceCents)}</p>
         </div>
+        <TrustLedgerBalanceCheck key={`${ledger.id}:${ledger.balanceCents}`} agencyId={agencyId} ledgerId={ledger.id} />
         <div className="flex gap-2">
           <TrustDownloadButton
             label={COPY.downloadCsv}
