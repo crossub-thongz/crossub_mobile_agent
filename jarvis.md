@@ -49,8 +49,8 @@ Review items: AI-003, AI-012, AI-013.
 ### 1.1 Screen awareness
 
 - [~] Portal sends `pageModule`, `pageLabel` and `propertyChanged` with every turn (fields already in contract 0.45.0). Code done (`constants/gii-page-context.ts`, `utils/gii-page-context.ts`, `gii-client.ts`, `gii-assistant.tsx`); staging check pending.
-- [ ] Contract: add record type and id on screen (maintenance job, inspection, rent review, leasing, vacate, tribunal, conversation thread, application) to `GiiChatContextDto`; prompt treats it as the subject.
-- [ ] Portal: derive record type and id from the route and send them.
+- [-] Contract: record type and id on screen in `GiiChatContextDto`. Moved to 2.1: no Gii tool takes a record id yet, so it lands with the first one that does.
+- [~] Portal: a record screen (maintenance, inspection, leasing, tenant selection, rent review, vacate, tribunal, message thread) scopes Cros to that record's property and names the record in `pageLabel`. Code done (`GII_SCREEN_RECORD_LIST`, `giiScreenRecordFor`); staging check pending.
 - [ ] Answers link to the record they talk about (Open buttons for every record kind, not only job cases).
 
 ### 1.2 Saved conversations
@@ -86,6 +86,7 @@ Review items: AI-001, AI-002, AI-004, AI-005, AI-019, AI-024, AI-025, AI-027, AI
 ### 2.1 Tool bundles
 
 - [ ] Bundle loading: core tools plus the bundle for the current screen.
+- [ ] Contract: record kind and id on screen in `GiiChatContextDto` (from 1.1), for tools that act on the open record.
 - [ ] Maintenance: approve or reject quote, chase contractor, schedule, close.
 - [ ] Inspections: book routine, ingoing and outgoing; cancel; sign off.
 - [ ] Rent review: send offer, chase tenant, record response.
@@ -153,3 +154,4 @@ Review items: AI-016 (spoken English first).
 |---|---|---|
 | 2026-10-26 | Plan | Plan agreed; tracker created |
 | 2026-10-26 | 1.1 | Portal sends screen module and label on every turn; property change only counts navigation, reset on a new chat |
+| 2026-10-26 | 1.1 | Record screens scope Cros to the record's property; contract record field moved to 2.1 |

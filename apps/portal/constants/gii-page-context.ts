@@ -39,6 +39,24 @@ export const GII_PAGE_MODULE = {
 
 export type GiiPageModule = (typeof GII_PAGE_MODULE)[keyof typeof GII_PAGE_MODULE];
 
+/**
+ * The agent data list a record screen's `[id]` is looked up in. The record names the
+ * property on screen, so a job screen is about that job's property without an address.
+ */
+export const GII_SCREEN_RECORD_LIST = {
+  MAINTENANCE: 'maintenanceAll',
+  INSPECTIONS: 'inspections',
+  LEASING_CYCLES: 'leasingCycles',
+  TENANT_SELECTIONS: 'tenantSelections',
+  RENT_REVIEWS: 'rentReviews',
+  VACATING: 'vacating',
+  TRIBUNAL_CASES: 'tribunalCases',
+  MESSAGES: 'messages',
+} as const;
+
+export type GiiScreenRecordList =
+  (typeof GII_SCREEN_RECORD_LIST)[keyof typeof GII_SCREEN_RECORD_LIST];
+
 export type GiiPageRoute = {
   route: string;
   module: GiiPageModule;
@@ -46,6 +64,8 @@ export type GiiPageRoute = {
   label: string;
   /** One record opened under the route (`/maintenance/[id]`). Absent: same as `label`. */
   detailLabel?: string;
+  /** Where that record is found, to name its property. Absent: the screen names none. */
+  recordList?: GiiScreenRecordList;
 };
 
 /**
@@ -70,12 +90,14 @@ export const GII_PAGE_ROUTES: readonly GiiPageRoute[] = [
     module: GII_PAGE_MODULE.MAINTENANCE,
     label: 'Maintenance',
     detailLabel: 'Maintenance job',
+    recordList: GII_SCREEN_RECORD_LIST.MAINTENANCE,
   },
   {
     route: ROUTES.INSPECTIONS,
     module: GII_PAGE_MODULE.INSPECTIONS,
     label: 'Inspections',
     detailLabel: 'Inspection',
+    recordList: GII_SCREEN_RECORD_LIST.INSPECTIONS,
   },
   {
     route: ROUTES.PROPERTY_TRANSFER,
@@ -87,30 +109,35 @@ export const GII_PAGE_ROUTES: readonly GiiPageRoute[] = [
     module: GII_PAGE_MODULE.LEASING,
     label: 'Leasing',
     detailLabel: 'Leasing record',
+    recordList: GII_SCREEN_RECORD_LIST.LEASING_CYCLES,
   },
   {
     route: ROUTES.TENANT_SELECTION,
     module: GII_PAGE_MODULE.TENANT_SELECTION,
     label: 'Tenant selection',
     detailLabel: 'Tenant application',
+    recordList: GII_SCREEN_RECORD_LIST.TENANT_SELECTIONS,
   },
   {
     route: ROUTES.RENT_REVIEW,
     module: GII_PAGE_MODULE.RENT_REVIEW,
     label: 'Rent review',
     detailLabel: 'Rent review',
+    recordList: GII_SCREEN_RECORD_LIST.RENT_REVIEWS,
   },
   {
     route: ROUTES.VACATING,
     module: GII_PAGE_MODULE.VACATING,
     label: 'Vacating',
     detailLabel: 'Vacate case',
+    recordList: GII_SCREEN_RECORD_LIST.VACATING,
   },
   {
     route: ROUTES.TRIBUNAL,
     module: GII_PAGE_MODULE.TRIBUNAL,
     label: 'Tribunal',
     detailLabel: 'Tribunal case',
+    recordList: GII_SCREEN_RECORD_LIST.TRIBUNAL_CASES,
   },
   { route: ROUTES.CONVERSATIONS, module: GII_PAGE_MODULE.CONVERSATIONS, label: 'Conversations' },
   {
@@ -118,6 +145,7 @@ export const GII_PAGE_ROUTES: readonly GiiPageRoute[] = [
     module: GII_PAGE_MODULE.MESSAGES,
     label: 'Messages',
     detailLabel: 'Message thread',
+    recordList: GII_SCREEN_RECORD_LIST.MESSAGES,
   },
   { route: ROUTES.COMMUNICATIONS, module: GII_PAGE_MODULE.COMMUNICATIONS, label: 'Communications' },
   { route: ROUTES.TRUST, module: GII_PAGE_MODULE.TRUST, label: 'Trust accounting' },

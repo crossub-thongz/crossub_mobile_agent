@@ -96,6 +96,7 @@ import { propertyIdFromPath } from '@/lib/property-path';
 import {
   giiPageContextFor,
   giiPropertyChanged,
+  giiScreenRecordFor,
   type GiiPageContext,
 } from '@/utils/gii-page-context';
 import { useShellDockStore, type GiiScope } from '@/lib/shell-dock-store';
@@ -362,7 +363,9 @@ export function GiiAssistant({
   /** Property embed and message dock scroll the page; modal/panel keep the composer pinned with inner scroll. */
   const usePageScroll = isEmbedded || isMessageDock;
 
-  const pathPropertyId = propertyIdFromPath(pathname);
+  /** A record screen (`/maintenance/[id]`) is about that record's property. */
+  const screenRecord = useMemo(() => giiScreenRecordFor(pathname, data), [data, pathname]);
+  const pathPropertyId = propertyIdFromPath(pathname) ?? screenRecord?.propertyId ?? undefined;
   const scopedProperty = useMemo(() => {
     const id = effectiveLaunch.propertyId ?? pathPropertyId;
     if (!id) return null;
@@ -516,7 +519,11 @@ export function GiiAssistant({
 
   /** The screen the agent is on, read at send time so a turn always names the current one. */
   const pageContextRef = useRef<GiiPageContext | null>(null);
-  pageContextRef.current = giiPageContextFor({ pathname, propertyLabel: scopedAddress });
+  pageContextRef.current = giiPageContextFor({
+    pathname,
+    propertyLabel: scopedAddress,
+    recordTitle: screenRecord?.title,
+  });
   /**
    * The property on screen, and the one on screen at the previous turn. Only navigation
    * counts as a change: a property Cros resolved from the agent's words is not.
