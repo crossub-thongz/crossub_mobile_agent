@@ -19,7 +19,7 @@ import { TRUST_INPUT_LIMITS, TRUST_SUPPLIER_COPY as COPY } from '@/constants/tru
 import { addTrustSupplier, type TrustLedger } from '@/lib/crossub-api/agent-trust-client';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
-/** Open a supplier ledger on the trust account. Payout details stay with CROSSUB staff. */
+/** Open a supplier ledger on the trust account; its payout details are added from the ledger. */
 export function TrustAddSupplierDialog({
   agencyId,
   bankAccountId,

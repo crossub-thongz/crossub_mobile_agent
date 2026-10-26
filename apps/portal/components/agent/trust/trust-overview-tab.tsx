@@ -1,11 +1,14 @@
 'use client';
 
 import { TrustLoadError, TrustLoading, TrustPanel, TrustStat } from '@/components/agent/trust/trust-ui';
+import { Button } from '@/components/ui/button';
 import {
   TRUST_BANK_RECONCILIATION_STATUS,
   TRUST_LEDGER_KIND,
   TRUST_LEDGER_KIND_LABEL,
   TRUST_OVERVIEW_COPY as COPY,
+  TRUST_TAB,
+  type TrustTab,
 } from '@/constants/trust';
 import { useTrustResource } from '@/hooks/use-trust-resource';
 import { fetchTrustOverview } from '@/lib/crossub-api/agent-trust-client';
@@ -14,9 +17,11 @@ import { formatCents, formatTrustDate } from '@/lib/trust-accounting';
 export function TrustOverviewTab({
   agencyId,
   bankAccountId,
+  onOpenTab,
 }: {
   agencyId: string;
   bankAccountId: string;
+  onOpenTab: (tab: TrustTab) => void;
 }) {
   const { data, error, loading, reload } = useTrustResource(
     `${agencyId}:${bankAccountId}`,
@@ -33,6 +38,17 @@ export function TrustOverviewTab({
 
   return (
     <div className="space-y-4">
+      {data.takeOnPending ? (
+        <div className="flex flex-col gap-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold">{COPY.takeOnPending}</p>
+            <p className="text-muted-foreground text-sm">{COPY.takeOnPendingHint}</p>
+          </div>
+          <Button type="button" size="sm" onClick={() => onOpenTab(TRUST_TAB.SETTINGS)}>
+            {COPY.openTakeOn}
+          </Button>
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <TrustStat label={COPY.cashBook} value={formatCents(data.cashBookBalanceCents)} />
         <TrustStat label={COPY.ledgers} value={formatCents(data.ledgerBalanceCents)} />
@@ -65,9 +81,19 @@ export function TrustOverviewTab({
           label={COPY.ownersDue}
           value={data.ownersDueCount}
           hint={
-            data.ownersWithoutPayoutMethodCount > 0
-              ? COPY.ownersWithoutPayout(data.ownersWithoutPayoutMethodCount)
-              : undefined
+            data.ownersWithoutPayoutMethodCount > 0 ? (
+              <>
+                {COPY.ownersWithoutPayout(data.ownersWithoutPayoutMethodCount)}
+                {' · '}
+                <button
+                  type="button"
+                  className="text-primary font-medium underline-offset-2 hover:underline"
+                  onClick={() => onOpenTab(TRUST_TAB.DISBURSE)}
+                >
+                  {COPY.addPayoutDetails}
+                </button>
+              </>
+            ) : undefined
           }
         />
         <TrustStat

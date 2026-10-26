@@ -27,8 +27,9 @@ const DEFAULT_SMS_REMINDER =
   'CROSSUB: Rent {{amount}} for {{property_address}} is {{days}} days overdue. Reply or pay via tenant app.';
 
 /**
- * A Self-Manage principal or accountant sees their trust workspace's settings read-only (CROSSUB
- * manages them, D132); everyone else keeps the placeholder behind `ACCOUNTING_MODULE_LAUNCHED`.
+ * A Self-Manage principal or accountant sees a summary of their trust workspace's settings here
+ * and changes them in Trust, Settings (D132 as amended 26 Oct 2026); everyone else keeps the
+ * placeholder behind `ACCOUNTING_MODULE_LAUNCHED`.
  */
 export function AccountingSettingsSection() {
   const { selfManagedTrust } = useSelfManagedAccess();

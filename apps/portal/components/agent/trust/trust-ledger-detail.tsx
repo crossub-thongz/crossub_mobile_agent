@@ -2,7 +2,11 @@
 
 import { ArrowLeft } from 'lucide-react';
 
+import { TrustFeeSettingsPanel } from '@/components/agent/trust/trust-fee-settings-panel';
 import { TrustFeesPanel } from '@/components/agent/trust/trust-fees-panel';
+import { TrustLedgerActions } from '@/components/agent/trust/trust-ledger-actions';
+import { TrustTenantPanel } from '@/components/agent/trust/trust-tenant-panel';
+import { TrustWithholdsPanel } from '@/components/agent/trust/trust-withholds-panel';
 import {
   TRUST_TABLE_CELL_CLASS,
   TRUST_TABLE_HEAD_CLASS,
@@ -18,7 +22,9 @@ import { Button } from '@/components/ui/button';
 import {
   TRUST_LEDGER_FILE_FORMAT,
   TRUST_LEDGER_KIND,
+  TRUST_LEDGER_ACTIONS_COPY,
   TRUST_LEDGER_KIND_LABEL,
+  TRUST_LEDGER_STATUS,
   TRUST_LEDGERS_COPY as COPY,
   TRUST_PAGE_SIZE_MAX,
 } from '@/constants/trust';
@@ -69,13 +75,8 @@ export function TrustLedgerDetail({
         )
       ) : (
         <>
-          <LedgerHeader agencyId={agencyId} ledger={ledger.data} />
-          <div
-            className={cn(
-              'grid gap-4',
-              ledger.data.kind === TRUST_LEDGER_KIND.OWNER && 'lg:grid-cols-[3fr_2fr]',
-            )}
-          >
+          <LedgerHeader agencyId={agencyId} ledger={ledger.data} onChanged={ledger.reload} />
+          <div className={cn('grid gap-4', hasSideColumn(ledger.data) && 'lg:grid-cols-[3fr_2fr]')}>
             <LedgerEntries agencyId={agencyId} ledgerId={ledgerId} />
             {ledger.data.kind === TRUST_LEDGER_KIND.OWNER ? (
               <div className="space-y-4">
@@ -84,6 +85,17 @@ export function TrustLedgerDetail({
                   agencyId={agencyId}
                   ledgerId={ledgerId}
                   accountCodes={accountCodes}
+                  onChanged={ledger.reload}
+                />
+                <TrustFeeSettingsPanel agencyId={agencyId} ledgerId={ledgerId} accountCodes={accountCodes} />
+                <TrustWithholdsPanel agencyId={agencyId} ledgerId={ledgerId} onChanged={ledger.reload} />
+              </div>
+            ) : ledger.data.kind === TRUST_LEDGER_KIND.TENANT && ledger.data.rentProfile ? (
+              <div className="space-y-4">
+                <TrustTenantPanel
+                  agencyId={agencyId}
+                  ledger={ledger.data}
+                  profile={ledger.data.rentProfile}
                   onChanged={ledger.reload}
                 />
               </div>
@@ -95,7 +107,23 @@ export function TrustLedgerDetail({
   );
 }
 
-function LedgerHeader({ agencyId, ledger }: { agencyId: string; ledger: TrustLedger }) {
+/** Owners carry statements, fees and held amounts; a tenant with rent set carries its bond. */
+function hasSideColumn(ledger: TrustLedger): boolean {
+  return (
+    ledger.kind === TRUST_LEDGER_KIND.OWNER ||
+    (ledger.kind === TRUST_LEDGER_KIND.TENANT && ledger.rentProfile != null)
+  );
+}
+
+function LedgerHeader({
+  agencyId,
+  ledger,
+  onChanged,
+}: {
+  agencyId: string;
+  ledger: TrustLedger;
+  onChanged: () => void;
+}) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border bg-card p-4">
       <div className="min-w-0">
@@ -104,6 +132,9 @@ function LedgerHeader({ agencyId, ledger }: { agencyId: string; ledger: TrustLed
           <TrustPill className="bg-secondary text-secondary-foreground">
             {TRUST_LEDGER_KIND_LABEL[ledger.kind]}
           </TrustPill>
+          {ledger.status === TRUST_LEDGER_STATUS.CLOSED ? (
+            <TrustPill className="bg-muted text-muted-foreground">{TRUST_LEDGER_ACTIONS_COPY.closedBadge}</TrustPill>
+          ) : null}
         </div>
         <p className="mt-1 text-lg font-semibold leading-tight">{ledger.name}</p>
         {ledger.propertyAddress ? (
@@ -129,6 +160,7 @@ function LedgerHeader({ agencyId, ledger }: { agencyId: string; ledger: TrustLed
             failedMessage={COPY.downloadFailed}
           />
         </div>
+        <TrustLedgerActions agencyId={agencyId} ledger={ledger} onChanged={onChanged} />
       </div>
     </div>
   );

@@ -7,7 +7,8 @@ import { crossub } from './client';
 /**
  * Self-Manage trust accounting (Phase 3) on the agent facade, `/agent/agencies/{agencyId}/trust/*`.
  * Every call 404s unless the caller is that Self-Manage agency's principal or accountant and
- * CROSSUB has set up its trust workspace (see `isTrustNotSetUpError`).
+ * the agency's trust workspace is set up (see `isTrustNotSetUpError`; `setupTrustAccount` sets
+ * it up from the app).
  */
 
 export type AgentTrustWorkspace = components['schemas']['AgentTrustWorkspaceDto'];
@@ -69,6 +70,40 @@ export type TrustCashReport = components['schemas']['TrustCashReportDto'];
 export type TrustFolioBalanceReport = components['schemas']['TrustFolioBalanceReportDto'];
 export type TrustUnpresentedReport = components['schemas']['TrustUnpresentedReportDto'];
 
+export type TrustAccountSetupInput = components['schemas']['AgentTrustSetupDto'];
+export type UpdateTrustBankAccountInput = components['schemas']['UpdateBankAccountDto'];
+export type CreateTrustAccountCodeInput = components['schemas']['CreateAccountCodeDto'];
+export type UpdateTrustAccountCodeInput = components['schemas']['UpdateAccountCodeDto'];
+export type TrustTakeOnStatus = components['schemas']['TrustTakeOnStatusDto'];
+export type TrustTakeOnLedgerRow = components['schemas']['TrustTakeOnLedgerRowDto'];
+export type PostTrustTakeOnInput = components['schemas']['PostTakeOnDto'];
+export type OpenTrustLedgerInput = components['schemas']['AgentOpenLedgerDto'];
+export type UpdateTrustLedgerInput = components['schemas']['UpdateLedgerDto'];
+export type TrustFolioSyncPreview = components['schemas']['TrustFolioSyncPreviewDto'];
+export type TrustFolioSyncResult = components['schemas']['TrustFolioSyncResultDto'];
+export type TrustPayoutMethods = components['schemas']['TrustPayoutMethodsDto'];
+export type TrustPayoutMethod = components['schemas']['TrustPayoutMethodDto'];
+export type PutTrustPayoutMethodsInput = components['schemas']['PutPayoutMethodsDto'];
+export type TrustPayoutMethodRowInput = components['schemas']['PayoutMethodRowDto'];
+export type SetTrustPayoutScheduleInput = components['schemas']['SetPayoutScheduleDto'];
+export type TrustFeeSetting = components['schemas']['TrustFeeSettingDto'];
+export type PutTrustFeeSettingsInput = components['schemas']['PutFeeSettingsDto'];
+export type TrustFeeSettingInput = components['schemas']['TrustFeeSettingInputDto'];
+export type TrustRentProfile = components['schemas']['TrustRentProfileDto'];
+export type SetTrustBondInput = components['schemas']['SetBondDto'];
+export type ResetTrustRentInput = components['schemas']['RentResetDto'];
+export type TrustWithholds = components['schemas']['TrustWithholdsDto'];
+export type TrustWithhold = components['schemas']['TrustWithholdDto'];
+export type CreateTrustWithholdInput = components['schemas']['CreateWithholdDto'];
+export type ReleaseTrustWithholdInput = components['schemas']['ReleaseWithholdDto'];
+export type UpdateTrustBillInput = components['schemas']['UpdateBillDto'];
+export type CancelTrustBillInput = components['schemas']['TrustCancelDocumentDto'];
+export type TrustDisbursementRun = components['schemas']['TrustDisbursementRunDto'];
+export type TrustDisbursementRunList = components['schemas']['TrustDisbursementRunListDto'];
+export type TrustStatementPreview = components['schemas']['TrustStatementPreviewDto'];
+export type RevokeTrustReconciliationInput = components['schemas']['RevokeReconciliationDto'];
+export type TrustBankBalances = components['schemas']['TrustBankBalancesDto'];
+
 export type ListTrustLedgersQuery = NonNullable<
   operations['AgentTrustController_listLedgers']['parameters']['query']
 >;
@@ -100,6 +135,13 @@ export type TrustReportKind =
   operations['AgentTrustController_reportCsv']['parameters']['path']['kind'];
 export type TrustLedgerFileFormat =
   operations['AgentTrustController_ledgerFile']['parameters']['path']['format'];
+
+export type TrustBankBalancesQuery = NonNullable<
+  operations['AgentTrustManageController_listBankBalances']['parameters']['query']
+>;
+export type TrustStatementPreviewQuery = NonNullable<
+  operations['AgentTrustManageController_statementPreview']['parameters']['query']
+>;
 
 export async function fetchTrustWorkspace(agencyId: string): Promise<AgentTrustWorkspace> {
   const result = await crossub.GET('/agent/agencies/{agencyId}/trust/workspace', {
@@ -627,4 +669,349 @@ export async function downloadTrustReportCsv(
     { params: { path: { agencyId, bankAccountId, kind }, query }, parseAs: 'blob' },
   );
   return unwrapCrossubResult(result, "Couldn't download the report");
+}
+
+// --------------------------------------------------------------------------- Set-up and settings (D132 amended)
+
+/**
+ * Sets up the agency's own trust account: creates its workspace when it has none (with the
+ * default account codes), then its first trust bank account. Returns the workspace.
+ */
+export async function setupTrustAccount(
+  agencyId: string,
+  body: TrustAccountSetupInput,
+): Promise<AgentTrustWorkspace> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/setup', {
+    params: { path: { agencyId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't set up the trust account");
+}
+
+export async function updateTrustBankAccount(
+  agencyId: string,
+  bankAccountId: string,
+  body: UpdateTrustBankAccountInput,
+): Promise<TrustBankAccount> {
+  const result = await crossub.PATCH('/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}', {
+    params: { path: { agencyId, bankAccountId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't save the trust bank account");
+}
+
+export async function createTrustAccountCode(
+  agencyId: string,
+  body: CreateTrustAccountCodeInput,
+): Promise<TrustAccountCode> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/account-codes', {
+    params: { path: { agencyId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't add the account code");
+}
+
+export async function updateTrustAccountCode(
+  agencyId: string,
+  accountCodeId: string,
+  body: UpdateTrustAccountCodeInput,
+): Promise<TrustAccountCode> {
+  const result = await crossub.PATCH('/agent/agencies/{agencyId}/trust/account-codes/{accountCodeId}', {
+    params: { path: { agencyId, accountCodeId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't save the account code");
+}
+
+// --------------------------------------------------------------------------- Opening balances (take-on)
+
+export async function fetchTrustTakeOn(agencyId: string, bankAccountId: string): Promise<TrustTakeOnStatus> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/take-on', {
+    params: { path: { agencyId, bankAccountId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't load the opening balances");
+}
+
+export async function postTrustTakeOn(
+  agencyId: string,
+  bankAccountId: string,
+  body: PostTrustTakeOnInput,
+): Promise<TrustTransaction> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/take-on', {
+    params: { path: { agencyId, bankAccountId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't post the opening balances");
+}
+
+// --------------------------------------------------------------------------- Ledger upkeep
+
+export async function openTrustLedger(
+  agencyId: string,
+  bankAccountId: string,
+  body: OpenTrustLedgerInput,
+): Promise<TrustLedger> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/ledgers', {
+    params: { path: { agencyId, bankAccountId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't open the ledger");
+}
+
+export async function fetchTrustFolioSync(
+  agencyId: string,
+  bankAccountId: string,
+): Promise<TrustFolioSyncPreview> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/folio-sync',
+    { params: { path: { agencyId, bankAccountId } } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the owners and tenants without a ledger");
+}
+
+export async function runTrustFolioSync(agencyId: string, bankAccountId: string): Promise<TrustFolioSyncResult> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/folio-sync',
+    { params: { path: { agencyId, bankAccountId } } },
+  );
+  return unwrapCrossubResult(result, "Couldn't open the ledgers");
+}
+
+export async function updateTrustLedger(
+  agencyId: string,
+  ledgerId: string,
+  body: UpdateTrustLedgerInput,
+): Promise<TrustLedger> {
+  const result = await crossub.PATCH('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}', {
+    params: { path: { agencyId, ledgerId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't save the ledger");
+}
+
+export async function closeTrustLedger(agencyId: string, ledgerId: string): Promise<TrustLedger> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/close', {
+    params: { path: { agencyId, ledgerId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't close the ledger");
+}
+
+export async function fetchTrustPayoutMethods(agencyId: string, ledgerId: string): Promise<TrustPayoutMethods> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/payout-methods', {
+    params: { path: { agencyId, ledgerId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't load the payout details");
+}
+
+/** Replaces every payout method; account numbers go in plain and are never returned. */
+export async function putTrustPayoutMethods(
+  agencyId: string,
+  ledgerId: string,
+  body: PutTrustPayoutMethodsInput,
+): Promise<TrustPayoutMethods> {
+  const result = await crossub.PUT('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/payout-methods', {
+    params: { path: { agencyId, ledgerId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't save the payout details");
+}
+
+export async function setTrustPayoutSchedule(
+  agencyId: string,
+  ledgerId: string,
+  body: SetTrustPayoutScheduleInput,
+): Promise<TrustPayoutMethods> {
+  const result = await crossub.PATCH('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/payout-schedule', {
+    params: { path: { agencyId, ledgerId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't save the payout schedule");
+}
+
+export async function fetchTrustFeeSettings(agencyId: string, ledgerId: string): Promise<TrustFeeSetting[]> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/fee-settings', {
+    params: { path: { agencyId, ledgerId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't load the recurring fees");
+}
+
+/** Replace-all: settings left out are switched off. */
+export async function putTrustFeeSettings(
+  agencyId: string,
+  ledgerId: string,
+  body: PutTrustFeeSettingsInput,
+): Promise<TrustFeeSetting[]> {
+  const result = await crossub.PUT('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/fee-settings', {
+    params: { path: { agencyId, ledgerId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't save the recurring fees");
+}
+
+export async function setTrustBond(
+  agencyId: string,
+  ledgerId: string,
+  body: SetTrustBondInput,
+): Promise<TrustRentProfile> {
+  const result = await crossub.PUT('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/bond', {
+    params: { path: { agencyId, ledgerId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't save the bond");
+}
+
+export async function resetTrustRent(
+  agencyId: string,
+  ledgerId: string,
+  body: ResetTrustRentInput,
+): Promise<TrustLedger> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/rent-reset', {
+    params: { path: { agencyId, ledgerId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't reset the rent");
+}
+
+export async function fetchTrustWithholds(agencyId: string, ledgerId: string): Promise<TrustWithholds> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/withholds', {
+    params: { path: { agencyId, ledgerId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't load the held amounts");
+}
+
+export async function createTrustWithhold(
+  agencyId: string,
+  ledgerId: string,
+  body: CreateTrustWithholdInput,
+): Promise<TrustWithhold> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/withholds', {
+    params: { path: { agencyId, ledgerId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't hold the amount");
+}
+
+export async function releaseTrustWithhold(
+  agencyId: string,
+  withholdId: string,
+  body: ReleaseTrustWithholdInput,
+): Promise<TrustWithhold> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/withholds/{withholdId}/release', {
+    params: { path: { agencyId, withholdId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't release the amount");
+}
+
+export async function fetchTrustStatementPreview(
+  agencyId: string,
+  ledgerId: string,
+  query: TrustStatementPreviewQuery = {},
+): Promise<TrustStatementPreview> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/statement-preview', {
+    params: { path: { agencyId, ledgerId }, query },
+  });
+  return unwrapCrossubResult(result, "Couldn't preview the statement");
+}
+
+// --------------------------------------------------------------------------- Bill upkeep
+
+export async function fetchTrustBill(agencyId: string, billId: string): Promise<TrustBill> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/bills/{billId}', {
+    params: { path: { agencyId, billId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't load the bill");
+}
+
+export async function updateTrustBill(
+  agencyId: string,
+  billId: string,
+  body: UpdateTrustBillInput,
+): Promise<TrustBill> {
+  const result = await crossub.PATCH('/agent/agencies/{agencyId}/trust/bills/{billId}', {
+    params: { path: { agencyId, billId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't save the bill");
+}
+
+export async function cancelTrustBill(
+  agencyId: string,
+  billId: string,
+  body: CancelTrustBillInput,
+): Promise<TrustBill> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/bills/{billId}/cancel', {
+    params: { path: { agencyId, billId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't cancel the bill");
+}
+
+export async function downloadTrustBillAttachment(agencyId: string, billId: string): Promise<Blob> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/bills/{billId}/attachment', {
+    params: { path: { agencyId, billId } },
+    parseAs: 'blob',
+  });
+  return unwrapCrossubResult(result, "Couldn't open the attachment");
+}
+
+// --------------------------------------------------------------------------- Disbursement history
+
+export async function fetchTrustDisbursements(
+  agencyId: string,
+  bankAccountId: string,
+  query: TrustPageQuery = {},
+): Promise<TrustDisbursementRunList> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/disbursements',
+    { params: { path: { agencyId, bankAccountId }, query } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the past disbursements");
+}
+
+export async function fetchTrustDisbursement(agencyId: string, runId: string): Promise<TrustDisbursementRun> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/disbursements/{runId}', {
+    params: { path: { agencyId, runId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't load the disbursement");
+}
+
+// --------------------------------------------------------------------------- Reconciliation upkeep
+
+/** Only the latest locked month can be revoked. */
+export async function revokeTrustReconciliationLock(
+  agencyId: string,
+  lockId: string,
+  body: RevokeTrustReconciliationInput,
+): Promise<TrustReconciliationFigures> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/reconciliation-locks/{lockId}/revoke', {
+    params: { path: { agencyId, lockId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't revoke the month");
+}
+
+export async function fetchTrustBankBalances(
+  agencyId: string,
+  bankAccountId: string,
+  query: TrustBankBalancesQuery = {},
+): Promise<TrustBankBalances> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/bank-balances',
+    { params: { path: { agencyId, bankAccountId }, query } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the bank balances");
+}
+
+/** `date` is YYYY-MM-DD. */
+export async function removeTrustBankBalance(
+  agencyId: string,
+  bankAccountId: string,
+  date: string,
+): Promise<TrustBankBalance> {
+  const result = await crossub.DELETE(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/bank-balances/{date}',
+    { params: { path: { agencyId, bankAccountId, date } } },
+  );
+  return unwrapCrossubResult(result, "Couldn't remove the bank balance");
 }

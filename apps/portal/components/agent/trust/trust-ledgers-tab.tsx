@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { TrustAddSupplierDialog } from '@/components/agent/trust/trust-add-supplier-dialog';
 import { TrustLedgerDetail } from '@/components/agent/trust/trust-ledger-detail';
+import { TrustFolioSyncDialog, TrustOpenLedgerDialog } from '@/components/agent/trust/trust-open-ledgers-dialog';
 import {
   TRUST_TABLE_CELL_CLASS,
   TRUST_TABLE_HEAD_CLASS,
@@ -18,6 +19,7 @@ import {
   TRUST_LEDGER_KIND_FILTERS,
   TRUST_LEDGER_KIND_LABEL,
   TRUST_LEDGERS_COPY as COPY,
+  TRUST_OPEN_LEDGERS_COPY,
   TRUST_PAGE_COPY,
   TRUST_PAGE_SIZE_MAX,
   TRUST_SUPPLIER_COPY,
@@ -27,6 +29,13 @@ import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource'
 import { fetchTrustLedgers, type TrustAccountCode } from '@/lib/crossub-api/agent-trust-client';
 import { formatCents } from '@/lib/trust-accounting';
 import { cn } from '@/lib/utils';
+
+/** Which "open ledger" dialog is showing. */
+const LEDGER_DIALOG = {
+  SYNC: 'sync',
+  ONE: 'one',
+} as const;
+type LedgerDialog = (typeof LEDGER_DIALOG)[keyof typeof LEDGER_DIALOG];
 
 export function TrustLedgersTab({
   agencyId,
@@ -41,6 +50,7 @@ export function TrustLedgersTab({
   const [search, setSearch] = useState('');
   const [openLedgerId, setOpenLedgerId] = useState<string | null>(null);
   const [addingSupplier, setAddingSupplier] = useState(false);
+  const [openDialog, setOpenDialog] = useState<LedgerDialog | null>(null);
   const query = useDebouncedValue(search.trim());
 
   const { data, error, loading, reload } = useTrustResource(
@@ -71,10 +81,34 @@ export function TrustLedgersTab({
         <div className="min-w-0 flex-1">
           <FilterChips options={TRUST_LEDGER_KIND_FILTERS} value={kind} onChange={setKind} />
         </div>
-        <Button type="button" size="sm" variant="outline" onClick={() => setAddingSupplier(true)}>
-          {TRUST_SUPPLIER_COPY.add}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" variant="outline" onClick={() => setOpenDialog(LEDGER_DIALOG.SYNC)}>
+            {TRUST_OPEN_LEDGERS_COPY.openMissing}
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => setOpenDialog(LEDGER_DIALOG.ONE)}>
+            {TRUST_OPEN_LEDGERS_COPY.openOne}
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => setAddingSupplier(true)}>
+            {TRUST_SUPPLIER_COPY.add}
+          </Button>
+        </div>
       </div>
+
+      {openDialog === LEDGER_DIALOG.SYNC ? (
+        <TrustFolioSyncDialog
+          agencyId={agencyId}
+          bankAccountId={bankAccountId}
+          onClose={() => setOpenDialog(null)}
+          onOpened={reload}
+        />
+      ) : openDialog === LEDGER_DIALOG.ONE ? (
+        <TrustOpenLedgerDialog
+          agencyId={agencyId}
+          bankAccountId={bankAccountId}
+          onClose={() => setOpenDialog(null)}
+          onOpened={reload}
+        />
+      ) : null}
 
       {addingSupplier ? (
         <TrustAddSupplierDialog

@@ -1,14 +1,16 @@
 'use client';
 
-import { Loader2, Lock } from 'lucide-react';
+import { Loader2, Lock, LockOpen } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
+import { TrustBankBalancesPanel } from '@/components/agent/trust/trust-bank-balances-panel';
 import {
   TrustLoadError,
   TrustLoading,
   TrustPanel,
   TrustPill,
+  TrustReasonDialog,
 } from '@/components/agent/trust/trust-ui';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,6 +28,7 @@ import {
   TRUST_RECONCILIATION_STATUS,
   TRUST_RECONCILIATION_STATUS_LABEL,
   TRUST_RECONCILIATION_STATUS_TONE,
+  TRUST_RECONCILIATION_UPKEEP_COPY as UPKEEP_COPY,
 } from '@/constants/trust';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
 import {
@@ -33,7 +36,9 @@ import {
   fetchTrustReconciliationMonths,
   lockTrustReconciliationMonth,
   recordTrustBankBalance,
+  revokeTrustReconciliationLock,
   type TrustReconciliationFigures,
+  type TrustReconciliationMonth,
 } from '@/lib/crossub-api/agent-trust-client';
 import { formatCents, formatTrustDate, parseDollarsToCents } from '@/lib/trust-accounting';
 import { cn, formatDate } from '@/lib/utils';
@@ -50,6 +55,11 @@ export function TrustReconciliationTab({
     fetchTrustReconciliationMonths(agencyId, bankAccountId),
   );
   const [pickedMonth, setPickedMonth] = useState<string | null>(null);
+  const [changes, setChanges] = useState(0);
+  const onChanged = () => {
+    months.reload();
+    setChanges((n) => n + 1);
+  };
 
   if (!months.data) {
     return months.error ? (
@@ -63,47 +73,56 @@ export function TrustReconciliationTab({
   const month = pickedMonth ?? months.data.monthToLock?.month ?? list[0]?.month ?? null;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[16rem_1fr]">
-      <TrustPanel title={COPY.months}>
-        {months.data.monthToLock ? (
-          <p className="text-muted-foreground mb-2 text-xs">
-            {COPY.monthToLock(months.data.monthToLock.label)}
-          </p>
-        ) : null}
-        {list.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{COPY.noMonths}</p>
-        ) : (
-          <ul className="-mx-2 space-y-0.5">
-            {list.map((m) => (
-              <li key={m.month}>
-                <button
-                  type="button"
-                  onClick={() => setPickedMonth(m.month)}
-                  className={cn(
-                    'flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm',
-                    m.month === month ? 'bg-primary/10 text-primary' : 'hover:bg-secondary/60',
-                  )}
-                >
-                  <span className="font-medium">{m.label}</span>
-                  <TrustPill className={TRUST_RECONCILIATION_STATUS_TONE[m.status]}>
-                    {TRUST_RECONCILIATION_STATUS_LABEL[m.status]}
-                  </TrustPill>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </TrustPanel>
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-[16rem_1fr]">
+        <TrustPanel title={COPY.months}>
+          {months.data.monthToLock ? (
+            <p className="text-muted-foreground mb-2 text-xs">
+              {COPY.monthToLock(months.data.monthToLock.label)}
+            </p>
+          ) : null}
+          {list.length === 0 ? (
+            <p className="text-muted-foreground text-sm">{COPY.noMonths}</p>
+          ) : (
+            <ul className="-mx-2 space-y-0.5">
+              {list.map((m) => (
+                <li key={m.month}>
+                  <button
+                    type="button"
+                    onClick={() => setPickedMonth(m.month)}
+                    className={cn(
+                      'flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm',
+                      m.month === month ? 'bg-primary/10 text-primary' : 'hover:bg-secondary/60',
+                    )}
+                  >
+                    <span className="font-medium">{m.label}</span>
+                    <TrustPill className={TRUST_RECONCILIATION_STATUS_TONE[m.status]}>
+                      {TRUST_RECONCILIATION_STATUS_LABEL[m.status]}
+                    </TrustPill>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </TrustPanel>
 
-      {month ? (
-        <MonthFigures
-          key={month}
-          agencyId={agencyId}
-          bankAccountId={bankAccountId}
-          month={month}
-          onChanged={months.reload}
-        />
-      ) : null}
+        {month ? (
+          <MonthFigures
+            key={`${month}:${changes}`}
+            agencyId={agencyId}
+            bankAccountId={bankAccountId}
+            month={month}
+            monthInfo={list.find((m) => m.month === month) ?? null}
+            onChanged={onChanged}
+          />
+        ) : null}
+      </div>
+      <TrustBankBalancesPanel
+        agencyId={agencyId}
+        bankAccountId={bankAccountId}
+        refreshKey={changes}
+        onChanged={onChanged}
+      />
     </div>
   );
 }
@@ -121,13 +140,16 @@ function MonthFigures({
   agencyId,
   bankAccountId,
   month,
+  monthInfo,
   onChanged,
 }: {
   agencyId: string;
   bankAccountId: string;
   month: string;
+  monthInfo: TrustReconciliationMonth | null;
   onChanged: () => void;
 }) {
+  const [revoking, setRevoking] = useState(false);
   const [balanceInput, setBalanceInput] = useState('');
   const typedCents = parseDollarsToCents(useDebouncedValue(balanceInput), true);
   const figures = useTrustResource(`${agencyId}:${bankAccountId}:${month}:${typedCents ?? ''}`, () =>
@@ -224,8 +246,31 @@ function MonthFigures({
             <Lock className="size-4" />
             {COPY.lock}
           </Button>
+        ) : monthInfo?.canRevoke && monthInfo.lockId ? (
+          <Button type="button" variant="outline" onClick={() => setRevoking(true)}>
+            <LockOpen className="size-4" />
+            {UPKEEP_COPY.revoke}
+          </Button>
         ) : null}
       </div>
+
+      {revoking && monthInfo?.lockId ? (
+        <TrustReasonDialog
+          title={UPKEEP_COPY.revokeTitle(data.label)}
+          description={UPKEEP_COPY.revokeDescription}
+          reasonLabel={UPKEEP_COPY.reason}
+          reasonRequired={UPKEEP_COPY.reasonRequired}
+          submitLabel={UPKEEP_COPY.revokeSubmit}
+          cancelLabel={UPKEEP_COPY.cancel}
+          destructive
+          onSubmit={async (reason) => {
+            await revokeTrustReconciliationLock(agencyId, monthInfo.lockId as string, { reason });
+            toast.success(UPKEEP_COPY.revoked(data.label));
+            onChanged();
+          }}
+          onClose={() => setRevoking(false)}
+        />
+      ) : null}
 
       {open ? (
         <TrustPanel title={COPY.recordTitle}>

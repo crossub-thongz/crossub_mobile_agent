@@ -1,9 +1,7 @@
 'use client';
 
-import { Landmark } from 'lucide-react';
 import { useState } from 'react';
 
-import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { SELECT_CLASS } from '@/components/agent/maintenance-self-managed/step-card';
 import { TrustBankFilesTab } from '@/components/agent/trust/trust-bank-files-tab';
@@ -15,14 +13,14 @@ import { TrustOverviewTab } from '@/components/agent/trust/trust-overview-tab';
 import { TrustReconciliationTab } from '@/components/agent/trust/trust-reconciliation-tab';
 import { TrustRentTab } from '@/components/agent/trust/trust-rent-tab';
 import { TrustReportsTab } from '@/components/agent/trust/trust-reports-tab';
-import { TrustWorkspaceSettingsTables } from '@/components/agent/trust/trust-settings-summary';
+import { TrustSettingsTab } from '@/components/agent/trust/trust-settings-tab';
+import { TrustSetupForm } from '@/components/agent/trust/trust-setup-form';
 import { TrustTransactionsTab } from '@/components/agent/trust/trust-transactions-tab';
-import { TrustLoadError, TrustLoading, TrustPanel } from '@/components/agent/trust/trust-ui';
+import { TrustLoadError, TrustLoading } from '@/components/agent/trust/trust-ui';
 import { Label } from '@/components/ui/label';
 import {
   TRUST_BANK_ACCOUNT_STATUS,
   TRUST_PAGE_COPY as COPY,
-  TRUST_SETTINGS_SUMMARY_COPY,
   TRUST_TAB,
   TRUST_TABS,
   type TrustTab,
@@ -52,17 +50,21 @@ function TrustTabContent({
   agencyId,
   bankAccountId,
   workspace,
+  onOpenTab,
+  onWorkspaceChanged,
 }: {
   tab: TrustTab;
   agencyId: string;
   bankAccountId: string;
   workspace: AgentTrustWorkspace;
+  onOpenTab: (tab: TrustTab) => void;
+  onWorkspaceChanged: () => void;
 }) {
   const props = { agencyId, bankAccountId };
   const { accountCodes } = workspace;
   switch (tab) {
     case TRUST_TAB.OVERVIEW:
-      return <TrustOverviewTab {...props} />;
+      return <TrustOverviewTab {...props} onOpenTab={onOpenTab} />;
     case TRUST_TAB.LEDGERS:
       return <TrustLedgersTab {...props} accountCodes={accountCodes} />;
     case TRUST_TAB.TRANSACTIONS:
@@ -82,19 +84,14 @@ function TrustTabContent({
     case TRUST_TAB.REPORTS:
       return <TrustReportsTab {...props} />;
     case TRUST_TAB.SETTINGS:
-      return (
-        <TrustPanel title={TRUST_SETTINGS_SUMMARY_COPY.title}>
-          <p className="text-muted-foreground mb-4 text-sm">{TRUST_SETTINGS_SUMMARY_COPY.description}</p>
-          <TrustWorkspaceSettingsTables workspace={workspace} />
-        </TrustPanel>
-      );
+      return <TrustSettingsTab {...props} workspace={workspace} onChanged={onWorkspaceChanged} />;
   }
 }
 
 /**
  * Self-Manage trust accounting: pick the agency (when the agent runs several trust accounts) and
- * the trust bank account, then work one tab at a time. An agency CROSSUB has not set up yet
- * shows a friendly empty state instead of an error.
+ * the trust bank account, then work one tab at a time. An agency without a trust workspace or
+ * bank account yet gets the set-up form (D132 as amended 26 Oct 2026) instead of an error.
  */
 export function TrustWorkspace({ agencies }: { agencies: readonly Agency[] }) {
   const [agencyId, setAgencyId] = useState(agencies[0]?.id ?? '');
@@ -108,8 +105,9 @@ export function TrustWorkspace({ agencies }: { agencies: readonly Agency[] }) {
       ? pickedBankAccountId
       : defaultBankAccountId(accounts);
 
-  const notSetUp =
-    isTrustNotSetUpError(workspace.error) || (workspace.data != null && accounts.length === 0);
+  const needsWorkspace = isTrustNotSetUpError(workspace.error);
+  const notSetUp = needsWorkspace || (workspace.data != null && accounts.length === 0);
+  const agencyName = agencies.find((agency) => agency.id === agencyId)?.name ?? '';
 
   return (
     <div className="space-y-4 lg:px-6 lg:py-4">
@@ -156,10 +154,15 @@ export function TrustWorkspace({ agencies }: { agencies: readonly Agency[] }) {
       </div>
 
       {notSetUp ? (
-        <EmptyState
-          icon={Landmark}
-          title={COPY.notSetUpTitle}
-          description={COPY.notSetUpDescription}
+        <TrustSetupForm
+          key={agencyId}
+          agencyId={agencyId}
+          agencyName={agencyName}
+          needsWorkspace={needsWorkspace}
+          onDone={() => {
+            setTab(TRUST_TAB.SETTINGS);
+            workspace.reload();
+          }}
         />
       ) : workspace.error ? (
         <TrustLoadError error={workspace.error} onRetry={workspace.reload} />
@@ -174,6 +177,8 @@ export function TrustWorkspace({ agencies }: { agencies: readonly Agency[] }) {
             agencyId={agencyId}
             bankAccountId={bankAccountId}
             workspace={workspace.data}
+            onOpenTab={setTab}
+            onWorkspaceChanged={workspace.reload}
           />
         </>
       )}
