@@ -326,24 +326,25 @@ export type SelfManagedNavAccess = {
   selfManagedTrust: boolean;
 };
 
-export function filterNavByAccess<T extends { portalAccess?: PortalNavAccess }>(
-  items: readonly T[],
-  hasFullAccess: boolean,
-  selfManagedAccess?: SelfManagedNavAccess,
-): T[] {
-  return items.filter((item) => {
-    if (item.portalAccess === PORTAL_NAV_ACCESS.FULL) return hasFullAccess;
-    if (item.portalAccess === PORTAL_NAV_ACCESS.SELF_MANAGED) {
-      return selfManagedAccess?.selfManaged === true;
-    }
-    if (item.portalAccess === PORTAL_NAV_ACCESS.SELF_MANAGED_PRINCIPAL) {
-      return selfManagedAccess?.selfManagedPrincipal === true;
-    }
-    if (item.portalAccess === PORTAL_NAV_ACCESS.SELF_MANAGED_TRUST) {
-      return selfManagedAccess?.selfManagedTrust === true;
-    }
-    return true;
-  });
+export function filterNavByAccess<
+  T extends { portalAccess?: PortalNavAccess; label?: string; selfManagedTrustLabel?: string },
+>(items: readonly T[], hasFullAccess: boolean, selfManagedAccess?: SelfManagedNavAccess): T[] {
+  const seesTrust = selfManagedAccess?.selfManagedTrust === true;
+  return items
+    .filter((item) => {
+      if (item.portalAccess === PORTAL_NAV_ACCESS.FULL) return hasFullAccess;
+      if (item.portalAccess === PORTAL_NAV_ACCESS.SELF_MANAGED) {
+        return selfManagedAccess?.selfManaged === true;
+      }
+      if (item.portalAccess === PORTAL_NAV_ACCESS.SELF_MANAGED_PRINCIPAL) {
+        return selfManagedAccess?.selfManagedPrincipal === true;
+      }
+      if (item.portalAccess === PORTAL_NAV_ACCESS.SELF_MANAGED_TRUST) {
+        return seesTrust;
+      }
+      return true;
+    })
+    .map((item) => (seesTrust && item.selfManagedTrustLabel ? { ...item, label: item.selfManagedTrustLabel } : item));
 }
 
 export const INSPECTION_ONLY_HIDDEN_QUICK_ACTIONS: BuiltinQuickActionId[] = [

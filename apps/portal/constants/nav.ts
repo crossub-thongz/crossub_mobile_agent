@@ -24,6 +24,8 @@ export type NavItem = {
   label: string;
   icon: LucideIcon;
   portalAccess?: PortalNavAccess;
+  /** Label shown instead when the agent also sees Accounting (the trust module), so the two differ. */
+  selfManagedTrustLabel?: string;
 };
 
 /** Production v1 — module hubs on the sidebar, matching live. */
@@ -91,7 +93,13 @@ export const V1_MORE_NAV: NavItem[] = [
   CONVERSATIONS_NAV_ITEM,
   PEOPLE_NAV_ITEM,
   TRUST_NAV_ITEM,
-  { href: ROUTES.ACCOUNTING, label: 'Accounting', icon: FileText, portalAccess: 'full' },
+  {
+    href: ROUTES.ACCOUNTING,
+    label: 'Accounting',
+    icon: FileText,
+    portalAccess: 'full',
+    selfManagedTrustLabel: 'Arrears',
+  },
   { href: ROUTES.TRIBUNAL, label: 'Tribunal', icon: FileText },
   { href: ROUTES.ARCHIVE, label: 'History', icon: FolderArchive, portalAccess: 'full' },
 ];
