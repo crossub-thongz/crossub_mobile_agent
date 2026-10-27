@@ -44,17 +44,17 @@ export const AGENCY_TENANCY_RENT_PROFILE_STATUS = {
   FAILED: 'FAILED',
 } as const satisfies Record<string, AgencyTenancyRentProfileStatus>;
 
-/** What Create tenancy did with the tenant ledger's rent in Trust. */
+/** What Create tenancy did with the tenant ledger's rent in Accounting. */
 export const AGENCY_TENANCY_RENT_PROFILE_MESSAGE: Record<AgencyTenancyRentProfileStatus, string> = {
-  [AGENCY_TENANCY_RENT_PROFILE_STATUS.SET]: 'The rent is set on the tenant ledger in Trust.',
+  [AGENCY_TENANCY_RENT_PROFILE_STATUS.SET]: 'The rent is set on the tenant ledger in Accounting.',
   [AGENCY_TENANCY_RENT_PROFILE_STATUS.NOT_TRUST_TIER]:
-    'Ask the agency principal or accountant to set the rent in Trust.',
+    'Ask the agency principal or accountant to set the rent in Accounting.',
   [AGENCY_TENANCY_RENT_PROFILE_STATUS.TRUST_NOT_SET_UP]:
-    'Trust is not set up for this agency, so the rent was not set there.',
+    'Accounting is not set up for this agency, so the rent was not set there.',
   [AGENCY_TENANCY_RENT_PROFILE_STATUS.NO_TENANT_LEDGER]:
-    'No tenant ledger opened in Trust yet. Open it from Trust, then set the rent.',
+    'No tenant ledger opened in Accounting yet. Open it from Accounting, then set the rent.',
   [AGENCY_TENANCY_RENT_PROFILE_STATUS.ALREADY_SET]: 'The tenant ledger already had a rent; it was kept.',
-  [AGENCY_TENANCY_RENT_PROFILE_STATUS.FAILED]: 'The rent could not be set in Trust. Set it there.',
+  [AGENCY_TENANCY_RENT_PROFILE_STATUS.FAILED]: 'The rent could not be set in Accounting. Set it there.',
 };
 
 /** The primary tenant plus as many co-tenants as the server accepts. */
@@ -104,7 +104,7 @@ export const CREATE_TENANCY_COPY = {
   openProperty: 'Open property',
   nextStepsTitle: 'Next',
   nextSteps: [
-    'Receipt the bond and the first rent in Trust.',
+    'Receipt the bond and the first rent in Accounting.',
     'Book the ingoing inspection from Inspections.',
   ],
   invitesTitle: 'Tenant app',

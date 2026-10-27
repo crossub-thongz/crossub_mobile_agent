@@ -7,7 +7,6 @@ import { TrustAddBankAccountDialog } from '@/components/agent/trust/trust-add-ba
 import { TrustAuditLogPanel } from '@/components/agent/trust/trust-audit-log-panel';
 import { TrustBankAccountDialog } from '@/components/agent/trust/trust-bank-account-dialog';
 import { TrustWorkspaceSettingsTables } from '@/components/agent/trust/trust-settings-summary';
-import { TrustTakeOnPanel } from '@/components/agent/trust/trust-take-on-panel';
 import { TrustPanel } from '@/components/agent/trust/trust-ui';
 import { TRUST_SETTINGS_TAB_COPY as COPY } from '@/constants/trust';
 import type {
@@ -20,17 +19,17 @@ import type {
 type CodeDialog = { open: false } | { open: true; code: TrustAccountCode | null };
 
 /**
- * Trust, Settings (D132 as amended 26 Oct 2026): the agency keeps its own trust bank accounts
- * (ABA details included, D135 adds further ones) and account codes, posts its opening balances,
- * and reads its audit log (D135).
+ * Accounting, Settings (D132 as amended 26 Oct 2026): the agency keeps its own trust bank accounts
+ * (ABA details included, D135 adds further ones) and account codes, and reads its audit log
+ * (D135). The opening balance is the starting point and is not split across ledgers (D136).
  */
 export function TrustSettingsTab({
   agencyId,
-  bankAccountId,
   workspace,
   onChanged,
 }: {
   agencyId: string;
+  /** Passed with every tab's props; Settings covers the whole workspace. */
   bankAccountId: string;
   workspace: AgentTrustWorkspace;
   onChanged: () => void;
@@ -53,7 +52,6 @@ export function TrustSettingsTab({
           }}
         />
       </TrustPanel>
-      <TrustTakeOnPanel agencyId={agencyId} bankAccountId={bankAccountId} />
       <TrustAuditLogPanel agencyId={agencyId} />
 
       {editingAccount ? (

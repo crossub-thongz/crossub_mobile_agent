@@ -4,6 +4,14 @@
 
 ### Added
 - On a record screen Cros is sent the record's kind and id, so its tools can act on the job on screen.
+- Accounting: "Opening balance (not allocated to a folio)" under the Overview ledger total and in the reconciliation result when the opening balance is not on a ledger (contract 0.53.0).
+
+### Changed
+- Self-Manage "Trust" is now "Accounting" in the menu, page title, More page, Cros page name, plan descriptions and every "in Trust" hint; the trust bank account keeps its name.
+- The opening balance hint says it is the starting balance and that money is recorded against folios from then on.
+
+### Removed
+- Accounting: the Opening balances (take-on) panel in Settings and the "Opening balances are not posted yet" banner on the Overview.
 
 ## 2026-10-26
 

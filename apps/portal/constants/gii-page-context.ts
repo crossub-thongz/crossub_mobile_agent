@@ -167,7 +167,7 @@ export const GII_PAGE_ROUTES: readonly GiiPageRoute[] = [
     recordList: GII_SCREEN_RECORD_LIST.MESSAGES,
   },
   { route: ROUTES.COMMUNICATIONS, module: GII_PAGE_MODULE.COMMUNICATIONS, label: 'Communications' },
-  { route: ROUTES.TRUST, module: GII_PAGE_MODULE.TRUST, label: 'Trust accounting' },
+  { route: ROUTES.TRUST, module: GII_PAGE_MODULE.TRUST, label: 'Accounting' },
   { route: ROUTES.ACCOUNTING, module: GII_PAGE_MODULE.ACCOUNTING, label: 'Accounting' },
   { route: ROUTES.BILL, module: GII_PAGE_MODULE.BILLING, label: 'Bill' },
   { route: ROUTES.BILLING_OVERDUE, module: GII_PAGE_MODULE.BILLING, label: 'Overdue billing' },

@@ -48,10 +48,10 @@ const PEOPLE_NAV_ITEM: NavItem = {
   portalAccess: PORTAL_NAV_ACCESS.SELF_MANAGED,
 };
 
-/** Self-Manage trust accounting — principals and accountants. */
+/** Self-Manage Accounting (the trust accounting module) — principals and accountants. */
 const TRUST_NAV_ITEM: NavItem = {
   href: ROUTES.TRUST,
-  label: 'Trust',
+  label: 'Accounting',
   icon: Landmark,
   portalAccess: PORTAL_NAV_ACCESS.SELF_MANAGED_TRUST,
 };

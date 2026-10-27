@@ -23,7 +23,10 @@ export const ROUTES = {
   COMMUNICATIONS: '/communications',
   /** Self-Manage three-pane inbox (threads, conversation, job context). */
   CONVERSATIONS: '/conversations',
-  /** Self-Manage trust accounting (principals only; shell until the trust routes land). */
+  /**
+   * Self-Manage Accounting, the trust accounting module (principals and accountants). The path
+   * stays `/trust`: `/accounting` is the existing Accounting page.
+   */
   TRUST: '/trust',
   /** Self-Manage People: the agency's tenants, owners, suppliers and applicants with CP references. */
   PEOPLE: '/people',

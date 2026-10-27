@@ -43,6 +43,7 @@ import {
 import { formatCents, formatTrustDate, parseDollarsToCents } from '@/lib/trust-accounting';
 import { cn, formatDate } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { trustFolioBalancesCents } from '@/utils/trust-reconciliation';
 
 export function TrustReconciliationTab({
   agencyId,
@@ -332,7 +333,11 @@ function MonthFigures({
         </TrustPanel>
         <TrustPanel title={COPY.result}>
           <dl className="text-sm">
-            <Row label={COPY.folios} value={formatCents(folios.totalCents)} />
+            <Row label={COPY.folios} value={formatCents(trustFolioBalancesCents(folios))} />
+            {/* D136: the opening balance not on a ledger counts on the ledger side. */}
+            {folios.openingUnallocatedCents !== 0 ? (
+              <Row label={COPY.openingUnallocated} value={formatCents(folios.openingUnallocatedCents)} />
+            ) : null}
             <Row
               label={COPY.bankVsCashBook}
               value={result.bankVsCashBookCents == null ? '—' : formatCents(result.bankVsCashBookCents)}

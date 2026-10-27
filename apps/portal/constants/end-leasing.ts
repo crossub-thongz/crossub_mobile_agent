@@ -525,14 +525,14 @@ export const SELF_MANAGED_SETTLEMENT_COPY = {
 export const SELF_MANAGED_VACATING_COMPLETE_COPY = {
   stepTitle: 'Complete vacating',
   intro:
-    'Compare is confirmed. Completing closes this vacate: the tenancy ends on the property and the case moves to completed. Handle any bond refund in Trust.',
+    'Compare is confirmed. Completing closes this vacate: the tenancy ends on the property and the case moves to completed. Handle any bond refund in Accounting.',
   compareFirst: 'Confirm the ingoing / outgoing comparison first.',
   settlementPending:
     "The bond settlement is confirmed and waiting on the tenant. Wait for their answer: accepting it refunds the bond and completes the vacate.",
   button: 'Complete vacating',
   confirmTitle: 'Complete this vacate?',
   confirmBody:
-    'The case closes and leaves your open tasks. No money is posted; record any bond refund in Trust.',
+    'The case closes and leaves your open tasks. No money is posted; record any bond refund in Accounting.',
   confirm: 'Complete vacating',
   cancel: 'Cancel',
   completedToast: 'Vacate completed',

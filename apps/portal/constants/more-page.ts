@@ -25,7 +25,7 @@ export const MORE_MENU_ITEM_DESCRIPTION: Partial<Record<string, string>> = {
   [ROUTES.INSPECTIONS]: 'Open, routine, ingoing and outgoing inspections.',
   [ROUTES.CONVERSATIONS]: 'Tenant, owner and tradie threads beside the job they belong to.',
   [ROUTES.PEOPLE]: 'Tenants, owners, suppliers and applicants with their CP references.',
-  [ROUTES.TRUST]: 'Trust accounting for your agency.',
+  [ROUTES.TRUST]: "Your agency's trust account, ledgers and reconciliation.",
   [ROUTES.ACCOUNTING]: 'Rent and invoice arrears, plus rent chasing.',
   [ROUTES.TRIBUNAL]: 'Tribunal cases and rent chasing.',
   [ROUTES.ARCHIVE]: 'Archived properties and closed property tasks.',

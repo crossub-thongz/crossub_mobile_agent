@@ -185,7 +185,7 @@ export const TRUST_NEW_INVOICE_COPY = {
   noSuppliers: 'No supplier ledgers yet. Add one from Bills, New bill.',
   type: 'Type',
   chooseType: 'Choose a type',
-  noTypes: 'No income types are set up on this trust account. Add one in Trust, Settings.',
+  noTypes: 'No income types are set up on this trust account. Add one in Accounting, Settings.',
   dueDate: 'Due date',
   period: 'Invoice period (optional)',
   periodPlaceholder: 'e.g. 01/07/2026 to 30/09/2026',

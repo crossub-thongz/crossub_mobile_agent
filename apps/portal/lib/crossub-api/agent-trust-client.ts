@@ -74,9 +74,6 @@ export type TrustAccountSetupInput = components['schemas']['AgentTrustSetupDto']
 export type UpdateTrustBankAccountInput = components['schemas']['UpdateBankAccountDto'];
 export type CreateTrustAccountCodeInput = components['schemas']['CreateAccountCodeDto'];
 export type UpdateTrustAccountCodeInput = components['schemas']['UpdateAccountCodeDto'];
-export type TrustTakeOnStatus = components['schemas']['TrustTakeOnStatusDto'];
-export type TrustTakeOnLedgerRow = components['schemas']['TrustTakeOnLedgerRowDto'];
-export type PostTrustTakeOnInput = components['schemas']['PostTakeOnDto'];
 export type OpenTrustLedgerInput = components['schemas']['AgentOpenLedgerDto'];
 export type UpdateTrustLedgerInput = components['schemas']['UpdateLedgerDto'];
 export type TrustFolioSyncPreview = components['schemas']['TrustFolioSyncPreviewDto'];
@@ -721,27 +718,6 @@ export async function updateTrustAccountCode(
     body,
   });
   return unwrapCrossubResult(result, "Couldn't save the account code");
-}
-
-// --------------------------------------------------------------------------- Opening balances (take-on)
-
-export async function fetchTrustTakeOn(agencyId: string, bankAccountId: string): Promise<TrustTakeOnStatus> {
-  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/take-on', {
-    params: { path: { agencyId, bankAccountId } },
-  });
-  return unwrapCrossubResult(result, "Couldn't load the opening balances");
-}
-
-export async function postTrustTakeOn(
-  agencyId: string,
-  bankAccountId: string,
-  body: PostTrustTakeOnInput,
-): Promise<TrustTransaction> {
-  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/take-on', {
-    params: { path: { agencyId, bankAccountId } },
-    body,
-  });
-  return unwrapCrossubResult(result, "Couldn't post the opening balances");
 }
 
 // --------------------------------------------------------------------------- Ledger upkeep

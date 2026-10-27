@@ -36,7 +36,7 @@ export const SELF_MANAGED_PRICING_COPY = {
   howYouPay: 'Free · no payment',
   points: [
     'No platform fees, invoices or card on file',
-    `Maintenance, inspections, leasing, conversations and trust accounting, with ${CROS_ASSISTANT_NAME} assisting`,
+    `Maintenance, inspections, leasing, conversations and accounting, with ${CROS_ASSISTANT_NAME} assisting`,
     'Owners get an emailed copy of your decisions',
     'Switch to Inspection Only or Full Service anytime from Settings → Plan',
   ],

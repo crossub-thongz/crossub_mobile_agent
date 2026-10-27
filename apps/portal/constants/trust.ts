@@ -65,7 +65,6 @@ export const TRUST_INPUT_LIMITS = {
   withholdReasonMax: 300,
   reasonMax: 300,
   bondReferenceMax: 64,
-  takeOnNoteMax: 300,
   invoiceReferenceMax: 120,
   billDetailsMax: 300,
 } as const;
@@ -306,11 +305,11 @@ export const TRUST_RECONCILIATION_STATUS_TONE: Record<TrustReconciliationStatus,
 };
 
 export const TRUST_PAGE_COPY = {
-  title: 'Trust',
+  title: 'Accounting',
   agencyLabel: 'Agency',
   bankAccountLabel: 'Trust account',
   archived: 'archived',
-  notSetUpTitle: "Trust isn't set up for this agency yet",
+  notSetUpTitle: "Accounting isn't set up for this agency yet",
   loadFailed: "Couldn't load the trust account",
   retry: 'Try again',
   loading: 'Loading…',
@@ -321,6 +320,8 @@ export const TRUST_PAGE_COPY = {
 export const TRUST_OVERVIEW_COPY = {
   cashBook: 'Cash book',
   ledgers: 'Ledger total',
+  /** D136: the bank opening balance not on any ledger, shown when not $0.00. */
+  openingUnallocated: 'Opening balance (not allocated to a folio)',
   difference: 'Difference',
   reconciliation: 'Reconciliation',
   reconciled: 'Reconciled',
@@ -339,9 +340,6 @@ export const TRUST_OVERVIEW_COPY = {
   ownersDue: 'Owners due a payout',
   ownersWithoutPayout: (count: number) => `${count} without a payout method`,
   addPayoutDetails: 'Add payout details',
-  takeOnPending: 'Opening balances are not posted yet',
-  takeOnPendingHint: 'Post them so the ledgers carry the money already in the trust account.',
-  openTakeOn: 'Enter opening balances',
   invoicesOutstanding: 'Tenant invoices owing',
   invoicesOverdue: (count: number) => `${count} overdue`,
   ledgerCounts: 'Ledgers',
@@ -498,7 +496,7 @@ export const TRUST_NEW_BILL_COPY = {
   chooseSupplier: 'Choose a supplier',
   chooseCategory: 'Choose a category',
   noSuppliers: 'No supplier ledgers yet. Add the supplier first.',
-  noCategories: 'No expense categories are set up on this trust account. Add one in Trust, Settings.',
+  noCategories: 'No expense categories are set up on this trust account. Add one in Accounting, Settings.',
   billDate: 'Bill date',
   dueDate: 'Due date (optional)',
   details: 'Details',
@@ -599,6 +597,8 @@ export const TRUST_RECONCILIATION_COPY = {
   withdrawals: (count: number) => `Withdrawals (${count})`,
   closing: 'Closing',
   folios: 'Ledger total',
+  /** D136: counts with the ledger total against the cash book. */
+  openingUnallocated: 'Opening balance (not allocated to a folio)',
   result: 'Result',
   reconciled: 'Reconciled',
   outBy: (amount: string) => `Out by ${amount}`,
@@ -757,7 +757,7 @@ export const TRUST_NEW_FEE_COPY = {
   gstInclusive: 'Amount includes GST',
   category: 'Income category',
   chooseCategory: 'Choose a category',
-  noCategories: 'No income categories are set up on this trust account. Add one in Trust, Settings.',
+  noCategories: 'No income categories are set up on this trust account. Add one in Accounting, Settings.',
   date: 'Charge date',
   incomplete: 'Fill in the name, amount, category and date',
   submit: 'Charge fee',
@@ -953,7 +953,7 @@ export const TRUST_LEDGER_FILE_FORMAT = {
 
 export const TRUST_SETTINGS_SUMMARY_COPY = {
   title: 'Trust account settings',
-  description: 'Your trust bank accounts and account codes. Change them from Trust, Settings.',
+  description: 'Your trust bank accounts and account codes. Change them from Accounting, Settings.',
   bankAccounts: 'Trust bank accounts',
   noBankAccounts: 'No trust bank account yet.',
   accountCodes: 'Account codes',
@@ -968,7 +968,7 @@ export const TRUST_SETTINGS_SUMMARY_COPY = {
   gstApplies: 'Yes',
   gstNone: 'No',
   inactive: 'inactive',
-  openTrust: 'Open Trust',
+  openTrust: 'Open Accounting',
 } as const;
 
 export const TRUST_ACCOUNT_CODE_KIND_LABEL: Record<
@@ -1009,7 +1009,7 @@ export const TRUST_SETUP_COPY = {
     "From the bank's ABA sample file. An ABA bank file needs the bank code; the user ID defaults to 000000 when the bank issues none.",
   openingSection: 'Opening balance',
   openingHint:
-    'The trust account balance on the day you start in CROSSUB. You then share it across the ledgers in Opening balances.',
+    'The trust account balance on the day you start in CROSSUB. It is your starting balance: from then on, money is recorded against folios.',
   submit: 'Set up trust account',
   done: 'Trust account set up',
 } as const;
@@ -1075,37 +1075,6 @@ export const TRUST_SETTINGS_TAB_COPY = {
   aba: 'ABA',
   abaReady: 'Ready',
   abaMissing: 'Bank code missing',
-} as const;
-
-// --------------------------------------------------------------------------- Opening balances (take-on)
-
-export const TRUST_TAKE_ON_COPY = {
-  title: 'Opening balances',
-  description:
-    'Share the opening balance of the trust account across the ledgers that held the money on the opening date. It posts once, as one transaction with no bank movement.',
-  bankOpening: (amount: string, date: string) => `Bank opening balance ${amount} on ${date}`,
-  noOpeningDate: 'Set the opening date on the trust bank account first.',
-  noLedgers: 'Open the owner, tenant and agency ledgers first (Ledgers, Open missing ledgers).',
-  ledger: 'Ledger',
-  kind: 'Kind',
-  amount: 'Opening amount ($)',
-  total: 'Total',
-  remaining: (amount: string) => `${amount} still to share`,
-  over: (amount: string) => `${amount} over the bank opening balance`,
-  balanced: 'Matches the bank opening balance',
-  tenantNoRent: 'Set the rent first',
-  tenantsWithoutRent: (count: number) =>
-    `${count} tenant ledger${count === 1 ? '' : 's'} need rent set before an amount can go on them.`,
-  note: 'Note (optional)',
-  amountInvalid: 'Enter each amount in dollars, e.g. 1250.00',
-  notBalanced: 'The amounts must add up to the bank opening balance',
-  submit: 'Post opening balances',
-  confirmTitle: 'Post opening balances',
-  confirmBody: 'This posts one opening transaction. A wrong take-on is fixed by reversing it in Transactions.',
-  cancel: 'Cancel',
-  posted: 'Opening balances posted',
-  postedSummary: (n: number | null | undefined, date: string, by: string | null | undefined) =>
-    `Posted${n != null ? ` as #${n}` : ''} on ${date}${by ? ` by ${by}` : ''}.`,
 } as const;
 
 // --------------------------------------------------------------------------- Opening ledgers

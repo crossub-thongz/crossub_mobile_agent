@@ -103,7 +103,7 @@ const END_LEASING_STAGE_COPY: Record<string, Pick<WorkflowTourStage, 'descriptio
   },
   [END_LEASING_AGENT_STEP.COMPLETE]: {
     description:
-      'Once the comparison is confirmed, you complete the vacate. Any bond refund is handled in Trust.',
+      'Once the comparison is confirmed, you complete the vacate. Any bond refund is handled in Accounting.',
     agentAction: 'Select Complete vacating in the Workflow panel to close the case.',
   },
 };

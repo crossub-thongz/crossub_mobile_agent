@@ -129,7 +129,7 @@ export const TRUST_AUDIT_EMPTY_DISPLAY = '—';
 
 export const TRUST_AUDIT_COPY = {
   title: 'Audit log',
-  subtitle: 'Every trust accounting change in this workspace, newest first',
+  subtitle: 'Every accounting change in this workspace, newest first',
   when: 'When',
   who: 'Who',
   action: 'Action',
