@@ -459,7 +459,7 @@ export default function PropertyDetailPage() {
     } else if (section === 'archive') {
       setTab('Archive');
       next.set('tab', 'Archive');
-    } else if (section === 'activities') {
+    } else if (section === 'activities' || section === 'tenancies') {
       next.delete('tab');
     }
     router.replace(`/properties/${id}?${next.toString()}`);

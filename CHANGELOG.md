@@ -3,6 +3,8 @@
 ## 2026-10-27
 
 ### Added
+- Self-Manage property Overview shows the admin Property, Tenancy and Owner cards, with edit property, building contacts, edit tenancy, owner details, payment reference, tenant details and tenant portal invite.
+- Self-Manage properties have a Tenancies section: current, upcoming and past tenancies with tenant search, Add tenancy, Archive tenancy, Remove tenancy, Set as current tenancy, Use lease dates instead, Restore tenant and Archive incoming tenancy.
 - On a record screen Cros is sent the record's kind and id, so its tools can act on the job on screen.
 - Accounting: "Opening balance (not allocated to a folio)" under the Overview ledger total and in the reconciliation result when the opening balance is not on a ledger (contract 0.53.0).
 
@@ -13,6 +15,9 @@
 
 ### Removed
 - Accounting: the Opening balances (take-on) panel in Settings and the "Opening balances are not posted yet" banner on the Overview.
+
+### Changed
+- Agent API contract 0.54.0.
 
 ## 2026-10-26
 

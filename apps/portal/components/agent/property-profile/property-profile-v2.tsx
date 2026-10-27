@@ -14,9 +14,14 @@ import { PropertyProfileActionsMenu } from '@/components/agent/property-profile/
 import { PropertyProfileIncludedUsage } from '@/components/agent/property-profile/property-profile-included-usage';
 import { PropertyProfilePhoto } from '@/components/agent/property-profile/property-profile-photo';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
+import { PropertyTenanciesSection } from '@/components/agent/property-tenancies/property-tenancies-section';
+import { SelfManagedOverviewCards } from '@/components/agent/property-tenancies/self-managed-overview-cards';
+import { TenancyOverviewGate } from '@/components/agent/property-tenancies/tenancy-overview-gate';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { PROPERTY_JOBS_COPY } from '@/constants/agent-copy-variant';
 import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
+import { usePropertyTenancyOverview } from '@/hooks/use-property-tenancy-overview';
+import { useIsPropertySelfManaged, useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 import {
   buildCrosHandlingJobs,
   buildPropertyProfileMetrics,
@@ -149,6 +154,7 @@ function OverviewGrid({
   tribunalCases,
   onViewTasks,
   onNeedActionClick,
+  showTenancyCard = true,
 }: {
   property: Property;
   propertyId: string;
@@ -166,6 +172,8 @@ function OverviewGrid({
   tribunalCases: TribunalCase[];
   onViewTasks: () => void;
   onNeedActionClick: (href: string) => void;
+  /** False on Self-Manage, where the Tenancy details card replaces this summary. */
+  showTenancyCard?: boolean;
 }) {
   const jobsCopy = PROPERTY_JOBS_COPY[useAgentCopyVariant(property.agencyId)];
   const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
@@ -250,6 +258,7 @@ function OverviewGrid({
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
+      {showTenancyCard ? (
       <ProfileCard
         title={viewingPrevious ? 'Previous Tenancy' : currentTenancyTitle}
         subtitle={viewingPrevious ? previousSubtitle : undefined}
@@ -342,6 +351,7 @@ function OverviewGrid({
           />
         </div>
       </ProfileCard>
+      ) : null}
 
       <ProfileCard
         title={jobsCopy.heading}
@@ -500,12 +510,25 @@ export function PropertyProfileV2({
 }) {
   const { agencies, hasFullManagementAccess } = useAgentData();
   const activeCycle = leasingCycles[0];
+  const { ready: selfManagedReady } = useSelfManagedAccess();
+  const isSelfManaged = useIsPropertySelfManaged(propertyId);
+  const tenancyOverview = usePropertyTenancyOverview(propertyId, isSelfManaged);
+  const refreshTenancies = () => {
+    tenancyOverview.reload();
+    onRefresh?.();
+  };
 
   useEffect(() => {
     if (section === 'financials' && !hasFullManagementAccess) {
       onSectionChange('overview');
     }
   }, [hasFullManagementAccess, onSectionChange, section]);
+
+  useEffect(() => {
+    if (section === 'tenancies' && selfManagedReady && !isSelfManaged) {
+      onSectionChange('overview');
+    }
+  }, [isSelfManaged, onSectionChange, section, selfManagedReady]);
   const sync = usePropertyOverviewSync(
     property,
     true,
@@ -577,12 +600,12 @@ export function PropertyProfileV2({
 
   const sectionTabs = useMemo(
     () =>
-      propertyProfileSectionsForAccess(hasFullManagementAccess).map((tab) => ({
+      propertyProfileSectionsForAccess(hasFullManagementAccess, isSelfManaged).map((tab) => ({
         ...tab,
         label:
           tab.id === 'tasks' && taskCount > 0 ? `${tab.label} (${taskCount})` : tab.label,
       })),
-    [hasFullManagementAccess, taskCount],
+    [hasFullManagementAccess, isSelfManaged, taskCount],
   );
 
   return (
@@ -704,6 +727,21 @@ export function PropertyProfileV2({
 
       {section === 'overview' ? (
         <div className="space-y-4">
+          {isSelfManaged ? (
+            <TenancyOverviewGate resource={tenancyOverview}>
+              {(record) => (
+                <SelfManagedOverviewCards
+                  property={property}
+                  record={record}
+                  onChanged={refreshTenancies}
+                  onOpenTenancies={() => onSectionChange('tenancies')}
+                  onOpenFinancials={
+                    hasFullManagementAccess ? () => onSectionChange('financials') : undefined
+                  }
+                />
+              )}
+            </TenancyOverviewGate>
+          ) : null}
           <OverviewGrid
             property={property}
             propertyId={propertyId}
@@ -721,22 +759,33 @@ export function PropertyProfileV2({
             tribunalCases={tribunalCases}
             onViewTasks={() => onSectionChange('tasks')}
             onNeedActionClick={onNeedActionNavigate}
+            showTenancyCard={!isSelfManaged}
           />
 
-          <PropertyProfileDetails
-            property={property}
-            propertyId={propertyId}
-            currentLease={currentLease}
-            inspections={inspections}
-            propertyDocs={propertyDocs}
-            leasingCycles={leasingCycles}
-            tenantSelections={tenantSelections}
-            vacatingCases={vacatingCases}
-            rentReviews={rentReviews}
-            onViewBondLodgement={onViewBondLodgement}
-            onRefresh={onRefresh}
-          />
+          {isSelfManaged ? null : (
+            <PropertyProfileDetails
+              property={property}
+              propertyId={propertyId}
+              currentLease={currentLease}
+              inspections={inspections}
+              propertyDocs={propertyDocs}
+              leasingCycles={leasingCycles}
+              tenantSelections={tenantSelections}
+              vacatingCases={vacatingCases}
+              rentReviews={rentReviews}
+              onViewBondLodgement={onViewBondLodgement}
+              onRefresh={onRefresh}
+            />
+          )}
         </div>
+      ) : null}
+
+      {section === 'tenancies' && isSelfManaged ? (
+        <TenancyOverviewGate resource={tenancyOverview}>
+          {(record) => (
+            <PropertyTenanciesSection property={property} record={record} onChanged={refreshTenancies} />
+          )}
+        </TenancyOverviewGate>
       ) : null}
 
       {section === 'tasks' ? <div className="space-y-4">{tasksPanel}</div> : null}

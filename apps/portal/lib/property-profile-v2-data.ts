@@ -33,6 +33,7 @@ import { formatCurrency, formatDate, resolveOutstandingArrearsDays } from '@/lib
 
 export type PropertyProfileSection =
   | 'overview'
+  | 'tenancies'
   | 'tasks'
   | 'financials'
   | 'documents'
@@ -44,6 +45,7 @@ export const PROPERTY_PROFILE_SECTIONS: {
   label: string;
 }[] = [
   { id: 'overview', label: 'Overview' },
+  { id: 'tenancies', label: 'Tenancies' },
   { id: 'tasks', label: 'Tasks' },
   { id: 'financials', label: 'Financials' },
   { id: 'documents', label: 'Documents' },
@@ -51,10 +53,14 @@ export const PROPERTY_PROFILE_SECTIONS: {
   { id: 'activities', label: 'Activities' },
 ];
 
-/** Level 1 (inspection-only) does not record arrears or rent chasing. */
-export function propertyProfileSectionsForAccess(hasFullAccess: boolean) {
-  if (hasFullAccess) return PROPERTY_PROFILE_SECTIONS;
-  return PROPERTY_PROFILE_SECTIONS.filter((tab) => tab.id !== 'financials');
+/**
+ * Level 1 (inspection-only) does not record arrears or rent chasing. Tenancies is Self-Manage
+ * only (Daniel, 27 Oct 2026): the agency records and ends its own tenancies there.
+ */
+export function propertyProfileSectionsForAccess(hasFullAccess: boolean, isSelfManaged = false) {
+  return PROPERTY_PROFILE_SECTIONS.filter(
+    (tab) => (hasFullAccess || tab.id !== 'financials') && (isSelfManaged || tab.id !== 'tenancies'),
+  );
 }
 
 function firstNamesFromLabel(name: string): string[] {
@@ -163,6 +169,7 @@ export function normalizePropertyProfileSection(
   raw: string | null,
 ): PropertyProfileSection {
   if (
+    raw === 'tenancies' ||
     raw === 'tasks' ||
     raw === 'financials' ||
     raw === 'documents' ||
