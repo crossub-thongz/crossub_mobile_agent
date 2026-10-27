@@ -344,8 +344,6 @@ export const OVERVIEW_COPY = {
   EVERY_MONTHS_SUFFIX: 'months',
   PER_YEAR_SUFFIX: '× per year',
   RENT_FROM: 'from',
-  LOAD_FAILED: "Couldn't load the tenancy details",
-  RETRY: 'Try again',
   LOADING: 'Loading tenancy details…',
 } as const;
 

@@ -21,7 +21,6 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { PROPERTY_JOBS_COPY } from '@/constants/agent-copy-variant';
 import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 import { usePropertyTenancyOverview } from '@/hooks/use-property-tenancy-overview';
-import { useIsPropertySelfManaged, useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 import {
   buildCrosHandlingJobs,
   buildPropertyProfileMetrics,
@@ -510,9 +509,10 @@ export function PropertyProfileV2({
 }) {
   const { agencies, hasFullManagementAccess } = useAgentData();
   const activeCycle = leasingCycles[0];
-  const { ready: selfManagedReady } = useSelfManagedAccess();
-  const isSelfManaged = useIsPropertySelfManaged(propertyId);
-  const tenancyOverview = usePropertyTenancyOverview(propertyId, isSelfManaged);
+  // Self-Manage is the API's per-property answer (a live management override counts), the same
+  // rule the tenancy writes enforce. Until it answers, or if it fails, today's Overview shows.
+  const tenancyOverview = usePropertyTenancyOverview(propertyId);
+  const isSelfManaged = tenancyOverview.selfManaged;
   const refreshTenancies = () => {
     tenancyOverview.reload();
     onRefresh?.();
@@ -525,10 +525,10 @@ export function PropertyProfileV2({
   }, [hasFullManagementAccess, onSectionChange, section]);
 
   useEffect(() => {
-    if (section === 'tenancies' && selfManagedReady && !isSelfManaged) {
+    if (section === 'tenancies' && tenancyOverview.settled && !isSelfManaged) {
       onSectionChange('overview');
     }
-  }, [isSelfManaged, onSectionChange, section, selfManagedReady]);
+  }, [isSelfManaged, onSectionChange, section, tenancyOverview.settled]);
   const sync = usePropertyOverviewSync(
     property,
     true,
@@ -727,20 +727,16 @@ export function PropertyProfileV2({
 
       {section === 'overview' ? (
         <div className="space-y-4">
-          {isSelfManaged ? (
-            <TenancyOverviewGate resource={tenancyOverview}>
-              {(record) => (
-                <SelfManagedOverviewCards
-                  property={property}
-                  record={record}
-                  onChanged={refreshTenancies}
-                  onOpenTenancies={() => onSectionChange('tenancies')}
-                  onOpenFinancials={
-                    hasFullManagementAccess ? () => onSectionChange('financials') : undefined
-                  }
-                />
-              )}
-            </TenancyOverviewGate>
+          {isSelfManaged && tenancyOverview.record ? (
+            <SelfManagedOverviewCards
+              property={property}
+              record={tenancyOverview.record}
+              onChanged={refreshTenancies}
+              onOpenTenancies={() => onSectionChange('tenancies')}
+              onOpenFinancials={
+                hasFullManagementAccess ? () => onSectionChange('financials') : undefined
+              }
+            />
           ) : null}
           <OverviewGrid
             property={property}
@@ -780,8 +776,8 @@ export function PropertyProfileV2({
         </div>
       ) : null}
 
-      {section === 'tenancies' && isSelfManaged ? (
-        <TenancyOverviewGate resource={tenancyOverview}>
+      {section === 'tenancies' && (isSelfManaged || !tenancyOverview.settled) ? (
+        <TenancyOverviewGate record={isSelfManaged ? tenancyOverview.record : null}>
           {(record) => (
             <PropertyTenanciesSection property={property} record={record} onChanged={refreshTenancies} />
           )}
