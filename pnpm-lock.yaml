@@ -11,8 +11,8 @@ importers:
   apps/portal:
     dependencies:
       '@crossub-thongz/api-contract':
-        specifier: ^0.51.0
-        version: 0.51.0
+        specifier: ^0.52.0
+        version: 0.52.0
       '@googlemaps/js-api-loader':
         specifier: ^1.16.8
         version: 1.16.10
@@ -123,8 +123,8 @@ packages:
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
 
-  '@crossub-thongz/api-contract@0.51.0':
-    resolution: {integrity: sha512-FpFKe/P5I+5SvfmbkUw3wtzqpxWnP0G9DcR8uozbDrexzydhxsvj8uEnUKQoPyQSkgrYZM3eHw5REjRiv94Bvg==, tarball: https://npm.pkg.github.com/download/@crossub-thongz/api-contract/0.51.0/df5b80b64eefe60cd925c90977a14b670678955f}
+  '@crossub-thongz/api-contract@0.52.0':
+    resolution: {integrity: sha512-hk+NRFfGHXLuK5k9dTmSB9Gi8G01r/Uq4gjheUzKqAuyFRNA1LHg9vghYEyyufr+Y8SE2avntpxD7pTvYJ9oLg==, tarball: https://npm.pkg.github.com/download/@crossub-thongz/api-contract/0.52.0/689cc0fd180560b322faba049d8e93504af306a7}
 
   '@date-fns/tz@1.5.0':
     resolution: {integrity: sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg==}
@@ -1153,7 +1153,7 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
-  '@crossub-thongz/api-contract@0.51.0':
+  '@crossub-thongz/api-contract@0.52.0':
     dependencies:
       openapi-fetch: 0.13.8
 
