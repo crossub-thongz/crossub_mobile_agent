@@ -124,6 +124,7 @@ export function AddTenancyDialog({
   useEffect(() => {
     if (!open || !agencyId || term.length < PEOPLE_SEARCH_MIN_LENGTH) {
       setResults([]);
+      setSearching(false);
       return;
     }
     let cancelled = false;

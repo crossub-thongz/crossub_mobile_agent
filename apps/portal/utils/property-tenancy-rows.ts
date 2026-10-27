@@ -431,7 +431,7 @@ export function buildPropertyTenancyRows(record: PropertyTenancyOverview): Prope
   const tenant = record.tenant;
   if (leases.length === 0 && tenant?.name?.trim()) {
     const start = orUndefined(tenant.leaseStartDate ?? record.overview.leaseStartDate);
-    const end = orUndefined(tenant.leaseEndDate);
+    const end = orUndefined(tenant.leaseEndDate ?? record.overview.leaseEndDate);
     const termination = assignTerminationCase(openCases, start, tenancyStarts, true);
     const snapshot = currentTenancyStatus(
       { leaseStartDate: start, leaseEndDate: end },

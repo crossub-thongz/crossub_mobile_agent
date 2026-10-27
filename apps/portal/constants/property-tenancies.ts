@@ -623,3 +623,30 @@ export const RENT_PERIOD_SUFFIX: Record<PropertyRentPeriod, string> = {
   MONTHLY: '/ month',
   YEARLY: '/ year',
 };
+
+/** The Self-Manage Overview's Agency card (the admin Agent card and the former Agency Details). */
+export const AGENCY_CARD_COPY = {
+  TITLE: 'Agency details',
+  AGENCY: 'Agency',
+  SERVICE_TYPE: 'Service type',
+  MANAGEMENT_RATE: 'Management rate',
+  REPAIR_LIMIT: 'Repair limit',
+  ASSIGNED_AGENT: 'Assigned agent',
+  MANAGEMENT_AGREEMENT: 'Management agreement',
+  VIEW_AGREEMENT: 'View agreement',
+  NOT_UPLOADED: 'Not uploaded',
+  END_OF_MANAGEMENT: 'End of management',
+  EDIT: 'Edit',
+} as const;
+
+/** The Tenancy card's bond panel. */
+export const BOND_PANEL_COPY = {
+  BOND_ID: 'Bond ID',
+} as const;
+
+/** The Property card's key fob count. */
+export const KEY_FOB_COPY = {
+  LABEL: 'Key fob',
+  ONE: 'fob',
+  MANY: 'fobs',
+} as const;

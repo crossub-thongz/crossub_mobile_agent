@@ -96,16 +96,13 @@ function changedPatch(before: TenancyForm, after: TenancyForm): AgentPropertyPat
     patch.tenantPhone = after.tenantPhone.trim();
   }
   if (after.leaseStartDate !== before.leaseStartDate) patch.leaseStartDate = after.leaseStartDate;
-  if (
-    after.leaseType === TENANCY_LEASE_TERM_TYPE.FIXED &&
-    after.leaseEndDate &&
-    after.leaseEndDate !== before.leaseEndDate
-  ) {
-    patch.leaseEndDate = after.leaseEndDate;
-  }
-  if (after.vacateDate && after.vacateDate !== before.vacateDate) patch.vacateDate = after.vacateDate;
-  if (after.nextRentReviewAt && after.nextRentReviewAt !== before.nextRentReviewAt) {
-    patch.nextRentReviewAt = after.nextRentReviewAt;
+  // Periodic has no fixed end: switching to it clears the end the fixed term had.
+  const leaseEnd = after.leaseType === TENANCY_LEASE_TERM_TYPE.FIXED ? after.leaseEndDate : '';
+  if (leaseEnd !== before.leaseEndDate) patch.leaseEndDate = leaseEnd || null;
+  // A blanked date clears it (null); an untouched one is not sent.
+  if (after.vacateDate !== before.vacateDate) patch.vacateDate = after.vacateDate || null;
+  if (after.nextRentReviewAt !== before.nextRentReviewAt) {
+    patch.nextRentReviewAt = after.nextRentReviewAt || null;
   }
   if (after.rentPeriod !== before.rentPeriod) patch.rentPeriod = after.rentPeriod;
   const rent = parseAmountInput(after.rentAmount);

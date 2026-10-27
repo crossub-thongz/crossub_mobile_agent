@@ -15,6 +15,7 @@ import { PropertyProfileIncludedUsage } from '@/components/agent/property-profil
 import { PropertyProfilePhoto } from '@/components/agent/property-profile/property-profile-photo';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
 import { PropertyTenanciesSection } from '@/components/agent/property-tenancies/property-tenancies-section';
+import { SelfManagedAgencyCard } from '@/components/agent/property-tenancies/self-managed-agency-card';
 import { SelfManagedOverviewCards } from '@/components/agent/property-tenancies/self-managed-overview-cards';
 import { TenancyOverviewGate } from '@/components/agent/property-tenancies/tenancy-overview-gate';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -736,6 +737,17 @@ export function PropertyProfileV2({
               onOpenFinancials={
                 hasFullManagementAccess ? () => onSectionChange('financials') : undefined
               }
+              bond={sync.bond}
+              hasActiveLeasingCycle={Boolean(activeCycle?.id)}
+              keyFobCount={sync.keyFobCount}
+            />
+          ) : null}
+          {isSelfManaged && tenancyOverview.record ? (
+            <SelfManagedAgencyCard
+              property={property}
+              record={tenancyOverview.record}
+              propertyDocs={propertyDocs}
+              onChanged={refreshTenancies}
             />
           ) : null}
           <OverviewGrid

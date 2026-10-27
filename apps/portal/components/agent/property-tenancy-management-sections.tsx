@@ -208,7 +208,7 @@ function firstDate(...values: Array<string | null | undefined>): string {
   return '';
 }
 
-function resolveManagementAgreementDoc(
+export function resolveManagementAgreementDoc(
   portalDocuments: PropertyPortalDocument[],
   fallbackDocs: Array<{
     id: string;

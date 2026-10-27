@@ -5,16 +5,10 @@ import Link from 'next/link';
 import { Home, KeyRound, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { PropertyBondEditDialog } from '@/components/agent/property-bond-edit-dialog';
 import { PropertyBuildingContactsDialog } from '@/components/agent/property-building-contacts-dialog';
 import { PropertyFactsEditDialog } from '@/components/agent/property-facts-edit-dialog';
 import { PropertyProfileInfoCard } from '@/components/agent/property-profile/property-profile-info-card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { PROPERTY_TYPE_LABEL, type PropertyType } from '@/constants/api-enums';
 import { PROPERTY_CONTACT_ROLE } from '@/constants/property-contact';
 import {
@@ -22,7 +16,9 @@ import {
   PROPERTY_RENT_PERIOD_LABEL,
 } from '@/constants/property-profile-edit';
 import {
+  BOND_PANEL_COPY,
   HOUSEHOLD_PREVIEW_COUNT,
+  KEY_FOB_COPY,
   OVERVIEW_ACTION,
   OVERVIEW_CARD_TITLE,
   OVERVIEW_CARD_TONE,
@@ -46,6 +42,8 @@ import type {
 } from '@/lib/crossub-api/agent-tenancy-client';
 import { fromProperty } from '@/lib/detail-navigation';
 import { formatDateMedium } from '@/lib/format-datetime';
+import { resolveBondOverviewDisplay } from '@/lib/property-overview';
+import type { PropertyBondSnapshot } from '@/lib/use-property-overview-sync';
 import type { Property } from '@/lib/types';
 import { cn, formatCurrency } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
@@ -204,6 +202,9 @@ export function SelfManagedOverviewCards({
   onChanged,
   onOpenTenancies,
   onOpenFinancials,
+  bond,
+  hasActiveLeasingCycle,
+  keyFobCount,
 }: {
   property: Property;
   record: PropertyTenancyOverview;
@@ -211,6 +212,10 @@ export function SelfManagedOverviewCards({
   onOpenTenancies: () => void;
   /** Absent when this agent has no Financials section. */
   onOpenFinancials?: () => void;
+  /** The letting's bond lodgement, as the profile already reads it. */
+  bond: PropertyBondSnapshot | null;
+  hasActiveLeasingCycle: boolean;
+  keyFobCount: number | null;
 }) {
   const { overview, financial } = record;
   const [factsOpen, setFactsOpen] = useState(false);
@@ -263,8 +268,12 @@ export function SelfManagedOverviewCards({
   const rentHint = upcomingRent
     ? `${formatCurrency(upcomingRent.newRent)}${TENANCY_SECTION_COPY.PER_WEEK} ${OVERVIEW_COPY.RENT_FROM} ${formatDateMedium(upcomingRent.startDate)}`
     : undefined;
-  const arrears = record.arrears.outstandingAmount;
+  // Rent only; invoices are their own figure (the outstanding total is both together).
+  const arrears = record.arrears.rentArrears;
   const unpaidInvoices = record.arrears.invoiceArrears;
+  const bondAmount = financial.bondAmount ?? property.bondAmount ?? null;
+  const bondOverview = resolveBondOverviewDisplay(bondAmount, bond, hasActiveLeasingCycle);
+  const bondIdLabel = bondOverview.bondIdLabel !== TENANCY_PLACEHOLDER ? bondOverview.bondIdLabel : null;
   const inspectionCadence =
     overview.routineInspectionFrequencyMonths != null
       ? `${OVERVIEW_COPY.EVERY_MONTHS_PREFIX} ${overview.routineInspectionFrequencyMonths} ${OVERVIEW_COPY.EVERY_MONTHS_SUFFIX}`
@@ -316,6 +325,14 @@ export function SelfManagedOverviewCards({
             <Count label={OVERVIEW_LABEL.BEDROOMS} value={countLabel(property.bedrooms)} />
             <Count label={OVERVIEW_LABEL.BATHROOMS} value={countLabel(property.bathrooms)} />
             <Count label={OVERVIEW_LABEL.CAR_SPACES} value={countLabel(property.carSpaces)} />
+            {keyFobCount != null ? (
+              <span className="inline-flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground">{KEY_FOB_COPY.LABEL}</span>
+                <span className="font-semibold">
+                  {keyFobCount} {keyFobCount === 1 ? KEY_FOB_COPY.ONE : KEY_FOB_COPY.MANY}
+                </span>
+              </span>
+            ) : null}
             <span className="inline-flex items-center gap-2 text-xs">
               <span className="text-muted-foreground">{OVERVIEW_LABEL.FURNISHED}</span>
               <span className="font-semibold">
@@ -520,12 +537,14 @@ export function SelfManagedOverviewCards({
               <div className="bg-muted/30 flex items-center gap-3 rounded-lg border px-3 py-2.5">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-semibold">
-                    {OVERVIEW_LABEL.BOND} · {formatCurrency(financial.bondAmount)}
+                    {OVERVIEW_LABEL.BOND} · {formatCurrency(bondAmount)}
                   </p>
                   <p className="text-muted-foreground text-[11px]">
-                    {financial.bondAmount != null
-                      ? `${OVERVIEW_COPY.RECORDED_AMOUNT} · ${OVERVIEW_COPY.LODGEMENT_NOT_PROVIDED}`
-                      : OVERVIEW_COPY.NOT_RECORDED}
+                    {bondIdLabel
+                      ? `${BOND_PANEL_COPY.BOND_ID} ${bondIdLabel}`
+                      : bondAmount != null
+                        ? `${OVERVIEW_COPY.RECORDED_AMOUNT} · ${OVERVIEW_COPY.LODGEMENT_NOT_PROVIDED}`
+                        : OVERVIEW_COPY.NOT_RECORDED}
                   </p>
                 </div>
                 <CardLink label={OVERVIEW_ACTION.VIEW_DETAILS} onClick={() => setBondOpen(true)} />
@@ -656,17 +675,15 @@ export function SelfManagedOverviewCards({
         onOpenChange={(next) => (next ? undefined : setDetailsEdit(null))}
         onSaved={onChanged}
       />
-      <Dialog open={bondOpen} onOpenChange={setBondOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{OVERVIEW_LABEL.BOND}</DialogTitle>
-            <DialogDescription>
-              {OVERVIEW_COPY.RECORDED_AMOUNT}. {OVERVIEW_COPY.LODGEMENT_NOT_PROVIDED}.
-            </DialogDescription>
-          </DialogHeader>
-          <p className="text-2xl font-semibold tabular-nums">{formatCurrency(financial.bondAmount)}</p>
-        </DialogContent>
-      </Dialog>
+      <PropertyBondEditDialog
+        open={bondOpen}
+        onOpenChange={setBondOpen}
+        propertyId={record.propertyId}
+        initialAmount={bondAmount}
+        bondId={bondIdLabel}
+        bondLodgementUrl={bond?.agentLink}
+        onSaved={onChanged}
+      />
     </div>
   );
 }

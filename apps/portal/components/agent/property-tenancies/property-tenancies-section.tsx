@@ -202,7 +202,7 @@ function TenancyCard({ group, ...h }: Handlers & { group: PropertyTenancyGroup }
   const rent = group.rentWeekly ?? (isCurrent ? record.financial.currentRentWeekly : null);
   const bond = group.bondAmount ?? (isCurrent ? record.financial.bondAmount : null);
   const paidTo = isCurrent ? (record.overview.rentPaidUntilDate ?? group.rentPaidUntil) : group.rentPaidUntil;
-  const arrears = isCurrent ? record.arrears.outstandingAmount : null;
+  const arrears = isCurrent ? record.arrears.rentArrears : null;
   return (
     <div className="v2-dashboard__card overflow-hidden rounded-2xl border">
       <div
