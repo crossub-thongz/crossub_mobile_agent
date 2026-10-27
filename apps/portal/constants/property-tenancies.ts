@@ -336,7 +336,7 @@ export const OVERVIEW_COPY = {
   OWNERS_SUFFIX: 'owners',
   RECORDED_AMOUNT: 'Recorded amount',
   LODGEMENT_NOT_PROVIDED: 'Lodgement details not provided',
-  TRUST_ACCOUNTING_NOTE: 'Trust figures are on the Trust screens.',
+  TRUST_ACCOUNTING_NOTE: 'Trust figures are on the Accounting screens.',
   GST_INCLUDE: 'incl. GST',
   GST_EXCLUDE: 'excl. GST',
   MOVING_IN: 'Moving in',

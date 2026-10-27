@@ -9,15 +9,13 @@
 - Accounting: "Opening balance (not allocated to a folio)" under the Overview ledger total and in the reconciliation result when the opening balance is not on a ledger (contract 0.53.0).
 
 ### Changed
+- Agent API contract 0.54.0.
 - Self-Manage "Trust" is now "Accounting" in the menu, page title, More page, Cros page name, plan descriptions and every "in Trust" hint; the trust bank account keeps its name.
 - The opening balance hint says it is the starting balance and that money is recorded against folios from then on.
 - The older Accounting menu item (rent and invoice arrears) reads "Arrears" for agents who also see the Self-Manage Accounting module.
 
 ### Removed
 - Accounting: the Opening balances (take-on) panel in Settings and the "Opening balances are not posted yet" banner on the Overview.
-
-### Changed
-- Agent API contract 0.54.0.
 
 ## 2026-10-26
 
