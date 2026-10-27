@@ -3,8 +3,10 @@ import {
   GII_PAGE_LABEL_SEPARATOR,
   GII_PAGE_NON_RECORD_SEGMENTS,
   GII_PAGE_ROUTES,
+  GII_SCREEN_RECORD_KIND,
   type GiiPageModule,
   type GiiPageRoute,
+  type GiiScreenRecordKind,
   type GiiScreenRecordList,
 } from '@/constants/gii-page-context';
 import type {
@@ -21,6 +23,8 @@ import type {
 export type GiiPageContext = {
   pageModule: GiiPageModule;
   pageLabel: string;
+  /** The record open on screen, by kind and id; absent on a list screen or form. */
+  screenRecord?: { kind: GiiScreenRecordKind; id: string };
 };
 
 /** The agent data lists a record screen can be on — `useAgentData()` satisfies it. */
@@ -37,6 +41,8 @@ export type GiiScreenRecordLists = {
 
 /** The record open on screen, and the property it belongs to. */
 export type GiiScreenRecord = {
+  kind: GiiScreenRecordKind;
+  id: string;
   propertyId: string | null;
   propertyAddress: string | null;
   /** What the record is about (job title, thread subject), when it has one. */
@@ -81,6 +87,8 @@ function findRecord(
     ('caseNumber' in row && typeof row.caseNumber === 'string' && row.caseNumber.trim()) ||
     null;
   return {
+    kind: GII_SCREEN_RECORD_KIND[list],
+    id: row.id,
     propertyId: row.propertyId || null,
     propertyAddress: row.propertyAddress?.trim() || null,
     title,
@@ -118,6 +126,8 @@ export function giiPageContextFor(args: {
   recordTitle?: string | null;
   /** The open record's reference, put after the record screen's name. */
   recordReference?: string | null;
+  /** The open record itself, sent so Cros's tools can act on it by id. */
+  record?: { kind: GiiScreenRecordKind; id: string } | null;
 }): GiiPageContext | null {
   const match = matchRoute(args.pathname);
   if (!match) return null;
@@ -131,7 +141,11 @@ export function giiPageContextFor(args: {
   const label = [title ? `${named}: ${title}` : named, property]
     .filter(Boolean)
     .join(GII_PAGE_LABEL_SEPARATOR);
-  return { pageModule: page.module, pageLabel: label.slice(0, GII_PAGE_LABEL_MAX_LENGTH) };
+  return {
+    pageModule: page.module,
+    pageLabel: label.slice(0, GII_PAGE_LABEL_MAX_LENGTH),
+    ...(onRecord && args.record ? { screenRecord: { kind: args.record.kind, id: args.record.id } } : {}),
+  };
 }
 
 /**

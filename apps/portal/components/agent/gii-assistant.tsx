@@ -541,6 +541,7 @@ export function GiiAssistant({
     propertyLabel: scopedAddress,
     recordTitle: screenRecord?.title,
     recordReference: screenRecord?.reference,
+    record: screenRecord,
   });
   /**
    * The property on screen, and the one on screen at the previous turn. Only navigation

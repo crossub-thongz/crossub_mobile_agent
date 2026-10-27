@@ -82,6 +82,7 @@ export async function sendGiiMessage(args: {
             ? { pendingPropertyCandidates: ctx.pendingPropertyCandidates }
             : {}),
           ...(args.page ? { pageModule: args.page.pageModule, pageLabel: args.page.pageLabel } : {}),
+          ...(args.page?.screenRecord ? { screenRecord: args.page.screenRecord } : {}),
           ...(args.propertyChanged ? { propertyChanged: true } : {}),
           ...(args.earlierSummary ? { earlierSummary: args.earlierSummary } : {}),
         }

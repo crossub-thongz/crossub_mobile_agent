@@ -1,3 +1,5 @@
+import type { components } from '@crossub-thongz/api-contract';
+
 import { ROUTES } from '@/constants/routes';
 
 /**
@@ -56,6 +58,23 @@ export const GII_SCREEN_RECORD_LIST = {
 
 export type GiiScreenRecordList =
   (typeof GII_SCREEN_RECORD_LIST)[keyof typeof GII_SCREEN_RECORD_LIST];
+
+export type GiiScreenRecordKind = components['schemas']['GiiScreenRecordDto']['kind'];
+
+/**
+ * The record kind sent as `screenRecord.kind` (Jarvis 2.1), one per record list, so Cros's
+ * tools can act on "this job" by its id.
+ */
+export const GII_SCREEN_RECORD_KIND = {
+  [GII_SCREEN_RECORD_LIST.MAINTENANCE]: 'maintenance',
+  [GII_SCREEN_RECORD_LIST.INSPECTIONS]: 'inspection',
+  [GII_SCREEN_RECORD_LIST.LEASING_CYCLES]: 'leasing',
+  [GII_SCREEN_RECORD_LIST.TENANT_SELECTIONS]: 'tenant_selection',
+  [GII_SCREEN_RECORD_LIST.RENT_REVIEWS]: 'rent_review',
+  [GII_SCREEN_RECORD_LIST.VACATING]: 'vacating',
+  [GII_SCREEN_RECORD_LIST.TRIBUNAL_CASES]: 'tribunal',
+  [GII_SCREEN_RECORD_LIST.MESSAGES]: 'message_thread',
+} as const satisfies Record<GiiScreenRecordList, GiiScreenRecordKind>;
 
 export type GiiPageRoute = {
   route: string;

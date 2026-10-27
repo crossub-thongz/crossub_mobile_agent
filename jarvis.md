@@ -48,29 +48,30 @@ Review items: AI-003, AI-012, AI-013.
 
 ### 1.1 Screen awareness
 
-- [~] Portal sends `pageModule`, `pageLabel` and `propertyChanged` with every turn (fields already in contract 0.45.0). Code done (`constants/gii-page-context.ts`, `utils/gii-page-context.ts`, `gii-client.ts`, `gii-assistant.tsx`); staging check pending.
+- [x] Portal sends `pageModule`, `pageLabel` and `propertyChanged` with every turn (fields already in contract 0.45.0). Code done (`constants/gii-page-context.ts`, `utils/gii-page-context.ts`, `gii-client.ts`, `gii-assistant.tsx`). Staging check passed: on the property page Cros answered without asking for an address. Moving to another property is not tested: the staging login has one property.
 - [-] Contract: record type and id on screen in `GiiChatContextDto`. Moved to 2.1: no Gii tool takes a record id yet, so it lands with the first one that does.
-- [~] Portal: a record screen (maintenance, inspection, leasing, tenant selection, rent review, vacate, tribunal, message thread) scopes Cros to that record's property and names the record in `pageLabel`. Code done (`GII_SCREEN_RECORD_LIST`, `giiScreenRecordFor`); staging check pending.
-- [ ] Answers link to the record they talk about (Open buttons for every record kind, not only job cases).
+- [x] Portal: a record screen (maintenance, inspection, leasing, tenant selection, rent review, vacate, tribunal, message thread) scopes Cros to that record's property and names the record in `pageLabel`, with its reference ("Maintenance job MR-00196: Sink tap leaking"). The prompt treats the record on screen as the subject (`crossub_web` fa5b22252). Staging check passed on 0935fba: on MR-00196 Cros named the job without asking which one. It cannot read the job's stage or quote yet (2.1).
+- [~] Answers link to the record they talk about (Open buttons for every record kind, not only job cases). Built for maintenance, rent review, inspection, leasing, End Leasing, inbox thread, notification, arrears and property (`crossub_web` fa5b22252, contract 0.51.0; portal 2b99341). Staging check passed for leasing. Inbox thread, notification, arrears and property are held back by `GII_RECORD_LINK_KINDS_SENT` (a7a44742f), because an app build older than 4734d55 crashes on a kind it does not know. Turn them on once every app, live included, runs 0935fba or later, then test them.
 
 ### 1.2 Saved conversations
 
 - [x] Prisma: `GiiConversation` (officer, title, property, messages as JSON, last activity); one table, transcript saved whole each turn. `crossub_web` 594b01d84, additive migration `20261026120000_gii_conversations`.
 - [x] Agent routes: `GET /agent/gii/conversations`, `GET/PUT/DELETE /agent/gii/conversations/{id}` (contract 0.47.0). PUT creates or replaces; app mints the id. Scoped to the calling officer (another officer's chat reads as not found); property must be in scope; latest 50 kept.
 - [x] Older turns summarised instead of dropped past `GII_MAX_HISTORY_MESSAGES`: `POST /agent/gii/summarise` folds them into notes sent back as `context.earlierSummary` (contract 0.48.0). Portal folds between turns once 16 lines follow the notes, keeping the last 8 word for word; a failed fold drops the oldest as before. Notes quote each officer request word for word, numbered and carried forward, with one model line per request; no figures, not saved with the chat. Staging check passed: after 11 questions Cros quoted the first (MR-00195) word for word.
-- [~] Portal: History loads from the server, saves after every settled turn, reopens and deletes. Words only; cards and attachments are not saved. Staging check pending.
+- [x] Portal: History loads from the server, saves after every settled turn, reopens and deletes. Words only; cards and attachments are not saved. Times shown in Sydney time (2b99341). Staging check passed: saved, reloaded, reopened and deleted; a chat started 20:41 Sydney time is listed at 8:41 pm.
 
 ### 1.3 Confirm card and AI log
 
 - [x] One confirm card for every write tool (exact change, Confirm, Cancel), generalising the email draft. Backend `crossub_web` 439e96a33 (contract 0.46.0): unconfirmed write calls return a signed proposal (15 min, bound to the officer); `POST /v1/agent/gii/confirm` runs exactly that call. Portal `GiiProposalCard`; a new message clears an open card. On the agent app every write in chat only proposes, so Confirm is the only way a change runs (d007cb942); a property update checks clashes when proposing and the card shows the value it replaces. On the agent app a replacement goes straight to the card, "2 (replaces 1)", with no question in words first (347d7e728). A maintenance job with photos still confirms in words. Staging check passed on d007cb94; card wording passed on 347d7e72. A card turn where Cros writes no sentence showed "Sorry, I could not complete that"; fixed in 524de54b1, live on staging (card flow rechecked).
 - [x] Write an `AiDecision` row for every Gii write (action, risk, source record, approver, result). `crossub_web` e18596a68: `GiiActionLedgerService`, outcome RECOMMENDED + new reason `USER_CONFIRMED`, resolved ACCEPTED by the officer, effects and property timeline. Staging check passed: one row per Confirm, none for a typed yes or a Cancel.
+- [x] Decision log rows name the field and values ("Parking spaces 1 to 2"), and `GET /agent/gii/changes` lists Cros changes in the property Activities tab with who confirmed (`crossub_web` fa5b22252, contract 0.51.0; portal 2b99341). Staging check passed: parking 1 to 2 and back, two rows, both in Activities. Rows written before this fix still read "Updated 1 detail(s)".
 - [x] `GII_MAX_TURNS` 6 to 12 done (e18596a68). Model: `AI_GII_MODEL` setting added, default still Haiku 4.5; switching to Sonnet 5.5 is under Open questions (model budget).
 
 ### 1.4 Read tools
 
-- [~] Conversations: `list_inbox` and `read_conversation` over the Self-Manage Conversations inbox (`AgentConversationService`); a thread Cros reads stays unread for the officer (`peek`). Backend `crossub_web` 54102dedf, no contract change. Staging check pending.
-- [~] Arrears: `list_arrears`, the Arrears screen's rows (`AgentPortfolioService.listAccountingForAgent`), most owed first with the total; with a propertyId, each open case split into rent, bills and bond. 54102dedf. Staging check pending.
-- [~] Tasks and notifications: `list_notifications`, unread by default, read without marking read (54102dedf). Tasks stay with the existing `list_actionable_cases` (quotes awaiting approval, rent reviews, routines due); vacating, leasing and tribunal tasks are not in it yet. Staging check pending.
+- [x] Conversations: `list_inbox` and `read_conversation` over the Self-Manage Conversations inbox (`AgentConversationService`); a thread Cros reads stays unread for the officer (`peek`). Backend `crossub_web` 54102dedf, no contract change. Staging check passed: same 4 threads as Conversations, one summarised.
+- [x] Arrears: `list_arrears`, the Arrears screen's rows (`AgentPortfolioService.listAccountingForAgent`), most owed first with the total; with a propertyId, each open case split into rent, bills and bond. 54102dedf. Staging check passed: nobody behind, as the dashboard shows (nothing owed on staging).
+- [x] Tasks and notifications: `list_notifications`, unread by default, read without marking read (54102dedf). Tasks stay with the existing `list_actionable_cases` (quotes awaiting approval, rent reviews, routines due); vacating, leasing and tribunal tasks are not in it yet. Staging check passed: none new, then all 4 with Sydney times.
 
 ### 1.5 Fixes before new tools
 
@@ -85,9 +86,9 @@ Review items: AI-001, AI-002, AI-004, AI-005, AI-019, AI-024, AI-025, AI-027, AI
 
 ### 2.1 Tool bundles
 
-- [ ] Bundle loading: core tools plus the bundle for the current screen.
-- [ ] Contract: record kind and id on screen in `GiiChatContextDto` (from 1.1), for tools that act on the open record.
-- [ ] Maintenance: approve or reject quote, chase contractor, schedule, close.
+- [~] Bundle loading: core tools plus the bundle for the current screen. Built (`crossub_web` 76425bb7e): a bundle opens from the start on its module or record screen, elsewhere Cros opens it with `load_tools` and uses it on its next step (the tool loop rereads its list each step). One bundle so far: maintenance. Not yet on staging.
+- [~] Contract: record kind and id on screen in `GiiChatContextDto` (from 1.1), for tools that act on the open record. `context.screenRecord {kind, id}` in 76425bb7e (contract 0.52.0); portal change written, waits for 0.52.0 to be published. Must not ship before the backend: the API refuses unknown fields.
+- [~] Maintenance: approve or reject quote, chase contractor, schedule, close. Built (76425bb7e): `get_maintenance_job` (by record on screen or reference: stage, tradie, work order, owner repair limit, every quote), `approve_quote`, `decline_quote`, `send_quote_to_owner`, `record_owner_quote_reply`. Each goes through the job screen's own service, proposes on a Confirm card and is logged. Decided 27 Oct: same users as the app's buttons (declared permission overrides); Cros approves only within the owner's repair limit, otherwise offers to send the quote to the owner. Chase contractor, schedule and close are next.
 - [ ] Inspections: book routine, ingoing and outgoing; cancel; sign off.
 - [ ] Rent review: send offer, chase tenant, record response.
 - [ ] Conversations: reply to any party, assign, resolve.
@@ -167,3 +168,8 @@ Review items: AI-016 (spoken English first).
 | 2026-10-26 | 1.3 | A card turn with no sentence from Cros says the card is waiting instead of "could not complete" (crossub_web 524de54b1, on staging; card flow rechecked, Cancel wrote nothing) |
 | 2026-10-26 | 1.2 | Notes quote the officer's requests word for word, numbered and carried forward (crossub_web 1f4e8ead5); staging recall check passed |
 | 2026-10-26 | 1.2 | A long model line no longer fails the fold with 503 (crossub_web e45ed11d5); staging replay 6 of 6 and a carried fold passed |
+| 2026-10-26 | 1.1 | Job reference in the screen label, record on screen is the subject; Open buttons for every record kind (crossub_web fa5b22252, contract 0.51.0; portal 2b99341) |
+| 2026-10-26 | 1.1 | New button kinds crashed the live app; API sends only the kinds older apps know (crossub_web a7a44742f), app skips unknown kinds (4734d55) |
+| 2026-10-26 | 1.3 | Decision log rows name field and values; Cros changes in the property Activities tab (crossub_web fa5b22252; portal 2b99341) |
+| 2026-10-27 | 1 | Stage 1 retest on staging passed (`~/Downloads/Cros_Stage1_Retest_Results.pdf`); left: held-back Open buttons, property switch untested, pilot gate |
+| 2026-10-27 | 2.1 | Tool bundles, record on screen (contract 0.52.0), maintenance bundle: read a job, approve within the owner's limit, decline, send to owner, record owner's answer (crossub_web 76425bb7e) |

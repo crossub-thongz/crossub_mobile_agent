@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-27
+
+### Added
+- On a record screen Cros is sent the record's kind and id, so its tools can act on the job on screen.
+
 ## 2026-10-26
 
 ### Added
