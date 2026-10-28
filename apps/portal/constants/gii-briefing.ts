@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import type { GiiServerBriefingCategory } from '@/lib/crossub-api/gii-client';
+import type { TaskListV2Row } from '@/lib/task-list-v2';
 
 import type { NeedActionCategory, Priority } from '@/lib/types';
 
@@ -118,3 +119,23 @@ export const SERVER_BRIEFING_UNAVAILABLE_LABEL: Record<string, string> = {
 
 /** Updates named in the greeting before the rest are counted. */
 export const SERVER_BRIEFING_CHANGES_NAMED = 3;
+
+/** Icon per Tasks page category, for the "Needs My Action" tasks listed under the server's items. */
+export const TASK_BRIEFING_ICON: Record<TaskListV2Row['category'], LucideIcon> = {
+  maintenance: Wrench,
+  inspection: ClipboardList,
+  leasing: Building2,
+  rent_review: FileText,
+  tribunal: Gavel,
+};
+
+/** A task at this priority is drawn in the destructive tone, like an urgent repair. */
+export const BRIEFING_URGENT_PRIORITY: Priority = 'urgent';
+
+/** How the greeting counts those tasks: alone ("2 tasks") or after the server's ("2 other tasks"). */
+export const BRIEFING_TASK_NOUN = {
+  ONE: 'task',
+  MANY: 'tasks',
+  OTHER_ONE: 'other task',
+  OTHER_MANY: 'other tasks',
+} as const;

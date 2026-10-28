@@ -68,7 +68,8 @@ import {
 } from '@/constants/gii-prompts';
 import { MESSAGE_GII_PROMPTS } from '@/constants/gii-message-prompts';
 import { buildGiiBriefing, type GiiBriefing } from '@/lib/gii-briefing';
-import { serverBriefingGreeting } from '@/lib/gii-server-briefing';
+import { briefingExtraTasks, briefingTaskDetail, serverBriefingGreeting } from '@/lib/gii-server-briefing';
+import type { TaskListV2Row } from '@/lib/task-list-v2';
 import {
   primeGiiVoiceStatus,
   resolveSpeechLanguage,
@@ -83,6 +84,7 @@ import { useAgentStore } from '@/lib/store';
 import type { PropertyNeedAction } from '@/lib/types';
 import { needActionToJobRow } from '@/lib/portfolio-case-dialog';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
+import { usePortfolioTaskRows } from '@/hooks/use-portfolio-task-rows';
 import {
   confirmGiiProposal,
   deleteGiiConversation,
@@ -496,6 +498,13 @@ export function GiiAssistant({
       seenBriefingRef.current = null;
     });
   }, [serverBriefing]);
+  // The Tasks page's "Needs My Action" rows the server does not cover (leasing approvals, vacate
+  // notices, a job's next step), so Cros never says nothing is waiting while Tasks lists work.
+  const taskRows = usePortfolioTaskRows();
+  const briefingTasks = useMemo(
+    () => (serverBriefing ? briefingExtraTasks(serverBriefing, taskRows) : []),
+    [serverBriefing, taskRows],
+  );
 
   const greetingText = useMemo(() => {
     if (messageScoped && scopedAddress) {
@@ -511,11 +520,14 @@ export function GiiAssistant({
         user?.firstName,
       );
     }
-    if (serverBriefing) return serverBriefingGreeting(serverBriefing, new Date(), user?.firstName);
+    if (serverBriefing) {
+      return serverBriefingGreeting(serverBriefing, new Date(), user?.firstName, briefingTasks.length);
+    }
     return liveBriefing.subtitle
       ? `${liveBriefing.greeting}\n\n${liveBriefing.subtitle}`
       : liveBriefing.greeting;
   }, [
+    briefingTasks.length,
     copyVariant,
     messageScoped,
     propertyJobs.length,
@@ -531,7 +543,7 @@ export function GiiAssistant({
   const briefingIsEmpty = scopedProperty
     ? propertyJobs.length === 0
     : serverBriefing
-      ? serverBriefing.total === 0
+      ? serverBriefing.total + briefingTasks.length === 0
       : liveBriefing.isEmpty;
 
   const hasUserMessages = useMemo(() => lines.some((l) => l.role === 'user'), [lines]);
@@ -1049,6 +1061,13 @@ export function GiiAssistant({
     void runQuery(`Give me an update on ${item.title}${where} (${item.detail}).`);
   };
 
+  /** Ask Cros about a task from the Tasks page, scoped to its property. */
+  const askAboutTask = (row: TaskListV2Row) => {
+    contextRef.current = { propertyId: row.propertyId, propertyLabel: row.propertyAddress };
+    propertyContextRef.current = buildGiiPropertyContext({ property: row.property, address: row.propertyAddress });
+    void runQuery(`Give me an update on ${row.task.title} (${briefingTaskDetail(row, new Date())}).`);
+  };
+
   const askAboutRow = (row: PropertyNeedAction) => {
     const rowProperty =
       data.properties.find((p) => p.id === row.propertyId) ??
@@ -1522,9 +1541,14 @@ export function GiiAssistant({
             briefing={
               serverBriefing ? (
                 <div className="space-y-2">
-                  <GiiChatGreeting text={serverBriefingGreeting(serverBriefing, new Date(), user?.firstName)} />
+                  <GiiChatGreeting
+                    text={serverBriefingGreeting(serverBriefing, new Date(), user?.firstName, briefingTasks.length)}
+                  />
                   <GiiServerBriefingCard
                     briefing={serverBriefing}
+                    tasks={briefingTasks}
+                    onAskTask={askAboutTask}
+                    onOpenTask={(row) => router.push(row.href)}
                     title="Your morning briefing"
                     onNavigate={onClose}
                     onAsk={askAboutBriefingItem}
@@ -1553,6 +1577,9 @@ export function GiiAssistant({
             ) : !messageScoped && serverBriefing ? (
               <GiiServerBriefingCard
                 briefing={serverBriefing}
+                tasks={briefingTasks}
+                onAskTask={askAboutTask}
+                onOpenTask={(row) => router.push(row.href)}
                 title={briefingTitle}
                 onNavigate={onClose}
                 onAsk={askAboutBriefingItem}

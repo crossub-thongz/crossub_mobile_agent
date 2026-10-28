@@ -30,15 +30,13 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { TASK_LIST_COPY } from '@/constants/agent-copy-variant';
 import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 import { useAuth } from '@/components/providers/auth-provider';
-import { useAgentStore } from '@/lib/store';
+import { usePortfolioTaskRows } from '@/hooks/use-portfolio-task-rows';
 import {
-  buildPortfolioTaskList,
   clearTaskMoreFilter,
   countTaskListV2Buckets,
   countTaskListV2Categories,
   EMPTY_TASK_MORE_FILTERS,
   filterTaskListV2Rows,
-  filterTaskListV2RowsForAgencies,
   sortTasksByDueDate,
   taskDueMeta,
   taskListV2BucketFilters,
@@ -136,23 +134,7 @@ export function V2TasksPage() {
   const { user } = useAuth();
   const currentUserName = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
 
-  const {
-    properties,
-    agencies,
-    hasFullManagementAccess,
-    isInspectionOnlyAgent,
-    leasingRecords,
-    maintenanceAll,
-    inspections,
-    rentReviews,
-    leasingCycles,
-    tenantSelections,
-    vacating,
-    tribunalCases,
-    accounting,
-    getPropertyActions,
-  } = useAgentData();
-  const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
+  const { agencies, hasFullManagementAccess, isInspectionOnlyAgent } = useAgentData();
   const copyVariant = useAgentCopyVariant();
   const bucketFilters = useMemo(() => taskListV2BucketFilters(copyVariant), [copyVariant]);
 
@@ -185,45 +167,7 @@ export function V2TasksPage() {
     }
   }, [searchParams]);
 
-  const allRows = useMemo(
-    () =>
-      filterTaskListV2RowsForAgencies(
-        buildPortfolioTaskList({
-          properties: propertyFilter
-            ? properties.filter((property) => property.id === propertyFilter)
-            : properties,
-          leasingRecords,
-          maintenanceAll,
-          inspections,
-          rentReviews,
-          rentReviewDecisions,
-          leasingCycles,
-          tenantSelections,
-          vacating,
-          tribunalCases,
-          accounting,
-          getPropertyActions,
-          agencies,
-        }),
-        agencies,
-      ),
-    [
-      accounting,
-      agencies,
-      getPropertyActions,
-      inspections,
-      leasingCycles,
-      leasingRecords,
-      maintenanceAll,
-      properties,
-      propertyFilter,
-      rentReviewDecisions,
-      rentReviews,
-      tenantSelections,
-      tribunalCases,
-      vacating,
-    ],
-  );
+  const allRows = usePortfolioTaskRows(propertyFilter);
 
   const categoryFilters = useMemo(
     () => taskListV2CategoryFiltersForAccess(hasFullManagementAccess),
