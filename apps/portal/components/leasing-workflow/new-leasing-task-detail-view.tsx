@@ -12,6 +12,8 @@ import {
   Phone,
   User,
 } from 'lucide-react';
+import { AdminSideCard } from '@/components/agent/self-managed-task/admin-task-chrome';
+import { LeasingOpenedTask } from '@/components/agent/self-managed-task/leasing-opened-task';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
 import { TaskJobLoading, TaskJobUnavailable } from '@/components/agent/tasks/task-job-status';
 import {
@@ -277,6 +279,59 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
 
   const address = formatPropertyFullAddress(property);
   const taskRef = newLeasingTaskReference(cycleId);
+
+  if (selfManaged) {
+    return (
+        <LeasingOpenedTask
+          cycle={cycle}
+          address={address}
+          locality={[property.suburb, property.state, property.postcode].filter(Boolean).join(', ')}
+          reference={taskRef}
+          assignedTo={resolveCaseAssignedToFromProperty(
+            property.assignedPortalAgentName || property.propertyManager,
+          )}
+          nextAction={banner?.title ?? 'Continue this letting'}
+          nextDetail={banner?.subtitle ?? ''}
+          dueLabel={cycle.availableFrom ? formatDate(cycle.availableFrom) : null}
+          landlordName={property.homeOwnerName || '—'}
+          tenantName={tenant?.applicant || '—'}
+          summary={
+            <AdminSideCard title="Lease">
+              <dl className="space-y-2 text-sm">
+                {leaseRows.map((row) => (
+                  <div key={row.label} className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">{row.label}</dt>
+                    <dd className="text-right font-medium">{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </AdminSideCard>
+          }
+          workflow={
+            <div className="space-y-4">
+              <LeasingReletDecisionCard propertyId={propertyId} cycleId={cycleId} />
+              <LeasingWorkflowTimeline
+                propertyId={propertyId}
+                leasingCycleId={cycleId}
+                propertyAddress={address}
+                rentWeekly={rentWeekly}
+                hideSectionLabel
+                showReletDecisionCard={false}
+                onCaseClosed={() => {
+                  void refresh().then(() => {
+                    router.push(ROUTES.LEASING);
+                  });
+                }}
+                onOpenInspectionCreated={(inspectionId) => {
+                  router.push(inspectionDetail(inspectionId, fromProperty(propertyId, 'Tasks')));
+                }}
+              />
+            </div>
+          }
+        />
+    );
+  }
+
   const createdLabel = cycle.createdAt ? formatDate(cycle.createdAt) : '—';
 
   return (

@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
+import { SelfManagedLeasingStages } from '@/components/agent/self-managed-task/leasing-admin-stages';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { LeasingLifecyclePhaseNav } from '@/components/leasing-workflow/leasing-lifecycle-phase-nav';
 import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
@@ -75,6 +76,16 @@ export function LeasingLifecycleTabs({
     contentStep === LEASING_LIFECYCLE_STEP.OPEN_INSPECTION ||
     contentStep === LEASING_LIFECYCLE_STEP.OPEN_REPORT ||
     contentStep === LEASING_LIFECYCLE_STEP.RESULTS;
+
+  if (selfManaged) {
+    return (
+      <SelfManagedLeasingStages
+        detail={liveDetail}
+        leasingCycleId={leasingCycleId}
+        onOpenInspectionCreated={onOpenInspectionCreated}
+      />
+    );
+  }
 
   return (
     <div className="min-w-0 space-y-4">

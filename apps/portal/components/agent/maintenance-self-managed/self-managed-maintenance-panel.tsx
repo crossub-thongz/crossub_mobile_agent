@@ -32,6 +32,15 @@ import { useSelfManagedMaintenance } from '@/hooks/use-self-managed-maintenance'
 import { selfManagedMaintenanceSteps } from '@/lib/maintenance/self-managed-steps';
 import { cn, formatCurrency } from '@/lib/utils';
 
+/** Admin case stages. When set, only the actions that belong on that board are shown. */
+export type SelfManagedMaintenanceStage =
+  | 'created'
+  | 'review'
+  | 'quote'
+  | 'approval'
+  | 'progress'
+  | 'done';
+
 /**
  * Self-Manage maintenance actions on one job (Phase 1): the steps a CROSSUB Account Manager runs,
  * shown only when they apply to the job's current stage. The server copies the owner on quote
@@ -44,6 +53,7 @@ export function SelfManagedMaintenancePanel({
   onChanged,
   heading,
   className,
+  stage,
 }: {
   requestId: string;
   agencyId: string | null;
@@ -51,6 +61,8 @@ export function SelfManagedMaintenancePanel({
   /** Shown above the steps when the panel stands alone (the full job page). */
   heading?: ReactNode;
   className?: string;
+  /** Limit the actions to one admin stage board. */
+  stage?: SelfManagedMaintenanceStage;
 }) {
   const { detail, error, busy, reload, run } = useSelfManagedMaintenance(requestId, onChanged);
 
@@ -81,18 +93,51 @@ export function SelfManagedMaintenancePanel({
   const quotedNames = new Set(
     detail.quotes.map((q) => q.contractorName).filter((name): name is string => name !== null),
   );
+  const on = (allowed: SelfManagedMaintenanceStage[]) => !stage || allowed.includes(stage);
+  const showEscalation = on(['review']) && steps.escalations.length > 0;
+  const showUrgent = on(['review']) && Boolean(steps.urgent);
+  const showInvoice = on(['progress', 'done']) && Boolean(steps.invoiceDecision && match);
+  const showDisputed = on(['progress', 'done']) && Boolean(steps.disputed && match);
+  const showPayment = on(['progress', 'done']) && Boolean(steps.payment && match);
+  const showCompletion = on(['progress', 'done']) && Boolean(steps.completion);
+  const showSchedule = on(['progress']) && Boolean(steps.schedule);
+  const showCompare = on(['quote', 'approval']) && Boolean(steps.compareQuotes);
+  const showWorkOrder = on(['progress']) && Boolean(steps.workOrder && detail.workOrder);
+  const showResponsibility = on(['review']);
+  const showJobDetails = !stage;
+  const showTriage = on(['review']) && Boolean(steps.triage);
+  const showQuotes = on(['quote']) && Boolean(steps.enterQuote);
+  const showSplit = !stage && Boolean(steps.triage);
+  const anyAction =
+    showEscalation ||
+    showUrgent ||
+    showInvoice ||
+    showDisputed ||
+    showPayment ||
+    showCompletion ||
+    showSchedule ||
+    showCompare ||
+    showWorkOrder ||
+    showResponsibility ||
+    showJobDetails ||
+    showTriage ||
+    showQuotes ||
+    showSplit;
+  if (stage && !anyAction) return null;
 
   return (
     <div className={cn('space-y-3', className)}>
-      {heading}
-      <p className="text-muted-foreground text-xs">
-        {detail.spendThreshold === null
-          ? COPY.ownerCopyNoLimit
-          : COPY.ownerCopyLimit(formatCurrency(detail.spendThreshold))}
-      </p>
-      <p className="text-muted-foreground text-xs">{COPY.advisoryHint}</p>
+      {stage ? null : heading}
+      {stage ? null : (
+        <p className="text-muted-foreground text-xs">
+          {detail.spendThreshold === null
+            ? COPY.ownerCopyNoLimit
+            : COPY.ownerCopyLimit(formatCurrency(detail.spendThreshold))}
+        </p>
+      )}
+      {stage ? null : <p className="text-muted-foreground text-xs">{COPY.advisoryHint}</p>}
 
-      {steps.escalations.length > 0 ? (
+      {showEscalation ? (
         <EscalationStep
           requestId={requestId}
           escalations={steps.escalations}
@@ -100,22 +145,20 @@ export function SelfManagedMaintenancePanel({
           run={run}
         />
       ) : null}
-      {steps.urgent ? (
+      {showUrgent ? (
         <UrgentDecisionStep requestId={requestId} agencyId={agencyId} busy={busy} run={run} />
       ) : null}
-      {steps.invoiceDecision && match ? (
+      {showInvoice && match ? (
         <InvoiceDecisionStep requestId={requestId} match={match} busy={busy} run={run} />
       ) : null}
-      {steps.disputed && match ? (
+      {showDisputed && match ? (
         <DisputedInvoiceStep requestId={requestId} match={match} busy={busy} run={run} />
       ) : null}
-      {steps.payment && match ? (
+      {showPayment && match ? (
         <PaymentStep requestId={requestId} match={match} busy={busy} run={run} />
       ) : null}
-      {steps.completion ? (
-        <CompletionStep detail={detail} busy={busy} run={run} />
-      ) : null}
-      {steps.schedule ? (
+      {showCompletion ? <CompletionStep detail={detail} busy={busy} run={run} /> : null}
+      {showSchedule ? (
         <VisitBookingStep
           requestId={requestId}
           proposal={detail.scheduleProposal}
@@ -123,14 +166,14 @@ export function SelfManagedMaintenancePanel({
           run={run}
         />
       ) : null}
-      {steps.compareQuotes ? <QuoteCompareStep detail={detail} busy={busy} run={run} /> : null}
-      {steps.workOrder && detail.workOrder ? <WorkOrderStep workOrder={detail.workOrder} /> : null}
-      <ResponsibilityStep detail={detail} busy={busy} run={run} />
-      <JobDetailsStep detail={detail} busy={busy} run={run} />
-      {steps.triage ? (
+      {showCompare ? <QuoteCompareStep detail={detail} busy={busy} run={run} /> : null}
+      {showWorkOrder && detail.workOrder ? <WorkOrderStep workOrder={detail.workOrder} /> : null}
+      {showResponsibility ? <ResponsibilityStep detail={detail} busy={busy} run={run} /> : null}
+      {showJobDetails ? <JobDetailsStep detail={detail} busy={busy} run={run} /> : null}
+      {showTriage ? (
         <IssueTriageStep requestId={requestId} issues={steps.issues} busy={busy} run={run} />
       ) : null}
-      {steps.enterQuote ? (
+      {showQuotes ? (
         <InviteTradiesStep
           requestId={requestId}
           agencyId={agencyId}
@@ -139,7 +182,7 @@ export function SelfManagedMaintenancePanel({
           run={run}
         />
       ) : null}
-      {steps.enterQuote && detail.invitedContractors.length > 0 ? (
+      {showQuotes && detail.invitedContractors.length > 0 ? (
         <InvitedTradiesStep
           requestId={requestId}
           invited={detail.invitedContractors}
@@ -148,7 +191,7 @@ export function SelfManagedMaintenancePanel({
           run={run}
         />
       ) : null}
-      {steps.enterQuote ? (
+      {showQuotes ? (
         <EnterQuoteStep
           requestId={requestId}
           contractors={detail.invitedContractors}
@@ -156,7 +199,7 @@ export function SelfManagedMaintenancePanel({
           run={run}
         />
       ) : null}
-      {steps.triage ? (
+      {showSplit ? (
         <>
           <SplitJobStep requestId={requestId} busy={busy} run={run} />
           <CombineJobStep requestId={requestId} busy={busy} run={run} />

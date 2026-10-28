@@ -14,7 +14,7 @@ import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 
 /**
  * Inspections list hub is retired for every other tier: they view and create jobs on Tasks.
- * Self-Manage agents get the desktop inspections page instead (list-and-detail split pane).
+ * Self-Manage agents get the desktop inspections page. A row opens the full task.
  */
 export default function InspectionsPage() {
   const { ready, selfManaged } = useSelfManagedAccess();

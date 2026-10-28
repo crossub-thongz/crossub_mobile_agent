@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ChevronRight, Search, type LucideIcon } from 'lucide-react';
 import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
 
@@ -54,9 +55,9 @@ export function ModuleLanePill({
 }
 
 /**
- * Self-Manage desktop module page: lane chips and search across the top, a dense sortable table
- * on the left and the selected row's detail on the right. Below `lg` it is a list of cards that
- * open the existing full detail page, and the detail pane is never mounted.
+ * Self-Manage desktop module page: lane chips and search across the top, then either a
+ * list-and-detail split pane or (Maintenance, Leasing, Inspections) a full-width task table
+ * whose row opens the full task page. Below `lg` it is a list of cards that do the same.
  */
 export function ModuleWorkspace<Row, Lane extends string, SortKey extends string>({
   copy,
@@ -74,6 +75,7 @@ export function ModuleWorkspace<Row, Lane extends string, SortKey extends string
   mobileRow,
   renderDetail,
   detailClassName,
+  detailPresentation = 'pane',
 }: {
   copy: ModuleWorkspaceCopy;
   emptyIcon: LucideIcon;
@@ -91,10 +93,16 @@ export function ModuleWorkspace<Row, Lane extends string, SortKey extends string
   defaultSortDirection?: SortDirection;
   /** Card body on mobile. */
   mobileRow: (row: Row) => ReactNode;
-  renderDetail: (row: Row) => ReactNode;
-  /** Widens the detail pane where it hosts a whole workspace (Leasing). */
+  /** Required for `pane`. Unused when a row opens the full task page. */
+  renderDetail?: (row: Row) => ReactNode;
+  /** Widens the detail pane where it hosts a whole workspace. */
   detailClassName?: string;
+  /**
+   * `pane` keeps the selected case beside the table. `navigate` opens the full task page.
+   */
+  detailPresentation?: 'pane' | 'navigate';
 }) {
+  const router = useRouter();
   const desktop = useDesktopViewport();
   const [lane, setLane] = useState<Lane | ModuleLaneAll>(MODULE_LANE_ALL);
   const [search, setSearch] = useState('');
@@ -129,15 +137,24 @@ export function ModuleWorkspace<Row, Lane extends string, SortKey extends string
       .sort((a, b) => applySortDirection(compare(a, b), sortDirection));
   }, [lane, laneById, rowId, rowSearchText, rows, search, sortComparators, sortDirection, sortKey]);
 
-  const selected = desktop
-    ? (visible.find((row) => rowId(row) === selectedId) ?? visible[0] ?? null)
-    : null;
+  const selected =
+    detailPresentation === 'navigate' || !desktop
+      ? null
+      : (visible.find((row) => rowId(row) === selectedId) ?? visible[0] ?? null);
   const selectedRowId = selected ? rowId(selected) : null;
 
-  const onRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, id: string) => {
+  const openRow = (row: Row) => {
+    if (detailPresentation === 'navigate') {
+      router.push(rowHref(row));
+      return;
+    }
+    setSelectedId(rowId(row));
+  };
+
+  const onRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, row: Row) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
-    setSelectedId(id);
+    openRow(row);
   };
 
   return (
@@ -163,14 +180,19 @@ export function ModuleWorkspace<Row, Lane extends string, SortKey extends string
         <EmptyState icon={emptyIcon} title={copy.emptyTitle} description={copy.emptyDescription} />
       ) : (
         <div className="flex min-h-0 flex-1 gap-4">
-          <section className="scrollbar-subtle min-h-0 min-w-0 flex-1 overflow-y-auto lg:rounded-xl lg:border lg:bg-card">
+          <section className="scrollbar-subtle min-h-0 min-w-0 flex-1 overflow-auto lg:rounded-xl lg:border lg:bg-card">
             {visible.length === 0 ? (
               <p className="text-muted-foreground px-4 py-10 text-center text-sm">
                 {copy.noMatchTitle}
               </p>
             ) : (
               <>
-                <table className="hidden w-full table-fixed border-collapse text-sm lg:table">
+                <table
+                  className={cn(
+                    'hidden w-full border-collapse text-sm lg:table',
+                    detailPresentation === 'navigate' ? 'min-w-[1040px]' : 'table-fixed',
+                  )}
+                >
                   <thead className="bg-card sticky top-0 z-10 border-b">
                     <tr>
                       {columns.map((column) =>
@@ -207,8 +229,8 @@ export function ModuleWorkspace<Row, Lane extends string, SortKey extends string
                           key={id}
                           tabIndex={0}
                           aria-selected={isSelected}
-                          onClick={() => setSelectedId(id)}
-                          onKeyDown={(event) => onRowKeyDown(event, id)}
+                          onClick={() => openRow(row)}
+                          onKeyDown={(event) => onRowKeyDown(event, row)}
                           className={cn(
                             'border-border/60 cursor-pointer border-b outline-none transition-colors last:border-b-0',
                             'hover:bg-secondary/40 focus-visible:bg-secondary/50',
@@ -218,7 +240,7 @@ export function ModuleWorkspace<Row, Lane extends string, SortKey extends string
                           {columns.map((column) => (
                             <td
                               key={column.id}
-                              className={cn('min-w-0 overflow-hidden px-3 py-2 align-middle', column.className)}
+                              className={cn('min-w-0 overflow-hidden px-3 py-3 align-top', column.className)}
                             >
                               {column.cell(row)}
                             </td>
@@ -246,14 +268,14 @@ export function ModuleWorkspace<Row, Lane extends string, SortKey extends string
             )}
           </section>
 
-          {desktop ? (
+          {desktop && detailPresentation === 'pane' ? (
             <aside
               className={cn(
                 'scrollbar-subtle min-h-0 w-[400px] shrink-0 overflow-y-auto rounded-xl border bg-card xl:w-[460px]',
                 detailClassName,
               )}
             >
-              {selected ? (
+              {selected && renderDetail ? (
                 <div key={selectedRowId}>{renderDetail(selected)}</div>
               ) : (
                 <p className="text-muted-foreground px-4 py-10 text-center text-sm">

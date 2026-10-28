@@ -8,7 +8,7 @@ import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 
 /**
  * Maintenance list hub is retired for every other tier: they view and create jobs on Tasks.
- * Self-Manage agents get the desktop maintenance page instead (list-and-detail split pane).
+ * Self-Manage agents get the desktop maintenance page. A row opens the full task.
  */
 export default function MaintenancePage() {
   const { ready, selfManaged } = useSelfManagedAccess();

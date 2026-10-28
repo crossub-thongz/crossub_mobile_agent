@@ -12,6 +12,8 @@ import {
   XCircle,
 } from 'lucide-react';
 
+import { MaintenanceOpenedTask } from '@/components/agent/self-managed-task/maintenance-opened-task';
+import { MaintenanceStageWorkspace } from '@/components/agent/self-managed-task/maintenance-stage-workspace';
 import { WorkspaceChatPanel } from '@/components/maintenance-workspace/workspace-chat-panel';
 import { SelfManagedMaintenanceCard } from '@/components/agent/maintenance-self-managed/self-managed-maintenance-card';
 import { MaintenanceAgentWorkflowPanel } from '@/components/maintenance/maintenance-agent-workflow-panel';
@@ -336,6 +338,56 @@ export function MaintenanceTaskDetailView({
     tribunalCases,
     vacating,
   ]);
+
+  if (selfManaged) {
+    const closed = workspaceCase.status === 'completed' || workspaceCase.status === 'closed';
+    return (
+      <>
+        <MaintenanceOpenedTask
+          address={address}
+          locality={[resolvedProperty?.suburb, resolvedProperty?.state, resolvedProperty?.postcode]
+            .filter(Boolean)
+            .join(', ')}
+          reference={taskRef}
+          issue={item.title || workspaceCase.issueType}
+          statusLabel={
+            tenantRejected ? TENANT_REJECTED_LABEL : closed ? 'Completed' : banner.needsAction ? 'Needs action' : 'In progress'
+          }
+          statusTone={tenantRejected ? 'danger' : closed ? 'done' : banner.needsAction ? 'attention' : 'active'}
+          assignedTo={
+            assignedToName ||
+            resolvedProperty?.assignedPortalAgentName ||
+            resolvedProperty?.propertyManager ||
+            'You'
+          }
+          dueLabel={quoteExpiry ? formatDate(quoteExpiry) : '—'}
+          priorityLabel={item.priority === 'urgent' || item.priority === 'high' ? 'Urgent' : null}
+          estimatedCost={quoteAmount ?? null}
+          propertyId={propertyId}
+          onCloseJob={canCloseJob ? () => setCloseJobOpen(true) : undefined}
+          body={
+            <MaintenanceStageWorkspace
+              requestId={item.id}
+              propertyId={propertyId}
+              onChanged={onCaseUpdated}
+              workspace={workspaceCase}
+              contractorName={contractorName}
+              recommendation={item.recommendation}
+              quoteExpiry={quoteExpiry}
+              attachments={attachments}
+              activity={activityEntries}
+            />
+          }
+        />
+        <MaintenanceCloseJobDialog
+          open={closeJobOpen}
+          onOpenChange={setCloseJobOpen}
+          requestId={item.id}
+          onClosed={onCaseUpdated}
+        />
+      </>
+    );
+  }
 
   return (
     <TaskWorkflowRailSlotProvider onStepActivate={showWorkflowTab}>

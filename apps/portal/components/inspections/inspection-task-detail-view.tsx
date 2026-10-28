@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
 import { ChevronRight, ClipboardList, DoorOpen, Home, Sparkles } from 'lucide-react';
 
+import { InspectionOpenedTask } from '@/components/agent/self-managed-task/inspection-opened-task';
 import { InspectionDetailView } from '@/components/inspections/inspection-detail-view';
 import { InspectionTaskDocuments } from '@/components/inspections/inspection-task-documents';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
@@ -16,7 +17,7 @@ import {
 import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { TASK_DETAIL_COPY } from '@/constants/agent-copy-variant';
-import { propertyDetail } from '@/constants/routes';
+import { messagesForProperty, propertyDetail } from '@/constants/routes';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
   INSPECTION_TYPE_LABEL,
@@ -124,7 +125,8 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
     (row) => row.propertyId === propertyId && row.status === 'current',
   );
   const tenantName = usePrimaryTenantName(property);
-  const copyVariant = agentCopyVariant(useIsPropertySelfManaged(propertyId));
+  const selfManaged = useIsPropertySelfManaged(propertyId);
+  const copyVariant = agentCopyVariant(selfManaged);
   const detailCopy = TASK_DETAIL_COPY[copyVariant];
 
   const banner = useMemo(
@@ -203,6 +205,84 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
 
   const address = property ? formatPropertyFullAddress(property) : inspection.propertyAddress;
   const taskRef = inspectionTaskReference(inspection);
+
+  if (selfManaged) {
+    const closed = isInspectionDone(inspection) || isInspectionCancelled(inspection);
+    return (
+      <InspectionOpenedTask
+        inspection={inspection}
+        address={address}
+        locality={[property?.suburb, property?.state, property?.postcode].filter(Boolean).join(', ')}
+        reference={taskRef}
+        statusLabel={closed ? (isInspectionCancelled(inspection) ? 'Cancelled' : 'Completed') : banner.statusLabel}
+        statusTone={closed ? 'done' : banner.needsAction ? 'attention' : 'active'}
+        createdAt={inspection.createdAt}
+        createdBy={property?.propertyManager || property?.assignedPortalAgentName || 'You'}
+        scheduledLabel={inspection.scheduledAt ? formatDate(inspection.scheduledAt) : 'Not booked'}
+        inspector={inspection.inspector || 'Unassigned'}
+        tenantName={tenantName || '—'}
+        tenantPhone={property?.tenantContact.phone}
+        tenantEmail={property?.tenantContact.email}
+        landlordName={property?.homeOwnerName}
+        landlordPhone={property?.homeOwnerContact.phone}
+        landlordEmail={property?.homeOwnerContact.email}
+        leaseStarts={
+          inspection.type === 'INGOING' && property?.leaseStart ? formatDate(property.leaseStart) : null
+        }
+        propertyId={propertyId}
+        issues={inspection.maintenanceEscalations ?? []}
+        activity={
+          activityEntries.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No activity recorded yet.</p>
+          ) : (
+            <ol className="space-y-3">
+              {activityEntries.map((entry) => (
+                <li key={entry.id} className="border-b pb-3 last:border-b-0">
+                  <p className="text-sm font-medium">{entry.title}</p>
+                  {entry.detail ? <p className="text-muted-foreground mt-0.5 text-xs">{entry.detail}</p> : null}
+                  <p className="text-muted-foreground mt-0.5 text-xs">{formatDate(entry.at)}</p>
+                </li>
+              ))}
+            </ol>
+          )
+        }
+        report={<InspectionTaskDocuments inspection={inspection} />}
+        related={
+          relatedTasks.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No other active tasks.</p>
+          ) : (
+            <ul className="space-y-2">
+              {relatedTasks.map((task) => (
+                <li key={task.id}>
+                  <Link
+                    href={propertyId ? relatedPropertyJobHref(task, propertyId) : '#'}
+                    className="hover:bg-muted/50 flex items-start justify-between gap-3 rounded-lg border px-3 py-2"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium">{task.jobType}</span>
+                      <span className="text-muted-foreground block text-xs">{task.status}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+        conversation={
+          propertyId ? (
+            <p className="text-sm">
+              <Link href={messagesForProperty(propertyId)} className="text-primary font-medium hover:underline">
+                Open the property conversation
+              </Link>
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-sm">No conversation on this inspection.</p>
+          )
+        }
+      />
+    );
+  }
+
   const createdLabel = inspection.createdAt ? formatDate(inspection.createdAt) : '—';
   const TypeIcon =
     inspection.type === 'OPEN' ? DoorOpen : inspection.type === 'ROUTINE' ? ClipboardList : Home;
@@ -419,7 +499,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
                 relatedTasks.map((task) => (
                   <li key={task.id}>
                     <Link
-                      href={relatedPropertyJobHref(task, propertyId)}
+                      href={propertyId ? relatedPropertyJobHref(task, propertyId) : '#'}
                       className="hover:bg-muted/40 v2-frosted-surface flex items-start justify-between gap-3 rounded-xl border p-3 transition"
                     >
                       <div className="min-w-0">

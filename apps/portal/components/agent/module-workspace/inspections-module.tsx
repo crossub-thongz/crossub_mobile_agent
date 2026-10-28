@@ -3,99 +3,127 @@
 import { ClipboardList } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 
-import { SelfManagedInspectionPanel } from '@/components/agent/inspection-self-managed/self-managed-inspection-panel';
-import { ModuleCaseDetail } from '@/components/agent/module-workspace/module-case-detail';
 import {
-  ModuleCellText,
   ModuleLanePill,
   ModuleWorkspace,
   formatModuleDate,
   type ModuleWorkspaceColumn,
 } from '@/components/agent/module-workspace/module-workspace';
+import {
+  DueCell,
+  OutlineBadge,
+  TaskPersonCell,
+  TaskStatusPill,
+  taskListDate,
+} from '@/components/agent/module-workspace/task-list-cells';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useSelfManagedPropertyIds } from '@/hooks/use-self-managed-access';
 import {
   INSPECTIONS_WORKSPACE_COPY,
+  INSPECTION_LANE,
   INSPECTION_LANES,
   MODULE_FIELD_LABELS,
   MODULE_WORKSPACE_LABELS,
 } from '@/constants/module-workspace';
-import { OWNER_DECISION_MODULE } from '@/constants/owner-decision';
 import { inspectionDetail } from '@/constants/routes';
-import { SELF_MANAGED_INSPECTION_COPY } from '@/constants/self-managed-inspections';
 import { compareNumbers, compareSortTime, compareStrings } from '@/lib/client-table-sort';
+import { formatTimeShort } from '@/lib/format-datetime';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
 import { findLaneDefinition, inspectionLane } from '@/lib/module-workspace-lanes';
 import type { Inspection } from '@/lib/types';
-import { inspectionRefSourceId } from '@/lib/workflow-case-reference';
 
-type InspectionSortKey = 'lane' | 'reference' | 'property' | 'type' | 'inspector' | 'scheduled' | 'created';
+type InspectionSortKey = 'property' | 'type' | 'lane' | 'due' | 'inspector';
+
+/** Same type colours as the admin inspection worklist. */
+const TYPE_CHIP: Record<Inspection['type'], string> = {
+  INGOING: 'border-blue-600 bg-blue-600/10 text-blue-600 dark:bg-blue-600/20 dark:text-blue-300',
+  OUTGOING: 'border-orange-600 bg-orange-600/10 text-orange-600 dark:bg-orange-600/20 dark:text-orange-300',
+  ROUTINE: 'border-cyan-600 bg-cyan-600/10 text-cyan-600 dark:bg-cyan-600/20 dark:text-cyan-300',
+  OPEN: 'border-violet-600 bg-violet-600/10 text-violet-600 dark:bg-violet-600/20 dark:text-violet-300',
+};
 
 const laneOf = (i: Inspection) => findLaneDefinition(INSPECTION_LANES, inspectionLane(i));
 const laneIndex = (i: Inspection) => INSPECTION_LANES.indexOf(laneOf(i));
 /** Ingoing jobs not yet booked show the move-in target instead. */
 const scheduledOf = (i: Inspection) => i.scheduledAt ?? i.moveInDate;
+const settled = (i: Inspection) => {
+  const lane = inspectionLane(i);
+  return lane === INSPECTION_LANE.PUBLISHED || lane === INSPECTION_LANE.CANCELLED;
+};
+
+function AppointmentCell({ inspection }: { inspection: Inspection }) {
+  if (!inspection.scheduledAt) {
+    return <span className="text-muted-foreground text-sm">Not booked</span>;
+  }
+  const day = taskListDate(inspection.scheduledAt);
+  const time = formatTimeShort(inspection.scheduledAt);
+  const midnight = time === '12:00 am';
+  return (
+    <div className="tabular-nums">
+      <p>{day}</p>
+      {midnight ? null : <p className="text-muted-foreground text-xs">{time}</p>}
+    </div>
+  );
+}
 
 const COLUMNS: readonly ModuleWorkspaceColumn<Inspection, InspectionSortKey>[] = [
-  {
-    id: 'lane',
-    label: MODULE_FIELD_LABELS.status,
-    sortKey: 'lane',
-    className: 'w-[17%]',
-    cell: (i) => <ModuleLanePill lane={laneOf(i)} />,
-  },
-  {
-    id: 'reference',
-    label: MODULE_FIELD_LABELS.reference,
-    sortKey: 'reference',
-    className: 'w-[11%]',
-    cell: (i) => <ModuleCellText muted className="font-mono text-xs">{i.trackingNumber}</ModuleCellText>,
-  },
   {
     id: 'property',
     label: MODULE_FIELD_LABELS.property,
     sortKey: 'property',
-    className: 'w-[26%]',
-    cell: (i) => <ModuleCellText className="font-medium">{i.propertyAddress}</ModuleCellText>,
+    className: 'pl-4',
+    cell: (i) => (
+      <div className="min-w-0 max-w-[22rem]">
+        <p className="truncate font-medium" title={i.propertyAddress}>
+          {i.propertyAddress}
+        </p>
+        <p className="text-muted-foreground truncate text-xs">{i.trackingNumber}</p>
+      </div>
+    ),
   },
   {
     id: 'type',
     label: MODULE_FIELD_LABELS.type,
     sortKey: 'type',
-    className: 'w-[13%]',
-    cell: (i) => <ModuleCellText>{INSPECTION_TYPE_LABEL[i.type]}</ModuleCellText>,
+    cell: (i) => <OutlineBadge className={TYPE_CHIP[i.type]}>{INSPECTION_TYPE_LABEL[i.type]}</OutlineBadge>,
+  },
+  {
+    id: 'lane',
+    label: MODULE_FIELD_LABELS.status,
+    sortKey: 'lane',
+    cell: (i) => <TaskStatusPill lane={laneOf(i)} />,
+  },
+  {
+    id: 'due',
+    label: 'Due date',
+    sortKey: 'due',
+    cell: (i) => <DueCell iso={scheduledOf(i)} settled={settled(i)} />,
+  },
+  {
+    id: 'appointment',
+    label: MODULE_FIELD_LABELS.appointment,
+    cell: (i) => <AppointmentCell inspection={i} />,
   },
   {
     id: 'inspector',
     label: MODULE_FIELD_LABELS.inspector,
     sortKey: 'inspector',
-    className: 'w-[13%]',
-    cell: (i) => <ModuleCellText muted>{i.inspector ?? MODULE_WORKSPACE_LABELS.noValue}</ModuleCellText>,
-  },
-  {
-    id: 'scheduled',
-    label: MODULE_FIELD_LABELS.scheduled,
-    sortKey: 'scheduled',
-    className: 'w-[10%]',
-    cell: (i) => <ModuleCellText muted>{formatModuleDate(scheduledOf(i))}</ModuleCellText>,
-  },
-  {
-    id: 'created',
-    label: MODULE_FIELD_LABELS.created,
-    sortKey: 'created',
-    className: 'w-[10%]',
-    cell: (i) => <ModuleCellText muted>{formatModuleDate(i.createdAt)}</ModuleCellText>,
+    className: 'pr-6',
+    cell: (i) =>
+      i.inspector ? (
+        <TaskPersonCell name={i.inspector} />
+      ) : (
+        <span className="text-muted-foreground text-sm">{MODULE_WORKSPACE_LABELS.noValue}</span>
+      ),
   },
 ];
 
 const SORT: Record<InspectionSortKey, (a: Inspection, b: Inspection) => number> = {
-  lane: (a, b) => compareNumbers(laneIndex(a), laneIndex(b)),
-  reference: (a, b) => compareStrings(a.trackingNumber, b.trackingNumber),
   property: (a, b) => compareStrings(a.propertyAddress, b.propertyAddress),
   type: (a, b) => compareStrings(INSPECTION_TYPE_LABEL[a.type], INSPECTION_TYPE_LABEL[b.type]),
+  lane: (a, b) => compareNumbers(laneIndex(a), laneIndex(b)),
+  due: (a, b) => compareSortTime(scheduledOf(a), scheduledOf(b)),
   inspector: (a, b) => compareStrings(a.inspector ?? '', b.inspector ?? ''),
-  scheduled: (a, b) => compareSortTime(scheduledOf(a), scheduledOf(b)),
-  created: (a, b) => compareSortTime(a.createdAt, b.createdAt),
 };
 
 function searchText(i: Inspection): string {
@@ -119,54 +147,7 @@ function MobileRow({ i }: { i: Inspection }) {
   );
 }
 
-function Detail({ i }: { i: Inspection }) {
-  const { refresh } = useAgentData();
-  // Lanes come from the portfolio list, so a step that moves the job re-reads it.
-  const onChanged = useCallback(() => void refresh({ force: true }), [refresh]);
-  // Open-viewing rows key on the session id; the agent facade wants the inspection record id.
-  const inspectionId = inspectionRefSourceId(i);
-  const agencyJob = i.conductedByAgency === true;
-  return (
-    <ModuleCaseDetail
-      module={OWNER_DECISION_MODULE.INSPECTIONS}
-      caseId={inspectionId}
-      propertyId={i.propertyId}
-      propertyAddress={i.propertyAddress}
-      reference={i.trackingNumber}
-      title={INSPECTION_TYPE_LABEL[i.type]}
-      lane={laneOf(i)}
-      statusLabel={i.status}
-      detailHref={inspectionDetail(i.id)}
-      recordDecision={!agencyJob}
-      actions={
-        agencyJob
-          ? {
-              title: SELF_MANAGED_INSPECTION_COPY.sectionTitle,
-              content: (
-                <SelfManagedInspectionPanel
-                  key={inspectionId}
-                  inspectionId={inspectionId}
-                  onChanged={onChanged}
-                />
-              ),
-            }
-          : undefined
-      }
-      fields={[
-        { label: MODULE_FIELD_LABELS.status, value: i.status },
-        {
-          label: agencyJob ? MODULE_FIELD_LABELS.conductedBy : MODULE_FIELD_LABELS.inspector,
-          value: i.inspector ?? MODULE_WORKSPACE_LABELS.noValue,
-        },
-        { label: MODULE_FIELD_LABELS.scheduled, value: formatModuleDate(scheduledOf(i)) },
-        { label: MODULE_FIELD_LABELS.completed, value: formatModuleDate(i.completedAt) },
-        { label: MODULE_FIELD_LABELS.created, value: formatModuleDate(i.createdAt) },
-      ]}
-    />
-  );
-}
-
-/** Self-Manage Inspections page body — booking to published report, by lane. */
+/** Self-Manage Inspections list. A row opens the full inspection task. */
 export function InspectionsModule() {
   const { inspections } = useAgentData();
   const scope = useSelfManagedPropertyIds();
@@ -189,9 +170,10 @@ export function InspectionsModule() {
       lanes={INSPECTION_LANES}
       columns={COLUMNS}
       sortComparators={SORT}
-      defaultSortKey="scheduled"
+      defaultSortKey="due"
+      defaultSortDirection="asc"
+      detailPresentation="navigate"
       mobileRow={(i) => <MobileRow i={i} />}
-      renderDetail={(i) => <Detail i={i} />}
     />
   );
 }

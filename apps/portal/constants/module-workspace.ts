@@ -316,6 +316,14 @@ export const MODULE_WORKSPACE_LABELS = {
 /** Column and summary labels shared by the three module pages. */
 export const MODULE_FIELD_LABELS = {
   status: 'Status',
+  taskId: 'Task ID',
+  addressIssue: 'Address / Issue',
+  nextAction: 'Next Action',
+  agent: 'Agent',
+  due: 'Due',
+  vacant: 'Vacant',
+  applications: 'Apps',
+  appointment: 'Appointment',
   reference: 'Ref',
   property: 'Property',
   job: 'Job',

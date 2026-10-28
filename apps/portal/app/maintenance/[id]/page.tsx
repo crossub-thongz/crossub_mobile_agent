@@ -13,6 +13,7 @@ import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { ROUTES, maintenanceDetail } from '@/constants/routes';
 import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
+import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 import { useRecordRecentCaseVisit } from '@/hooks/use-record-recent-visit';
 import { useMaintenanceCaseLiveSync } from '@/lib/use-maintenance-case-live-sync';
 import { useResolvedMaintenance } from '@/lib/use-resolved-maintenance';
@@ -34,7 +35,11 @@ export default function MaintenanceDetailPage() {
   const { properties, apiConnected, approveMaintenanceQuote, declineMaintenanceQuote, requoteMaintenanceQuote, refresh } =
     useAgentData();
   const { item, resolveState } = useResolvedMaintenance(id);
-  const back = useBackNavigation(ROUTES.TASKS, 'Tasks');
+  const { selfManaged } = useSelfManagedAccess();
+  const back = useBackNavigation(
+    selfManaged ? ROUTES.MAINTENANCE : ROUTES.TASKS,
+    selfManaged ? 'Maintenance' : 'Tasks',
+  );
 
   const property = useMemo(
     () => properties.find((p) => p.id === item?.propertyId),
@@ -109,7 +114,7 @@ export default function MaintenanceDetailPage() {
   return (
     <AgentShell
       wide
-      immersive={!isV2}
+      immersive={!isV2 && !selfManaged}
       backHref={back.href}
       backLabel={back.label}
       hideGlobalFabs
@@ -122,7 +127,7 @@ export default function MaintenanceDetailPage() {
           title="Maintenance job not found"
           description="This job may still be saving. Open it from Tasks in a moment."
         />
-      ) : isV2 ? (
+      ) : isV2 || selfManaged ? (
         <MaintenanceTaskDetailView
           item={displayItem}
           property={property}

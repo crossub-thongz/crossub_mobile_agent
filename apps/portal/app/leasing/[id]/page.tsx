@@ -8,6 +8,7 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { ROUTES, leasingDetail } from '@/constants/routes';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
+import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 import { useRecordRecentCaseVisit } from '@/hooks/use-record-recent-visit';
 
 export default function LeasingTaskDetailPage() {
@@ -15,7 +16,11 @@ export default function LeasingTaskDetailPage() {
   const router = useRouter();
   const cycleId = String(params.id);
   const isV2 = useIsAgentUiV2();
-  const back = useBackNavigation(ROUTES.TASKS, 'Tasks');
+  const { selfManaged } = useSelfManagedAccess();
+  const back = useBackNavigation(
+    selfManaged ? ROUTES.LEASING : ROUTES.TASKS,
+    selfManaged ? 'Leasing' : 'Tasks',
+  );
 
   useRecordRecentCaseVisit({
     id: cycleId,
@@ -25,17 +30,17 @@ export default function LeasingTaskDetailPage() {
   });
 
   useEffect(() => {
-    if (isV2) return;
+    if (isV2 || selfManaged) return;
     router.replace(ROUTES.TASKS);
-  }, [isV2, router]);
+  }, [isV2, router, selfManaged]);
 
-  if (!isV2) {
+  if (!isV2 && !selfManaged) {
     return null;
   }
 
   return (
     <AgentShell
-      title="New lease"
+      title={selfManaged ? undefined : 'New lease'}
       backHref={back.href}
       backLabel={back.label}
       hideGlobalFabs

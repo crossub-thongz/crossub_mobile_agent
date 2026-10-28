@@ -96,7 +96,7 @@ export function ModuleCaseDetail({
           <ModuleLanePill lane={lane} />
         </div>
         <div>
-          <h2 className="text-base font-semibold leading-snug">{title}</h2>
+          <h2 className="text-base leading-snug font-semibold">{title}</h2>
           <p className="text-muted-foreground mt-0.5 text-xs">{address}</p>
           {statusLabel && statusLabel !== lane.label ? (
             <p className="text-muted-foreground mt-1 text-xs">{statusLabel}</p>

@@ -3,43 +3,44 @@
 import { FileText } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 
-import { LeasingCycleWorkspacePane } from '@/components/agent/module-workspace/leasing-cycle-workspace-pane';
-import { ModuleCaseDetail } from '@/components/agent/module-workspace/module-case-detail';
 import {
-  ModuleCellText,
   ModuleLanePill,
   ModuleWorkspace,
-  formatModuleDate,
   type ModuleWorkspaceColumn,
 } from '@/components/agent/module-workspace/module-workspace';
+import {
+  DueCell,
+  NextActionCell,
+  TaskStatusPill,
+  daysUntil,
+  sinceLabel,
+} from '@/components/agent/module-workspace/task-list-cells';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useSelfManagedPropertyIds } from '@/hooks/use-self-managed-access';
-import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import {
+  LEASING_LANE,
   LEASING_LANES,
   LEASING_WORKSPACE_COPY,
-  LEASING_WORKSPACE_PANE_COPY,
   MODULE_FIELD_LABELS,
   MODULE_WORKSPACE_LABELS,
 } from '@/constants/module-workspace';
-import { OWNER_DECISION_MODULE } from '@/constants/owner-decision';
-import { leasingCycleHref } from '@/constants/routes';
+import { leasingDetail } from '@/constants/routes';
 import { leasingLifecycleProgress, leasingOnboardingProgress } from '@/lib/case-workflows/leasing';
 import { compareNumbers, compareSortTime, compareStrings } from '@/lib/client-table-sort';
 import { findLaneDefinition, leasingCycleLane } from '@/lib/module-workspace-lanes';
 import type { LeasingCycle } from '@/lib/types';
-import { formatCurrency } from '@/lib/utils';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 import { leasingCycleStageLabel, leasingCycleStatusLabel } from '@/utils/leasing-relet-decision';
 
-type LeasingSortKey = 'lane' | 'reference' | 'property' | 'stage' | 'rent' | 'available' | 'created';
-
-/** Wider than the other modules' panes: it hosts the whole letting workspace. */
-const DETAIL_PANE_CLASS = 'lg:w-[500px] xl:w-[600px] 2xl:w-[720px]';
+type LeasingSortKey = 'property' | 'lane' | 'stage' | 'available' | 'vacant';
 
 const laneOf = (c: LeasingCycle) => findLaneDefinition(LEASING_LANES, leasingCycleLane(c));
 const laneIndex = (c: LeasingCycle) => LEASING_LANES.indexOf(laneOf(c));
 const referenceOf = (c: LeasingCycle) => workflowCaseReferenceLabel(c.id, 'leasing');
+const settled = (c: LeasingCycle) => {
+  const lane = leasingCycleLane(c);
+  return lane === LEASING_LANE.COMPLETED || lane === LEASING_LANE.CANCELLED;
+};
 
 /** Step text, with the onboarding sub-step when there is one. */
 function stageOf(c: LeasingCycle): string {
@@ -48,66 +49,103 @@ function stageOf(c: LeasingCycle): string {
   return onboarding ? `${step} · ${onboarding.currentStepLabel}` : step;
 }
 
+/** Days the property has been empty, once the available date has passed. */
+function vacantDays(c: LeasingCycle): number | null {
+  if (settled(c)) return null;
+  const remaining = daysUntil(c.availableFrom);
+  if (remaining == null || remaining > 0) return null;
+  return -remaining;
+}
+
 const COLUMNS: readonly ModuleWorkspaceColumn<LeasingCycle, LeasingSortKey>[] = [
-  {
-    id: 'lane',
-    label: MODULE_FIELD_LABELS.status,
-    sortKey: 'lane',
-    className: 'w-[15%]',
-    cell: (c) => <ModuleLanePill lane={laneOf(c)} />,
-  },
-  {
-    id: 'reference',
-    label: MODULE_FIELD_LABELS.reference,
-    sortKey: 'reference',
-    className: 'w-[11%]',
-    cell: (c) => <ModuleCellText muted className="font-mono text-xs">{referenceOf(c)}</ModuleCellText>,
-  },
   {
     id: 'property',
     label: MODULE_FIELD_LABELS.property,
     sortKey: 'property',
-    className: 'w-[26%]',
-    cell: (c) => <ModuleCellText className="font-medium">{c.propertyAddress}</ModuleCellText>,
+    className: 'pl-4',
+    cell: (c) => (
+      <div className="min-w-0 max-w-[18rem]">
+        <p className="truncate text-sm font-medium" title={c.propertyAddress}>
+          {c.propertyAddress}
+        </p>
+        <p className="text-muted-foreground mt-0.5 truncate text-[11px]">{referenceOf(c)}</p>
+      </div>
+    ),
+  },
+  {
+    id: 'lane',
+    label: MODULE_FIELD_LABELS.stage,
+    sortKey: 'lane',
+    cell: (c) => <TaskStatusPill lane={laneOf(c)} />,
   },
   {
     id: 'stage',
-    label: MODULE_FIELD_LABELS.stage,
+    label: MODULE_FIELD_LABELS.nextAction,
     sortKey: 'stage',
-    className: 'w-[20%]',
-    cell: (c) => <ModuleCellText>{stageOf(c)}</ModuleCellText>,
-  },
-  {
-    id: 'rent',
-    label: MODULE_FIELD_LABELS.rent,
-    sortKey: 'rent',
-    className: 'w-[9%]',
-    cell: (c) => <ModuleCellText muted>{formatCurrency(c.rentPerWeek)}</ModuleCellText>,
+    cell: (c) => {
+      const closed = settled(c);
+      const yours = leasingCycleLane(c) === LEASING_LANE.AWAITING_YOU;
+      return (
+        <div className="flex min-w-0 max-w-[20rem] items-center gap-2">
+          {closed ? null : (
+            <span
+              className={
+                yours
+                  ? 'shrink-0 rounded-full border border-violet-500/40 bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-200'
+                  : 'border-border text-muted-foreground shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium'
+              }
+            >
+              {yours ? 'Your turn' : 'Waiting'}
+            </span>
+          )}
+          <NextActionCell
+            action={closed ? 'No further action' : stageOf(c)}
+            since={closed ? null : sinceLabel(c.createdAt)}
+          />
+        </div>
+      );
+    },
   },
   {
     id: 'available',
-    label: MODULE_FIELD_LABELS.available,
+    label: MODULE_FIELD_LABELS.due,
     sortKey: 'available',
-    className: 'w-[10%]',
-    cell: (c) => <ModuleCellText muted>{formatModuleDate(c.availableFrom)}</ModuleCellText>,
+    cell: (c) => <DueCell iso={c.availableFrom} settled={settled(c)} />,
   },
   {
-    id: 'created',
-    label: MODULE_FIELD_LABELS.created,
-    sortKey: 'created',
-    className: 'w-[9%]',
-    cell: (c) => <ModuleCellText muted>{formatModuleDate(c.createdAt)}</ModuleCellText>,
+    id: 'vacant',
+    label: MODULE_FIELD_LABELS.vacant,
+    sortKey: 'vacant',
+    className: 'text-right',
+    cell: (c) => {
+      const days = vacantDays(c);
+      return (
+        <span className={days == null ? 'text-muted-foreground text-[13px]' : 'text-[13px] tabular-nums'}>
+          {days == null ? MODULE_WORKSPACE_LABELS.noValue : `${days}d`}
+        </span>
+      );
+    },
+  },
+  {
+    id: 'apps',
+    label: MODULE_FIELD_LABELS.applications,
+    className: 'text-right',
+    cell: () => <span className="text-muted-foreground text-[13px]">{MODULE_WORKSPACE_LABELS.noValue}</span>,
+  },
+  {
+    id: 'tenant',
+    label: MODULE_FIELD_LABELS.tenant,
+    className: 'pr-6',
+    cell: () => <span className="text-muted-foreground text-[13px]">{MODULE_WORKSPACE_LABELS.noValue}</span>,
   },
 ];
 
 const SORT: Record<LeasingSortKey, (a: LeasingCycle, b: LeasingCycle) => number> = {
-  lane: (a, b) => compareNumbers(laneIndex(a), laneIndex(b)),
-  reference: (a, b) => compareStrings(referenceOf(a), referenceOf(b)),
   property: (a, b) => compareStrings(a.propertyAddress, b.propertyAddress),
+  lane: (a, b) => compareNumbers(laneIndex(a), laneIndex(b)),
   stage: (a, b) => compareStrings(stageOf(a), stageOf(b)),
-  rent: (a, b) => compareNumbers(a.rentPerWeek ?? 0, b.rentPerWeek ?? 0),
   available: (a, b) => compareSortTime(a.availableFrom, b.availableFrom),
-  created: (a, b) => compareSortTime(a.createdAt, b.createdAt),
+  vacant: (a, b) => compareNumbers(vacantDays(a) ?? -1, vacantDays(b) ?? -1),
 };
 
 function searchText(c: LeasingCycle): string {
@@ -131,10 +169,7 @@ function MobileRow({ c }: { c: LeasingCycle }) {
   );
 }
 
-/**
- * Self-Manage Leasing page body: letting cycles by status, with the selected cycle's summary and
- * its letting workspace in the split pane.
- */
+/** Self-Manage lettings list. A row opens the full leasing task. */
 export function LeasingModule() {
   const { leasingCycles } = useAgentData();
   const scope = useSelfManagedPropertyIds();
@@ -142,8 +177,7 @@ export function LeasingModule() {
     () => leasingCycles.filter((c) => scope.has(c.propertyId)),
     [leasingCycles, scope],
   );
-  const isV2 = useIsAgentUiV2();
-  const rowHref = useCallback((c: LeasingCycle) => leasingCycleHref(c, isV2), [isV2]);
+  const rowHref = useCallback((c: LeasingCycle) => leasingDetail(c.id), []);
   const rowId = useCallback((c: LeasingCycle) => c.id, []);
 
   return (
@@ -158,44 +192,10 @@ export function LeasingModule() {
       lanes={LEASING_LANES}
       columns={COLUMNS}
       sortComparators={SORT}
-      defaultSortKey="created"
+      defaultSortKey="available"
+      defaultSortDirection="asc"
+      detailPresentation="navigate"
       mobileRow={(c) => <MobileRow c={c} />}
-      detailClassName={DETAIL_PANE_CLASS}
-      renderDetail={(c) => (
-        <ModuleCaseDetail
-          module={OWNER_DECISION_MODULE.LEASING}
-          caseId={c.id}
-          propertyId={c.propertyId}
-          propertyAddress={c.propertyAddress}
-          reference={referenceOf(c)}
-          title={stageOf(c)}
-          lane={laneOf(c)}
-          statusLabel={leasingCycleStatusLabel(c) ?? undefined}
-          detailHref={rowHref(c)}
-          actions={{
-            title: LEASING_WORKSPACE_PANE_COPY.title,
-            content:
-              c.isActive === false ? (
-                <p className="text-muted-foreground text-xs">{LEASING_WORKSPACE_PANE_COPY.closed}</p>
-              ) : (
-                <LeasingCycleWorkspacePane cycle={c} />
-              ),
-          }}
-          fields={[
-            {
-              label: MODULE_FIELD_LABELS.status,
-              value: leasingCycleStatusLabel(c) ?? laneOf(c).label,
-            },
-            { label: MODULE_FIELD_LABELS.stage, value: stageOf(c) },
-            {
-              label: MODULE_FIELD_LABELS.rent,
-              value: c.rentPerWeek != null ? formatCurrency(c.rentPerWeek) : MODULE_WORKSPACE_LABELS.noValue,
-            },
-            { label: MODULE_FIELD_LABELS.available, value: formatModuleDate(c.availableFrom) },
-            { label: MODULE_FIELD_LABELS.created, value: formatModuleDate(c.createdAt) },
-          ]}
-        />
-      )}
     />
   );
 }
