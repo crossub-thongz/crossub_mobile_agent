@@ -20,6 +20,10 @@ export type GiiChatMessage = components['schemas']['GiiChatMessageDto'] & {
 
 /** A record a Cros reply talked about, shown as an Open button under it. */
 export type GiiJobCaseLink = components['schemas']['GiiJobCaseLinkDto'];
+/** Cros's morning briefing, built on the server (Jarvis 2.2). */
+export type GiiServerBriefing = components['schemas']['AgentGiiBriefingDto'];
+export type GiiServerBriefingItem = components['schemas']['AgentGiiBriefingItemDto'];
+export type GiiServerBriefingCategory = GiiServerBriefingItem['category'];
 
 export type GiiChatResponse = components['schemas']['GiiChatResponseDto'];
 export type GiiAssessment = components['schemas']['GiiAssessmentDto'];
@@ -185,6 +189,19 @@ export async function listGiiChanges(propertyId: string): Promise<GiiChange[]> {
   });
   if (error || !data) throw new Error(`${CROS_ASSISTANT_NAME} changes could not be loaded`);
   return data.changes;
+}
+
+/** Today's briefing for the signed-in agent; the server builds it on the first read of the day. */
+export async function getGiiBriefing(): Promise<GiiServerBriefing> {
+  const { data, error } = await crossub.GET('/agent/gii/briefing');
+  if (error || !data) throw new Error(`${CROS_ASSISTANT_NAME} briefing could not be loaded`);
+  return data;
+}
+
+/** The agent saw the briefing: tomorrow's "since your last briefing" counts from now. */
+export async function markGiiBriefingSeen(briefingDate: string): Promise<void> {
+  const { error, response } = await crossub.POST('/agent/gii/briefing/seen', { body: { briefingDate } });
+  if (error || !response.ok) throw new Error(`${CROS_ASSISTANT_NAME} briefing could not be marked seen`);
 }
 
 export async function deleteGiiConversation(id: string): Promise<void> {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import {
   ArrowUpRight,
   ClipboardList,
@@ -359,6 +359,7 @@ function helpTile(
 export function CrosPortfolioBody({
   view,
   wide = false,
+  briefing = null,
   onAsk,
   history,
   onOpenHistory,
@@ -367,6 +368,8 @@ export function CrosPortfolioBody({
 }: {
   view: Exclude<CrosPortfolioView, 'chat'>;
   wide?: boolean;
+  /** Today's server briefing (Jarvis 2.2), shown first on Discover when it loaded. */
+  briefing?: ReactNode;
   onAsk: (prompt: string) => void;
   history: GiiConversationSummary[];
   onOpenHistory: (entry: GiiConversationSummary) => void;
@@ -401,6 +404,8 @@ export function CrosPortfolioBody({
             ))}
           </div>
         </div>
+
+        {briefing ? <section>{briefing}</section> : null}
 
         <section>
           <h3 className="text-sm font-bold text-slate-900">What can I help with?</h3>

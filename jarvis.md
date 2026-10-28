@@ -97,9 +97,23 @@ Review items: AI-001, AI-002, AI-004, AI-005, AI-019, AI-024, AI-025, AI-027, AI
 
 ### 2.2 Server briefing
 
-- [ ] Morning job per agent: urgent repairs, arrears, quotes waiting, leases expiring, unanswered messages, changes since last visit.
-- [ ] Agent route for today's briefing; Cros opening message reads it instead of `lib/gii-briefing.ts`.
-- [ ] Push alert with the briefing; review and switch on the outstanding reminder sweep.
+Decided (Chan, 28 Oct 2026): in app now, push later; on for everyone, `AGENT_BRIEFING_ENABLED=false` turns it off.
+
+- [~] Morning job per agent: urgent repairs, arrears, quotes waiting, rent reviews and inspections waiting on the agent, unanswered messages, leases ending within 60 days, changes since the last briefing. Built (`crossub_web` 445752f9c): hourly sweep builds each agent's briefing at 6am in the zone of most of their properties (Sydney when none), stored in the new `AgentBriefing` table, one bell card a day; a source that fails is named in `unavailable`, not shown as nothing waiting. Counts and lines come from the records, no AI wording. Deployed to staging and production.
+- [~] Agent route for today's briefing; Cros opening message reads it instead of `lib/gii-briefing.ts`. Built: `GET /agent/gii/briefing` (builds on the spot when the sweep has not run) and `POST /agent/gii/briefing/seen` (contract 0.55.0). Cros greeting, Discover view and panel card read it, with Ask Cros and Open per item; the phone-built briefing stays as fallback.
+- [ ] Push alert with the briefing (the agent app registers no device tokens yet).
+- [ ] Review and switch on the outstanding reminder sweep (`AGENT_OUTSTANDING_REMINDERS_ENABLED`, off): its cron fires 08:00 UTC, it does not skip archived assignments, and it has never run on real data.
+
+### 2.3 Talk to a person
+
+The boss's "communication tool" (agreed on a call, 28 Oct 2026): when Cros cannot help, the agent reaches a real CROSSUB person in the same Cros chat, like WhatsApp or WeChat. It does not replace the Self-Manage Conversations page, which stays the agency's email inbox.
+
+- [ ] Handoff card: when Cros cannot do a request, or the agent asks for a person, Cros offers "Hand to CROSSUB team" on a Confirm card. New AI action with a risk level before it ships.
+- [ ] Handoff route: Confirm opens (or reuses) a "CROSSUB Support — " staff thread (`STAFF_SUPPORT_SUBJECT_PREFIX`, `MessagingService`) carrying a summary of the chat (`POST /agent/gii/summarise`), the property and the record on screen; linked to the `GiiConversation`.
+- [ ] Staff reply from the admin Message Center; replies show in the Cros chat as bubbles with the staff member's name.
+- [ ] Delivery: the open chat checks for new replies every few seconds; push alert (Expo) when the app is closed. A websocket comes later if polling is not fast enough.
+- [ ] While a person holds the chat, Cros stays quiet; the chat returns to Cros when staff close the thread.
+- [ ] Waiting time and out of hours: show how long the agent has waited, using the working day in `ai-escalation-sla.constants.ts`; outside it, say when someone will answer.
 
 ---
 
@@ -148,6 +162,9 @@ Review items: AI-016 (spoken English first).
 - Where are owner approval limits set, and does Cros read them per owner?
 - Spoken replies in English only at first?
 - Who signs off the risk level for each new tool?
+- Talk to a person (2.3): who answers, the agency's Account Manager or a shared CROSSUB support team?
+- Talk to a person (2.3): what does the agent see outside 9 to 5 when nobody is online?
+- Talk to a person (2.3): agent app only, or the tenant, landlord and contractor apps' Cros too?
 
 ## Log
 
@@ -180,3 +197,5 @@ Review items: AI-016 (spoken English first).
 | 2026-10-28 | 2.1 | Tasks bundle: complete a task (crossub_web 282885cd7) |
 | 2026-10-28 | 2.1 | Conversations staging check: reply recipient and inbox search fixed (crossub_web 0757867b4) |
 | 2026-10-28 | 2.1 | Reply recipient recheck passed. Owners and keys bundle: owner decisions, key collection (crossub_web ab8ca4b3d); email greeting fix (c0dc0d440) |
+| 2026-10-28 | 2.3 | Added Talk to a person: Cros hands a chat to a live CROSSUB person (boss's communication tool); Conversations stays as is |
+| 2026-10-28 | 2.2 | Server briefing built: morning sweep, briefing route, Cros opening message (crossub_web 445752f9c, contract 0.55.0) |

@@ -30,6 +30,7 @@ import {
   type CrosPortfolioView,
 } from '@/components/agent/cros-portfolio-views';
 import { GiiBriefingCard } from '@/components/agent/gii-briefing-card';
+import { GiiServerBriefingCard } from '@/components/agent/gii-server-briefing-card';
 import { GiiChatGreeting, GiiChatLine } from '@/components/agent/gii-chat-line';
 import {
   GiiAttachButton,
@@ -67,6 +68,7 @@ import {
 } from '@/constants/gii-prompts';
 import { MESSAGE_GII_PROMPTS } from '@/constants/gii-message-prompts';
 import { buildGiiBriefing, type GiiBriefing } from '@/lib/gii-briefing';
+import { serverBriefingGreeting } from '@/lib/gii-server-briefing';
 import {
   primeGiiVoiceStatus,
   resolveSpeechLanguage,
@@ -84,8 +86,10 @@ import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import {
   confirmGiiProposal,
   deleteGiiConversation,
+  getGiiBriefing,
   getGiiConversation,
   listGiiConversations,
+  markGiiBriefingSeen,
   saveGiiConversation,
   summariseGiiConversation,
   sendGiiMessage,
@@ -95,6 +99,8 @@ import {
   type GiiConversationSummary,
   type GiiJobCaseLink,
   type GiiProposal,
+  type GiiServerBriefing,
+  type GiiServerBriefingItem,
 } from '@/lib/crossub-api/gii-client';
 import {
   createPendingAttachment,
@@ -464,6 +470,33 @@ export function GiiAssistant({
   const briefingTitle =
     isV2 && pathname === ROUTES.DASHBOARD ? 'Needs Your Attention' : "Today's Jobs For You";
 
+  // Jarvis 2.2: on the portfolio, Cros opens with the briefing the server built this morning.
+  // The briefing built here from the loaded list stays as the fallback when it cannot be read.
+  const briefingScope = !scopedProperty && !messageScoped;
+  const [serverBriefing, setServerBriefing] = useState<GiiServerBriefing | null>(null);
+  useEffect(() => {
+    if (!briefingScope) return;
+    let live = true;
+    getGiiBriefing()
+      .then((briefing) => {
+        if (live) setServerBriefing(briefing);
+      })
+      .catch(() => {
+        if (live) setServerBriefing(null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [briefingScope]);
+  const seenBriefingRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!serverBriefing || seenBriefingRef.current === serverBriefing.briefingDate) return;
+    seenBriefingRef.current = serverBriefing.briefingDate;
+    markGiiBriefingSeen(serverBriefing.briefingDate).catch(() => {
+      seenBriefingRef.current = null;
+    });
+  }, [serverBriefing]);
+
   const greetingText = useMemo(() => {
     if (messageScoped && scopedAddress) {
       const name = user?.firstName?.trim();
@@ -478,6 +511,7 @@ export function GiiAssistant({
         user?.firstName,
       );
     }
+    if (serverBriefing) return serverBriefingGreeting(serverBriefing, new Date(), user?.firstName);
     return liveBriefing.subtitle
       ? `${liveBriefing.greeting}\n\n${liveBriefing.subtitle}`
       : liveBriefing.greeting;
@@ -486,6 +520,7 @@ export function GiiAssistant({
     messageScoped,
     propertyJobs.length,
     liveBriefing,
+    serverBriefing,
     scopedAddress,
     scopedProperty,
     user?.firstName,
@@ -493,7 +528,11 @@ export function GiiAssistant({
 
   // What the greeting count and the empty-states key off — jobs on a property, else the
   // portfolio need-action briefing.
-  const briefingIsEmpty = scopedProperty ? propertyJobs.length === 0 : liveBriefing.isEmpty;
+  const briefingIsEmpty = scopedProperty
+    ? propertyJobs.length === 0
+    : serverBriefing
+      ? serverBriefing.total === 0
+      : liveBriefing.isEmpty;
 
   const hasUserMessages = useMemo(() => lines.some((l) => l.role === 'user'), [lines]);
 
@@ -995,6 +1034,21 @@ export function GiiAssistant({
   };
 
   /** Ask Gii conversationally about a briefing row — scoped to that property automatically. */
+  /** Ask Cros about a server briefing item, scoped to its property when it has one. */
+  const askAboutBriefingItem = (item: GiiServerBriefingItem) => {
+    if (item.propertyId) {
+      const itemProperty =
+        data.properties.find((p) => p.id === item.propertyId) ??
+        data.archivedProperties.find((p) => p.id === item.propertyId) ??
+        null;
+      const address = item.propertyAddress ?? undefined;
+      contextRef.current = { propertyId: item.propertyId, propertyLabel: address };
+      propertyContextRef.current = itemProperty ? buildGiiPropertyContext({ property: itemProperty, address }) : null;
+    }
+    const where = item.propertyAddress ? ` at ${item.propertyAddress}` : '';
+    void runQuery(`Give me an update on ${item.title}${where} (${item.detail}).`);
+  };
+
   const askAboutRow = (row: PropertyNeedAction) => {
     const rowProperty =
       data.properties.find((p) => p.id === row.propertyId) ??
@@ -1465,6 +1519,20 @@ export function GiiAssistant({
           <CrosPortfolioBody
             view={crosView}
             wide={workspace}
+            briefing={
+              serverBriefing ? (
+                <div className="space-y-2">
+                  <GiiChatGreeting text={serverBriefingGreeting(serverBriefing, new Date(), user?.firstName)} />
+                  <GiiServerBriefingCard
+                    briefing={serverBriefing}
+                    title="Your morning briefing"
+                    onNavigate={onClose}
+                    onAsk={askAboutBriefingItem}
+                    onOpen={(link) => void openJobCaseLink(link)}
+                  />
+                </div>
+              ) : null
+            }
             onAsk={(prompt) => void runQuery(prompt)}
             history={crosHistory}
             onOpenHistory={(entry) => void openCrosHistory(entry)}
@@ -1482,6 +1550,14 @@ export function GiiAssistant({
               propertyJobs.length > 0 ? (
                 <GiiPropertyJobsCard jobs={propertyJobs} onOpen={openJob} />
               ) : null
+            ) : !messageScoped && serverBriefing ? (
+              <GiiServerBriefingCard
+                briefing={serverBriefing}
+                title={briefingTitle}
+                onNavigate={onClose}
+                onAsk={askAboutBriefingItem}
+                onOpen={(link) => void openJobCaseLink(link)}
+              />
             ) : !messageScoped && !liveBriefing.isEmpty ? (
               <GiiBriefingCard
                 briefing={liveBriefing}

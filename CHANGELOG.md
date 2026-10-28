@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-28
+
+### Added
+- Cros opens with the server's morning briefing: urgent repairs, arrears, quotes waiting, rent reviews, inspections, unanswered messages and leases ending, most urgent first, each with Ask Cros and Open, plus what changed since the last briefing (contract 0.55.0).
+- The briefing says which sources could not be checked instead of reporting nothing waiting.
+
+### Changed
+- Agent API contract 0.55.0.
+- Opening Cros marks the day's briefing seen; the phone-built briefing is kept as the fallback when the server briefing cannot load.
+
 ## 2026-10-27
 
 ### Added

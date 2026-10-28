@@ -46,7 +46,7 @@ function salutation(now: Date): string {
  * The name is the warmth the briefing opens with; without one it degrades to the plain
  * salutation rather than an awkward trailing comma.
  */
-function greetingLead(now: Date, agentName?: string | null): string {
+export function greetingLead(now: Date, agentName?: string | null): string {
   const name = agentName?.trim();
   return name ? `${salutation(now)}, ${name}` : salutation(now);
 }

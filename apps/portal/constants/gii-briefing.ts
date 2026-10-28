@@ -1,12 +1,18 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  AlertTriangle,
   Building2,
+  CalendarClock,
   ClipboardList,
   FileText,
   Gavel,
+  MessageSquare,
+  Receipt,
   Wallet,
   Wrench,
 } from 'lucide-react';
+
+import type { GiiServerBriefingCategory } from '@/lib/crossub-api/gii-client';
 
 import type { NeedActionCategory, Priority } from '@/lib/types';
 
@@ -68,3 +74,47 @@ export const GROUP_SUMMARY_NOUN: Record<string, string> = {
 /** Empty-state line — a warm caught-up message, never a blank card. */
 export const BRIEFING_EMPTY_COPY =
   "You're all caught up — nothing needs you right now. Enjoy the calm.";
+
+/** The server briefing's categories (Jarvis 2.2), as the contract names them. */
+export const SERVER_BRIEFING_CATEGORY = {
+  URGENT_REPAIR: 'urgent_repair',
+  ARREARS: 'arrears',
+  QUOTE_WAITING: 'quote_waiting',
+  RENT_REVIEW: 'rent_review',
+  INSPECTION: 'inspection',
+  UNANSWERED_MESSAGE: 'unanswered_message',
+  LEASE_EXPIRING: 'lease_expiring',
+} as const satisfies Record<string, GiiServerBriefingCategory>;
+
+/** Icon per server briefing category. */
+export const SERVER_BRIEFING_ICON: Record<GiiServerBriefingCategory, LucideIcon> = {
+  [SERVER_BRIEFING_CATEGORY.URGENT_REPAIR]: AlertTriangle,
+  [SERVER_BRIEFING_CATEGORY.ARREARS]: Wallet,
+  [SERVER_BRIEFING_CATEGORY.QUOTE_WAITING]: Receipt,
+  [SERVER_BRIEFING_CATEGORY.RENT_REVIEW]: FileText,
+  [SERVER_BRIEFING_CATEGORY.INSPECTION]: ClipboardList,
+  [SERVER_BRIEFING_CATEGORY.UNANSWERED_MESSAGE]: MessageSquare,
+  [SERVER_BRIEFING_CATEGORY.LEASE_EXPIRING]: CalendarClock,
+};
+
+/** Categories drawn in the destructive tone: the risk the briefing leads with. */
+export const SERVER_BRIEFING_URGENT: readonly GiiServerBriefingCategory[] = [
+  SERVER_BRIEFING_CATEGORY.URGENT_REPAIR,
+  SERVER_BRIEFING_CATEGORY.ARREARS,
+];
+
+/** Plain words for a briefing part that could not be read, in the greeting's warning line. */
+export const SERVER_BRIEFING_UNAVAILABLE_LABEL: Record<string, string> = {
+  [SERVER_BRIEFING_CATEGORY.URGENT_REPAIR]: 'urgent repairs',
+  [SERVER_BRIEFING_CATEGORY.ARREARS]: 'arrears',
+  [SERVER_BRIEFING_CATEGORY.QUOTE_WAITING]: 'quotes',
+  [SERVER_BRIEFING_CATEGORY.RENT_REVIEW]: 'rent reviews',
+  [SERVER_BRIEFING_CATEGORY.INSPECTION]: 'inspections',
+  [SERVER_BRIEFING_CATEGORY.UNANSWERED_MESSAGE]: 'messages',
+  [SERVER_BRIEFING_CATEGORY.LEASE_EXPIRING]: 'lease end dates',
+  /** The server's name for the "changes since last briefing" part. */
+  changes: 'updates since your last briefing',
+};
+
+/** Updates named in the greeting before the rest are counted. */
+export const SERVER_BRIEFING_CHANGES_NAMED = 3;
