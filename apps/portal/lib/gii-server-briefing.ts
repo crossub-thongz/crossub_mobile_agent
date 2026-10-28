@@ -64,7 +64,8 @@ export function serverBriefingGreeting(
     parts.push(`${lead} Nothing needs you right now.`);
   } else {
     const verb = total === 1 ? 'thing needs' : 'things need';
-    const summary = briefingSummaryWithTasks(briefing.summary, taskCount);
+    // Only tasks: "4 things need you today: 4 tasks" says nothing, so the count stands alone.
+    const summary = briefing.summary ? briefingSummaryWithTasks(briefing.summary, taskCount) : null;
     parts.push(`${lead} ${total} ${verb} you today${summary ? `: ${summary}` : ''}.`);
   }
   const { count, latest } = briefing.changes;
