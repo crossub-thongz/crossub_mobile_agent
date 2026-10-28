@@ -109,12 +109,14 @@ Decided (Chan, 28 Oct 2026): in app now, push later; on for everyone, `AGENT_BRI
 
 The boss's "communication tool" (agreed on a call, 28 Oct 2026): when Cros cannot help, the agent reaches a real CROSSUB person in the same Cros chat, like WhatsApp or WeChat. It does not replace the Self-Manage Conversations page, which stays the agency's email inbox.
 
-- [ ] Handoff card: when Cros cannot do a request, or the agent asks for a person, Cros offers "Hand to CROSSUB team" on a Confirm card. New AI action with a risk level before it ships.
-- [ ] Handoff route: Confirm opens (or reuses) a "CROSSUB Support — " staff thread (`STAFF_SUPPORT_SUBJECT_PREFIX`, `MessagingService`) carrying a summary of the chat (`POST /agent/gii/summarise`), the property and the record on screen; linked to the `GiiConversation`.
-- [ ] Staff reply from the admin Message Center; replies show in the Cros chat as bubbles with the staff member's name.
-- [ ] Delivery: the open chat checks for new replies every few seconds; push alert (Expo) when the app is closed. A websocket comes later if polling is not fast enough.
-- [ ] While a person holds the chat, Cros stays quiet; the chat returns to Cros when staff close the thread.
-- [ ] Waiting time and out of hours: show how long the agent has waited, using the working day in `ai-escalation-sla.constants.ts`; outside it, say when someone will answer.
+Decided (Chan, 28 Oct 2026): a shared CROSSUB team answers, and every handoff reaches Daniel Zhou; agent app only for now; outside the working day Cros says when the team is back.
+
+- [~] Handoff card: when Cros cannot do a request, or the agent asks for a person, Cros offers `hand_to_crossub_team` on a Confirm card (to Daniel Zhou, property, record on screen, the message, and the team's hours when they are away). Built (`crossub_web` a31b69648): a core tool, on every screen. New AI action `HAND_TO_CROSSUB_TEAM` (MEDIUM, as a staff notification). Waits for push.
+- [~] Handoff route: Confirm opens a "CROSSUB Support — Cros chat: <address>" staff thread through the agent messaging service, assigned to Daniel Zhou (his staging or production login, whichever is active), with his bell card per message; a second handoff adds to the open one. Cros writes the message on the card for the agent to confirm, instead of `POST /agent/gii/summarise`. The chat is found by the thread (one open chat per agent), not linked to the `GiiConversation`, so no migration. Confirm returns `handoffThreadId` (contract 0.56.0). Waits for push.
+- [~] Staff reply from the admin Message Center; replies show in the Cros chat as bubbles with the staff member's name (`GET /agent/gii/handoff`, `GET /agent/gii/handoff/:threadId`). Built; not yet checked on staging.
+- [~] Delivery: the open chat checks for new replies every 5 seconds (app). Push alert when the app is closed: blocked, the agent app registers no device tokens (as for 2.2). A websocket comes later if polling is not fast enough.
+- [~] While a person holds the chat, Cros stays quiet: the composer writes to the team (`POST /agent/gii/handoff/:threadId/messages`, which rings the holder's bell). The chat returns to Cros when staff mark the thread Done. Built in the app; waits for contract 0.56.0.
+- [~] Waiting time and out of hours: the chat shows how long the agent has waited since their first unanswered message, and outside 9 to 5 Sydney time on weekdays (`AI_ESCALATION_BUSINESS_DAY`) when the team is back. Public holidays are not counted.
 
 ---
 
@@ -163,9 +165,6 @@ Review items: AI-016 (spoken English first).
 - Where are owner approval limits set, and does Cros read them per owner?
 - Spoken replies in English only at first?
 - Who signs off the risk level for each new tool?
-- Talk to a person (2.3): who answers, the agency's Account Manager or a shared CROSSUB support team?
-- Talk to a person (2.3): what does the agent see outside 9 to 5 when nobody is online?
-- Talk to a person (2.3): agent app only, or the tenant, landlord and contractor apps' Cros too?
 
 ## Log
 
@@ -199,6 +198,7 @@ Review items: AI-016 (spoken English first).
 | 2026-10-28 | 2.1 | Conversations staging check: reply recipient and inbox search fixed (crossub_web 0757867b4) |
 | 2026-10-28 | 2.1 | Reply recipient recheck passed. Owners and keys bundle: owner decisions, key collection (crossub_web ab8ca4b3d); email greeting fix (c0dc0d440) |
 | 2026-10-28 | 2.3 | Added Talk to a person: Cros hands a chat to a live CROSSUB person (boss's communication tool); Conversations stays as is |
+| 2026-10-28 | 2.3 | Decided: shared CROSSUB team, every handoff to Daniel Zhou, agent app only, out of hours says when the team is back. Built: backend a31b69648 (contract 0.56.0), app on 0.56.0 |
 | 2026-10-28 | 2.2 | Server briefing built: morning sweep, briefing route, Cros opening message (crossub_web 445752f9c, contract 0.55.0) |
 | 2026-10-28 | 2.2 | Staging check: briefing adds Tasks page "Needs My Action" rows; outstanding-cases scope fix (crossub_web 41c657582) |
 | 2026-10-28 | 2.2 | Scope fix 41c657582 pushed and live on staging; briefing and greeting rechecked |

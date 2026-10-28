@@ -32,6 +32,9 @@ import {
 import { GiiBriefingCard } from '@/components/agent/gii-briefing-card';
 import { GiiServerBriefingCard } from '@/components/agent/gii-server-briefing-card';
 import { GiiChatGreeting, GiiChatLine } from '@/components/agent/gii-chat-line';
+import { GiiHandoffThread } from '@/components/agent/gii-handoff-thread';
+import { GII_HANDOFF_COPY } from '@/constants/gii-handoff';
+import { useGiiHandoff } from '@/hooks/use-gii-handoff';
 import {
   GiiAttachButton,
   GiiAttachmentPreviewRow,
@@ -412,6 +415,12 @@ export function GiiAssistant({
   const isPortfolioCros = (isPanel || isModal) && isV2 && !scopedProperty && !messageScoped;
   const isFrostedV2Panel = isPanel && isV2 && !isPortfolioCros;
   const [crosView, setCrosView] = useState<CrosPortfolioView>('discover');
+  const teamChat = useGiiHandoff(open);
+  const heldThreadId = teamChat.held?.threadId ?? null;
+  // A chat a person holds is where the agent is: open it rather than the Discover view.
+  useEffect(() => {
+    if (heldThreadId && portfolioCrosRef.current) setCrosView('chat');
+  }, [heldThreadId]);
   const [crosHistory, setCrosHistory] = useState<GiiConversationSummary[]>([]);
   /** The open chat's server id, minted on its first save. Null until something is asked. */
   const crosHistoryIdRef = useRef<string | null>(null);
@@ -891,6 +900,29 @@ export function GiiAssistant({
     }
   }, [earlierSummary, lines, pendingAttachments, refreshPortfolio, sending]);
 
+  /**
+   * What the composer sends: to Cros, or, while a CROSSUB person holds the chat (Jarvis 2.3),
+   * to that person. Cros stays quiet until the team hands the chat back.
+   */
+  const submitQuery = useCallback(
+    async (text: string) => {
+      if (!teamChat.held) {
+        await runQuery(text);
+        return;
+      }
+      const trimmed = text.trim();
+      if (!trimmed || teamChat.sending) return;
+      setQuery('');
+      try {
+        await teamChat.send(trimmed);
+      } catch {
+        setQuery(trimmed);
+        toast.error(GII_HANDOFF_COPY.SEND_FAILED);
+      }
+    },
+    [runQuery, teamChat],
+  );
+
   // Fold a long chat's older lines into notes between turns, so they reach Cros as notes
   // instead of being dropped from the 20 it reads. A failed fold leaves the chat as before
   // (oldest lines dropped) and is tried again after the next reply.
@@ -933,13 +965,14 @@ export function GiiAssistant({
         const result = await confirmGiiProposal(proposal.token);
         settleProposal(lineId, { text: result.message, jobCases: result.jobCases });
         if (result.done) void refreshPortfolio();
+        if (result.handoffThreadId) teamChat.adopt(result.handoffThreadId);
       } catch {
         settleProposal(lineId, { text: GII_PROPOSAL_COPY.UNREACHABLE });
       } finally {
         setConfirmingLineId(null);
       }
     },
-    [confirmingLineId, refreshPortfolio, settleProposal],
+    [confirmingLineId, refreshPortfolio, settleProposal, teamChat],
   );
 
   const cancelProposal = useCallback(
@@ -1126,7 +1159,7 @@ export function GiiAssistant({
         voiceCaptureRef.current = null;
         setVoicePhase(VOICE_PHASE.IDLE);
         setVoiceLevel(null);
-        void runQuery(text);
+        void submitQuery(text);
       },
       onError: (message) => {
         voiceCaptureRef.current = null;
@@ -1185,6 +1218,7 @@ export function GiiAssistant({
                 ) : null}
               </div>
             ))}
+            {teamChat.handoff ? <GiiHandoffThread handoff={teamChat.handoff} /> : null}
             <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
           </div>
         )}
@@ -1301,10 +1335,14 @@ export function GiiAssistant({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        void runQuery(query);
+                        void submitQuery(query);
                       }
                     }}
-                    placeholder={`Ask ${CROS_ASSISTANT_NAME} about this message…`}
+                    placeholder={
+                      teamChat.held
+                        ? GII_HANDOFF_COPY.PLACEHOLDER(teamChat.held.staffName)
+                        : `Ask ${CROS_ASSISTANT_NAME} about this message…`
+                    }
                     rows={2}
                     className={cn(
                       'min-h-14 max-h-28 min-w-0 flex-1 resize-none overflow-y-auto px-3 py-2.5 text-sm leading-relaxed shadow-none',
@@ -1325,7 +1363,7 @@ export function GiiAssistant({
                     {query.trim() || pendingAttachments.length > 0 ? (
                       <button
                         type="button"
-                        onClick={() => void runQuery(query)}
+                        onClick={() => void submitQuery(query)}
                         disabled={sending}
                         className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95 disabled:opacity-50"
                         aria-label={`Ask ${CROS_ASSISTANT_NAME}`}
@@ -1655,6 +1693,9 @@ export function GiiAssistant({
             ) : null}
           </div>
         ))}
+        {(!isPortfolioCros || crosView === 'chat') && teamChat.handoff ? (
+          <GiiHandoffThread handoff={teamChat.handoff} />
+        ) : null}
         </div>
 
         <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
@@ -1746,13 +1787,15 @@ export function GiiAssistant({
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  void runQuery(query);
+                  void submitQuery(query);
                 }
               }}
               placeholder={
-                scopedProperty
-                  ? `Ask ${CROS_ASSISTANT_NAME} to create a job or check this property…`
-                  : `Ask ${CROS_ASSISTANT_NAME} anything…`
+                teamChat.held
+                  ? GII_HANDOFF_COPY.PLACEHOLDER(teamChat.held.staffName)
+                  : scopedProperty
+                    ? `Ask ${CROS_ASSISTANT_NAME} to create a job or check this property…`
+                    : `Ask ${CROS_ASSISTANT_NAME} anything…`
               }
               rows={isEmbedded ? 3 : 4}
               className={cn(
@@ -1766,13 +1809,13 @@ export function GiiAssistant({
             <div className="mb-0.5 flex shrink-0 flex-col items-center gap-1.5">
               <GiiAttachButton
                 onPick={addAttachmentFiles}
-                disabled={sending || voiceActive || pendingAttachments.length >= GII_MAX_ATTACHMENTS}
+                disabled={sending || voiceActive || teamChat.held !== null || pendingAttachments.length >= GII_MAX_ATTACHMENTS}
                 className="size-9"
               />
               {query.trim() || pendingAttachments.length > 0 ? (
                 <button
                   type="button"
-                  onClick={() => void runQuery(query)}
+                  onClick={() => void submitQuery(query)}
                   disabled={sending}
                   className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95 disabled:opacity-50"
                   aria-label="Send message"

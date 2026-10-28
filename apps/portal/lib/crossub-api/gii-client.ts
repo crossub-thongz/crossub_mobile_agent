@@ -109,6 +109,8 @@ export type GiiConfirmResult = {
   done: boolean;
   message: string;
   jobCases: GiiJobCaseLink[];
+  /** Set when the change handed the chat to the CROSSUB team (Jarvis 2.3). */
+  handoffThreadId: string | null;
 };
 
 /**
@@ -124,11 +126,12 @@ export async function confirmGiiProposal(token: string): Promise<GiiConfirmResul
       done: data.done,
       message: data.message,
       jobCases: data.jobCases,
+      handoffThreadId: data.handoffThreadId,
     };
   }
   const reason = (error as { message?: unknown } | undefined)?.message;
   if (typeof reason === 'string' && reason.trim()) {
-    return { done: false, message: reason, jobCases: [] };
+    return { done: false, message: reason, jobCases: [], handoffThreadId: null };
   }
   throw new Error(`${CROS_ASSISTANT_NAME} could not confirm`);
 }
@@ -202,6 +205,36 @@ export async function getGiiBriefing(): Promise<GiiServerBriefing> {
 export async function markGiiBriefingSeen(briefingDate: string): Promise<void> {
   const { error, response } = await crossub.POST('/agent/gii/briefing/seen', { body: { briefingDate } });
   if (error || !response.ok) throw new Error(`${CROS_ASSISTANT_NAME} briefing could not be marked seen`);
+}
+
+/** A Cros chat a CROSSUB person holds (Jarvis 2.3): their replies, the wait, the team's hours. */
+export type GiiHandoff = components['schemas']['AgentGiiHandoffDto'];
+export type GiiHandoffMessage = components['schemas']['AgentGiiHandoffMessageDto'];
+
+/** The agent's open chat with the CROSSUB team, or null when none is with them. */
+export async function getCurrentGiiHandoff(): Promise<GiiHandoff | null> {
+  const { data, error } = await crossub.GET('/agent/gii/handoff');
+  if (error || !data) throw new Error('The CROSSUB team chat could not be loaded');
+  return data.handoff;
+}
+
+/** One handed-over chat, open or closed. */
+export async function getGiiHandoff(threadId: string): Promise<GiiHandoff> {
+  const { data, error } = await crossub.GET('/agent/gii/handoff/{threadId}', {
+    params: { path: { threadId } },
+  });
+  if (error || !data) throw new Error('The CROSSUB team chat could not be loaded');
+  return data;
+}
+
+/** Write to the CROSSUB team while they hold the chat. */
+export async function sendGiiHandoffMessage(threadId: string, body: string): Promise<GiiHandoff> {
+  const { data, error } = await crossub.POST('/agent/gii/handoff/{threadId}/messages', {
+    params: { path: { threadId } },
+    body: { body },
+  });
+  if (error || !data) throw new Error('Your message could not be sent to the CROSSUB team');
+  return data;
 }
 
 export async function deleteGiiConversation(id: string): Promise<void> {
