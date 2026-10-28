@@ -374,6 +374,17 @@
     background-color 0.2s ease;
 }
 
+.agent-sidebar-v2__nav-link--nested {
+  margin-left: 2.15rem;
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+  font-size: 14px;
+}
+
+.agent-sidebar-v2.w-\[72px\]:not(:hover) .agent-sidebar-v2__nav-link--nested {
+  margin-left: 4px;
+}
+
 .agent-sidebar-v2__nav-icon {
   transition: color 0.2s ease;
 }

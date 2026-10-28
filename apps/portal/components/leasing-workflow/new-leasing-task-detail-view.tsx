@@ -20,7 +20,6 @@ import {
   TaskWorkflowRailSlot,
   TaskWorkflowRailSlotProvider,
 } from '@/components/agent/tasks/task-workflow-rail-slot';
-import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { LeasingReletDecisionCard } from '@/components/leasing-workflow/leasing-relet-decision-card';
 import { LeasingWorkflowTimeline } from '@/components/leasing-workflow/leasing-workflow-timeline';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -744,7 +743,6 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                 })
               )}
             </ul>
-            <PortalBackLink className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline" />
           </section>
         </aside>
       </div>

@@ -13,7 +13,6 @@ import {
 } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { TribunalAwaitingAccountManagerPanel } from '@/components/agent/tribunal-awaiting-account-manager';
 import { TribunalRentChasingDetail } from '@/components/agent/tribunal-rent-chasing-detail';
-import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { TASK_DETAIL_COPY } from '@/constants/agent-copy-variant';
 import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
@@ -605,7 +604,6 @@ export function TribunalTaskDetailView({
                 ))
               )}
             </ul>
-            <PortalBackLink className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline" />
           </section>
         </aside>
       </div>

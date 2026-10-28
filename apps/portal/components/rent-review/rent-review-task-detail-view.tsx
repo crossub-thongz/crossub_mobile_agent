@@ -14,7 +14,6 @@ import {
 } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { RentReviewAgentWorkflowPanel } from '@/components/rent-review/rent-review-agent-workflow-panel';
 import { RentReviewTaskDocuments } from '@/components/rent-review/rent-review-task-documents';
-import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
 import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
@@ -590,7 +589,6 @@ export function RentReviewTaskDetailView({
                 ))
               )}
             </ul>
-            <PortalBackLink className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline" />
           </section>
         </aside>
       </div>

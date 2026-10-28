@@ -138,6 +138,13 @@ export const V2_MORE_NAV_FOOTER: NavItem[] = [
   { href: ROUTES.PRICING, label: 'Pricing', icon: Tags },
 ];
 
+/** Self-Manage job hubs. They sit under Tasks in the sidebar, not beside it. */
+export const TASK_SECTION_HREFS = [
+  ROUTES.MAINTENANCE,
+  ROUTES.INSPECTIONS,
+  ROUTES.LEASING,
+] as const;
+
 export function primaryNavForUi(isV2: boolean): NavItem[] {
   return isV2 ? V2_PRIMARY_NAV : V1_PRIMARY_NAV;
 }

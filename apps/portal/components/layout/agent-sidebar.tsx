@@ -10,7 +10,7 @@ import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { menuNavForUi, sidebarFooterNavForUi } from '@/constants/nav';
+import { menuNavForUi, sidebarFooterNavForUi, TASK_SECTION_HREFS } from '@/constants/nav';
 import { SUPPORT_PAGE_SECTION } from '@/constants/more-page';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -48,6 +48,7 @@ function NavLink({
   badge,
   v2 = false,
   trailingChevron = false,
+  nested = false,
 }: {
   href: string;
   label: string;
@@ -57,6 +58,7 @@ function NavLink({
   badge?: number;
   v2?: boolean;
   trailingChevron?: boolean;
+  nested?: boolean;
 }) {
   if (v2) {
     return (
@@ -69,6 +71,7 @@ function NavLink({
             ? 'justify-center px-2 py-3.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-5'
             : 'gap-3 px-5 py-3.5',
           active ? 'agent-sidebar-v2__nav-link--active' : 'agent-sidebar-v2__nav-link--idle',
+          nested && 'agent-sidebar-v2__nav-link--nested !py-2',
         )}
         data-tour={
           href === ROUTES.PROPERTIES
@@ -416,18 +419,38 @@ export function AgentSidebar({
 
         <nav className="scrollbar-subtle flex-1 overflow-x-hidden overflow-y-auto">
           <ul className="agent-sidebar-v2__nav-list">
-            {v2SidebarNav.map((item) => (
-              <li key={item.href} className="agent-sidebar-v2__nav-item">
-                <NavLink
-                  {...item}
-                  v2
-                  active={isActive(pathname, item.href)}
-                  compact={compact}
-                  badge={item.href === ROUTES.TASKS ? propertyNeedActionCount : undefined}
-                  trailingChevron={'trailingChevron' in item && item.trailingChevron}
-                />
-              </li>
-            ))}
+            {v2SidebarNav.flatMap((item) => {
+              if ((TASK_SECTION_HREFS as readonly string[]).includes(item.href)) return [];
+              const row = (
+                <li key={item.href} className="agent-sidebar-v2__nav-item">
+                  <NavLink
+                    {...item}
+                    v2
+                    active={isActive(pathname, item.href)}
+                    compact={compact}
+                    badge={item.href === ROUTES.TASKS ? propertyNeedActionCount : undefined}
+                    trailingChevron={'trailingChevron' in item && item.trailingChevron}
+                  />
+                </li>
+              );
+              if (item.href !== ROUTES.TASKS) return [row];
+              const children = TASK_SECTION_HREFS.flatMap((href) => {
+                const child = v2SidebarNav.find((entry) => entry.href === href);
+                if (!child) return [];
+                return [
+                  <li key={child.href} className="agent-sidebar-v2__nav-item">
+                    <NavLink
+                      {...child}
+                      v2
+                      nested
+                      active={isActive(pathname, child.href)}
+                      compact={compact}
+                    />
+                  </li>,
+                ];
+              });
+              return [row, ...children];
+            })}
           </ul>
         </nav>
 

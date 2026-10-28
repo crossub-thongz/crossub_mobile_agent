@@ -3,11 +3,29 @@ import { propertyDetail, ROUTES } from '@/constants/routes';
 const CURRENT_KEY = 'crossub.portal.nav.current';
 const PREVIOUS_KEY = 'crossub.portal.nav.previous';
 
-/** Primary destinations — Back here would jump to an unrelated hub (e.g. Tasks → Dashboard). */
+/**
+ * Sidebar destinations. A Back control here only repeats the nav, and a history
+ * back between them is how People ends up labelled "Inspection".
+ */
 const TOP_LEVEL_PATHS = new Set<string>([
   ROUTES.DASHBOARD,
   ROUTES.PROPERTIES,
   ROUTES.TASKS,
+  ROUTES.MAINTENANCE,
+  ROUTES.INSPECTIONS,
+  ROUTES.LEASING,
+  ROUTES.PEOPLE,
+  ROUTES.CONVERSATIONS,
+  ROUTES.TRUST,
+  ROUTES.ARCHIVE,
+  ROUTES.MORE,
+  ROUTES.ACCOUNTING,
+  ROUTES.MESSAGES,
+  ROUTES.BILL,
+  ROUTES.TRIBUNAL,
+  ROUTES.RENT_REVIEW,
+  ROUTES.PROFILE,
+  ROUTES.NOTIFICATIONS,
 ]);
 
 export function portalLocation(pathname: string, search: string): string {
@@ -83,16 +101,9 @@ export function labelForPortalPath(href: string): string {
   return 'Back';
 }
 
-function isInternalPortalPath(href: string): boolean {
-  if (!href.startsWith('/') || href.startsWith('//')) return false;
-  if (href.startsWith('/login') || href.startsWith('/register')) return false;
-  return true;
-}
-
 export function resolvePortalBackTarget(input: {
   pathname: string;
   searchParams: Pick<URLSearchParams, 'get' | 'toString'>;
-  previousPath: string | null;
   fallbackHref?: string;
   fallbackLabel?: string;
   fromHref?: string | null;
@@ -102,14 +113,9 @@ export function resolvePortalBackTarget(input: {
     return null;
   }
 
-  const previous = input.previousPath?.trim() || null;
-  if (previous && isInternalPortalPath(previous)) {
-    const current = portalLocation(input.pathname, input.searchParams.toString());
-    if (previous !== current) {
-      return { href: previous, label: labelForPortalPath(previous) };
-    }
-  }
-
+  // Only an explicit `from` (opened from a property or Tasks) or the page's own
+  // parent. The last page visited is not a back target — that is what put
+  // "Inspection" on People.
   if (input.fromHref) {
     return { href: input.fromHref, label: input.fromLabel || labelForPortalPath(input.fromHref) };
   }

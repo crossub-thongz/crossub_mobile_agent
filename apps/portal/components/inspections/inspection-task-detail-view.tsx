@@ -14,7 +14,6 @@ import {
   TaskWorkflowRailSlot,
   TaskWorkflowRailSlotProvider,
 } from '@/components/agent/tasks/task-workflow-rail-slot';
-import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { TASK_DETAIL_COPY } from '@/constants/agent-copy-variant';
 import { messagesForProperty, propertyDetail } from '@/constants/routes';
@@ -512,7 +511,6 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
                 ))
               )}
             </ul>
-            <PortalBackLink className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline" />
           </section>
         </aside>
       </div>

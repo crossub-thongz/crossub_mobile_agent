@@ -14,23 +14,17 @@ export function isShellHomePath(pathname: string): boolean {
   return pathname === ROUTES.DASHBOARD;
 }
 
+/** Named parent for a property record. Other routes only show a back the page asked for. */
 function parentRouteFallback(pathname: string): { href: string; label: string } | null {
-  if (pathname.startsWith('/properties/')) {
-    const segments = pathname.split('/').filter(Boolean);
-    if (segments.length === 2) {
-      return { href: ROUTES.PROPERTIES, label: 'Properties' };
-    }
-    if (segments.length >= 3) {
-      return { href: `/properties/${segments[1]}`, label: 'Property' };
-    }
-  }
-
+  if (!pathname.startsWith('/properties/')) return null;
   const segments = pathname.split('/').filter(Boolean);
-  if (segments.length <= 1) {
-    return pathname === ROUTES.DASHBOARD ? null : { href: ROUTES.DASHBOARD, label: 'Dashboard' };
+  if (segments.length === 2) {
+    return { href: ROUTES.PROPERTIES, label: 'Properties' };
   }
-
-  return { href: `/${segments.slice(0, -1).join('/')}`, label: 'Back' };
+  if (segments.length >= 3) {
+    return { href: `/properties/${segments[1]}`, label: 'Property' };
+  }
+  return null;
 }
 
 export function ShellBackButton({
