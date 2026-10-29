@@ -225,7 +225,8 @@ export const CONVERSATIONS_COPY = {
   channelLabel: 'Send as',
   appHint: 'Shows in their CROSSUB app. Text only: no subject, formatting or attachments.',
   appSent: (names: string) => `Sent to ${names}`,
-  composeAppHint: 'Shows in the tenant’s CROSSUB app. Owners and contractors are written to by email.',
+  composeAppHint:
+    'Shows in the tenant’s CROSSUB app, once they have signed in to it. Owners and contractors are written to by email.',
   replyPlaceholder: 'Write your message…',
   replyBodyLabel: 'Message',
   replySubjectLabel: 'Subject',
