@@ -39,8 +39,10 @@ export default function InspectionsPage() {
         </Button>
       }
     >
-      <div className="space-y-4">
-        <ServiceRecommendation surface="inspections" />
+      <div className="min-h-0 flex-1 overflow-y-auto pb-8">
+        <div className="lg:px-8 lg:pt-4">
+          <ServiceRecommendation surface="inspections" />
+        </div>
         <InspectionsModule />
       </div>
     </AgentShell>
