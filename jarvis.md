@@ -126,7 +126,8 @@ The rest of the boss's communication tool (agent and tenant, agent and owner, ag
 - [x] App messages in Conversations: an Email / App message switch on the reply box when the thread names a tenant or owner, and in New conversation (tenant or owner only). Text only: no subject, formatting or attachments. Each message is tagged Email or App. An app reply on a thread with no tenant or owner is refused (`crossub_web` dcc66217e, contract 0.58.0; app e5af3cf).
 - [x] Staging check, agent side (29 Oct): New conversation as an app message to the tenant of 1008/19 Halifax Street, then an app reply on the same thread; both sent and tagged App (thread "[TEST] App message check"). Screenshots in `~/Downloads/crossub-agent-communication/`.
 - [ ] Staging check, tenant and owner side: the tenant app shows the test thread, the owner app does not.
-- [ ] Known gaps: no check that the tenant or owner uses the app (a message to someone without it waits unseen); a contractor still sees every message on a thread linked to their maintenance job; owners get no bell for new messages.
+- [x] Owner bell: the owner app gets a bell when the agent or CROSSUB writes on a thread that names the owner, like the tenant's (`crossub_web` 15e1d34a4, contract 0.60.0, live on staging and production).
+- [ ] Known gaps: no check that the tenant or owner uses the app (a message to someone without it waits unseen); a contractor still sees every message on a thread linked to their maintenance job.
 
 ---
 
@@ -215,4 +216,5 @@ Review items: AI-016 (spoken English first).
 | 2026-10-29 | 2.2 | Decided: server works out the missing Needs My Action rows (not a full Tasks move). Built push alerts, needs-me briefing items, reminder sweep fixes (crossub_web eb4701659, contract 0.57.0; app 550c888); reminder sweep on after staging dry run (abddb6a5e) |
 | 2026-10-29 | 2 | Decided: test data may be created on staging only. Full Stage 2 test on staging with Confirm pressed; report Cros_Stage2_Test.pdf. Fails: complete a task (references and record on screen), staff cannot hand a Cros chat back. Main faults: Cros promises cards it has not made, screen references not accepted, emails reported sent when staging blocks them |
 | 2026-10-29 | 2.4 | Conversations by app: tenant and owner apps see only threads that name them; Email / App message switch in Conversations (crossub_web dcc66217e, contract 0.58.0; app e5af3cf); agent side passed on staging |
+| 2026-10-29 | 2.4 | Owner bell for messages on threads that name the owner (crossub_web 15e1d34a4, contract 0.60.0) |
 | 2026-10-29 | 2 | Fixed the Stage 2 test faults (crossub_web 2df4ef5fd, contract 0.59.0; 11c55c96b): hand back from the Message Center, references the screens show, task tools on End Leasing pages, no promised card without one, real email outcomes, plain failure wording, agency sign off and full date, handoff filed against its property. Retest on staging passed for complete a task and talk to a person; report revised (Cros_Stage2_Test.pdf). Still open: "Dear Tenant" greeting, key collection card wording, who handed back, team chat order in the panel |
