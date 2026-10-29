@@ -3,7 +3,11 @@
 ## 2026-10-30
 
 ### Added
+- Self-Manage inspection page offers "Use a CROSSUB inspector?" on an unbooked routine, ingoing or outgoing job the agency runs: pay by card at Inspection Only rates and CROSSUB sets the time and sends an inspector; later routine visits stay with the agency (contract 0.65.0)
 - Settings has a CROS section: email tone (friendly, formal, brief), your own sign off, quiet hours with no phone alerts from CROS (Sydney time), and a link to your agency's preferred contractors in People; the same preferences CROS changes when asked in chat (contract 0.64.0).
+
+### Changed
+- Cros recommendation card: Book inspection and Arrange via Crossub open the job at its "Use a CROSSUB inspector?" step (Arrange via Crossub opens the soonest waiting job)
 
 ## 2026-10-29
 

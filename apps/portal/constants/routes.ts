@@ -134,6 +134,11 @@ export const tenantNew = (query?: Record<string, string>) => {
 };
 export const inspectionDetail = (id: string, ctx?: DetailNavContext) =>
   appendDetailNavContext(`/inspections/${id}`, ctx);
+/** Query flag that opens an inspection's "Use a CROSSUB inspector?" step. */
+export const INSPECTION_CROSSUB_QUERY = 'crossub';
+/** An inspection with its "Use a CROSSUB inspector?" step opened (Self-Manage). */
+export const inspectionCrossubInspector = (id: string) =>
+  `${inspectionDetail(id)}?${INSPECTION_CROSSUB_QUERY}=1`;
 export const inspectionNew = (propertyId?: string) =>
   propertyId ? `/inspections/new?property=${propertyId}` : '/inspections/new';
 export const maintenanceDetail = (id: string, ctx?: DetailNavContext) =>
