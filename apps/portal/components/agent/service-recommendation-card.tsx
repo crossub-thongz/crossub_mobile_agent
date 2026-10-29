@@ -240,14 +240,11 @@ function CrosBatchSuggestion({ count, includeWays }: { count: number; includeWay
         You have {count} upcoming inspections that haven&apos;t been arranged yet.
       </p>
       <p className="text-muted-foreground mt-1 text-sm">
-        I can help you arrange these through Crossub&apos;s Inspection Only service, or you can explore Full Service if you&apos;d prefer ongoing management support.
+        Arrange your own inspection, and coordinate it with Crossub.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         <Link href={ROUTES.INSPECTIONS} className="rounded-lg bg-[#00bd85] px-3 py-2 text-sm font-semibold text-white">
-          Arrange inspections
-        </Link>
-        <Link href={ROUTES.PRICING} className="rounded-lg border border-[#ccece3] px-3 py-2 text-sm font-semibold text-[#067a56]">
-          Explore Full Service
+          Arrange your own inspection
         </Link>
       </div>
       {includeWays ? <WaysCrosHelps /> : null}
