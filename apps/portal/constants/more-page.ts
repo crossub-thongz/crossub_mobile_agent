@@ -62,13 +62,6 @@ export const SUPPORT_PAGE_SECTION: MorePageSection = {
   tone: 'amber',
   items: [
     {
-      id: 'explore-full-service',
-      title: 'Explore Full Service',
-      description: 'See the price, scope and start date. Opening this does not change your management.',
-      href: ROUTES.PRICING_FULL_MANAGEMENT,
-      icon: Tags,
-    },
-    {
       id: 'intro-video',
       title: 'Intro video',
       description: 'Watch the agent portal welcome video again.',
