@@ -3,12 +3,16 @@
 ## 2026-10-29
 
 ### Added
+- Self-Manage: booking an ingoing, outgoing or in-person routine inspection asks who conducts it; Your inspector stays free, CROSSUB inspector is paid by card when you book, at Inspection Only rates.
 - Conversations replies and new conversations can go as an app message to the tenant or owner, as well as by email; each message shows whether it went by email or app.
 - Alerts on this phone, under Settings > Notifications: the morning briefing and CROSSUB team replies in Cros arrive as phone notifications, even with the app closed; on iPhone once the app is added to the Home Screen.
 - Tapping a CROSSUB team reply alert opens Cros.
 - The morning briefing shows applications to approve, ends of lease waiting on you, and repairs to move on, from the server.
 
 ### Changed
+- Self-Manage: a CROSSUB open inspection is paid by card when you book it.
+- Self-Manage: the Invoice page lists the CROSSUB inspections you booked, with payments and refunds.
+- Self-Manage plan and pricing text says you pay only for the CROSSUB inspections you choose.
 - Agent API contract 0.58.0.
 - Agent API contract 0.57.0.
 

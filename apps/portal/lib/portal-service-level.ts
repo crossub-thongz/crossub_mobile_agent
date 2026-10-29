@@ -175,7 +175,7 @@ export function isLegacyLevel(level: AgentPortalServiceLevel): boolean {
 
 /**
  * Level 1 and 2 see an add-card prompt until a card is saved or dismissed (Level 2: once per day).
- * Self-Manage is free, so there is nothing to pay with a card.
+ * Self-Manage is free; it pays only at booking for a CROSSUB job it chooses, so no standing prompt.
  */
 export function usesGlobalPaymentMethodPrompt(
   level: AgentPortalServiceLevel | string | undefined,

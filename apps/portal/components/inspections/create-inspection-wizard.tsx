@@ -12,6 +12,7 @@ import {
 import { toast } from 'sonner';
 
 import { AgencyBookingFields } from '@/components/agent/inspection-self-managed/agency-booking-fields';
+import { SelfManagedConductorChoice } from '@/components/agent/inspection-self-managed/self-managed-conductor-choice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +23,8 @@ import { inspectionDetail, propertyDetail, propertyLeasingWorkflow, ROUTES } fro
 import { LEASING_CREATE_RELET_DECISION } from '@/constants/leasing-relet-decision';
 import {
   AGENCY_BOOKING_COPY,
+  SELF_MANAGED_CONDUCTOR,
+  type SelfManagedConductor,
   AGENCY_INSPECTION_TYPE,
   type AgencyInspectionType,
 } from '@/constants/self-managed-inspections';
@@ -32,6 +35,7 @@ import {
 import { mapAgentInspections } from '@/lib/crossub-api/agent-mappers';
 import {
   agencyScheduledTimeIso,
+  agencyBookableType,
   resolveAgencyBookingType,
 } from '@/lib/inspections/agency-inspection-booking';
 import { isPropertySelfManaged } from '@/lib/portal-service-level';
@@ -380,10 +384,20 @@ export function CreateInspectionWizard({
   const [agencyConductedByUserId, setAgencyConductedByUserId] = useState('');
   const [agencyScheduledLocal, setAgencyScheduledLocal] = useState('');
   const propertySelfManaged = property ? isPropertySelfManaged(agencies, property.agencyId) : false;
+  /** Self-Manage: the agency's own inspector by default; a CROSSUB inspector is a paid order. */
+  const [selfManagedConductor, setSelfManagedConductor] = useState<SelfManagedConductor>(
+    SELF_MANAGED_CONDUCTOR.AGENCY,
+  );
+  const agencyBookable = agencyBookableType({
+    selfManaged: propertySelfManaged,
+    type: inspectionType,
+    routineFlow: routine.flow,
+  });
   const agencyBookingType = resolveAgencyBookingType({
     selfManaged: propertySelfManaged,
     type: inspectionType,
     routineFlow: routine.flow,
+    conductor: selfManagedConductor,
   });
 
   const agentDisplayName = useMemo(() => {
@@ -1192,6 +1206,14 @@ export function CreateInspectionWizard({
             </div>
           ) : null}
           <>
+              {agencyBookable ? (
+                <SelfManagedConductorChoice
+                  value={selfManagedConductor}
+                  onChange={setSelfManagedConductor}
+                  disabled={submitting}
+                />
+              ) : null}
+
               {inspectionType === 'OPEN' && property ? (
                 <OpenInspectionForm
                   property={property}

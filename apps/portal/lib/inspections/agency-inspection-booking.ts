@@ -3,16 +3,17 @@ import {
   AGENCY_INSPECTION_TYPE,
   AGENCY_INSPECTION_TYPES,
   ROUTINE_FLOW,
+  SELF_MANAGED_CONDUCTOR,
   type AgencyInspectionType,
+  type SelfManagedConductor,
 } from '@/constants/self-managed-inspections';
 import { propertyWallClockToIso } from '@/lib/utils/property-wall-clock';
 
 /**
- * The agency-conducted type a create-inspection form books, or null when the form keeps the
- * CROSSUB order path. Self-Manage only; ingoing, outgoing and in-person routine (a tenant
- * self-inspection has no inspector to book).
+ * The type an agency inspector could conduct on this form, or null when only CROSSUB can. Self-Manage
+ * only; ingoing, outgoing and in-person routine (a tenant self-inspection has no inspector to book).
  */
-export function resolveAgencyBookingType(args: {
+export function agencyBookableType(args: {
   selfManaged: boolean;
   type: string | null;
   routineFlow: string;
@@ -23,6 +24,21 @@ export function resolveAgencyBookingType(args: {
     return null;
   }
   return type;
+}
+
+/**
+ * The agency-conducted type a create-inspection form books, or null when the form keeps the
+ * CROSSUB order path: not Self-Manage, not a bookable type, or the agent chose a CROSSUB
+ * inspector for this job (a paid order).
+ */
+export function resolveAgencyBookingType(args: {
+  selfManaged: boolean;
+  type: string | null;
+  routineFlow: string;
+  conductor: SelfManagedConductor;
+}): AgencyInspectionType | null {
+  if (args.conductor === SELF_MANAGED_CONDUCTOR.CROSSUB) return null;
+  return agencyBookableType(args);
 }
 
 /**

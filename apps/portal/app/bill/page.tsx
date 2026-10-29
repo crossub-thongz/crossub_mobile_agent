@@ -365,7 +365,7 @@ export default function BillPage() {
 
   const stripeConfigured = Boolean(getStripePublishableKey());
   const usesMonthlyInvoice = usesMonthlyPlatformInvoice(summary?.portalServiceLevel);
-  // Self-Manage is free: no card, charges or invoices, even before the summary loads.
+  // Self-Manage is free; its only bills are the CROSSUB inspections the agent chose to book.
   const selfManaged =
     summary?.portalServiceLevel === PORTAL_SERVICE_LEVEL.SELF_MANAGED ||
     isSelfManagedLevel(resolvePortalServiceLevel(primaryAgency?.portalServiceLevel));
@@ -699,16 +699,12 @@ export default function BillPage() {
     }
   };
 
-  if (selfManaged || summary?.platformBillingDisabled) {
+  if (!selfManaged && summary?.platformBillingDisabled) {
     return (
       <AgentShell title="Invoice">
         <PageIntro
           title="Invoice"
-          description={
-            selfManaged
-              ? SELF_MANAGED_BILLING_NOTE
-              : 'Platform billing is paused for your service plan. There is nothing to pay.'
-          }
+          description="Platform billing is paused for your service plan. There is nothing to pay."
         />
       </AgentShell>
     );
@@ -720,7 +716,9 @@ export default function BillPage() {
         <PageIntro
           title="Payment Method"
           description={
-            usesMonthlyInvoice
+            selfManaged
+              ? SELF_MANAGED_BILLING_NOTE
+              : usesMonthlyInvoice
               ? summary?.portalServiceLevel === PORTAL_SERVICE_LEVEL.LEGACY
                 ? 'Monthly invoice is letting fee and management fee. Extra inspections after included usage are prepaid on Bills. Open inspections are not charged.'
                 : 'Monthly invoice is management fee. Extra open, routine, ingoing and outgoing inspections after included usage are prepaid on Bills.'
@@ -978,7 +976,9 @@ export default function BillPage() {
               <EmptyState
                 title="No payments yet"
                 description={
-                  usesMonthlyInvoice
+                  selfManaged
+                    ? 'CROSSUB inspections you book will appear here.'
+                    : usesMonthlyInvoice
                     ? 'Sent monthly invoices and prepaid extras after included usage will appear here.'
                     : 'Prepaid inspections, tribunal sessions, and monthly service invoices will appear here.'
                 }

@@ -150,6 +150,41 @@ export const AGENCY_BOOKING_COPY = {
   invalidTime: 'The inspection date and time is invalid',
 } as const;
 
+/**
+ * Who conducts a Self-Manage inspection the agent books: one of the agency's own inspectors
+ * (free), or a CROSSUB inspector paid for on this one job at Inspection Only rates, by card
+ * before the job starts (Geng Xu 28 Oct, Daniel Zhou 29 Oct 2026).
+ */
+export const SELF_MANAGED_CONDUCTOR = {
+  AGENCY: 'agency',
+  CROSSUB: 'crossub',
+} as const;
+
+export type SelfManagedConductor =
+  (typeof SELF_MANAGED_CONDUCTOR)[keyof typeof SELF_MANAGED_CONDUCTOR];
+
+export const SELF_MANAGED_CONDUCTOR_COPY = {
+  heading: 'Who conducts this inspection?',
+  options: {
+    [SELF_MANAGED_CONDUCTOR.AGENCY]: {
+      label: 'Your inspector',
+      hint: 'You set the time and the inspector. Free.',
+    },
+    [SELF_MANAGED_CONDUCTOR.CROSSUB]: {
+      label: 'CROSSUB inspector',
+      hint: 'CROSSUB books the visit and sends an inspector. Paid per job.',
+    },
+  },
+  crossubPayment:
+    'You pay by card when you book, at Inspection Only rates. The amount is shown on the payment screen, and the job is refunded if no inspector accepts it within 48 hours.',
+  pricingLink: 'See rates',
+} as const satisfies {
+  heading: string;
+  options: Record<SelfManagedConductor, { label: string; hint: string }>;
+  crossubPayment: string;
+  pricingLink: string;
+};
+
 /** Inspections page header entry for Self-Manage agents. */
 export const INSPECTIONS_PAGE_ACTIONS = {
   book: 'Book inspection',

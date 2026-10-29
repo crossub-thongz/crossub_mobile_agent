@@ -123,7 +123,7 @@ export function AgentPaymentReminderBanner() {
   if (platformBillingDisabled) return null;
 
   // Level 3 with billing on (BILLING_LEVEL_3_DISABLED=false) pays on the task, not here.
-  // Self-Manage is free, so it never owes a platform fee.
+  // Self-Manage pays a CROSSUB job at booking; an unpaid quote is an abandoned checkout, not a bill.
   if (primaryAgency) {
     const level = resolvePortalServiceLevel(primaryAgency.portalServiceLevel);
     if (isLegacyLevel(level) || isSelfManagedLevel(level)) return null;
