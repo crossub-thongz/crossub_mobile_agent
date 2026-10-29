@@ -38,6 +38,8 @@ export const ROUTES = {
   FAQ: '/faq',
   BILL: '/bill',
   PRICING: '/pricing',
+  /** Pricing page, scrolled to the Full management section. */
+  PRICING_FULL_MANAGEMENT: '/pricing#full-management',
   SYSTEM_ACCESS_AGREEMENT: '/system-access-agreement',
   TENANT_SELECTION: '/tenant-selection',
   TENANTS: '/tenants',

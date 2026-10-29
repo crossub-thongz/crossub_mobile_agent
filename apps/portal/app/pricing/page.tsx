@@ -39,6 +39,7 @@ import './pricing.css';
 type PricingAccent = 'cyan' | 'violet' | 'emerald';
 
 function PricingSection({
+  id,
   title,
   subtitle,
   badge,
@@ -48,6 +49,7 @@ function PricingSection({
   className,
   delayClass,
 }: {
+  id?: string;
   title: string;
   subtitle?: string;
   badge?: string;
@@ -59,8 +61,9 @@ function PricingSection({
 }) {
   return (
     <section
+      id={id}
       data-accent={accent}
-      className={cn('pricing-section pricing-animate-in', delayClass, className)}
+      className={cn('pricing-section pricing-animate-in scroll-mt-6', delayClass, className)}
     >
       <div className="pricing-section__header">
         <div className="pricing-section__icon">
@@ -144,6 +147,14 @@ export default function PricingPage() {
   const included = catalog?.level2.includedPerPropertyPerYear;
   const includedUsage = catalog?.level2.includedUsageByProperty ?? [];
   const usageYear = includedUsage[0]?.calendarYear ?? new Date().getFullYear();
+
+  useEffect(() => {
+    if (!catalog || window.location.hash !== '#full-management') return;
+    const timer = window.setTimeout(() => {
+      document.getElementById('full-management')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, [catalog]);
 
   return (
     <AgentShell>
@@ -271,6 +282,7 @@ export default function PricingPage() {
             </PricingSection>
 
             <PricingSection
+              id="full-management"
               accent="violet"
               icon={Building2}
               badge="Level 2"

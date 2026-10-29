@@ -216,7 +216,7 @@ function FullServiceChoice({ primary }: { primary: boolean }) {
         Price, scope and start date are confirmed on the next page. This does not change the property&apos;s management.
       </p>
       <Link
-        href={ROUTES.PRICING}
+        href={ROUTES.PRICING_FULL_MANAGEMENT}
         className={cn(
           'mt-3 inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold',
           primary ? 'bg-[#00bd85] text-white' : 'border border-[#ccece3] text-[#067a56]',
@@ -237,7 +237,8 @@ function CrosBatchSuggestion({ count, includeWays }: { count: number; includeWay
         <span className="rounded-full bg-[#e7f8f2] px-2 py-0.5 text-[11px] font-semibold text-[#067a56]">Suggestion</span>
       </p>
       <p className="mt-2 text-sm">
-        You have {count} upcoming inspections that haven&apos;t been arranged yet.
+        You have <span className="mr-1">{count}</span>
+        upcoming inspections that haven&apos;t been arranged yet.
       </p>
       <p className="text-muted-foreground mt-1 text-sm">
         Arrange your own inspection, and coordinate it with Crossub.
