@@ -28,7 +28,8 @@ function opensLabel(iso: string): string {
 
 /** The status line under the header: the wait, the team's hours, or that they answered. */
 export function giiHandoffStatus(handoff: GiiHandoff, now: Date): string {
-  if (handoff.closed) return GII_HANDOFF_COPY.CLOSED(handoff.staffName);
+  // Whoever pressed Done, who may not be the person holding the chat.
+  if (handoff.closed) return GII_HANDOFF_COPY.CLOSED(handoff.closedByName);
   const parts = [
     handoff.waitingSince
       ? GII_HANDOFF_COPY.WAITING(giiHandoffWaitLabel(handoff.waitingSince, now))

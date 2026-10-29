@@ -417,6 +417,8 @@ export function GiiAssistant({
   const [crosView, setCrosView] = useState<CrosPortfolioView>('discover');
   const teamChat = useGiiHandoff(open);
   const heldThreadId = teamChat.held?.threadId ?? null;
+  /** The Cros line the team chat follows (the handoff's answer), so later turns sit below it. */
+  const [handoffAnchorId, setHandoffAnchorId] = useState<string | null>(null);
   // A chat a person holds is where the agent is: open it rather than the Discover view.
   useEffect(() => {
     if (heldThreadId && portfolioCrosRef.current) setCrosView('chat');
@@ -556,6 +558,11 @@ export function GiiAssistant({
       : liveBriefing.isEmpty;
 
   const hasUserMessages = useMemo(() => lines.some((l) => l.role === 'user'), [lines]);
+  // The team chat follows its handoff line; in a chat that no longer has it, it closes the list.
+  const teamChatAnchorId = useMemo(
+    () => (handoffAnchorId && lines.some((l) => l.id === handoffAnchorId) ? handoffAnchorId : null),
+    [handoffAnchorId, lines],
+  );
 
   const suggestedPrompts = messageScoped
     ? MESSAGE_GII_PROMPTS
@@ -948,11 +955,13 @@ export function GiiAssistant({
    * what happened on the next turn exactly as if it had made the change itself.
    */
   const settleProposal = useCallback(
-    (lineId: string, reply: Pick<ChatLine, 'text' | 'jobCases'>) => {
+    (lineId: string, reply: Pick<ChatLine, 'text' | 'jobCases'>): string => {
+      const id = `a-${idSeq()}`;
       setLines((prev) => [
         ...prev.map((l) => (l.id === lineId ? { ...l, proposal: null } : l)),
-        { id: `a-${idSeq()}`, role: 'assistant', ...reply },
+        { id, role: 'assistant', ...reply },
       ]);
+      return id;
     },
     [],
   );
@@ -963,9 +972,12 @@ export function GiiAssistant({
       setConfirmingLineId(lineId);
       try {
         const result = await confirmGiiProposal(proposal.token);
-        settleProposal(lineId, { text: result.message, jobCases: result.jobCases });
+        const replyId = settleProposal(lineId, { text: result.message, jobCases: result.jobCases });
         if (result.done) void refreshPortfolio();
-        if (result.handoffThreadId) teamChat.adopt(result.handoffThreadId);
+        if (result.handoffThreadId) {
+          setHandoffAnchorId(replyId);
+          teamChat.adopt(result.handoffThreadId);
+        }
       } catch {
         settleProposal(lineId, { text: GII_PROPOSAL_COPY.UNREACHABLE });
       } finally {
@@ -1216,9 +1228,12 @@ export function GiiAssistant({
                     onCancel={() => cancelProposal(line.id)}
                   />
                 ) : null}
+                {teamChat.handoff && line.id === teamChatAnchorId ? (
+                  <GiiHandoffThread handoff={teamChat.handoff} />
+                ) : null}
               </div>
             ))}
-            {teamChat.handoff ? <GiiHandoffThread handoff={teamChat.handoff} /> : null}
+            {teamChat.handoff && !teamChatAnchorId ? <GiiHandoffThread handoff={teamChat.handoff} /> : null}
             <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
           </div>
         )}
@@ -1691,9 +1706,13 @@ export function GiiAssistant({
                 Case <span className="tabular-nums">{line.lodgedRef}</span> created
               </p>
             ) : null}
+
+            {teamChat.handoff && line.id === teamChatAnchorId ? (
+              <GiiHandoffThread handoff={teamChat.handoff} />
+            ) : null}
           </div>
         ))}
-        {(!isPortfolioCros || crosView === 'chat') && teamChat.handoff ? (
+        {(!isPortfolioCros || crosView === 'chat') && teamChat.handoff && !teamChatAnchorId ? (
           <GiiHandoffThread handoff={teamChat.handoff} />
         ) : null}
         </div>

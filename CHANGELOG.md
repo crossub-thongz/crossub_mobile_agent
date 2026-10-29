@@ -10,6 +10,10 @@
 - Tapping a CROSSUB team reply alert opens Cros.
 - The morning briefing shows applications to approve, ends of lease waiting on you, and repairs to move on, from the server.
 
+### Fixed
+- Cros: the chat with a CROSSUB person sits under the handoff reply, not at the bottom below later answers.
+- Cros: a chat handed back says who pressed Done, or "The CROSSUB team" when the system closed it.
+
 ### Changed
 - Self-Manage: a CROSSUB open inspection is paid by card when you book it.
 - Self-Manage: the Invoice page lists the CROSSUB inspections you booked, with payments and refunds.
