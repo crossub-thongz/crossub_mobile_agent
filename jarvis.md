@@ -107,7 +107,7 @@ Decided (Chan, 28 Oct 2026): in app now, push later; on for everyone, `AGENT_BRI
 
 ### 2.3 Talk to a person
 
-The boss's "communication tool" (agreed on a call, 28 Oct 2026): when Cros cannot help, the agent reaches a real CROSSUB person in the same Cros chat, like WhatsApp or WeChat. It does not replace the Self-Manage Conversations page, which stays the agency's email inbox.
+The boss's "communication tool" (agreed on a call, 28 Oct 2026): when Cros cannot help, the agent reaches a real CROSSUB person in the same Cros chat, like WhatsApp or WeChat. It does not replace the Self-Manage Conversations page, the agency's inbox for tenants, owners and contractors (email, and app messages from 2.4).
 
 Decided (Chan, 28 Oct 2026): a shared CROSSUB team answers, and every handoff reaches Daniel Zhou; agent app only for now; outside the working day Cros says when the team is back.
 
@@ -117,6 +117,16 @@ Decided (Chan, 28 Oct 2026): a shared CROSSUB team answers, and every handoff re
 - [~] Delivery: the open chat checks for new replies every 5 seconds (app); on staging a staff reply showed within seconds. A staff reply is also pushed to the agent's phones and the alert opens Cros (eb4701659); not checked until the push keys are on staging. A websocket comes later if polling is not fast enough.
 - [~] While a person holds the chat, Cros stays quiet: the composer writes to the team (`POST /agent/gii/handoff/:threadId/messages`, which rings the holder's bell). Checked on staging 29 Oct. The chat returns to Cros when staff mark the thread Done, but the Message Center has no Done for it and the thread is not in the Inbox: staff cannot hand it back yet. To fix.
 - [~] Waiting time and out of hours: the chat shows how long the agent has waited since their first unanswered message, and outside 9 to 5 Sydney time on weekdays (`AI_ESCALATION_BUSINESS_DAY`) when the team is back. Public holidays are not counted.
+
+### 2.4 Conversations by app
+
+The rest of the boss's communication tool (agent and tenant, agent and owner, agent and contractor). Decided (Chan, 29 Oct 2026): Conversations sends app messages as well as email, like the admin web app; contractors stay on email. Phone is left out; a tap to call on the contact's number covers calls.
+
+- [x] Privacy fix first: the tenant and owner apps listed every thread on their property, so the tenant could read the agent's emails with the owner and the owner the agent's threads with the tenant. They now see a property's thread only when it names them, or they opened it; the tenant's bell follows the same rule (`crossub_web` dcc66217e, live on staging and production). Threads naming neither (such as the older Messages screen's agent to CROSSUB threads) drop out of those apps.
+- [x] App messages in Conversations: an Email / App message switch on the reply box when the thread names a tenant or owner, and in New conversation (tenant or owner only). Text only: no subject, formatting or attachments. Each message is tagged Email or App. An app reply on a thread with no tenant or owner is refused (`crossub_web` dcc66217e, contract 0.58.0; app e5af3cf).
+- [x] Staging check, agent side (29 Oct): New conversation as an app message to the tenant of 1008/19 Halifax Street, then an app reply on the same thread; both sent and tagged App (thread "[TEST] App message check"). Screenshots in `~/Downloads/crossub-agent-communication/`.
+- [ ] Staging check, tenant and owner side: the tenant app shows the test thread, the owner app does not.
+- [ ] Known gaps: no check that the tenant or owner uses the app (a message to someone without it waits unseen); a contractor still sees every message on a thread linked to their maintenance job; owners get no bell for new messages.
 
 ---
 
@@ -204,3 +214,4 @@ Review items: AI-016 (spoken English first).
 | 2026-10-28 | 2.2 | Scope fix 41c657582 pushed and live on staging; briefing and greeting rechecked |
 | 2026-10-29 | 2.2 | Decided: server works out the missing Needs My Action rows (not a full Tasks move). Built push alerts, needs-me briefing items, reminder sweep fixes (crossub_web eb4701659, contract 0.57.0; app 550c888); reminder sweep on after staging dry run (abddb6a5e) |
 | 2026-10-29 | 2 | Decided: test data may be created on staging only. Full Stage 2 test on staging with Confirm pressed; report Cros_Stage2_Test.pdf. Fails: complete a task (references and record on screen), staff cannot hand a Cros chat back. Main faults: Cros promises cards it has not made, screen references not accepted, emails reported sent when staging blocks them |
+| 2026-10-29 | 2.4 | Conversations by app: tenant and owner apps see only threads that name them; Email / App message switch in Conversations (crossub_web dcc66217e, contract 0.58.0; app e5af3cf); agent side passed on staging |
