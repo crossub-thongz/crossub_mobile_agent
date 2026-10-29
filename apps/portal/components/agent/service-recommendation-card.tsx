@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Building2, CalendarClock, ClipboardCheck, Clock3, Sparkles, X } from 'lucide-react';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { useAuth } from '@/components/providers/auth-provider';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { inspectionDetail, ROUTES } from '@/constants/routes';
 import {
@@ -15,14 +14,9 @@ import {
   SERVICE_RECOMMENDATION_URGENT_DAYS,
   type ServiceRecommendationOffer,
 } from '@/lib/service-recommendation';
-import { serviceRecommendationSamples } from '@/lib/service-recommendation-samples';
 import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'crossub.service-recommendation.v1';
-
-function bookHref(inspectionId: string): string {
-  return inspectionId.startsWith('sample-') ? ROUTES.INSPECTIONS : inspectionDetail(inspectionId);
-}
 
 type RecommendationMemory = {
   snoozeUntil?: string;
@@ -71,7 +65,6 @@ export function ServiceRecommendation({
   inspectionId?: string;
 }) {
   const { inspections, properties, agencies, needActionItems } = useAgentData();
-  const { user } = useAuth();
   const [memory, setMemory] = useState<Record<string, RecommendationMemory>>({});
   const [ready, setReady] = useState(false);
 
@@ -85,14 +78,10 @@ export function ServiceRecommendation({
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   }, []);
 
-  const offers = useMemo(() => {
-    const samples = serviceRecommendationSamples(user?.email, agencies);
-    return buildServiceRecommendations({
-      inspections: [...inspections, ...samples.inspections],
-      properties: [...properties, ...samples.properties],
-      agencies,
-    });
-  }, [agencies, inspections, properties, user?.email]);
+  const offers = useMemo(
+    () => buildServiceRecommendations({ inspections, properties, agencies }),
+    [agencies, inspections, properties],
+  );
   const shown = useMemo(
     () => visibleOffers(offers, memory, Date.now()),
     [memory, offers],
@@ -165,13 +154,13 @@ function AssistanceCard({
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {inspectionFirst ? (
           <>
-            <InspectionOnlyChoice href={bookHref(offer.id)} primary={emphasizeInspection || !emphasizeFull} />
+            <InspectionOnlyChoice href={inspectionDetail(offer.id)} primary={emphasizeInspection || !emphasizeFull} />
             <FullServiceChoice primary={emphasizeFull} />
           </>
         ) : (
           <>
             <FullServiceChoice primary />
-            <InspectionOnlyChoice href={bookHref(offer.id)} primary={false} />
+            <InspectionOnlyChoice href={inspectionDetail(offer.id)} primary={false} />
           </>
         )}
       </div>
