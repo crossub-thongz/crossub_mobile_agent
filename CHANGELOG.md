@@ -11,6 +11,7 @@
 - The morning briefing shows applications to approve, ends of lease waiting on you, and repairs to move on, from the server.
 
 ### Fixed
+- Invoice page payment note covers every CROSSUB service a Self-Manage agency chooses, not only inspections
 - Rent Review is greyed out on a vacant property with the reason, instead of failing after the form is filled.
 - A maintenance job's Scheduled date and Time window show the booked visit, including one recorded as arranged directly.
 - A job closed without photos or an invoice reads "Job closed", and steps that did not happen show "Not recorded" instead of a faint tick.

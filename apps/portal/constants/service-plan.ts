@@ -48,4 +48,4 @@ export const SELF_MANAGED_PRICING_COPY = {
  * chose for a job, prepaid at Inspection Only rates (Geng Xu 28 Oct, Daniel Zhou 29 Oct 2026).
  */
 export const SELF_MANAGED_BILLING_NOTE =
-  'Self-Manage is free. You pay only for the CROSSUB inspections you choose, by card when you book each one. A job no inspector accepts within 48 hours is refunded.';
+  'Self-Manage is free. You pay only for the CROSSUB services you choose, by card before each one starts. A CROSSUB inspection no inspector accepts within 48 hours is refunded.';
