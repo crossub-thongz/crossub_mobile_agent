@@ -121,8 +121,8 @@ function isAppParty(
 }
 
 /**
- * The tenant and owner a thread names: the people an app message reaches, since their apps list
- * a property's thread only when it names them. Empty when the thread has no property.
+ * The tenants a thread names: the people an app message reaches, since the tenant app lists a
+ * property's thread only when it names them. Empty when the thread has no property.
  */
 export function conversationAppParties(detail: AgentConversationDetail): ConversationParticipant[] {
   if (!detail.propertyId) return [];

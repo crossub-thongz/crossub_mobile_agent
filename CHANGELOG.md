@@ -4,7 +4,7 @@
 
 ### Added
 - Self-Manage: booking an ingoing, outgoing or in-person routine inspection asks who conducts it; Your inspector stays free, CROSSUB inspector is paid by card when you book, at Inspection Only rates.
-- Conversations replies and new conversations can go as an app message to the tenant or owner, as well as by email; each message shows whether it went by email or app.
+- Conversations replies and new conversations can go as an app message to the tenant, as well as by email; each message shows whether it went by email or app. Owners are written to by email only.
 - Alerts on this phone, under Settings > Notifications: the morning briefing and CROSSUB team replies in Cros arrive as phone notifications, even with the app closed; on iPhone once the app is added to the Home Screen.
 - Tapping a CROSSUB team reply alert opens Cros.
 - The morning briefing shows applications to approve, ends of lease waiting on you, and repairs to move on, from the server.
