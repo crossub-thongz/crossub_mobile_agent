@@ -8,6 +8,8 @@ import {
   MAINTENANCE_LANE,
   MAINTENANCE_STATUS_LANE,
   TENANCY_REVIEW_STATE_LANE,
+  VACATING_LANE,
+  VACATING_STAGE_LANE,
   type InspectionApiStatus,
   type InspectionLane,
   type LeasingLane,
@@ -15,13 +17,15 @@ import {
   type MaintenanceLane,
   type ModuleLaneDefinition,
   type TenancyReviewLane,
+  type VacatingLane,
+  type VacatingTerminationStage,
 } from '@/constants/module-workspace';
-import { INSPECTION_STATUS } from '@/constants/api-enums';
+import { INSPECTION_STATUS, VACATING_STATUS } from '@/constants/api-enums';
 import { leasingLifecycleProgress } from '@/lib/case-workflows/leasing';
 import { isDeletedInspection } from '@/lib/open-inspection-delete';
 import { isCompletedLeasingCycle } from '@/lib/property-leasing-history';
 import { isTenantRejectedMaintenance } from '@/lib/maintenance/tenant-rejected';
-import type { Inspection, LeasingCycle, MaintenanceRequest, RentReviewCase } from '@/lib/types';
+import type { Inspection, LeasingCycle, MaintenanceRequest, RentReviewCase, VacatingCase } from '@/lib/types';
 
 function hasKey<K extends string>(map: Record<K, unknown>, key: string | undefined): key is K {
   return key !== undefined && Object.prototype.hasOwnProperty.call(map, key);
@@ -93,6 +97,15 @@ export function tenancyReviewLane(review: RentReviewCase): TenancyReviewLane {
     return TENANCY_REVIEW_STATE_LANE[review.workflowState];
   }
   throw new Error(`Rent review ${review.id} has an unmapped workflow state "${review.workflowState}"`);
+}
+
+/** Self-Manage vacating lane. A completed case is Closed; an open case follows its pipeline stage. */
+export function vacatingLane(item: VacatingCase): VacatingLane {
+  if (item.apiStatus === VACATING_STATUS.COMPLETED) return VACATING_LANE.CLOSED;
+  if (hasKey<VacatingTerminationStage>(VACATING_STAGE_LANE, item.terminationStage)) {
+    return VACATING_STAGE_LANE[item.terminationStage];
+  }
+  return VACATING_LANE.NOTICE;
 }
 
 /** The lane definition for an id; throws on an id the lane list does not carry. */

@@ -12,6 +12,8 @@ import {
   LEASING_LIFECYCLE_STEP,
   MAINTENANCE_STATUS,
   RENT_REVIEW_WORKFLOW_STATE,
+  TERMINATION_STAGE,
+  VACATING_STATUS,
 } from '@/constants/api-enums';
 import { LEASING_MAIN_STATUS } from '@/constants/leasing-relet-decision';
 import type { Inspection } from '@/lib/types';
@@ -286,16 +288,61 @@ export const TENANCY_REVIEW_WORKSPACE_COPY: ModuleWorkspaceCopy = {
   detailPlaceholder: 'Select a review to work on it here.',
 };
 
-/** The Leasing page's two lists: lettings and tenancy reviews. */
+/** The Leasing page's lists: lettings, tenancy reviews, and vacating. */
 export const LEASING_PAGE_VIEW = {
   LETTINGS: 'lettings',
   TENANCY_REVIEWS: 'tenancy_reviews',
+  VACATING: 'vacating',
 } as const;
 export type LeasingPageView = (typeof LEASING_PAGE_VIEW)[keyof typeof LEASING_PAGE_VIEW];
 
 export const LEASING_PAGE_VIEW_LABEL: Record<LeasingPageView, string> = {
   [LEASING_PAGE_VIEW.LETTINGS]: 'Lettings',
   [LEASING_PAGE_VIEW.TENANCY_REVIEWS]: 'Tenancy reviews',
+  [LEASING_PAGE_VIEW.VACATING]: 'Vacating',
+};
+
+export const VACATING_LANE = {
+  NOTICE: 'notice',
+  INSPECTION: 'inspection',
+  MAKE_GOOD: 'make_good',
+  SETTLEMENT: 'settlement',
+  BOND: 'bond',
+  CLOSED: 'closed',
+} as const;
+export type VacatingLane = (typeof VACATING_LANE)[keyof typeof VACATING_LANE];
+
+export const VACATING_LANES: readonly ModuleLaneDefinition<VacatingLane>[] = [
+  { id: VACATING_LANE.NOTICE, label: 'Notice', tone: MODULE_LANE_TONE.ATTENTION },
+  { id: VACATING_LANE.INSPECTION, label: 'Inspection', tone: MODULE_LANE_TONE.ACTIVE },
+  { id: VACATING_LANE.MAKE_GOOD, label: 'Make good', tone: MODULE_LANE_TONE.WAITING },
+  { id: VACATING_LANE.SETTLEMENT, label: 'Settlement', tone: MODULE_LANE_TONE.ATTENTION },
+  { id: VACATING_LANE.BOND, label: 'Bond', tone: MODULE_LANE_TONE.ACTIVE },
+  { id: VACATING_LANE.CLOSED, label: 'Closed', tone: MODULE_LANE_TONE.DONE },
+];
+
+export type VacatingApiStatus = (typeof VACATING_STATUS)[keyof typeof VACATING_STATUS];
+export type VacatingTerminationStage = (typeof TERMINATION_STAGE)[keyof typeof TERMINATION_STAGE];
+
+/** Pipeline position for an open vacating case. A completed status is Closed regardless of stage. */
+export const VACATING_STAGE_LANE: Record<VacatingTerminationStage, VacatingLane> = {
+  [TERMINATION_STAGE.VACATE]: VACATING_LANE.NOTICE,
+  [TERMINATION_STAGE.OUTGOING_INSPECTION]: VACATING_LANE.INSPECTION,
+  [TERMINATION_STAGE.MAKE_GOOD]: VACATING_LANE.MAKE_GOOD,
+  [TERMINATION_STAGE.SETTLEMENT]: VACATING_LANE.SETTLEMENT,
+  [TERMINATION_STAGE.AGENT_APPROVAL]: VACATING_LANE.SETTLEMENT,
+  [TERMINATION_STAGE.BOND]: VACATING_LANE.BOND,
+  [TERMINATION_STAGE.CLOSURE]: VACATING_LANE.CLOSED,
+};
+
+export const VACATING_WORKSPACE_COPY: ModuleWorkspaceCopy = {
+  title: 'Vacating',
+  description: 'End-of-lease cases from the vacate notice through bond and closure.',
+  searchPlaceholder: 'Search address, reason or stage…',
+  emptyTitle: 'No vacating cases yet',
+  emptyDescription: 'Cases you start from a property appear here. Open ones also stay on Tasks.',
+  noMatchTitle: 'No vacating cases match',
+  detailPlaceholder: 'Select a case to work on it here.',
 };
 
 export const TENANCY_REVIEW_PANE_COPY = {
@@ -345,4 +392,7 @@ export const MODULE_FIELD_LABELS = {
   report: 'Report',
   tenant: 'Tenant',
   reviewDue: 'Review due',
+  vacateDate: 'Vacate date',
+  bond: 'Bond',
+  reason: 'Reason',
 } as const;

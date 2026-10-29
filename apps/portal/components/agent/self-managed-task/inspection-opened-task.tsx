@@ -13,6 +13,7 @@ import {
   TaskStatusPill,
 } from '@/components/agent/self-managed-task/admin-task-chrome';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { ServiceRecommendation } from '@/components/agent/service-recommendation-card';
 import { Button } from '@/components/ui/button';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
 import { ROUTES, propertyDetail } from '@/constants/routes';
@@ -190,6 +191,9 @@ export function InspectionOpenedTask({
           ) : null}
         </div>
       </header>
+      <div className="px-6 pt-4 lg:px-8">
+        <ServiceRecommendation surface="task" inspectionId={inspection.id} />
+      </div>
 
       <AdminTabStrip tabs={tabs} active={tab} onChange={setTab} />
 

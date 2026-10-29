@@ -12,6 +12,7 @@ import {
   Wrench,
 } from 'lucide-react';
 
+import { ServiceRecommendation } from '@/components/agent/service-recommendation-card';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
@@ -404,6 +405,8 @@ export function CrosPortfolioBody({
             ))}
           </div>
         </div>
+
+        <ServiceRecommendation surface="cros" />
 
         {briefing ? <section>{briefing}</section> : null}
 

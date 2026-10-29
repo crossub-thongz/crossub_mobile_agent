@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Plus } from 'lucide-react';
 
 import { InspectionsModule } from '@/components/agent/module-workspace/inspections-module';
+import { ServiceRecommendation } from '@/components/agent/service-recommendation-card';
 import { TasksFilterRedirect } from '@/components/agent/module-workspace/tasks-filter-redirect';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,10 @@ export default function InspectionsPage() {
         </Button>
       }
     >
-      <InspectionsModule />
+      <div className="space-y-4">
+        <ServiceRecommendation surface="inspections" />
+        <InspectionsModule />
+      </div>
     </AgentShell>
   );
 }

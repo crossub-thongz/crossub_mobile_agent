@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import { InspectionOnlyPlanBanner } from '@/components/agent/inspection-only-plan-banner';
+import { ServiceRecommendation } from '@/components/agent/service-recommendation-card';
 import { CrosAssistantLogo } from '@/components/brand/cros-assistant-logo';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -244,6 +245,8 @@ export function V2Dashboard() {
           Here&apos;s what&apos;s happening with your portfolio today.
         </p>
       </header>
+
+      <ServiceRecommendation surface="home" />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(16rem,0.85fr)_minmax(0,1.5fr)]">
         <article className="v2-dashboard__card p-4 sm:p-5">
