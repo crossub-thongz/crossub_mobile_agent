@@ -9,6 +9,7 @@ import {
   InvoiceDecisionStep,
   PaymentStep,
 } from '@/components/agent/maintenance-self-managed/invoice-completion-steps';
+import { CrossubArrangeStep } from '@/components/agent/maintenance-self-managed/crossub-arrange-step';
 import { EscalationStep } from '@/components/agent/maintenance-self-managed/escalation-step';
 import { InviteTradiesStep } from '@/components/agent/maintenance-self-managed/invite-tradies-step';
 import { InvitedTradiesStep } from '@/components/agent/maintenance-self-managed/invited-tradies-step';
@@ -24,11 +25,13 @@ import {
   SplitJobStep,
 } from '@/components/agent/maintenance-self-managed/split-combine-step';
 import { ResponsibilityStep } from '@/components/agent/maintenance-self-managed/responsibility-step';
+import { StepCard } from '@/components/agent/maintenance-self-managed/step-card';
 import { UrgentDecisionStep } from '@/components/agent/maintenance-self-managed/urgent-decision-step';
 import { WorkOrderStep } from '@/components/agent/maintenance-self-managed/work-order-step';
 import { Button } from '@/components/ui/button';
 import { SELF_MANAGED_MAINTENANCE_COPY as COPY } from '@/constants/self-managed-maintenance';
 import { useSelfManagedMaintenance } from '@/hooks/use-self-managed-maintenance';
+import { crossubPaysSupplier } from '@/lib/maintenance/crossub-maintenance';
 import { selfManagedMaintenanceSteps } from '@/lib/maintenance/self-managed-steps';
 import { cn, formatCurrency } from '@/lib/utils';
 
@@ -155,7 +158,13 @@ export function SelfManagedMaintenancePanel({
         <DisputedInvoiceStep requestId={requestId} match={match} busy={busy} run={run} />
       ) : null}
       {showPayment && match ? (
-        <PaymentStep requestId={requestId} match={match} busy={busy} run={run} />
+        crossubPaysSupplier(detail.quotes) ? (
+          <StepCard title={COPY.paymentTitle}>
+            <p className="text-muted-foreground text-xs">{COPY.crossubSupplierPaid}</p>
+          </StepCard>
+        ) : (
+          <PaymentStep requestId={requestId} match={match} busy={busy} run={run} />
+        )
       ) : null}
       {showCompletion ? <CompletionStep detail={detail} busy={busy} run={run} /> : null}
       {showSchedule ? (
@@ -172,6 +181,14 @@ export function SelfManagedMaintenancePanel({
       {showJobDetails ? <JobDetailsStep detail={detail} busy={busy} run={run} /> : null}
       {showTriage ? (
         <IssueTriageStep requestId={requestId} issues={steps.issues} busy={busy} run={run} />
+      ) : null}
+      {showQuotes && detail.crossubMaintenance ? (
+        <CrossubArrangeStep
+          requestId={requestId}
+          offer={detail.crossubMaintenance}
+          busy={busy}
+          run={run}
+        />
       ) : null}
       {showQuotes ? (
         <InviteTradiesStep

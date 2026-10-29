@@ -1,8 +1,13 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import { FieldLabel, StepCard } from '@/components/agent/maintenance-self-managed/step-card';
+import {
+  StripePaymentDialog,
+  type StripePaymentDialogState,
+} from '@/components/billing/stripe-payment-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,11 +27,15 @@ import {
   sendMaintenanceQuoteToOwner,
   type AgentMaintenanceDetail,
 } from '@/lib/crossub-api/maintenance-client';
+import { prepareCrossubMaintenancePayment } from '@/lib/billing/crossub-maintenance-payment';
+import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-payment';
+import { crossubFeeLabel, crossubPayableAud } from '@/lib/maintenance/crossub-maintenance';
 import {
   awaitingOwnerQuoteApproval,
   quoteDecisionCopiesOwner,
 } from '@/lib/maintenance/self-managed-steps';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { isEmailAddress } from '@/utils/email-recipients';
 
 /** Which inline form is open under a quote, if any. */
@@ -42,6 +51,9 @@ type QuoteForm = (typeof QUOTE_FORM)[keyof typeof QUOTE_FORM];
  * owner signs off on their own repairs, a way to email one quote to the owner and record their
  * answer. The owner replies to the agency (there is no approve link); "Owner approved" approves
  * the quote, which issues the work order. Decisions copy the owner above the repair limit.
+ *
+ * A CROSSUB quote is paid to CROSSUB by card first (the quote plus CROSSUB's fee), and approved
+ * with that paid charge; CROSSUB then pays the tradie.
  */
 export function QuoteCompareStep({
   detail,
@@ -56,8 +68,14 @@ export function QuoteCompareStep({
   const [open, setOpen] = useState<{ quoteId: string; form: QuoteForm } | null>(null);
   const [text, setText] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
+  const [paying, setPaying] = useState(false);
+  const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
+  const pendingApproval = useRef<((chargeId: string) => Promise<unknown>) | null>(null);
   const submitted = detail.quotes.filter((q) => q.status === MAINTENANCE_QUOTE_STATUS.SUBMITTED);
   if (submitted.length === 0) return null;
+
+  const offer = detail.crossubMaintenance;
+  const blocked = busy || paying;
 
   const onFile = detail.owner.email;
   const typedOwnerEmail = ownerEmail.trim();
@@ -104,18 +122,74 @@ export function QuoteCompareStep({
   };
 
   /** Approval carries no note; a decline carries what the owner said, as its reason. */
-  const ownerReply = async (quotationId: string, approved: boolean) => {
+  const ownerReply = async (quotationId: string, approved: boolean, platformChargeId?: string) => {
     const note = approved ? '' : text.trim();
     const ok = await run(
       () =>
         recordMaintenanceOwnerQuoteReply(detail.id, quotationId, {
           outcome: approved ? OWNER_QUOTE_OUTCOME.APPROVED : OWNER_QUOTE_OUTCOME.DECLINED,
           ...(note ? { note } : {}),
+          ...(platformChargeId ? { platformChargeId } : {}),
         }),
       approved ? COPY.ownerApproved : COPY.ownerDeclined,
     );
     if (ok) close();
   };
+
+  /** Pay CROSSUB for a CROSSUB quote, then `approve` with the paid charge. */
+  const withCrossubPayment = async (
+    quotationId: string,
+    approve: (chargeId: string) => Promise<unknown>,
+  ) => {
+    setPaying(true);
+    try {
+      const prepared = await prepareCrossubMaintenancePayment(detail.id, quotationId);
+      if (prepared.status === 'needs_card') {
+        pendingApproval.current = approve;
+        setPaymentDialog(prepared.dialog);
+        return;
+      }
+      if (!prepared.chargeId) throw new Error(COPY.loadFailed);
+      await approve(prepared.chargeId);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const onPaid = async () => {
+    const approve = pendingApproval.current;
+    const chargeId = paymentDialog?.chargeId;
+    pendingApproval.current = null;
+    setPaymentDialog(null);
+    if (!approve || !chargeId) return;
+    setPaying(true);
+    try {
+      await finalizeBillingChargePayment(chargeId);
+      toast.success(COPY.crossubPaid);
+      await approve(chargeId);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const approve = (quotationId: string, crossub: boolean) =>
+    crossub
+      ? withCrossubPayment(quotationId, (chargeId) =>
+          run(
+            thenDetail(() => approveMaintenanceQuotation(detail.id, quotationId, chargeId)),
+            COPY.quoteApproved,
+          ),
+        )
+      : run(thenDetail(() => approveMaintenanceQuotation(detail.id, quotationId)), COPY.quoteApproved);
+
+  const ownerApprove = (quotationId: string, crossub: boolean) =>
+    crossub
+      ? withCrossubPayment(quotationId, (chargeId) => ownerReply(quotationId, true, chargeId))
+      : ownerReply(quotationId, true);
 
   return (
     <StepCard title={COPY.compareTitle} hint={COPY.compareHint}>
@@ -123,6 +197,9 @@ export function QuoteCompareStep({
         {submitted.map((q) => {
           const awaiting = awaitingOwnerQuoteApproval(detail, q.id);
           const form = open?.quoteId === q.id ? open.form : null;
+          const crossub = Boolean(offer && q.crossubArranged);
+          const payable =
+            offer && q.total !== null ? formatCurrency(crossubPayableAud(q.total, offer)) : null;
           return (
             <li key={q.id} className="space-y-1.5 py-2 first:pt-0 last:pb-0">
               <div className="flex items-baseline justify-between gap-2">
@@ -134,7 +211,17 @@ export function QuoteCompareStep({
                 </p>
               </div>
               {q.scope ? <p className="text-muted-foreground line-clamp-2 text-xs">{q.scope}</p> : null}
+              {crossub && offer ? (
+                <p className="text-muted-foreground text-xs">
+                  {COPY.crossubPayNote(crossubFeeLabel(offer))}
+                </p>
+              ) : null}
               <div className="flex flex-wrap items-center gap-1.5">
+                {crossub ? (
+                  <span className="border-primary/35 bg-primary/10 text-primary rounded-full border px-2 py-0.5 text-[11px] font-medium">
+                    {COPY.crossubBadge}
+                  </span>
+                ) : null}
                 {q.isLowest ? (
                   <span className="rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
                     {COPY.lowest}
@@ -149,21 +236,16 @@ export function QuoteCompareStep({
                 <Button
                   size="sm"
                   className="h-7 px-2.5 text-xs"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(
-                      thenDetail(() => approveMaintenanceQuotation(detail.id, q.id)),
-                      COPY.quoteApproved,
-                    )
-                  }
+                  disabled={blocked || (crossub && payable === null)}
+                  onClick={() => void approve(q.id, crossub)}
                 >
-                  {COPY.approve}
+                  {crossub && payable ? COPY.crossubPayApprove(payable) : COPY.approve}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   className="h-7 px-2.5 text-xs"
-                  disabled={busy}
+                  disabled={blocked}
                   onClick={() => toggle(q.id, QUOTE_FORM.DECLINE)}
                 >
                   {COPY.decline}
@@ -172,7 +254,7 @@ export function QuoteCompareStep({
                   size="sm"
                   variant="outline"
                   className="h-7 px-2.5 text-xs"
-                  disabled={busy}
+                  disabled={blocked}
                   onClick={() => toggle(q.id, QUOTE_FORM.SEND_TO_OWNER)}
                 >
                   {awaiting ? COPY.ownerResent : COPY.sendToOwner}
@@ -186,16 +268,18 @@ export function QuoteCompareStep({
                     <Button
                       size="sm"
                       className="h-7 px-2.5 text-xs"
-                      disabled={busy}
-                      onClick={() => void ownerReply(q.id, true)}
+                      disabled={blocked}
+                      onClick={() => void ownerApprove(q.id, crossub)}
                     >
-                      {COPY.ownerApprovedAction}
+                      {crossub && payable
+                        ? COPY.crossubOwnerPayApprove(payable)
+                        : COPY.ownerApprovedAction}
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       className="h-7 px-2.5 text-xs"
-                      disabled={busy}
+                      disabled={blocked}
                       onClick={() => toggle(q.id, QUOTE_FORM.OWNER_DECLINED)}
                     >
                       {COPY.ownerDeclinedAction}
@@ -210,14 +294,14 @@ export function QuoteCompareStep({
                     aria-label={COPY.declineReason}
                     placeholder={COPY.declineReason}
                     value={text}
-                    disabled={busy}
+                    disabled={blocked}
                     onChange={(e) => setText(e.target.value)}
                   />
                   <Button
                     size="sm"
                     variant="outline"
                     className="h-9"
-                    disabled={busy || !text.trim()}
+                    disabled={blocked || !text.trim()}
                     onClick={() => void decline(q.id)}
                   >
                     {COPY.declineConfirm}
@@ -232,14 +316,14 @@ export function QuoteCompareStep({
                     placeholder={COPY.ownerDeclineNote}
                     value={text}
                     maxLength={LIMITS.ownerNoteMax}
-                    disabled={busy}
+                    disabled={blocked}
                     onChange={(e) => setText(e.target.value)}
                   />
                   <Button
                     size="sm"
                     variant="outline"
                     className="h-9"
-                    disabled={busy}
+                    disabled={blocked}
                     onClick={() => void ownerReply(q.id, false)}
                   >
                     {COPY.ownerDeclineConfirm}
@@ -261,7 +345,7 @@ export function QuoteCompareStep({
                         id={`${id}-${q.id}-owner-email`}
                         type="email"
                         value={ownerEmail}
-                        disabled={busy || !detail.propertyId}
+                        disabled={blocked || !detail.propertyId}
                         onChange={(e) => setOwnerEmail(e.target.value)}
                       />
                       <p className="text-muted-foreground mt-1 text-[11px]">
@@ -279,19 +363,19 @@ export function QuoteCompareStep({
                       inputKind="message"
                       maxLength={LIMITS.ownerMessageMax}
                       value={text}
-                      disabled={busy}
+                      disabled={blocked}
                       onChange={(e) => setText(e.target.value)}
                     />
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
-                      disabled={busy || !ownerEmailReady}
+                      disabled={blocked || !ownerEmailReady}
                       onClick={() => void sendToOwner(q.id)}
                     >
                       {COPY.sendToOwnerConfirm}
                     </Button>
-                    <Button size="sm" variant="ghost" disabled={busy} onClick={close}>
+                    <Button size="sm" variant="ghost" disabled={blocked} onClick={close}>
                       {COPY.cancel}
                     </Button>
                   </div>
@@ -301,6 +385,16 @@ export function QuoteCompareStep({
           );
         })}
       </ul>
+      <StripePaymentDialog
+        state={paymentDialog}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            pendingApproval.current = null;
+            setPaymentDialog(null);
+          }
+        }}
+        onSuccess={() => void onPaid()}
+      />
     </StepCard>
   );
 }

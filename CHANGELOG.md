@@ -3,6 +3,7 @@
 ## 2026-10-29
 
 ### Added
+- Self-Manage maintenance: a "Let CROSSUB arrange this?" card asks CROSSUB's partner Brightness AU to quote; their quote is marked CROSSUB and approved by paying CROSSUB by card (quote plus CROSSUB fee, none for now); contract 0.63.0, and CROSSUB pays the tradie.
 - Self-Manage: booking an ingoing, outgoing or in-person routine inspection asks who conducts it; Your inspector stays free, CROSSUB inspector is paid by card when you book, at Inspection Only rates.
 - Conversations replies and new conversations can go as an app message to the tenant, as well as by email; each message shows whether it went by email or app. Owners are written to by email only.
 - Alerts on this phone, under Settings > Notifications: the morning briefing and CROSSUB team replies in Cros arrive as phone notifications, even with the app closed; on iPhone once the app is added to the Home Screen.

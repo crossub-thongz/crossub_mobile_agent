@@ -359,6 +359,26 @@ export const SELF_MANAGED_MAINTENANCE_COPY = {
   combineDone: 'Jobs combined',
   alreadyQuoted: 'already out for quotes',
 
+  crossubTitle: 'Let CROSSUB arrange this?',
+  crossubHint: (partner: string) =>
+    `CROSSUB sends ${partner} to quote. If you approve, you pay CROSSUB by card and CROSSUB pays ${partner}. Your own tradies stay free.`,
+  crossubFee: (fee: string | null) =>
+    fee === null ? 'No CROSSUB fee on top of the quote.' : `CROSSUB fee ${fee} inc GST on top of the quote.`,
+  crossubAsk: 'Get a CROSSUB quote',
+  crossubAsked: (partner: string) =>
+    `${partner} has been asked to quote. Their quote appears under Compare quotes.`,
+  crossubRequested: 'CROSSUB quote requested',
+  crossubBadge: 'CROSSUB',
+  crossubPayApprove: (amount: string) => `Pay ${amount} & approve`,
+  crossubOwnerPayApprove: (amount: string) => `Owner approved: pay ${amount} & approve`,
+  crossubPayNote: (fee: string | null) =>
+    fee === null
+      ? 'Paid to CROSSUB by card. CROSSUB pays the tradie.'
+      : `Includes CROSSUB fee ${fee}. Paid to CROSSUB by card; CROSSUB pays the tradie.`,
+  crossubPaymentTitle: 'CROSSUB maintenance',
+  crossubPaid: 'Paid. Approving the quote',
+  crossubSupplierPaid: 'CROSSUB pays the tradie for this job. Nothing to record here.',
+
   inviteTitle: 'Ask tradies to quote',
   inviteHint: 'Each tradie you tick gets the quote request by email.',
   invited: 'Already invited',

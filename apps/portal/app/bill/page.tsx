@@ -81,6 +81,7 @@ const SERVICE_LABEL: Record<string, string> = {
   tribunal: 'Tribunal',
   service_fee: 'Management fee',
   letting_fee: 'Letting fee',
+  maintenance_arrangement: 'CROSSUB maintenance',
 };
 
 const STATUS_TONE: Record<string, string> = {

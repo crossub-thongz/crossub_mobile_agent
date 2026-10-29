@@ -714,20 +714,40 @@ export async function preparePlatformCharge(
     return { chargeId: charge.id };
   }
 
+  return startPrepaidChargePayment(
+    charge,
+    SERVICE_LABEL[input.serviceType] ?? 'Platform service',
+    summary,
+  );
+}
+
+/**
+ * Start card payment on a prepaid charge already raised — by the quote above, or by a service's
+ * own route (a CROSSUB maintenance quote). A paid charge needs no card.
+ */
+export async function startPrepaidChargePayment(
+  charge: Pick<
+    AgentBillingCharge,
+    'id' | 'status' | 'amount' | 'description' | 'calculationDetail' | 'calculationSummary'
+  >,
+  title: string,
+  summary?: AgentBillingSummary,
+): Promise<PlatformChargePrepareResult> {
   if (charge.status === 'paid') return { chargeId: charge.id };
 
   const paid = await payAgentBillingCharge(charge.id, { devConfirm: false });
   if (paid.paymentComplete) return { chargeId: paid.charge.id };
 
   if (paid.clientSecret) {
-    const defaultPaymentMethod = summary.defaultPaymentMethod ?? null;
+    const defaultPaymentMethod =
+      (summary ?? (await fetchAgentBillingSummary())).defaultPaymentMethod ?? null;
     return {
       chargeId: charge.id,
       paymentRequired: {
         chargeId: charge.id,
         clientSecret: paid.clientSecret,
         amountAud: charge.amount,
-        title: SERVICE_LABEL[input.serviceType] ?? 'Platform service',
+        title,
         description: charge.description,
         calculationDetail: charge.calculationDetail,
         calculationSummary: charge.calculationSummary,

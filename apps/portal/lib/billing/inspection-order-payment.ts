@@ -1,6 +1,7 @@
 import {
   preparePlatformCharge,
   type AgentBillingQuoteInput,
+  type PlatformChargePrepareResult,
 } from '@/lib/crossub-api/agent-billing-client';
 import { getStripePublishableKey } from '@/lib/stripe-client';
 import type { StripePaymentDialogState } from '@/components/billing/stripe-payment-dialog';
@@ -33,7 +34,13 @@ export async function prepareInspectionOrderPayment(
   serviceType: InspectionOrderServiceType,
   propertyId: string,
 ): Promise<InspectionOrderPaymentResult> {
-  const prepared = await preparePlatformCharge({ serviceType, propertyId });
+  return toOrderPaymentResult(await preparePlatformCharge({ serviceType, propertyId }));
+}
+
+/** A prepared charge as the next step for the order: go ahead, or take the card first. */
+export function toOrderPaymentResult(
+  prepared: PlatformChargePrepareResult,
+): InspectionOrderPaymentResult {
   if (prepared.paymentRequired) {
     if (!getStripePublishableKey()) {
       throw new Error('Card payments are not configured on this environment.');

@@ -441,6 +441,30 @@ export async function recordMaintenanceOwnerQuoteReply(
   return unwrapAgentMaintenance(result, "Couldn't record the owner's answer");
 }
 
+/** Ask CROSSUB to arrange the job: its partner is invited to quote (Self-Manage). */
+export async function requestCrossubMaintenanceQuote(
+  requestId: string,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/crossub-quote', {
+    params: { path: { requestId } },
+  });
+  return unwrapAgentMaintenance(result, "Couldn't ask CROSSUB for a quote");
+}
+
+export type CrossubMaintenanceCharge = components['schemas']['AgentBillingChargeDto'];
+
+/** The prepaid charge for approving a CROSSUB quote: the quote plus CROSSUB's fee. Reused on retry. */
+export async function quoteCrossubMaintenanceCharge(
+  requestId: string,
+  quotationId: string,
+): Promise<CrossubMaintenanceCharge> {
+  const result = await crossub.POST(
+    '/agent/maintenance/{requestId}/quotes/{quotationId}/crossub-charge',
+    { params: { path: { requestId, quotationId } } },
+  );
+  return unwrapAgentMaintenance(result, "Couldn't price the CROSSUB quote");
+}
+
 /** Correct the job's issue type, description, urgency or tenant contact. */
 export async function updateMaintenanceJob(
   requestId: string,
@@ -673,10 +697,14 @@ export async function inviteMaintenanceContractorsForRfq(
 export async function approveMaintenanceQuotation(
   requestId: string,
   quotationId: string,
+  platformChargeId?: string,
 ): Promise<AgentMaintenanceCard> {
   const result = await crossub.POST(
     '/agent/maintenance/{requestId}/quotes/{quotationId}/approve',
-    { params: { path: { requestId, quotationId } } },
+    {
+      params: { path: { requestId, quotationId } },
+      body: platformChargeId ? { platformChargeId } : {},
+    },
   );
   return unwrapAgentMaintenance(result, 'Failed to approve the quote');
 }
