@@ -6,6 +6,7 @@ import { ChevronRight, Moon, Sun } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { PlanSettingsCard } from '@/components/agent/plan-settings-card';
+import { PushAlertsSetting } from '@/components/agent/push-alerts-setting';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentPageGuides } from '@/components/providers/agent-page-guide-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -82,6 +83,7 @@ export default function SettingsPage() {
           <div className="flex items-center gap-2 px-1">
             <h2 className="text-sm font-semibold">Notifications</h2>
           </div>
+          <PushAlertsSetting />
           {toggles.map(({ key, label, description }) => (
             <div
               key={key}

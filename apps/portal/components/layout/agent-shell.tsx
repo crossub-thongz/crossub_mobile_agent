@@ -31,6 +31,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
+import { useCrosOpenParam } from '@/hooks/use-cros-open-param';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { moreNavFooterForUi, moreNavForUi, primaryNavForUi } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
@@ -113,6 +114,7 @@ export function AgentShell({
   const enterCrosWorkspace = useShellDockStore((state) => state.enterCrosWorkspace);
   const exitCrosWorkspace = useShellDockStore((state) => state.exitCrosWorkspace);
   const crosOpen = activePanel === 'gii';
+  useCrosOpenParam();
   const crosOverlay = isV2 && !showPropertyShellPreview;
   const [overlayFull, setOverlayFull] = useState(false);
   const [crosLayerReady, setCrosLayerReady] = useState(false);
