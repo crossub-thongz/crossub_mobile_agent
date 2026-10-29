@@ -41,12 +41,12 @@ import {
 } from '@/lib/crossub-api/agent-conversation-client';
 import { toPlainTextBody } from '@/lib/message-body';
 
-/** Recipients an app message can go to: the tenant and owner, never a contractor. */
+/** Recipients an app message can go to: the tenant only. */
 const APP_RECIPIENT_OPTIONS = CONVERSATION_RECIPIENT_OPTIONS.filter((o) => CONVERSATION_APP_RECIPIENTS.has(o.id));
 
 /**
  * Compose a new thread on one Self-Manage property: an email from the agency address to a
- * tenant, owner or contractor, or a message in the tenant's or owner's app.
+ * tenant, owner or contractor, or a message in the tenant's app.
  */
 export function NewConversationDialog({
   open,
