@@ -33,7 +33,7 @@ export const CONVERSATION_MESSAGE_DIRECTION = {
 
 export type ConversationReplyChannel = AgentConversationReplyInput['channel'];
 
-/** How a message goes: email from the agency address, or into the tenant / owner app. */
+/** How a message goes: email from the agency address, or into the tenant app. */
 export const CONVERSATION_REPLY_CHANNEL = {
   EMAIL: 'email',
   APP: 'app',
@@ -64,15 +64,16 @@ export const CONVERSATION_RECIPIENT_OPTIONS: readonly { id: ConversationRecipien
   { id: CONVERSATION_RECIPIENT.CONTRACTOR, label: 'Contractor' },
 ];
 
-/** Parties with a CROSSUB app the agency's threads show in. Contractors are written to by email. */
+/**
+ * Parties an app message can go to: the tenant only. CROSSUB never messages an owner, and
+ * contractors are written to by email.
+ */
 export const CONVERSATION_APP_RECIPIENTS: ReadonlySet<ConversationRecipient> = new Set([
   CONVERSATION_RECIPIENT.TENANT,
-  CONVERSATION_RECIPIENT.LANDLORD,
 ]);
 
 export const CONVERSATION_APP_NAME: Readonly<Record<string, string>> = {
   [CONVERSATION_RECIPIENT.TENANT]: 'tenant app',
-  [CONVERSATION_RECIPIENT.LANDLORD]: 'owner app',
 };
 
 /** Recipients the server needs a typed address for; tenant and owner fall back to the property record. */
@@ -224,7 +225,7 @@ export const CONVERSATIONS_COPY = {
   channelLabel: 'Send as',
   appHint: 'Shows in their CROSSUB app. Text only: no subject, formatting or attachments.',
   appSent: (names: string) => `Sent to ${names}`,
-  composeAppHint: 'Shows in their CROSSUB app. A contractor is written to by email.',
+  composeAppHint: 'Shows in the tenant’s CROSSUB app. Owners and contractors are written to by email.',
   replyPlaceholder: 'Write your message…',
   replyBodyLabel: 'Message',
   replySubjectLabel: 'Subject',
@@ -287,7 +288,7 @@ export const CONVERSATIONS_COPY = {
   propertyFiled: 'Filed under the property',
   decisionsHeading: 'Owner decisions',
   composeTitle: 'New conversation',
-  composeDescription: 'Email a tenant, owner or contractor from your agency address, or message a tenant or owner in their app.',
+  composeDescription: 'Email a tenant, owner or contractor from your agency address, or message a tenant in their app.',
   composePropertyLabel: 'Property',
   composePropertyPlaceholder: 'Choose a property…',
   composeRecipientLabel: 'To',

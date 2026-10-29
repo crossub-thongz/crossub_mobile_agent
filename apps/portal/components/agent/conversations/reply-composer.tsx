@@ -92,7 +92,7 @@ function initialState(detail: AgentConversationDetail) {
  * The reply composer, in step with the admin portal's Conversations composer (Daniel, 21 Oct
  * 2026): To / Cc / Bcc as address chips, subject, a formatting editor, attachments, templates, a
  * Cros draft, the signature line, Save draft, and Send or Send and resolve. On a thread that
- * names the tenant or owner it can also send an app message: text only, into their app.
+ * names the tenant it can also send an app message: text only, into the tenant app.
  */
 export function ReplyComposer({
   detail,
