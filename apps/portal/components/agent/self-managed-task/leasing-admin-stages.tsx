@@ -24,6 +24,7 @@ import {
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useOpenInspectionEmailSources } from '@/hooks/use-open-inspection-email-sources';
+import { LEASING_MAIN_STATUS } from '@/constants/leasing-relet-decision';
 import { LEASING_KEY_CUSTODY_LABEL, LEASING_ITEM_STATUS, LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
 import { deriveStepStatus, getApprovedApplications } from '@/lib/leasing/lifecycle';
 import { enrichLeasingEmailRecords } from '@/lib/leasing/agent-workflow-email';
@@ -108,9 +109,12 @@ export function SelfManagedLeasingStages({
   leasingCycleId?: string;
   onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
-  const current = currentCard(detail);
+  const held =
+    detail.mainStatus === LEASING_MAIN_STATUS.AWAITING_CONFIRMATION ||
+    detail.mainStatus === LEASING_MAIN_STATUS.PREPARATION;
+  const current = held ? null : currentCard(detail);
   const [tab, setTab] = useState<TabId>('overview');
-  const [expanded, setExpanded] = useState<CardId | null>(current);
+  const [expanded, setExpanded] = useState<CardId | null>(held ? null : current);
   const [setupOpen, setSetupOpen] = useState(false);
   const approved = getApprovedApplications(detail);
   const keysStarted = Boolean(detail.onboarding.keyCollection.time) || done(detail.onboarding.keyCollection.status);
@@ -182,7 +186,7 @@ function StageCard({
 }: {
   id: CardId;
   detail: LeasingPropertyDetail;
-  current: CardId;
+  current: CardId | null;
   expanded: boolean;
   onToggle: () => void;
   leasingCycleId?: string;
@@ -301,7 +305,7 @@ function StageCard({
   );
 }
 
-function cardState(id: CardId, detail: LeasingPropertyDetail, current: CardId): 'done' | 'in_progress' | 'not_started' {
+function cardState(id: CardId, detail: LeasingPropertyDetail, current: CardId | null): 'done' | 'in_progress' | 'not_started' {
   if (id === CARD.KEYS && done(detail.onboarding.keyCollection.status)) return 'done';
   if (id === CARD.SETUP && done(deriveStepStatus(detail, LEASING_LIFECYCLE_STEP.ONBOARDING))) return 'done';
   if (id === CARD.OPEN) {
@@ -317,6 +321,7 @@ function cardState(id: CardId, detail: LeasingPropertyDetail, current: CardId): 
   ) {
     return 'done';
   }
+  if (current == null) return 'not_started';
   if (id === current) return 'in_progress';
   return ORDER.indexOf(id) < ORDER.indexOf(current) ? 'done' : 'not_started';
 }

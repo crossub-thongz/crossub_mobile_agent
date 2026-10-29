@@ -213,11 +213,19 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
         address={address}
         locality={[property?.suburb, property?.state, property?.postcode].filter(Boolean).join(', ')}
         reference={taskRef}
-        statusLabel={closed ? (isInspectionCancelled(inspection) ? 'Cancelled' : 'Completed') : banner.statusLabel}
-        statusTone={closed ? 'done' : banner.needsAction ? 'attention' : 'active'}
+        statusLabel={
+          closed
+            ? isInspectionCancelled(inspection)
+              ? 'Cancelled'
+              : 'Completed'
+            : inspection.status || 'Draft'
+        }
+        statusTone={
+          isInspectionCancelled(inspection) ? 'danger' : closed ? 'done' : inspection.apiStatus?.toLowerCase() === 'draft' || !inspection.apiStatus ? 'attention' : 'active'
+        }
         createdAt={inspection.createdAt}
         createdBy={property?.propertyManager || property?.assignedPortalAgentName || 'You'}
-        scheduledLabel={inspection.scheduledAt ? formatDate(inspection.scheduledAt) : 'Not booked'}
+        scheduledLabel={inspection.scheduledAt ? formatDate(inspection.scheduledAt) : 'Not set'}
         inspector={inspection.inspector || 'Unassigned'}
         tenantName={tenantName || '—'}
         tenantPhone={property?.tenantContact.phone}
@@ -245,7 +253,16 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
             </ol>
           )
         }
-        report={<InspectionTaskDocuments inspection={inspection} />}
+        report={
+          inspection.reportUrl ||
+          inspection.reportStatus === 'sent' ||
+          inspection.reportStatus === 'uploaded' ||
+          inspection.reportStatus === 'approved' ? (
+            <InspectionTaskDocuments inspection={inspection} />
+          ) : (
+            <p className="text-muted-foreground text-sm">No report yet.</p>
+          )
+        }
         related={
           relatedTasks.length === 0 ? (
             <p className="text-muted-foreground text-sm">No other active tasks.</p>

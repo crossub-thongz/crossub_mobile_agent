@@ -3,9 +3,10 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
-import { ChevronRight, FileText } from 'lucide-react';
+import { Bath, BedDouble, Car, ChevronRight, FileText, Home, type LucideIcon } from 'lucide-react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { VacatingOpenedTask } from '@/components/agent/self-managed-task/vacating-opened-task';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
 import {
   TaskWorkflowRailSlot,
@@ -20,6 +21,10 @@ import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
 import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
 import { TASK_DETAIL_COPY } from '@/constants/agent-copy-variant';
+import {
+  SELF_MANAGED_VACATING_COMPLETE_COPY,
+  TERMINATION_CASE_STATUS,
+} from '@/constants/end-leasing';
 import { inspectionDetail, propertyDetail } from '@/constants/routes';
 import { CASE_ASSIGNED_TO_LABEL, resolveCaseAssignedToFromProperty } from '@/lib/case-assigned-to';
 import { fromProperty } from '@/lib/detail-navigation';
@@ -36,7 +41,13 @@ import {
 } from '@/lib/end-leasing-task-detail';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
-import { endLeasingVacateDate } from '@/lib/end-leasing/agent-workflow-model';
+import {
+  END_LEASING_AGENT_STEP,
+  endLeasingVacateDate,
+  type EndLeasingAgentWorkflowModel,
+} from '@/lib/end-leasing/agent-workflow-model';
+import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
+import type { Property } from '@/lib/types';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import { agentCopyVariant } from '@/lib/portal-service-level';
@@ -107,6 +118,98 @@ function initials(name: string): string {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('');
+}
+
+function propertyFacts(property: Property | null): { icon: LucideIcon; label: string }[] {
+  if (!property) return [];
+  return [
+    property.propertyType ? { icon: Home, label: property.propertyType.replace(/_/g, ' ') } : null,
+    property.bedrooms != null ? { icon: BedDouble, label: `${property.bedrooms} Bed` } : null,
+    property.bathrooms != null ? { icon: Bath, label: `${property.bathrooms} Bath` } : null,
+    property.carSpaces != null ? { icon: Car, label: `${property.carSpaces} Car` } : null,
+  ].filter((fact): fact is { icon: LucideIcon; label: string } => fact != null);
+}
+
+/** Real next step for a self-managed vacating task. The move-out date stays proposed until the case leaves Vacate. */
+function describeSelfManagedVacating(
+  caseData: TerminationCaseDetail,
+  workflow: EndLeasingAgentWorkflowModel,
+): {
+  title: string;
+  detail: string;
+  status: string;
+  tone: 'active' | 'attention' | 'done' | 'danger';
+} {
+  const cancelled = caseData.status === TERMINATION_CASE_STATUS.CANCELLED || Boolean(caseData.cancelledAt);
+  if (cancelled) {
+    return {
+      title: 'Vacating cancelled',
+      detail: caseData.cancellationReason?.trim() || 'This vacating task was cancelled.',
+      status: 'Cancelled',
+      tone: 'danger',
+    };
+  }
+  if (caseData.status === TERMINATION_CASE_STATUS.COMPLETED) {
+    return {
+      title: 'Vacating completed',
+      detail: 'This case is closed.',
+      status: 'Completed',
+      tone: 'done',
+    };
+  }
+  const date = endLeasingVacateDate(caseData);
+  const proposed = date
+    ? `Proposed move-out ${formatDate(date)}. Check this date before you continue. It is not a confirmed notice.`
+    : 'No move-out date is set yet.';
+  if (workflow.liveStepId === END_LEASING_AGENT_STEP.VACATE_CONFIRMED) {
+    return { title: 'Review the vacating details', detail: proposed, status: 'Vacate', tone: 'attention' };
+  }
+  if (workflow.liveStepId === END_LEASING_AGENT_STEP.OUTGOING_INSPECTION) {
+    if (caseData.inspection.status === LEASING_ITEM_STATUS.DONE) {
+      return {
+        title: 'Final inspection completed',
+        detail: 'Review the report when you are ready to compare.',
+        status: 'Outgoing',
+        tone: 'active',
+      };
+    }
+    if (caseData.inspection.inspectionDate) {
+      return {
+        title: 'Final inspection scheduled',
+        detail: formatDate(caseData.inspection.inspectionDate),
+        status: 'Outgoing',
+        tone: 'active',
+      };
+    }
+    return {
+      title: 'Schedule the final inspection',
+      detail: 'Nothing is booked yet.',
+      status: 'Outgoing',
+      tone: 'active',
+    };
+  }
+  if (workflow.liveStepId === END_LEASING_AGENT_STEP.REPORT_COMPARISON) {
+    return {
+      title: 'Compare the inspection reports',
+      detail: 'Review the ingoing and outgoing reports. Bond is not settled on this step.',
+      status: 'Compare',
+      tone: 'active',
+    };
+  }
+  if (workflow.liveStepId === END_LEASING_AGENT_STEP.COMPLETE) {
+    return {
+      title: 'Complete this vacating',
+      detail: SELF_MANAGED_VACATING_COMPLETE_COPY.intro,
+      status: 'Complete',
+      tone: 'attention',
+    };
+  }
+  return {
+    title: caseData.nextAction || 'Continue this vacating',
+    detail: proposed,
+    status: 'Vacate',
+    tone: 'active',
+  };
 }
 
 export function EndLeasingTaskDetailView({
@@ -225,6 +328,79 @@ export function EndLeasingTaskDetailView({
     (caseData.inspection.ingoingInspectionId ? 1 : 0);
   const taskRef = endLeasingTaskReference(caseData.id);
   const createdLabel = caseData.createdAt ? formatDate(caseData.createdAt) : '—';
+
+  if (selfManaged) {
+    const next = describeSelfManagedVacating(caseData, workflow);
+    const noticeAt =
+      caseData.terminationNotice?.noticeEmailSentAt ??
+      caseData.terminationNotice?.tenantVacateDateProvidedAt ??
+      null;
+    const proposed = endLeasingVacateDate(caseData);
+    const inspectionLabel =
+      caseData.inspection.status === LEASING_ITEM_STATUS.DONE
+        ? 'Completed'
+        : caseData.inspection.inspectionDate
+          ? `Scheduled ${formatDate(caseData.inspection.inspectionDate)}`
+          : 'Not scheduled';
+    const keysLabel = caseData.vacate.keysReturned
+      ? caseData.vacate.possessionRegainedDate
+        ? formatDate(caseData.vacate.possessionRegainedDate)
+        : 'Returned'
+      : 'Pending';
+    const locality = [
+      [property?.suburb ?? caseData.property.suburb, property?.state, property?.postcode]
+        .filter(Boolean)
+        .join(' '),
+      taskRef,
+      tenantName || null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    return (
+      <VacatingOpenedTask
+        reference={taskRef}
+        assignedTo={resolveCaseAssignedToFromProperty(property?.assignedPortalAgentName || property?.propertyManager || caseData.agentName)}
+        address={displayAddress}
+        locality={locality}
+        stageId={workflow.liveStepId}
+        completed={caseData.status === TERMINATION_CASE_STATUS.COMPLETED}
+        nextAction={next.title}
+        nextDetail={next.detail}
+        dueLabel={proposed ? `Proposed ${formatDate(proposed)}` : null}
+        statusLabel={next.status}
+        statusTone={next.tone}
+        facts={propertyFacts(property)}
+        rows={[
+          { label: 'Tenant', value: tenantName || '—' },
+          { label: 'Proposed move-out', value: proposed ? formatDate(proposed) : 'Not set' },
+          { label: 'Lease end', value: caseData.leaseEndDate ? formatDate(caseData.leaseEndDate) : '—' },
+          { label: 'Notice sent', value: noticeAt ? formatDate(noticeAt) : '—' },
+          { label: 'Keys', value: keysLabel },
+          { label: 'Final inspection', value: inspectionLabel },
+        ]}
+        actions={
+          <TaskPageActions
+            propertyId={propertyId || null}
+            reference={taskRef}
+            taskKind="end_leasing"
+            taskId={caseData.id}
+            completed={caseData.status === TERMINATION_CASE_STATUS.COMPLETED}
+            deleted={Boolean(caseData.cancelledAt) || caseData.status === TERMINATION_CASE_STATUS.CANCELLED}
+            onMutated={async () => {
+              await refreshCase(caseData.id);
+              await reloadAudit();
+            }}
+          />
+        }
+        workflow={
+          <div className="space-y-4">
+            <EndLeasingAgentWorkflowPanel caseData={caseData} />
+            <SelfManagedSettlementPanel caseData={caseData} />
+          </div>
+        }
+      />
+    );
+  }
 
   return (
     <TaskWorkflowRailSlotProvider onStepActivate={showWorkflowTab}>

@@ -45,6 +45,22 @@ const WORKFLOW_STEPS = [
 
 type WorkflowStepId = (typeof WORKFLOW_STEPS)[number]['id'] | 'CANCELLED';
 
+/** A saved date is not an appointment. Only a live inspection status confirms one. */
+function appointmentConfirmed(inspection: Inspection): boolean {
+  const api = (inspection.apiStatus ?? '').toLowerCase();
+  return (
+    api === 'in_progress' ||
+    api === 'first_review' ||
+    api === 'second_review' ||
+    api === 'completed' ||
+    api === 'published' ||
+    api === 'scheduled' ||
+    api === 'staff_en_route' ||
+    api === 'open' ||
+    api === 'closed'
+  );
+}
+
 function inspectionWorkflowStage(inspection: Inspection): WorkflowStepId {
   const api = (inspection.apiStatus ?? inspection.status ?? '').toLowerCase();
   if (api.includes('cancel') || inspection.cancelReason) return 'CANCELLED';
@@ -54,6 +70,7 @@ function inspectionWorkflowStage(inspection: Inspection): WorkflowStepId {
     return 'REPORT_READY';
   }
   if (api === 'in_progress') return 'IN_PROGRESS';
+  if (!appointmentConfirmed(inspection)) return 'CREATED';
   if (inspection.inspector && inspection.scheduledAt) return 'ASSIGNED';
   if (inspection.scheduledAt) return 'SCHEDULED';
   return 'CREATED';
@@ -268,11 +285,13 @@ function InspectionOverview({
 }) {
   const stage = inspectionWorkflowStage(inspection);
   const cancelled = stage === 'CANCELLED';
+  const confirmed = appointmentConfirmed(inspection) && !cancelled;
   const time =
     inspection.scheduledAt && formatTimeShort(inspection.scheduledAt).toLowerCase() !== '12:00 am'
       ? formatTimeShort(inspection.scheduledAt)
       : null;
-  const ready = Boolean(inspection.scheduledAt) && !cancelled;
+  const dateLabel = inspection.scheduledAt ? (confirmed ? 'Inspection date' : 'Proposed date') : 'Inspection date';
+  const dateValue = inspection.scheduledAt ? scheduledLabel : 'Not set';
   const contacts: { role: string; name: string; phone?: string; email?: string }[] = [];
   if (tenantName && tenantName !== '—') {
     contacts.push({ role: 'Tenant', name: tenantName, phone: tenantPhone, email: tenantEmail });
@@ -302,20 +321,28 @@ function InspectionOverview({
               Visit Plan
             </h2>
             <div className="mt-4 flex flex-col gap-3.5">
-              <PlanRow label="Inspection date" value={scheduledLabel} />
-              {time ? <PlanRow label="Time window" value={time} /> : null}
+              <PlanRow label={dateLabel} value={dateValue} />
+              {time ? <PlanRow label={confirmed ? 'Time' : 'Proposed time'} value={time} /> : null}
               {leaseStarts ? <PlanRow label="Lease starts" value={leaseStarts} /> : null}
               {inspection.keyStatus ? <PlanRow label="Key status" value={inspection.keyStatus} /> : null}
             </div>
             <div
               className={cn(
                 'mt-4 rounded-lg border px-3 py-2.5 text-[13px]',
-                ready
+                confirmed
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100'
                   : 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100',
               )}
             >
-              <p className="font-medium">{ready ? 'Visit is booked' : cancelled ? 'Cancelled' : 'Not booked yet'}</p>
+              <p className="font-medium">
+                {cancelled
+                  ? 'Cancelled'
+                  : confirmed
+                    ? 'Appointment confirmed'
+                    : inspection.scheduledAt
+                      ? 'Not a confirmed appointment'
+                      : 'No date set'}
+              </p>
             </div>
           </section>
 
@@ -332,9 +359,7 @@ function InspectionOverview({
                 <p className="truncate text-[15px] font-semibold">{inspector}</p>
               </div>
             ) : (
-              <p className="text-muted-foreground mt-4 text-[13px] leading-relaxed">
-                Book the routine visit first — an inspector is assigned once a visit exists.
-              </p>
+              <p className="text-muted-foreground mt-4 text-[13px] leading-relaxed">No inspector assigned yet.</p>
             )}
           </section>
 

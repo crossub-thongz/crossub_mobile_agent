@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Building2, Clock, FileText } from 'lucide-react';
+import { Building2, Clock, FileText, type LucideIcon } from 'lucide-react';
 
 import {
   AdminSideCard,
@@ -27,6 +27,9 @@ export function LeasingOpenedTask({
   nextAction,
   nextDetail,
   dueLabel,
+  statusLabel,
+  statusTone,
+  facts,
   landlordName,
   tenantName,
   summary,
@@ -40,6 +43,9 @@ export function LeasingOpenedTask({
   nextAction: string;
   nextDetail: string;
   dueLabel: string | null;
+  statusLabel: string;
+  statusTone: 'active' | 'attention' | 'done' | 'danger';
+  facts: readonly { icon: LucideIcon; label: string }[];
   landlordName: string;
   tenantName: string;
   summary: ReactNode;
@@ -70,6 +76,16 @@ export function LeasingOpenedTask({
               <p className="text-muted-foreground mt-0.5 text-sm">
                 {[locality, reference].filter(Boolean).join(' · ')}
               </p>
+              {facts.length > 0 ? (
+                <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
+                  {facts.map((fact) => (
+                    <span key={fact.label} className="inline-flex items-center gap-1.5 capitalize">
+                      <fact.icon className="size-3.5" />
+                      {fact.label}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -92,7 +108,10 @@ export function LeasingOpenedTask({
                   <p className="text-[11px] font-semibold tracking-wider text-violet-700 uppercase dark:text-violet-300">
                     Next action
                   </p>
-                  <TaskStatusPill label={ended ? 'Closed' : 'In progress'} tone={ended ? 'done' : 'active'} />
+                  <TaskStatusPill
+                    label={ended ? 'Closed' : statusLabel}
+                    tone={ended ? 'done' : statusTone}
+                  />
                 </div>
                 <p className="mt-1 text-lg leading-snug font-semibold">{nextAction}</p>
                 {nextDetail ? <p className="text-muted-foreground mt-1.5 text-[13px]">{nextDetail}</p> : null}
@@ -117,7 +136,7 @@ export function LeasingOpenedTask({
                 <dd className="text-right font-medium">{landlordName}</dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className="text-muted-foreground">Tenant</dt>
+                <dt className="text-muted-foreground">Applicant</dt>
                 <dd className="text-right font-medium">{tenantName}</dd>
               </div>
               <div className="flex justify-between gap-3">

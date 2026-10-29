@@ -6,8 +6,11 @@ import { useCallback, useMemo, useState } from 'react';
 import { ChevronRight, DollarSign } from 'lucide-react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { TenancyReviewOpenedTask } from '@/components/agent/self-managed-task/tenancy-review-opened-task';
 import { RentEquivalentsHint } from '@/components/rent-equivalents-hint';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
+import { TENANCY_REVIEW_KIND, TENANCY_REVIEW_STATE } from '@/constants/self-managed-tenancy-review';
+import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import {
   TaskWorkflowRailSlot,
   TaskWorkflowRailSlotProvider,
@@ -29,6 +32,7 @@ import {
 } from '@/lib/rent-review-task-detail';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
+import { hasTenantNoticeSent, rentReviewLeaseTypeLabel } from '@/lib/rent-review/agent-workflow-model';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import {
   cn,
@@ -99,6 +103,86 @@ function initials(name: string): string {
     .join('');
 }
 
+function describeSelfManagedTenancyReview(detail: RentReviewWorkflowDetail): {
+  title: string;
+  detail: string;
+  status: string;
+  tone: 'active' | 'attention' | 'done' | 'danger';
+  stageIndex: number;
+} {
+  const state = detail.workflowState;
+  if (state === TENANCY_REVIEW_STATE.CANCELLED) {
+    return {
+      title: 'Review cancelled',
+      detail: detail.cancellationReason?.trim() || 'This review was cancelled. The rent is unchanged.',
+      status: 'Cancelled',
+      tone: 'danger',
+      stageIndex: 0,
+    };
+  }
+  if (state === TENANCY_REVIEW_STATE.COMPLETED) {
+    return {
+      title: 'Review completed',
+      detail: 'This review is closed. No further rent change is assumed.',
+      status: 'Completed',
+      tone: 'done',
+      stageIndex: 4,
+    };
+  }
+  if (state === TENANCY_REVIEW_STATE.POSTPONED) {
+    return {
+      title: 'Review postponed',
+      detail: 'Nothing has been sent, and the rent is unchanged.',
+      status: 'Postponed',
+      tone: 'attention',
+      stageIndex: 0,
+    };
+  }
+  if (state === TENANCY_REVIEW_STATE.PENDING_CONFIRMATION || state === TENANCY_REVIEW_STATE.AGENT_REVIEW) {
+    const pathway =
+      detail.reviewKind === TENANCY_REVIEW_KIND.LEASE_RENEWAL
+        ? 'Lease renewal is selected.'
+        : detail.reviewKind === TENANCY_REVIEW_KIND.RENT_REVIEW
+          ? 'Rent review is selected.'
+          : 'No pathway is chosen yet.';
+    return {
+      title: 'Review this tenancy',
+      detail: `${pathway} Check the current rent and lease. A rent change or renewal happens only after you confirm it.`,
+      status: 'Review',
+      tone: 'attention',
+      stageIndex: 0,
+    };
+  }
+  if (state === TENANCY_REVIEW_STATE.TENANT_NOTIFIED) {
+    const sent = hasTenantNoticeSent(detail);
+    return {
+      title: sent ? 'Waiting on the tenant' : 'Notice not sent yet',
+      detail: sent
+        ? 'A notice has been sent. The rent has not changed.'
+        : 'No notice has been sent, and the rent is unchanged.',
+      status: 'Notice',
+      tone: 'active',
+      stageIndex: 1,
+    };
+  }
+  if (state === TENANCY_REVIEW_STATE.TENANT_ACCEPTED || state === TENANCY_REVIEW_STATE.ACCOUNTING) {
+    return {
+      title: 'Confirm the outcome',
+      detail: 'The tenant accepted. The rent changes only when you complete the review.',
+      status: 'Reply',
+      tone: 'active',
+      stageIndex: 2,
+    };
+  }
+  return {
+    title: 'Review the reply',
+    detail: 'The rent stays as it is until you confirm a change.',
+    status: 'Reply',
+    tone: 'attention',
+    stageIndex: 2,
+  };
+}
+
 export function RentReviewTaskDetailView({
   detail,
   onUpdated,
@@ -127,6 +211,7 @@ export function RentReviewTaskDetailView({
   );
 
   const propertyId = detail.propertyId ?? '';
+  const selfManaged = useIsPropertySelfManaged(propertyId);
   const property = properties.find((row) => row.id === propertyId) ?? null;
   const currentLease = leasingRecords.find(
     (row) => row.propertyId === propertyId && row.status === 'current',
@@ -195,6 +280,71 @@ export function RentReviewTaskDetailView({
     tribunalCases,
     vacating,
   ]);
+
+  if (selfManaged) {
+    const next = describeSelfManagedTenancyReview(detail);
+    const pathway =
+      detail.reviewKind === TENANCY_REVIEW_KIND.LEASE_RENEWAL
+        ? 'Lease renewal'
+        : detail.reviewKind === TENANCY_REVIEW_KIND.RENT_REVIEW
+          ? 'Rent review'
+          : 'Not chosen';
+    const locality = [property?.suburb, property?.state, property?.postcode, detail.tenantName, taskRef]
+      .filter(Boolean)
+      .join(' · ');
+    return (
+      <TenancyReviewOpenedTask
+        reference={taskRef}
+        assignedTo={resolveCaseAssignedToFromProperty(
+          property?.assignedPortalAgentName || property?.propertyManager,
+        )}
+        address={address}
+        locality={locality}
+        stageIndex={next.stageIndex}
+        completed={detail.workflowState === TENANCY_REVIEW_STATE.COMPLETED}
+        nextAction={next.title}
+        nextDetail={next.detail}
+        statusLabel={next.status}
+        statusTone={next.tone}
+        rows={[
+          { label: 'Tenant', value: detail.tenantName?.trim() || '—' },
+          {
+            label: 'Current rent',
+            value: detail.currentWeeklyRent > 0 ? `${formatCurrency(detail.currentWeeklyRent)}/week` : 'Not set',
+          },
+          { label: 'Lease', value: rentReviewLeaseTypeLabel(detail) },
+          {
+            label: 'Lease start',
+            value: detail.initialLeaseStartDate ? formatDate(detail.initialLeaseStartDate) : '—',
+          },
+          { label: 'Lease end', value: detail.leaseEndDate ? formatDate(detail.leaseEndDate) : '—' },
+          { label: 'Review due', value: detail.rentReviewDate ? formatDate(detail.rentReviewDate) : '—' },
+          { label: 'Pathway', value: pathway },
+          {
+            label: 'Proposed rent',
+            value:
+              detail.proposedWeeklyRent != null ? `${formatCurrency(detail.proposedWeeklyRent)}/week` : 'Not decided',
+          },
+          { label: 'Notice', value: hasTenantNoticeSent(detail) ? 'Sent' : 'Not sent' },
+        ]}
+        actions={
+          <TaskPageActions
+            propertyId={propertyId || null}
+            reference={taskRef}
+            taskKind="rent_review"
+            taskId={detail.id}
+            completed={detail.workflowState === TENANCY_REVIEW_STATE.COMPLETED}
+            deleted={detail.workflowState === TENANCY_REVIEW_STATE.CANCELLED}
+            onMutated={async () => {
+              onUpdated?.(detail);
+              await reloadAudit();
+            }}
+          />
+        }
+        workflow={<RentReviewAgentWorkflowPanel detail={detail} onUpdated={onUpdated} />}
+      />
+    );
+  }
 
   return (
     <TaskWorkflowRailSlotProvider onStepActivate={showWorkflowTab}>

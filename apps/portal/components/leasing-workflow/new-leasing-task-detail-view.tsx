@@ -5,12 +5,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Bath,
+  BedDouble,
+  Car,
   ChevronRight,
   Home,
   Link2,
   Mail,
   Phone,
   User,
+  type LucideIcon,
 } from 'lucide-react';
 import { AdminSideCard } from '@/components/agent/self-managed-task/admin-task-chrome';
 import { LeasingOpenedTask } from '@/components/agent/self-managed-task/leasing-opened-task';
@@ -24,6 +28,10 @@ import { LeasingReletDecisionCard } from '@/components/leasing-workflow/leasing-
 import { LeasingWorkflowTimeline } from '@/components/leasing-workflow/leasing-workflow-timeline';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { TASK_DETAIL_COPY } from '@/constants/agent-copy-variant';
+import {
+  LEASING_MAIN_STATUS,
+  LEASING_RELET_COPY,
+} from '@/constants/leasing-relet-decision';
 import { PROPERTY_JOB_KIND_ICON } from '@/constants/property-jobs';
 import {
   inspectionDetail,
@@ -34,7 +42,9 @@ import {
 import { CASE_ASSIGNED_TO_LABEL, resolveCaseAssignedToFromProperty } from '@/lib/case-assigned-to';
 import { fromProperty } from '@/lib/detail-navigation';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
+import { getApprovedApplications } from '@/lib/leasing/lifecycle';
 import { resolveOnboardingTenant } from '@/lib/leasing/onboarding-display';
+import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { agentCopyVariant } from '@/lib/portal-service-level';
 import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
@@ -66,6 +76,11 @@ import {
   formatPropertyFullAddress,
 } from '@/lib/utils';
 import { formatPropertyDateTime, formatPropertyTime } from '@/lib/format-datetime';
+import type { Property } from '@/lib/types';
+import {
+  isAwaitingReletConfirmation,
+  leasingCycleStatusLabel,
+} from '@/utils/leasing-relet-decision';
 
 import './new-leasing-task-detail.css';
 
@@ -138,6 +153,82 @@ function ActivityTimeline({
       ))}
     </div>
   );
+}
+
+function propertyFacts(property: Property): { icon: LucideIcon; label: string }[] {
+  return [
+    property.propertyType
+      ? { icon: Home, label: property.propertyType.replace(/_/g, ' ') }
+      : null,
+    property.bedrooms != null ? { icon: BedDouble, label: `${property.bedrooms} Bed` } : null,
+    property.bathrooms != null ? { icon: Bath, label: `${property.bathrooms} Bath` } : null,
+    property.carSpaces != null ? { icon: Car, label: `${property.carSpaces} Car` } : null,
+  ].filter((fact): fact is { icon: LucideIcon; label: string } => fact != null);
+}
+
+/** Real status for a self-managed new letting. Does not claim advertising or screening has started. */
+function selfManagedLettingNext(detail: LeasingPropertyDetail): {
+  title: string;
+  detail: string;
+  status: string;
+  tone: 'active' | 'attention' | 'done';
+} {
+  const status = leasingCycleStatusLabel(detail) ?? 'In progress';
+  if (isAwaitingReletConfirmation(detail)) {
+    return {
+      title: LEASING_RELET_COPY.title,
+      detail: LEASING_RELET_COPY.explanation,
+      status,
+      tone: 'attention',
+    };
+  }
+  const main = detail.mainStatus;
+  if (main === LEASING_MAIN_STATUS.PREPARATION) {
+    return {
+      title: 'Prepare this letting',
+      detail: 'Review the property details. Open inspections have not started.',
+      status,
+      tone: 'active',
+    };
+  }
+  if (main === LEASING_MAIN_STATUS.ACTIVE_LEASING) {
+    const when = detail.openInspection.timeProvisional ? null : detail.openInspection.scheduledTime;
+    return {
+      title: when ? 'Open inspection scheduled' : 'Schedule the open inspection',
+      detail: when ? `Scheduled ${formatDate(when)}` : 'Nothing is booked yet.',
+      status,
+      tone: 'active',
+    };
+  }
+  if (main === LEASING_MAIN_STATUS.OFFER_PENDING) {
+    const chosen = getApprovedApplications(detail)[0];
+    return {
+      title: chosen ? 'Review the approved application' : 'Review applications',
+      detail: chosen ? chosen.applicant : 'No application is approved yet.',
+      status,
+      tone: 'active',
+    };
+  }
+  if (main === LEASING_MAIN_STATUS.ONBOARDING) {
+    return {
+      title: 'Lease setup',
+      detail: 'Work through the lease setup checklist.',
+      status,
+      tone: 'active',
+    };
+  }
+  if (main === LEASING_MAIN_STATUS.KEY_HANDOVER) {
+    return {
+      title: 'Tenant key collection',
+      detail: 'Arrange key handover.',
+      status,
+      tone: 'active',
+    };
+  }
+  if (main === LEASING_MAIN_STATUS.COMPLETED || detail.cycleActive === false) {
+    return { title: 'Letting completed', detail: 'This case is closed.', status: 'Completed', tone: 'done' };
+  }
+  return { title: status, detail: '', status, tone: 'active' };
 }
 
 export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
@@ -280,6 +371,21 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
   const taskRef = newLeasingTaskReference(cycleId);
 
   if (selfManaged) {
+    const next = leasingDetail
+      ? selfManagedLettingNext(leasingDetail)
+      : { title: 'Continue this letting', detail: '', status: 'In progress', tone: 'active' as const };
+    const approved = leasingDetail ? getApprovedApplications(leasingDetail)[0] : null;
+    const weekly = leasingDetail?.rental.rentPerWeek;
+    const lettingRows = [
+      {
+        label: 'Weekly rent',
+        value: weekly != null && weekly > 0 ? `${formatCurrency(weekly)}/week` : 'Not set',
+      },
+      { label: 'Lease term', value: leasingDetail?.rental.leaseTerm || '—' },
+      { label: 'Available from', value: cycle.availableFrom ? formatDate(cycle.availableFrom) : '—' },
+      { label: 'Applications', value: String(leasingDetail?.applicationsDetail?.length ?? 0) },
+      { label: 'Approved application', value: approved?.applicant || '—' },
+    ];
     return (
         <LeasingOpenedTask
           cycle={cycle}
@@ -289,15 +395,18 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
           assignedTo={resolveCaseAssignedToFromProperty(
             property.assignedPortalAgentName || property.propertyManager,
           )}
-          nextAction={banner?.title ?? 'Continue this letting'}
-          nextDetail={banner?.subtitle ?? ''}
+          nextAction={next.title}
+          nextDetail={next.detail}
           dueLabel={cycle.availableFrom ? formatDate(cycle.availableFrom) : null}
+          statusLabel={next.status}
+          statusTone={next.tone}
+          facts={propertyFacts(property)}
           landlordName={property.homeOwnerName || '—'}
-          tenantName={tenant?.applicant || '—'}
+          tenantName={approved?.applicant || '—'}
           summary={
-            <AdminSideCard title="Lease">
+            <AdminSideCard title="Letting summary">
               <dl className="space-y-2 text-sm">
-                {leaseRows.map((row) => (
+                {lettingRows.map((row) => (
                   <div key={row.label} className="flex justify-between gap-3">
                     <dt className="text-muted-foreground">{row.label}</dt>
                     <dd className="text-right font-medium">{row.value}</dd>
