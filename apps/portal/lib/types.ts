@@ -1,5 +1,5 @@
 import type { PropertyRentPeriod } from '@/constants/property-profile-edit';
-import type { PropertyApprovalStatus } from '@/constants/api-enums';
+import type { PropertyApprovalStatus, PropertyStatus } from '@/constants/api-enums';
 import type { AgentPortfolioId } from '@/lib/agent-scope';
 import type {
   ServerLeasingMainStatus,
@@ -86,6 +86,8 @@ export interface Property {
   additionalLandlords?: PropertyPartyContact[];
   additionalTenants?: PropertyPartyContact[];
   leaseStatus: 'active' | 'periodic' | 'vacating' | 'vacant';
+  /** The registry's occupancy today; VACANT between tenancies even when a signed lease is on file. */
+  propertyStatus?: PropertyStatus;
   rentWeekly: number;
   bondAmount?: number;
   depositAmount?: number;

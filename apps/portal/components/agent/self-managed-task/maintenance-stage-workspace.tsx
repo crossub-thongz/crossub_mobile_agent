@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Building2, Check, CircleCheck, Inbox } from 'lucide-react';
+import { Building2, Check, CircleCheck, CircleDashed, Inbox, Minus } from 'lucide-react';
 
 import { SelfManagedMaintenancePanel } from '@/components/agent/maintenance-self-managed/self-managed-maintenance-panel';
 import { Button } from '@/components/ui/button';
@@ -528,8 +528,11 @@ function StageBoard({
               </span>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <Fact label="Scheduled date" value="Not scheduled" />
-              <Fact label="Time window" value="—" />
+              <Fact
+                label="Scheduled date"
+                value={workspace.scheduledVisitAt ? formatDateTime(workspace.scheduledVisitAt) : 'Not scheduled'}
+              />
+              <Fact label="Time window" value={workspace.visitWindow || '—'} />
               <Fact label="Status" value={statusLabel} />
               <Fact label="Tenant confirmed" value={workspace.tenantApprovalReceived ? 'Yes' : 'Pending'} />
             </div>
@@ -588,15 +591,30 @@ function StageBoard({
   const invoiceAmount = workspace.contractorInvoiceAmount ?? null;
   const difference =
     approvedAmount != null && invoiceAmount != null ? invoiceAmount - approvedAmount : null;
+  // A job closed by the officer (handled outside the system, cancelled) has no work, photos or
+  // invoice on file; say it was closed rather than completed.
+  const workRecorded =
+    Boolean(workspace.completionEvidenceUploaded) || completionPhotos.length > 0 || Boolean(workspace.invoiceUploaded);
   return (
     <>
-      <section className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.05] p-4">
+      <section
+        className={cn(
+          'rounded-xl border p-4',
+          workRecorded ? 'border-emerald-500/30 bg-emerald-500/[0.05]' : 'border-border bg-muted/30',
+        )}
+      >
         <div className="flex items-center gap-2">
-          <CircleCheck className="size-5 text-emerald-600 dark:text-emerald-400" />
+          {workRecorded ? (
+            <CircleCheck className="size-5 text-emerald-600 dark:text-emerald-400" />
+          ) : (
+            <CircleDashed className="text-muted-foreground size-5" />
+          )}
           <div>
-            <p className="text-sm font-semibold">Job completed successfully</p>
+            <p className="text-sm font-semibold">{workRecorded ? 'Job completed successfully' : 'Job closed'}</p>
             {workspace.status === 'completed' || workspace.status === 'closed' ? (
-              <p className="text-muted-foreground text-xs">Completed and closed</p>
+              <p className="text-muted-foreground text-xs">
+                {workRecorded ? 'Completed and closed' : 'Closed without completion photos or an invoice on file'}
+              </p>
             ) : null}
           </div>
         </div>
@@ -752,9 +770,14 @@ function Fact({ label, value }: { label: string; value: string }) {
 
 function CheckRow({ label, done }: { label: string; done: boolean }) {
   return (
-    <li className="flex items-center gap-2 py-1.5 text-sm">
-      <Check className={cn('size-4 shrink-0', done ? 'text-emerald-600' : 'text-muted-foreground/40')} />
-      {label}
+    <li className={cn('flex items-center gap-2 py-1.5 text-sm', !done && 'text-muted-foreground')}>
+      {done ? (
+        <Check className="size-4 shrink-0 text-emerald-600" />
+      ) : (
+        <Minus className="text-muted-foreground/60 size-4 shrink-0" />
+      )}
+      <span className="flex-1">{label}</span>
+      {done ? null : <span className="text-xs">Not recorded</span>}
     </li>
   );
 }

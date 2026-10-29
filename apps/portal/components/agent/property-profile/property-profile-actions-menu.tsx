@@ -80,6 +80,7 @@ export function PropertyProfileActionsMenu({
       inspections,
       tribunalCases,
       currentLease,
+      propertyStatus: property.propertyStatus,
     });
     return workflowMenuGroupsFor(ctx, { hasFullAccess: isV2 ? hasFullManagementAccess : true });
   }, [
@@ -91,6 +92,7 @@ export function PropertyProfileActionsMenu({
     inspections,
     tribunalCases,
     currentLease,
+    property.propertyStatus,
     hasFullManagementAccess,
     isV2,
   ]);

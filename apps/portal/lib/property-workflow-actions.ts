@@ -1,4 +1,5 @@
 import { ACCOUNTING_MODULE_LAUNCHED } from '@/constants/accounting-sections';
+import { PROPERTY_STATUS, type PropertyStatus } from '@/constants/api-enums';
 import type {
   Inspection,
   LeasingCycle,
@@ -108,6 +109,8 @@ export interface PropertyWorkflowContext {
   inspections: Inspection[];
   tribunalCases: TribunalCase[];
   currentLease?: LeasingRecord;
+  /** The registry's occupancy today; the server refuses a rent review on a VACANT property. */
+  propertyStatus?: PropertyStatus;
 }
 
 function hasActiveRentReview(ctx: PropertyWorkflowContext): boolean {
@@ -141,15 +144,18 @@ export function tabActionsFor(
       ];
     case 'rent_review': {
       const activeReview = hasActiveRentReview(ctx);
+      const vacant = ctx.propertyStatus === PROPERTY_STATUS.VACANT;
       return [
         {
           id: 'start_rent_review',
           label: 'Rent Review',
           description: activeReview
             ? 'This property already has an open rent review. Complete that case before creating a new one.'
-            : 'Open a rent review for this property',
+            : vacant
+              ? 'This property is vacant. A rent review can be opened once the tenancy has started.'
+              : 'Open a rent review for this property',
           primary: true,
-          disabled: activeReview,
+          disabled: activeReview || vacant,
         },
       ];
     }
@@ -262,6 +268,7 @@ export function buildPropertyWorkflowContext(input: {
   inspections: Inspection[];
   tribunalCases: TribunalCase[];
   currentLease?: LeasingRecord;
+  propertyStatus?: PropertyStatus;
 }): PropertyWorkflowContext {
   return {
     propertyId: input.propertyId,
@@ -276,5 +283,6 @@ export function buildPropertyWorkflowContext(input: {
     inspections: input.inspections.filter((i) => i.propertyId === input.propertyId),
     tribunalCases: input.tribunalCases.filter((t) => t.propertyId === input.propertyId),
     currentLease: input.currentLease,
+    propertyStatus: input.propertyStatus,
   };
 }

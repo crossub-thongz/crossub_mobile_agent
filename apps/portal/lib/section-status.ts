@@ -1,3 +1,4 @@
+import { INSPECTION_UPCOMING_LABEL } from '@/constants/inspection-records';
 import { ROUTES } from '@/constants/routes';
 import type {
   Inspection,
@@ -19,7 +20,7 @@ export function buildSectionStatus(input: {
     (m) => !['Closed', 'closed'].includes(m.status),
   ).length;
   const inspActive = input.inspections.filter((i) =>
-    ['Scheduled', 'Confirmed', 'In Progress'].includes(i.status),
+    ['Scheduled', 'Confirmed', 'In Progress', INSPECTION_UPCOMING_LABEL].includes(i.status),
   ).length;
   const rentAction = input.rentReviews.filter((r) => r.requiresApproval).length;
   const vacAction = input.vacating.filter((v) => v.requiresApproval).length;

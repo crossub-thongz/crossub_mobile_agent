@@ -65,6 +65,9 @@ export const INSPECTION_RECORD_STATUS = {
 export type InspectionRecordStatus =
   (typeof INSPECTION_RECORD_STATUS)[keyof typeof INSPECTION_RECORD_STATUS]
 
+/** An assigned job before its visit: the server holds it IN_PROGRESS from the moment it has an inspector. */
+export const INSPECTION_UPCOMING_LABEL = "Upcoming"
+
 export const INSPECTION_RECORD_STATUS_LABEL: Record<InspectionRecordStatus, string> = {
   DRAFT: "Draft",
   IN_PROGRESS: "In Progress",

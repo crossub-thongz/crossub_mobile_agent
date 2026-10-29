@@ -11,6 +11,10 @@
 - The morning briefing shows applications to approve, ends of lease waiting on you, and repairs to move on, from the server.
 
 ### Fixed
+- Rent Review is greyed out on a vacant property with the reason, instead of failing after the form is filled.
+- A maintenance job's Scheduled date and Time window show the booked visit, including one recorded as arranged directly.
+- A job closed without photos or an invoice reads "Job closed", and steps that did not happen show "Not recorded" instead of a faint tick.
+- A booked inspection whose visit is still ahead shows Upcoming, not In Progress.
 - Cros: the chat with a CROSSUB person sits under the handoff reply, not at the bottom below later answers.
 - Cros: a chat handed back says who pressed Done, or "The CROSSUB team" when the system closed it.
 

@@ -46,6 +46,9 @@ export const VISIT_TENANT_DECISION = {
 } as const satisfies Record<string, VisitTenantDecision>;
 
 /** Where the offered visit times stand, read off the job's schedule proposal. */
+/** The machine-read anchor the server appends to a visit window, e.g. " (2026-11-03 10:00)". */
+export const VISIT_ANCHOR_GLOBAL_PATTERN = /\s*\(\d{4}-\d{2}-\d{2} \d{2}:\d{2}\)/g;
+
 export const VISIT_PROPOSAL_STATE = {
   NONE: 'none',
   AWAITING_TENANT: 'awaiting_tenant',

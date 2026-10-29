@@ -8,6 +8,7 @@ import {
   MAINTENANCE_ISSUE_LIVE,
   MAINTENANCE_QUOTE_STATUS,
   URGENT_AUTHORISATION_STATUS,
+  VISIT_ANCHOR_GLOBAL_PATTERN,
   VISIT_PROPOSAL_STATE,
   VISIT_TENANT_DECISION,
   type VisitProposalState,
@@ -136,6 +137,11 @@ export function formatVisitAnchor(dateTimeLocal: string): string | null {
     weekday: 'short',
   });
   return `${weekday} ${d}/${mo}/${y} ${h}:${mi} (${y}-${mo}-${d} ${h}:${mi})`;
+}
+
+/** A visit window as a person reads it, without the server's machine-read anchor. */
+export function stripVisitAnchors(availableTimes: string): string {
+  return availableTimes.replace(VISIT_ANCHOR_GLOBAL_PATTERN, '').trim();
 }
 
 /**

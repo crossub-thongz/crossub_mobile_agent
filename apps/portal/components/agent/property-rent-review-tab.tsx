@@ -118,9 +118,11 @@ export function PropertyRentReviewTab({
         inspections,
         tribunalCases,
         currentLease,
+        propertyStatus: property.propertyStatus,
       }),
     [
       propertyId,
+      property.propertyStatus,
       leasingCycles,
       rentReviews,
       vacatingCases,

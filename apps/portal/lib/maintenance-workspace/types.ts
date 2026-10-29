@@ -37,6 +37,10 @@ export interface MaintenanceWorkspaceCase {
   completionEvidenceUploaded?: boolean;
   agentApprovalReceived?: boolean;
   tenantApprovalReceived?: boolean;
+  /** Start of the booked visit; absent until the tenant picks a time or the officer records one. */
+  scheduledVisitAt?: string;
+  /** The booked visit window as agreed, e.g. "Tue 03/11/2026 10:00 – 12:00 AEDT". */
+  visitWindow?: string;
   invoiceUploaded?: boolean;
   contractorInvoiceNumber?: string;
   contractorInvoiceAmount?: number;

@@ -1,3 +1,4 @@
+import { INSPECTION_UPCOMING_LABEL } from '@/constants/inspection-records';
 import {
   inspectionDetail,
   maintenanceDetail,
@@ -42,7 +43,7 @@ export function buildTaskStatusList(input: {
       status: i.status,
       href: inspectionDetail(i.id),
       module: 'Inspection',
-      tone: ['Scheduled', 'Confirmed', 'In Progress'].includes(i.status)
+      tone: ['Scheduled', 'Confirmed', 'In Progress', INSPECTION_UPCOMING_LABEL].includes(i.status)
         ? 'neutral'
         : 'ok',
     });

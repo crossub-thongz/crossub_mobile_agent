@@ -29,6 +29,8 @@ import { resolveOpenConductedByFromSession } from '@/lib/open-inspection/open-co
 import { INSPECTION_AWAITING_PAYMENT_LABEL } from '@/lib/inspections/awaiting-payment';
 import { openSessionInspectionId } from '@/lib/open-inspection/open-session-inspection-id';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
+import { isInspectionUpcoming } from '@/lib/inspections/upcoming-status';
+import { INSPECTION_UPCOMING_LABEL } from '@/constants/inspection-records';
 
 export function caseAuditToTimeline(
   entries: InspectionRecord['caseAudit'],
@@ -116,7 +118,9 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
     moveInDate: record.moveInDate ?? undefined,
     status: openInspectionStatusLabel(
       type,
-      STATUS_LABEL[record.status] ?? record.status,
+      isInspectionUpcoming(record.status, record.scheduledDate)
+        ? INSPECTION_UPCOMING_LABEL
+        : STATUS_LABEL[record.status] ?? record.status,
       record.status,
     ),
     apiStatus: record.status,

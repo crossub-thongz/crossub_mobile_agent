@@ -8,6 +8,8 @@ import type { MaintenanceRequest, Property } from '@/lib/types';
 import type { AuthUser } from '@/lib/auth-types';
 import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 import { maintenanceReferenceLabel } from '@/lib/workflow-case-reference';
+import { VISIT_TENANT_DECISION } from '@/constants/self-managed-maintenance';
+import { stripVisitAnchors } from '@/lib/maintenance/self-managed-steps';
 
 import type { MaintenanceWorkspaceCase, MaintenanceWorkspaceParty, MaintenanceWorkspaceStatus } from './types';
 
@@ -179,6 +181,11 @@ export function buildWorkspaceCaseFromApi(
     completionEvidenceUploaded: req.completionEvidenceUploaded,
     agentApprovalReceived: req.agentApprovalReceived,
     tenantApprovalReceived: req.tenantApprovalReceived,
+    scheduledVisitAt: req.scheduledVisitAt,
+    visitWindow:
+      req.scheduleProposal?.tenantDecision === VISIT_TENANT_DECISION.APPROVED
+        ? stripVisitAnchors(req.scheduleProposal.availableTimes)
+        : undefined,
     invoiceUploaded: req.invoiceUploaded,
     contractorInvoiceNumber: req.contractorInvoiceNumber,
     contractorInvoiceAmount: req.contractorInvoiceAmount,

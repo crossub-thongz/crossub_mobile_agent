@@ -198,6 +198,7 @@ export function QuickCreateWorkflowDialog({
       inspections: propertyInspections,
       tribunalCases: propertyTribunal,
       currentLease,
+      propertyStatus: property?.propertyStatus,
     });
     const action = tabActionsFor(tab, ctx).find((row) => row.id === actionId);
     if (action?.disabled) {
@@ -216,6 +217,7 @@ export function QuickCreateWorkflowDialog({
     propertyInspections,
     propertyTribunal,
     currentLease,
+    property?.propertyStatus,
     onOpenChange,
   ]);
 

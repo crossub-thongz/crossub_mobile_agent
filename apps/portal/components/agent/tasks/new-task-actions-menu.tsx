@@ -41,6 +41,7 @@ export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
     inspections,
     tribunalCases,
     leasingRecords,
+    properties,
   } = useAgentData();
   const { blockIfUnverified } = useEmailVerificationGuard();
   const [open, setOpen] = useState(false);
@@ -60,6 +61,7 @@ export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
       inspections: propertyId ? inspections : [],
       tribunalCases: propertyId ? tribunalCases : [],
       currentLease,
+      propertyStatus: properties.find((p) => p.id === propertyId)?.propertyStatus,
     });
     return workflowMenuGroupsFor(ctx, { hasFullAccess: hasFullManagementAccess }).map((group) => ({
       ...group,
@@ -73,6 +75,7 @@ export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
     leasingCycles,
     leasingRecords,
     maintenanceAll,
+    properties,
     propertyId,
     rentReviews,
     tribunalCases,

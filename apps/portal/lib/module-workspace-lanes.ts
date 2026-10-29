@@ -23,6 +23,7 @@ import {
 import { INSPECTION_STATUS, VACATING_STATUS } from '@/constants/api-enums';
 import { leasingLifecycleProgress } from '@/lib/case-workflows/leasing';
 import { isDeletedInspection } from '@/lib/open-inspection-delete';
+import { isInspectionUpcoming } from '@/lib/inspections/upcoming-status';
 import { isCompletedLeasingCycle } from '@/lib/property-leasing-history';
 import { isTenantRejectedMaintenance } from '@/lib/maintenance/tenant-rejected';
 import type { Inspection, LeasingCycle, MaintenanceRequest, RentReviewCase, VacatingCase } from '@/lib/types';
@@ -69,6 +70,7 @@ export function inspectionLane(inspection: Inspection): InspectionLane {
     return INSPECTION_LANE.CANCELLED;
   }
   const status = inspection.apiStatus;
+  if (status && isInspectionUpcoming(status, inspection.scheduledAt)) return INSPECTION_LANE.UPCOMING;
   if (hasKey<InspectionApiStatus>(INSPECTION_STATUS_LANE, status)) {
     if (status === INSPECTION_STATUS.COMPLETED) {
       return isCompletedInspectionDone(inspection)

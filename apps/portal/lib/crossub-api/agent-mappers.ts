@@ -80,6 +80,8 @@ import type {
 } from '@/lib/types';
 import type { AgentPortfolioId } from '@/lib/agent-scope';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
+import { isInspectionUpcoming } from '@/lib/inspections/upcoming-status';
+import { INSPECTION_UPCOMING_LABEL } from '@/constants/inspection-records';
 import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
 import { splitAgentMaintenanceDescription } from '@/lib/maintenance/maintenance-description';
 
@@ -206,6 +208,7 @@ export function mapAgentProperty(
       list.registryDraft ?? ext.registryDraft,
     ),
     leaseStatus: dto.leaseStatus,
+    propertyStatus: dto.status,
     rentWeekly: dto.rentWeekly ?? 0,
     bondAmount: dto.bondAmount ?? undefined,
     bedrooms: dto.bedrooms ?? undefined,
@@ -381,6 +384,7 @@ function inspectionStatusLabel(dto: AgentInspection): string {
   if (dto.awaitingAgentPayment) return INSPECTION_AWAITING_PAYMENT_LABEL;
   const type = INSPECTION_TYPE_VIEW[dto.type] ?? 'ROUTINE';
   if (type === 'OPEN' && dto.status === INSPECTION_STATUS.CANCELLED) return 'Deleted';
+  if (isInspectionUpcoming(dto.status, dto.scheduledDate)) return INSPECTION_UPCOMING_LABEL;
   return INSPECTION_STATUS_LABEL[dto.status] ?? dto.status;
 }
 

@@ -18,6 +18,8 @@ export interface ApiMaintenanceScheduleProposal {
   tenantDecision?: 'approved' | 'declined';
   tenantDecidedAt?: string;
   tenantDeclineReason?: string;
+  /** The officer recorded a time the tradie and tenant agreed between themselves. */
+  arrangedDirectly?: boolean;
 }
 
 export type ApiMaintenancePriority = 'low' | 'medium' | 'high' | 'critical';
@@ -167,6 +169,8 @@ export interface ApiMaintenanceRequest {
   quotationApprovalReminderRound?: number;
   scheduleStepStartedAt?: string;
   scheduleProposal?: ApiMaintenanceScheduleProposal;
+  /** Start of the booked visit, once the tenant picked a time or the officer recorded one. */
+  scheduledVisitAt?: string;
   scheduleEscalated?: boolean;
   /** End of Lease landlord-responsibility — visit times go to agent for approval. */
   endLeasingLandlordResp?: boolean;
