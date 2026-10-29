@@ -20,13 +20,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   CONVERSATION_ACTION,
+  CONVERSATION_APP_NAME,
+  CONVERSATION_APP_RECIPIENTS,
+  CONVERSATION_CHANNEL_OPTIONS,
   CONVERSATION_DELIVERY_SENT,
   CONVERSATION_RECIPIENT,
   CONVERSATION_RECIPIENT_OPTIONS,
   CONVERSATION_RECIPIENTS_REQUIRING_EMAIL,
+  CONVERSATION_REPLY_CHANNEL,
   CONVERSATION_SELECT_PROMPT_VALUE,
   CONVERSATIONS_COPY,
   type ConversationRecipient,
+  type ConversationReplyChannel,
 } from '@/constants/conversations';
 import { useConversationAction } from '@/hooks/use-agent-conversations';
 import {
@@ -36,7 +41,13 @@ import {
 } from '@/lib/crossub-api/agent-conversation-client';
 import { toPlainTextBody } from '@/lib/message-body';
 
-/** Compose a new email thread from the agency address to a party on one Self-Manage property. */
+/** Recipients an app message can go to: the tenant and owner, never a contractor. */
+const APP_RECIPIENT_OPTIONS = CONVERSATION_RECIPIENT_OPTIONS.filter((o) => CONVERSATION_APP_RECIPIENTS.has(o.id));
+
+/**
+ * Compose a new thread on one Self-Manage property: an email from the agency address to a
+ * tenant, owner or contractor, or a message in the tenant's or owner's app.
+ */
 export function NewConversationDialog({
   open,
   onOpenChange,
@@ -54,17 +65,26 @@ export function NewConversationDialog({
 }) {
   const { pending, run } = useConversationAction();
   const [propertyId, setPropertyId] = useState<string>(defaultPropertyId ?? CONVERSATION_SELECT_PROMPT_VALUE);
+  const [channel, setChannel] = useState<ConversationReplyChannel>(CONVERSATION_REPLY_CHANNEL.EMAIL);
   const [recipient, setRecipient] = useState<ConversationRecipient>(CONVERSATION_RECIPIENT.TENANT);
   const [toEmail, setToEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const busy = pending !== null;
-  const emailRequired = CONVERSATION_RECIPIENTS_REQUIRING_EMAIL.has(recipient);
+  const isApp = channel === CONVERSATION_REPLY_CHANNEL.APP;
+  const emailRequired = !isApp && CONVERSATION_RECIPIENTS_REQUIRING_EMAIL.has(recipient);
   const complete =
     propertyId !== CONVERSATION_SELECT_PROMPT_VALUE &&
     subject.trim().length > 0 &&
     body.trim().length > 0 &&
     (!emailRequired || toEmail.trim().length > 0);
+
+  const chooseChannel = (next: ConversationReplyChannel) => {
+    setChannel(next);
+    if (next === CONVERSATION_REPLY_CHANNEL.APP && !CONVERSATION_APP_RECIPIENTS.has(recipient)) {
+      setRecipient(CONVERSATION_RECIPIENT.TENANT);
+    }
+  };
 
   const insertTemplate = (templateId: string) => {
     const template = templates.find((t) => t.id === templateId);
@@ -81,13 +101,16 @@ export function NewConversationDialog({
       createAgentConversation({
         propertyId,
         recipient,
+        channel,
         subject: subject.trim(),
         body: body.trim(),
-        ...(email ? { toEmail: email } : {}),
+        ...(email && !isApp ? { toEmail: email } : {}),
       }),
     );
     if (!result) return;
-    if (result.delivery && result.delivery !== CONVERSATION_DELIVERY_SENT) {
+    if (isApp) {
+      toast.success(CONVERSATIONS_COPY.appSent(`the ${CONVERSATION_APP_NAME[recipient]}`));
+    } else if (result.delivery && result.delivery !== CONVERSATION_DELIVERY_SENT) {
       toast.warning(CONVERSATIONS_COPY.notSent(result.delivery));
     } else {
       toast.success(result.sentTo ? `${CONVERSATIONS_COPY.sent}: ${result.sentTo}` : CONVERSATIONS_COPY.sent);
@@ -123,23 +146,35 @@ export function NewConversationDialog({
           </div>
 
           <div>
-            <p className="text-muted-foreground mb-1 text-xs font-medium">{CONVERSATIONS_COPY.composeRecipientLabel}</p>
-            <FilterChips options={CONVERSATION_RECIPIENT_OPTIONS} value={recipient} onChange={setRecipient} />
+            <p className="text-muted-foreground mb-1 text-xs font-medium">{CONVERSATIONS_COPY.channelLabel}</p>
+            <FilterChips options={CONVERSATION_CHANNEL_OPTIONS} value={channel} onChange={chooseChannel} />
           </div>
 
           <div>
-            <FieldLabel htmlFor="compose-email">{CONVERSATIONS_COPY.composeEmailLabel}</FieldLabel>
-            <Input
-              id="compose-email"
-              type="email"
-              value={toEmail}
-              disabled={busy}
-              onChange={(e) => setToEmail(e.target.value)}
+            <p className="text-muted-foreground mb-1 text-xs font-medium">{CONVERSATIONS_COPY.composeRecipientLabel}</p>
+            <FilterChips
+              options={isApp ? APP_RECIPIENT_OPTIONS : CONVERSATION_RECIPIENT_OPTIONS}
+              value={recipient}
+              onChange={setRecipient}
             />
-            <p className="text-muted-foreground mt-1 text-[11px]">
-              {emailRequired ? CONVERSATIONS_COPY.composeEmailRequired : CONVERSATIONS_COPY.composeEmailOptional}
-            </p>
+            {isApp ? <p className="text-muted-foreground mt-1 text-[11px]">{CONVERSATIONS_COPY.composeAppHint}</p> : null}
           </div>
+
+          {isApp ? null : (
+            <div>
+              <FieldLabel htmlFor="compose-email">{CONVERSATIONS_COPY.composeEmailLabel}</FieldLabel>
+              <Input
+                id="compose-email"
+                type="email"
+                value={toEmail}
+                disabled={busy}
+                onChange={(e) => setToEmail(e.target.value)}
+              />
+              <p className="text-muted-foreground mt-1 text-[11px]">
+                {emailRequired ? CONVERSATIONS_COPY.composeEmailRequired : CONVERSATIONS_COPY.composeEmailOptional}
+              </p>
+            </div>
+          )}
 
           {templates.length > 0 ? (
             <div>

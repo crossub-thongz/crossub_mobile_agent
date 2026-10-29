@@ -1,7 +1,12 @@
 import {
+  CONVERSATION_APP_NAME,
+  CONVERSATION_APP_RECIPIENTS,
   CONVERSATION_LINKABLE_WORKFLOW_TYPES,
   CONVERSATION_MESSAGE_DIRECTION,
+  CONVERSATION_REPLY_CHANNEL,
   type ConversationLinkableWorkflowType,
+  type ConversationRecipient,
+  type ConversationReplyChannel,
 } from '@/constants/conversations';
 import type { AgencyTeamMember } from '@/lib/crossub-api/agent-client';
 import type {
@@ -105,4 +110,37 @@ export function conversationJobKey(job: Pick<AgentConversationWorkflowOption, 'w
 export function teamMemberName(member: AgencyTeamMember): string {
   const name = [member.firstName, member.lastName].filter(Boolean).join(' ').trim();
   return name || member.email;
+}
+
+type ConversationParticipant = AgentConversationDetail['participants'][number];
+
+function isAppParty(
+  participant: ConversationParticipant,
+): participant is ConversationParticipant & { userType: ConversationRecipient } {
+  return CONVERSATION_APP_RECIPIENTS.has(participant.userType as ConversationRecipient);
+}
+
+/**
+ * The tenant and owner a thread names: the people an app message reaches, since their apps list
+ * a property's thread only when it names them. Empty when the thread has no property.
+ */
+export function conversationAppParties(detail: AgentConversationDetail): ConversationParticipant[] {
+  if (!detail.propertyId) return [];
+  return detail.participants.filter(isAppParty);
+}
+
+/** "Tia Tenant (tenant app)", joined, for the composer heading and the sent toast. */
+export function appPartiesLabel(parties: readonly ConversationParticipant[]): string {
+  return parties
+    .filter(isAppParty)
+    .map((p) => `${p.name} (${CONVERSATION_APP_NAME[p.userType]})`)
+    .join(', ');
+}
+
+/** App when the thread's latest message went by app and an app message can still go; else email. */
+export function defaultReplyChannel(detail: AgentConversationDetail): ConversationReplyChannel {
+  const latest = detail.messages[detail.messages.length - 1];
+  return latest?.channel === CONVERSATION_REPLY_CHANNEL.APP && conversationAppParties(detail).length > 0
+    ? CONVERSATION_REPLY_CHANNEL.APP
+    : CONVERSATION_REPLY_CHANNEL.EMAIL;
 }

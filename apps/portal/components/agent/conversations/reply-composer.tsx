@@ -11,6 +11,7 @@ import {
   SendActions,
   SignaturePreview,
 } from '@/components/agent/conversations/reply-composer-parts';
+import { FilterChips } from '@/components/agent/filter-chips';
 import { SELECT_CLASS } from '@/components/agent/maintenance-self-managed/step-card';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -23,6 +24,7 @@ import {
   CONVERSATION_AI_DRAFT_DEFAULT_INSTRUCTION,
   CONVERSATION_AI_DRAFT_INSTRUCTION_MIN_CHARS,
   CONVERSATION_ATTACHMENT_LIMITS,
+  CONVERSATION_CHANNEL_OPTIONS,
   CONVERSATION_DELIVERY_SENT,
   CONVERSATION_RECIPIENTS_MAX,
   CONVERSATION_REPLY_CHANNEL,
@@ -31,9 +33,16 @@ import {
   CONVERSATION_STATE_ACTION,
   CONVERSATIONS_COPY,
   type ConversationAction,
+  type ConversationReplyChannel,
   type ConversationSendMode,
 } from '@/constants/conversations';
-import { defaultReplyToEmail, latestInboundMessageId } from '@/lib/agent-conversations';
+import {
+  appPartiesLabel,
+  conversationAppParties,
+  defaultReplyChannel,
+  defaultReplyToEmail,
+  latestInboundMessageId,
+} from '@/lib/agent-conversations';
 import {
   draftAgentConversationReply,
   replyToAgentConversation,
@@ -80,9 +89,10 @@ function initialState(detail: AgentConversationDetail) {
 }
 
 /**
- * The email reply composer, in step with the admin portal's Conversations composer (Daniel,
- * 21 Oct 2026): To / Cc / Bcc as address chips, subject, a formatting editor, attachments,
- * templates, a Cros draft, the signature line, Save draft, and Send or Send and resolve.
+ * The reply composer, in step with the admin portal's Conversations composer (Daniel, 21 Oct
+ * 2026): To / Cc / Bcc as address chips, subject, a formatting editor, attachments, templates, a
+ * Cros draft, the signature line, Save draft, and Send or Send and resolve. On a thread that
+ * names the tenant or owner it can also send an app message: text only, into their app.
  */
 export function ReplyComposer({
   detail,
@@ -114,6 +124,9 @@ export function ReplyComposer({
   const [instruction, setInstruction] = useState('');
   const [crosOpen, setCrosOpen] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [channel, setChannel] = useState<ConversationReplyChannel>(() => defaultReplyChannel(detail));
+  const appParties = useMemo(() => conversationAppParties(detail), [detail]);
+  const isApp = channel === CONVERSATION_REPLY_CHANNEL.APP && appParties.length > 0;
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const busy = pending !== null;
@@ -197,11 +210,13 @@ export function ReplyComposer({
   const badAddress = lines.flat().find((a) => !isEmailAddress(a));
   const blocker = !text.trim()
     ? CONVERSATIONS_COPY.noBody
-    : badAddress
-      ? CONVERSATIONS_COPY.checkAddress(badAddress)
-      : lines.some((line) => line.length > CONVERSATION_RECIPIENTS_MAX)
-        ? CONVERSATIONS_COPY.tooManyRecipients(CONVERSATION_RECIPIENTS_MAX)
-        : null;
+    : isApp
+      ? null
+      : badAddress
+        ? CONVERSATIONS_COPY.checkAddress(badAddress)
+        : lines.some((line) => line.length > CONVERSATION_RECIPIENTS_MAX)
+          ? CONVERSATIONS_COPY.tooManyRecipients(CONVERSATION_RECIPIENTS_MAX)
+          : null;
 
   const saveDraft = () => {
     const ok = writeConversationReplyDraft(detail.id, {
@@ -222,22 +237,31 @@ export function ReplyComposer({
     const trimmedSubject = subject.trim();
     const bodyHtml = editorRef.current ? compactComposerHtml(editorRef.current.innerHTML) : '';
     const outcome = await run(CONVERSATION_ACTION.SEND, async () => {
-      const sent = await replyToAgentConversation(detail.id, {
-        channel: CONVERSATION_REPLY_CHANNEL.EMAIL,
-        body: text.trim(),
-        ...(trimmedSubject && trimmedSubject !== detail.subject ? { subject: trimmedSubject } : {}),
-        ...(replyToMessageId ? { replyToMessageId } : {}),
-        ...(finalTo.length ? { toEmails: [...finalTo] } : {}),
-        ...(finalCc.length ? { ccEmails: [...finalCc] } : {}),
-        ...(finalBcc.length ? { bccEmails: [...finalBcc] } : {}),
-        ...(bodyHtml ? { bodyHtml } : {}),
-        ...(attachments.length ? { attachments: [...attachments] } : {}),
-      });
-      // Only a reply that went out closes the thread; a blocked send must stay in view.
+      const sent = await replyToAgentConversation(
+        detail.id,
+        isApp
+          ? {
+              channel: CONVERSATION_REPLY_CHANNEL.APP,
+              body: text.trim(),
+              ...(replyToMessageId ? { replyToMessageId } : {}),
+            }
+          : {
+              channel: CONVERSATION_REPLY_CHANNEL.EMAIL,
+              body: text.trim(),
+              ...(trimmedSubject && trimmedSubject !== detail.subject ? { subject: trimmedSubject } : {}),
+              ...(replyToMessageId ? { replyToMessageId } : {}),
+              ...(finalTo.length ? { toEmails: [...finalTo] } : {}),
+              ...(finalCc.length ? { ccEmails: [...finalCc] } : {}),
+              ...(finalBcc.length ? { bccEmails: [...finalBcc] } : {}),
+              ...(bodyHtml ? { bodyHtml } : {}),
+              ...(attachments.length ? { attachments: [...attachments] } : {}),
+            },
+      );
+      // Only a reply that went out closes the thread; a blocked send must stay in view. An app
+      // message is on the thread once saved, so it has no mail delivery to wait on.
+      const delivered = isApp || sent.delivery === CONVERSATION_DELIVERY_SENT;
       const resolve =
-        mode === CONVERSATION_SEND_MODE.SEND_AND_RESOLVE &&
-        sent.delivery === CONVERSATION_DELIVERY_SENT &&
-        !sent.conversation.resolved;
+        mode === CONVERSATION_SEND_MODE.SEND_AND_RESOLVE && delivered && !sent.conversation.resolved;
       if (!resolve) return { sent, conversation: sent.conversation, resolveError: null };
       try {
         const resolved = await setAgentConversationState(detail.id, CONVERSATION_STATE_ACTION.RESOLVE);
@@ -255,13 +279,69 @@ export function ReplyComposer({
     setInstruction('');
     setDraftSaved(false);
     onChange(conversation);
-    if (sent.delivery && sent.delivery !== CONVERSATION_DELIVERY_SENT) {
+    if (isApp) {
+      toast.success(CONVERSATIONS_COPY.appSent(appPartiesLabel(appParties)));
+    } else if (sent.delivery && sent.delivery !== CONVERSATION_DELIVERY_SENT) {
       toast.warning(CONVERSATIONS_COPY.notSent(sent.delivery));
     } else {
       toast.success(sent.sentTo ? `${CONVERSATIONS_COPY.sent}: ${sent.sentTo}` : CONVERSATIONS_COPY.sent);
     }
     if (resolveError) toast.error(CONVERSATIONS_COPY.sentNotResolved, { description: resolveError });
   };
+
+  const composerExtras = (
+    <>
+      {templates.length > 0 ? (
+        <select
+          aria-label={CONVERSATIONS_COPY.templateLabel}
+          className={cn(SELECT_CLASS, 'h-7 w-36 text-xs')}
+          value={CONVERSATION_SELECT_PROMPT_VALUE}
+          disabled={busy}
+          onChange={(e) => insertTemplate(e.target.value)}
+        >
+          <option value={CONVERSATION_SELECT_PROMPT_VALUE}>{CONVERSATIONS_COPY.templatePlaceholder}</option>
+          {templates.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+      ) : null}
+      <Popover open={crosOpen} onOpenChange={setCrosOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" size="sm" variant="outline" className="h-7 gap-1.5 text-xs" disabled={busy}>
+            {pending === CONVERSATION_ACTION.DRAFT ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src="/cros-logo.png" alt="" className="size-4 object-contain" />
+            )}
+            {CONVERSATIONS_COPY.crosLabel}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-72 space-y-2">
+          <Input
+            className="h-8 text-xs"
+            placeholder={CONVERSATIONS_COPY.crosInstructionPlaceholder}
+            value={instruction}
+            disabled={busy}
+            onChange={(e) => setInstruction(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === COMPOSER_ENTER_KEY) {
+                e.preventDefault();
+                void crosDraft();
+              }
+            }}
+          />
+          <div className="flex justify-end">
+            <Button type="button" size="sm" disabled={busy} onClick={() => void crosDraft()}>
+              {CONVERSATIONS_COPY.crosDraftButton}
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </>
+  );
 
   const toggle = (label: string, onClick: () => void) => (
     <button type="button" className="text-muted-foreground hover:text-foreground text-xs" onClick={onClick}>
@@ -274,120 +354,90 @@ export function ReplyComposer({
       <div className="bg-card rounded-xl border shadow-sm">
         <div className="flex min-w-0 items-center gap-2 border-b px-4 py-2">
           <p className="min-w-0 flex-1 truncate text-sm font-semibold">
-            {CONVERSATIONS_COPY.replyHeading(finalTo[0])}
+            {isApp
+              ? CONVERSATIONS_COPY.appReplyHeading(appPartiesLabel(appParties))
+              : CONVERSATIONS_COPY.replyHeading(finalTo[0])}
           </p>
           {init.restored ? (
             <span className="text-muted-foreground shrink-0 text-[11px]">{CONVERSATIONS_COPY.draftRestored}</span>
           ) : null}
         </div>
 
-        <div className="space-y-2 px-4 pt-3">
-          <RecipientRow
-            label={CONVERSATIONS_COPY.toLabel}
-            recipients={to}
-            onChange={setTo}
-            typed={toTyped}
-            onTypedChange={setToTyped}
-            disabled={busy}
-            trailing={
-              <>
-                {!showCc ? toggle(CONVERSATIONS_COPY.ccLabel, () => setShowCc(true)) : null}
-                {!showBcc ? toggle(CONVERSATIONS_COPY.bccLabel, () => setShowBcc(true)) : null}
-              </>
-            }
-          />
-          {showCc ? (
-            <RecipientRow
-              label={CONVERSATIONS_COPY.ccLabel}
-              recipients={cc}
-              onChange={setCc}
-              typed={ccTyped}
-              onTypedChange={setCcTyped}
-              disabled={busy}
-            />
-          ) : null}
-          {showBcc ? (
-            <RecipientRow
-              label={CONVERSATIONS_COPY.bccLabel}
-              recipients={bcc}
-              onChange={setBcc}
-              typed={bccTyped}
-              onTypedChange={setBccTyped}
-              disabled={busy}
-            />
-          ) : null}
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="text-muted-foreground w-12 shrink-0 text-xs">{CONVERSATIONS_COPY.replySubjectLabel}</span>
-            <Input
-              aria-label={CONVERSATIONS_COPY.replySubjectLabel}
-              className="h-8 min-w-0 flex-1 text-xs"
-              value={subject}
-              disabled={busy}
-              onChange={(e) => {
-                setSubject(e.target.value);
-                setDraftSaved(false);
-              }}
-            />
+        {appParties.length > 0 ? (
+          <div className="flex min-w-0 items-center gap-2 px-4 pt-3">
+            <span className="text-muted-foreground w-12 shrink-0 text-xs">{CONVERSATIONS_COPY.channelLabel}</span>
+            <div className="min-w-0 flex-1">
+              <FilterChips options={CONVERSATION_CHANNEL_OPTIONS} value={channel} onChange={setChannel} />
+            </div>
           </div>
+        ) : null}
 
-          <ComposerToolbar
-            editorRef={editorRef}
-            onEdited={syncEditor}
-            onAttach={() => fileInputRef.current?.click()}
-            attachDisabled={attachments.length >= CONVERSATION_ATTACHMENT_LIMITS.maxFiles}
-            disabled={busy}
-          >
-            {templates.length > 0 ? (
-              <select
-                aria-label={CONVERSATIONS_COPY.templateLabel}
-                className={cn(SELECT_CLASS, 'h-7 w-36 text-xs')}
-                value={CONVERSATION_SELECT_PROMPT_VALUE}
+        {isApp ? (
+          <div className="space-y-2 px-4 pt-3">
+            <p className="text-muted-foreground text-[11px]">{CONVERSATIONS_COPY.appHint}</p>
+            <div className="flex flex-wrap items-center justify-end gap-2">{composerExtras}</div>
+          </div>
+        ) : (
+          <div className="space-y-2 px-4 pt-3">
+            <RecipientRow
+              label={CONVERSATIONS_COPY.toLabel}
+              recipients={to}
+              onChange={setTo}
+              typed={toTyped}
+              onTypedChange={setToTyped}
+              disabled={busy}
+              trailing={
+                <>
+                  {!showCc ? toggle(CONVERSATIONS_COPY.ccLabel, () => setShowCc(true)) : null}
+                  {!showBcc ? toggle(CONVERSATIONS_COPY.bccLabel, () => setShowBcc(true)) : null}
+                </>
+              }
+            />
+            {showCc ? (
+              <RecipientRow
+                label={CONVERSATIONS_COPY.ccLabel}
+                recipients={cc}
+                onChange={setCc}
+                typed={ccTyped}
+                onTypedChange={setCcTyped}
                 disabled={busy}
-                onChange={(e) => insertTemplate(e.target.value)}
-              >
-                <option value={CONVERSATION_SELECT_PROMPT_VALUE}>{CONVERSATIONS_COPY.templatePlaceholder}</option>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+              />
             ) : null}
-            <Popover open={crosOpen} onOpenChange={setCrosOpen}>
-              <PopoverTrigger asChild>
-                <Button type="button" size="sm" variant="outline" className="h-7 gap-1.5 text-xs" disabled={busy}>
-                  {pending === CONVERSATION_ACTION.DRAFT ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src="/cros-logo.png" alt="" className="size-4 object-contain" />
-                  )}
-                  {CONVERSATIONS_COPY.crosLabel}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-72 space-y-2">
-                <Input
-                  className="h-8 text-xs"
-                  placeholder={CONVERSATIONS_COPY.crosInstructionPlaceholder}
-                  value={instruction}
-                  disabled={busy}
-                  onChange={(e) => setInstruction(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === COMPOSER_ENTER_KEY) {
-                      e.preventDefault();
-                      void crosDraft();
-                    }
-                  }}
-                />
-                <div className="flex justify-end">
-                  <Button type="button" size="sm" disabled={busy} onClick={() => void crosDraft()}>
-                    {CONVERSATIONS_COPY.crosDraftButton}
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </ComposerToolbar>
-        </div>
+            {showBcc ? (
+              <RecipientRow
+                label={CONVERSATIONS_COPY.bccLabel}
+                recipients={bcc}
+                onChange={setBcc}
+                typed={bccTyped}
+                onTypedChange={setBccTyped}
+                disabled={busy}
+              />
+            ) : null}
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="text-muted-foreground w-12 shrink-0 text-xs">{CONVERSATIONS_COPY.replySubjectLabel}</span>
+              <Input
+                aria-label={CONVERSATIONS_COPY.replySubjectLabel}
+                className="h-8 min-w-0 flex-1 text-xs"
+                value={subject}
+                disabled={busy}
+                onChange={(e) => {
+                  setSubject(e.target.value);
+                  setDraftSaved(false);
+                }}
+              />
+            </div>
+
+            <ComposerToolbar
+              editorRef={editorRef}
+              onEdited={syncEditor}
+              onAttach={() => fileInputRef.current?.click()}
+              attachDisabled={attachments.length >= CONVERSATION_ATTACHMENT_LIMITS.maxFiles}
+              disabled={busy}
+            >
+              {composerExtras}
+            </ComposerToolbar>
+          </div>
+        )}
 
         <div className="space-y-2 px-4 pt-2">
           <div
@@ -402,12 +452,16 @@ export function ReplyComposer({
             suppressContentEditableWarning
             className="empty:before:text-muted-foreground max-h-[24vh] min-h-[88px] w-full overflow-auto rounded-md text-sm leading-relaxed outline-none empty:before:content-[attr(data-placeholder)] [&_a]:text-teal-700 [&_a]:underline dark:[&_a]:text-teal-300 [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
           />
-          <SignaturePreview name={senderName} agencyName={agencyName} />
-          <AttachmentChips
-            attachments={attachments}
-            disabled={busy}
-            onRemove={(i) => setAttachments((prev) => prev.filter((_, j) => j !== i))}
-          />
+          {isApp ? null : (
+            <>
+              <SignaturePreview name={senderName} agencyName={agencyName} />
+              <AttachmentChips
+                attachments={attachments}
+                disabled={busy}
+                onRemove={(i) => setAttachments((prev) => prev.filter((_, j) => j !== i))}
+              />
+            </>
+          )}
         </div>
 
         <input

@@ -9,6 +9,7 @@ import { SELECT_CLASS } from '@/components/agent/maintenance-self-managed/step-c
 import { Button } from '@/components/ui/button';
 import {
   CONVERSATION_ACTION,
+  CONVERSATION_MESSAGE_CHANNEL_LABEL,
   CONVERSATION_MESSAGE_DIRECTION,
   CONVERSATION_STATE_ACTION,
   CONVERSATION_UNASSIGNED_VALUE,
@@ -30,6 +31,7 @@ import { cn, formatDateTime } from '@/lib/utils';
 function ConversationMessageBubble({ message }: { message: AgentConversationMessage }) {
   const outbound = message.direction === CONVERSATION_MESSAGE_DIRECTION.OUTBOUND;
   const attachments = message.attachments.filter((a) => !a.inline);
+  const channelLabel = CONVERSATION_MESSAGE_CHANNEL_LABEL[message.channel];
   return (
     <div className={cn('flex w-full', outbound ? 'justify-end' : 'justify-start')}>
       <div
@@ -49,6 +51,9 @@ function ConversationMessageBubble({ message }: { message: AgentConversationMess
           <span className="font-semibold tracking-wide uppercase">
             {outbound ? CONVERSATIONS_COPY.outbound : CONVERSATIONS_COPY.inbound}
           </span>
+          {channelLabel ? (
+            <span className="rounded-full border border-current/30 px-1.5 leading-4">{channelLabel}</span>
+          ) : null}
           <span className="font-medium">{message.from}</span>
           {message.fromEmail && message.fromEmail !== message.from ? <span>{message.fromEmail}</span> : null}
           <span className="tabular-nums">{formatDateTime(message.sentAt)}</span>

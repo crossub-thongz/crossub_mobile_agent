@@ -3,6 +3,7 @@ import type {
   AgentConversationJobInput,
   AgentConversationListState,
   AgentConversationMessage,
+  AgentConversationReplyInput,
   AgentConversationStateAction,
   AgentConversationWorkflowOption,
   AgentCreateConversationInput,
@@ -30,9 +31,24 @@ export const CONVERSATION_MESSAGE_DIRECTION = {
   OUTBOUND: 'outbound',
 } as const satisfies Record<string, AgentConversationMessage['direction']>;
 
+export type ConversationReplyChannel = AgentConversationReplyInput['channel'];
+
+/** How a message goes: email from the agency address, or into the tenant / owner app. */
 export const CONVERSATION_REPLY_CHANNEL = {
   EMAIL: 'email',
-} as const;
+  APP: 'app',
+} as const satisfies Record<string, ConversationReplyChannel>;
+
+export const CONVERSATION_CHANNEL_OPTIONS: readonly { id: ConversationReplyChannel; label: string }[] = [
+  { id: CONVERSATION_REPLY_CHANNEL.EMAIL, label: 'Email' },
+  { id: CONVERSATION_REPLY_CHANNEL.APP, label: 'App message' },
+];
+
+/** What each message channel reads as on the thread; others show as sent. */
+export const CONVERSATION_MESSAGE_CHANNEL_LABEL: Readonly<Record<string, string>> = {
+  [CONVERSATION_REPLY_CHANNEL.EMAIL]: 'Email',
+  [CONVERSATION_REPLY_CHANNEL.APP]: 'App',
+};
 
 export type ConversationRecipient = AgentCreateConversationInput['recipient'];
 
@@ -47,6 +63,17 @@ export const CONVERSATION_RECIPIENT_OPTIONS: readonly { id: ConversationRecipien
   { id: CONVERSATION_RECIPIENT.LANDLORD, label: 'Owner' },
   { id: CONVERSATION_RECIPIENT.CONTRACTOR, label: 'Contractor' },
 ];
+
+/** Parties with a CROSSUB app the agency's threads show in. Contractors are written to by email. */
+export const CONVERSATION_APP_RECIPIENTS: ReadonlySet<ConversationRecipient> = new Set([
+  CONVERSATION_RECIPIENT.TENANT,
+  CONVERSATION_RECIPIENT.LANDLORD,
+]);
+
+export const CONVERSATION_APP_NAME: Readonly<Record<string, string>> = {
+  [CONVERSATION_RECIPIENT.TENANT]: 'tenant app',
+  [CONVERSATION_RECIPIENT.LANDLORD]: 'owner app',
+};
 
 /** Recipients the server needs a typed address for; tenant and owner fall back to the property record. */
 export const CONVERSATION_RECIPIENTS_REQUIRING_EMAIL: ReadonlySet<ConversationRecipient> = new Set([
@@ -193,6 +220,11 @@ export const CONVERSATIONS_COPY = {
   ccLabel: 'Cc',
   bccLabel: 'Bcc',
   replyHeading: (to: string | undefined) => (to ? `Reply to ${to}` : 'Reply to the thread’s contact'),
+  appReplyHeading: (names: string) => `App message to ${names}`,
+  channelLabel: 'Send as',
+  appHint: 'Shows in their CROSSUB app. Text only: no subject, formatting or attachments.',
+  appSent: (names: string) => `Sent to ${names}`,
+  composeAppHint: 'Shows in their CROSSUB app. A contractor is written to by email.',
   replyPlaceholder: 'Write your message…',
   replyBodyLabel: 'Message',
   replySubjectLabel: 'Subject',
@@ -255,7 +287,7 @@ export const CONVERSATIONS_COPY = {
   propertyFiled: 'Filed under the property',
   decisionsHeading: 'Owner decisions',
   composeTitle: 'New conversation',
-  composeDescription: 'Email a tenant, owner or contractor from your agency address.',
+  composeDescription: 'Email a tenant, owner or contractor from your agency address, or message a tenant or owner in their app.',
   composePropertyLabel: 'Property',
   composePropertyPlaceholder: 'Choose a property…',
   composeRecipientLabel: 'To',
