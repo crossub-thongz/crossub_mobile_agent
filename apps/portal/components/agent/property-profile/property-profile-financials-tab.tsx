@@ -38,8 +38,6 @@ import '@/components/agent/property-profile/property-profile-v2.css';
 
 const LEDGER_PREVIEW_LIMIT = 5;
 
-type ArrearsKind = 'rent' | 'bill' | 'bond';
-
 function SnapshotCard({
   label,
   value,

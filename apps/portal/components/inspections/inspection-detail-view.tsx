@@ -1133,26 +1133,14 @@ export function InspectionDetailView({
         />
       ) : null}
 
-      {(showRoutineReport ||
-        (hasReport &&
-          insp.type !== 'OPEN' &&
-          insp.type !== 'ROUTINE' &&
-          hasLeftTaskPool({
-            completedAt: insp.completedAt,
-            approvedAt: insp.approvedAt,
-          }))) && (
+      {/* Ingoing and outgoing return AgentFieldInspectionDetail above, so only a routine report shows here. */}
+      {showRoutineReport && (
         <section className="space-y-3">
           <InspectionReportDownloadActions
             inspectionId={routineReportInspectionId}
             reportUrl={routineReportUrl}
             propertyLabel={insp.propertyAddress}
-            inspectionType={
-              insp.type === 'INGOING'
-                ? 'ingoing'
-                : insp.type === 'OUTGOING'
-                  ? 'outgoing'
-                  : 'routine'
-            }
+            inspectionType="routine"
             variant="card"
           />
         </section>

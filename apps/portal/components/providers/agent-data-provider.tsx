@@ -1710,6 +1710,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     const quote =
       pickLatestSubmittedQuote(snapshot.quotations, {
         id: requestId,
+        quotationIds: snapshot.mapped.apiRequest.quotationIds,
         assignedContractorId:
           snapshot.mapped.apiRequest.assignedContractorId ??
           snapshot.workflowRequest?.assignedContractorId,

@@ -130,8 +130,8 @@ export function attentionItemSubtext(
         0,
         Math.ceil((Date.parse(property.nextRentReview) - Date.now()) / (1000 * 60 * 60 * 24)),
       );
-      const rent = property.rentPerWeek;
-      const rentPart = rent != null ? ` · Current rent ${formatMoney(rent)}/w` : '';
+      const rent = property.rentWeekly;
+      const rentPart = rent > 0 ? ` · Current rent ${formatMoney(rent)}/w` : '';
       return `Lease expires in ${days} days${rentPart}`;
     }
   }

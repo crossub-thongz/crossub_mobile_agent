@@ -583,7 +583,7 @@ export function CreateInspectionWizard({
             ? LEASING_LIFECYCLE_STEP.OPEN_INSPECTION
             : LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL,
         );
-        const sessionId = view.openInspection?.viewingSessionId;
+        const sessionId = view.viewingSessionId;
         if (sessionId) {
           try {
             const session = await openViewingsApi.get(sessionId);
@@ -888,11 +888,6 @@ export function CreateInspectionWizard({
         if (openConductedBy === 'crossub' && !openPreferredStartLocal) {
           throw new Error(
             'This property is not on a letting yet — open the leasing workflow and request the open inspection from there',
-          );
-        }
-        if (openConductedBy === 'agent') {
-          throw new Error(
-            'Self open inspections need a start date and time — choose Agent conducts and set the viewing window.',
           );
         }
         const scheduledAt = new Date(openPreferredStartLocal).toISOString();

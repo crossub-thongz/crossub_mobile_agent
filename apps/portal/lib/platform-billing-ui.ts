@@ -1,6 +1,6 @@
 import { ROUTES } from '@/constants/routes';
 
-const HIDDEN_BILLING_HREFS = new Set([ROUTES.BILL, ROUTES.PRICING, ROUTES.BILLING_OVERDUE]);
+const HIDDEN_BILLING_HREFS = new Set<string>([ROUTES.BILL, ROUTES.PRICING, ROUTES.BILLING_OVERDUE]);
 const HIDDEN_MORE_ITEM_IDS = new Set([
   'invoices',
   'payment-methods',

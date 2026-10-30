@@ -21,14 +21,14 @@ import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 import { cn } from '@/lib/utils';
 
-const V2_SIDEBAR_PINNED_HREFS = new Set([
+const V2_SIDEBAR_PINNED_HREFS = new Set<string>([
   ROUTES.SETTINGS,
   ROUTES.FAQ,
   ROUTES.PRICING,
   ROUTES.MORE,
 ]);
 
-const V2_AGENCY_MENU_HREFS = new Set([ROUTES.SETTINGS, ROUTES.PRICING]);
+const V2_AGENCY_MENU_HREFS = new Set<string>([ROUTES.SETTINGS, ROUTES.PRICING]);
 
 function isActive(pathname: string, href: string): boolean {
   if (href === ROUTES.DASHBOARD) return pathname === href;

@@ -112,7 +112,7 @@ export function resolveAllowEmoji(
 }
 
 /** Wrap an input/textarea onChange so the handler receives the sanitized value. */
-export function bindSanitizedTextValue<E extends { target: { value: string } }>(options: {
+export function bindSanitizedTextValue<E extends { target: EventTarget & { value: string } }>(options: {
   kind?: ReturnType<typeof parseAgentInputKind>;
   allowEmoji: boolean;
   allowHtml?: boolean;
@@ -144,7 +144,7 @@ export function bindSanitizedTextValue<E extends { target: { value: string } }>(
 }
 
 /** Wrap an input/textarea onChange so the handler never sees emoji. */
-export function bindTextValueWithoutEmojis<E extends { target: { value: string } }>(
+export function bindTextValueWithoutEmojis<E extends { target: EventTarget & { value: string } }>(
   handler?: (event: E) => void,
 ): (event: E) => void {
   return bindSanitizedTextValue({ allowEmoji: false, onChange: handler });

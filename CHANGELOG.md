@@ -11,6 +11,9 @@
 - Settings has a CROS section: email tone (friendly, formal, brief), your own sign off, quiet hours with no phone alerts from CROS (Sydney time), and a link to your agency's preferred contractors in People; the same preferences CROS changes when asked in chat (contract 0.64.0).
 
 ### Fixed
+- Dashboard lease expiry items show the current weekly rent again (they read a field the property never has)
+- Booking an open inspection from a letting finds its viewing session (the wizard looked for it in the wrong place, so the open was never picked up)
+- Type check clean again: removed two registration banners and an open inspection check that could never show, and fixed route and event types
 - While the CROSSUB team holds a CROS chat out of hours, "The team is back" gives their Sydney time (it showed the phone's own clock, so 9am Sydney read as 6am in Malaysia)
 
 ### Changed
