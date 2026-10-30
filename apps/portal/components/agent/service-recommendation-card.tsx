@@ -94,13 +94,18 @@ export function ServiceRecommendation({
   if (!ready || !lead) return null;
   if (surface === 'cros' && !batch && !urgent) return null;
 
-  const snooze = (id: string) => {
+  const remember = (ids: string[], entry: RecommendationMemory) => {
+    const next = { ...memory };
+    for (const id of ids) next[id] = entry;
+    save(next);
+  };
+  const snooze = (ids: string[]) => {
     const until = new Date();
     until.setDate(until.getDate() + SERVICE_RECOMMENDATION_SNOOZE_DAYS);
-    save({ ...memory, [id]: { snoozeUntil: until.toISOString() } });
+    remember(ids, { snoozeUntil: until.toISOString() });
   };
-  const dismiss = (id: string) => {
-    save({ ...memory, [id]: { dismissed: true } });
+  const dismiss = (ids: string[]) => {
+    remember(ids, { dismissed: true });
   };
 
   const emphasizeFull =
@@ -110,14 +115,22 @@ export function ServiceRecommendation({
 
   return (
     <div className="space-y-3">
-      {batch ? <CrosBatchSuggestion count={scoped.length} includeWays={!urgent} /> : null}
+      {batch ? (
+        <CrosBatchSuggestion
+          count={scoped.length}
+          includeWays={!urgent}
+          arrangeViaHref={inspectionDetail(lead.id)}
+          onSnooze={() => snooze(scoped.map((offer) => offer.id))}
+          onDismiss={() => dismiss(scoped.map((offer) => offer.id))}
+        />
+      ) : null}
       {surface === 'cros' && batch && !urgent ? null : (
         <AssistanceCard
           offer={lead}
           emphasizeFull={emphasizeFull}
           emphasizeInspection={urgent}
-          onSnooze={() => snooze(lead.id)}
-          onDismiss={() => dismiss(lead.id)}
+          onSnooze={() => snooze([lead.id])}
+          onDismiss={() => dismiss([lead.id])}
         />
       )}
     </div>
@@ -228,7 +241,19 @@ function FullServiceChoice({ primary }: { primary: boolean }) {
   );
 }
 
-function CrosBatchSuggestion({ count, includeWays }: { count: number; includeWays: boolean }) {
+function CrosBatchSuggestion({
+  count,
+  includeWays,
+  arrangeViaHref,
+  onSnooze,
+  onDismiss,
+}: {
+  count: number;
+  includeWays: boolean;
+  arrangeViaHref: string;
+  onSnooze: () => void;
+  onDismiss: () => void;
+}) {
   return (
     <section className="rounded-xl border border-[#d7eee6] bg-[#f7faf9] p-3">
       <p className="inline-flex items-center gap-2 text-sm font-semibold">
@@ -241,12 +266,30 @@ function CrosBatchSuggestion({ count, includeWays }: { count: number; includeWay
         upcoming inspections that haven&apos;t been arranged yet.
       </p>
       <p className="text-muted-foreground mt-1 text-sm">
-        Arrange your own inspection, and coordinate it with Crossub.
+        Crossub can arrange them for you, or you can arrange them yourself.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Link href={ROUTES.INSPECTIONS} className="rounded-lg bg-[#00bd85] px-3 py-2 text-sm font-semibold text-white">
-          Arrange your own inspection
+        <Link href={arrangeViaHref} className="rounded-lg bg-[#00bd85] px-3 py-2 text-sm font-semibold text-white">
+          Arrange via Crossub
         </Link>
+        <Link
+          href={ROUTES.INSPECTIONS}
+          className="rounded-lg border border-[#ccece3] px-3 py-2 text-sm font-semibold text-[#067a56]"
+        >
+          Arrange it yourself
+        </Link>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-muted-foreground text-xs">Either choice is optional. You can leave this for later.</p>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={onSnooze} className="text-muted-foreground inline-flex items-center gap-1 text-xs font-semibold">
+            <Clock3 className="size-3.5" />
+            Remind me in {SERVICE_RECOMMENDATION_SNOOZE_DAYS} days
+          </button>
+          <button type="button" onClick={onDismiss} className="text-muted-foreground hover:text-foreground" aria-label="Not interested">
+            <X className="size-3.5" />
+          </button>
+        </div>
       </div>
       {includeWays ? <WaysCrosHelps /> : null}
     </section>
