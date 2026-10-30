@@ -152,17 +152,23 @@ function NavLink({
 function AgentSidebarSupport({
   compact,
   pathname,
+  onOpenChange,
 }: {
   compact?: boolean;
   pathname: string;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const setMenuOpen = (next: boolean) => {
+    setOpen(next);
+    onOpenChange?.(next);
+  };
   const items = SUPPORT_PAGE_SECTION.items.filter((item) => Boolean(item.href));
   const active = items.some((item) => item.href && isActive(pathname, item.href));
   const Icon = SUPPORT_PAGE_SECTION.icon;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setMenuOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -201,7 +207,7 @@ function AgentSidebarSupport({
       <PopoverContent
         align="start"
         side="top"
-        className="min-w-[220px] w-[var(--radix-popover-trigger-width)] p-2"
+        className="w-56 p-2"
       >
         <div className="space-y-0.5">
           {items.map((item) => {
@@ -211,9 +217,9 @@ function AgentSidebarSupport({
               <Link
                 key={item.id}
                 href={href}
-                onClick={() => setOpen(false)}
+                onClick={() => setMenuOpen(false)}
                 className={cn(
-                  'hover:bg-muted/60 flex items-center gap-2 rounded-lg px-3 py-2 text-sm',
+                  'hover:bg-muted/60 flex items-center gap-2 rounded-lg px-3 py-2 text-sm whitespace-nowrap',
                   isActive(pathname, href) && 'bg-muted/40 font-medium',
                 )}
               >
@@ -233,15 +239,21 @@ function AgentSidebarAgency({
   onLogout,
   menuItems,
   pathname,
+  onOpenChange,
 }: {
   compact?: boolean;
   onLogout: () => void;
   menuItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[];
   pathname: string;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const { primaryAgency, agencies } = useAgentData();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const setMenuOpen = (next: boolean) => {
+    setOpen(next);
+    onOpenChange?.(next);
+  };
 
   const clientSince = user?.systemAccessAcceptedAt
     ? formatClientSinceMonth(user.systemAccessAcceptedAt)
@@ -249,7 +261,7 @@ function AgentSidebarAgency({
   const agencyName = primaryAgency?.name ?? 'Your agency';
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setMenuOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -287,7 +299,7 @@ function AgentSidebarAgency({
           />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" side="top" className="w-[var(--radix-popover-trigger-width)] p-2">
+      <PopoverContent align="start" side="top" className="w-56 p-2">
         <div className="space-y-0.5">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -295,9 +307,9 @@ function AgentSidebarAgency({
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setOpen(false)}
+                onClick={() => setMenuOpen(false)}
                 className={cn(
-                  'hover:bg-muted/60 flex items-center gap-2 rounded-lg px-3 py-2 text-sm',
+                  'hover:bg-muted/60 flex items-center gap-2 rounded-lg px-3 py-2 text-sm whitespace-nowrap',
                   isActive(pathname, item.href) && 'bg-muted/40 font-medium',
                 )}
               >
@@ -312,8 +324,8 @@ function AgentSidebarAgency({
               <Link
                 key={agency.id}
                 href={`${ROUTES.AGENCIES}/${agency.id}`}
-                onClick={() => setOpen(false)}
-                className="hover:bg-muted/60 block rounded-lg px-3 py-2 text-sm"
+                onClick={() => setMenuOpen(false)}
+                className="hover:bg-muted/60 block rounded-lg px-3 py-2 text-sm whitespace-nowrap"
               >
                 {agency.name}
               </Link>
@@ -321,16 +333,16 @@ function AgentSidebarAgency({
           ) : primaryAgency && !primaryAgency.id.startsWith('local-') ? (
             <Link
               href={`${ROUTES.AGENCIES}/${primaryAgency.id}`}
-              onClick={() => setOpen(false)}
-              className="hover:bg-muted/60 block rounded-lg px-3 py-2 text-sm font-medium"
+              onClick={() => setMenuOpen(false)}
+              className="hover:bg-muted/60 block rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap"
             >
               View agency
             </Link>
           ) : (
             <Link
               href={ROUTES.AGENCIES}
-              onClick={() => setOpen(false)}
-              className="hover:bg-muted/60 block rounded-lg px-3 py-2 text-sm font-medium"
+              onClick={() => setMenuOpen(false)}
+              className="hover:bg-muted/60 block rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap"
             >
               Agencies
             </Link>
@@ -338,10 +350,10 @@ function AgentSidebarAgency({
           <button
             type="button"
             onClick={() => {
-              setOpen(false);
+              setMenuOpen(false);
               onLogout();
             }}
-            className="text-muted-foreground hover:bg-muted/60 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm"
+            className="text-muted-foreground hover:bg-muted/60 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm whitespace-nowrap"
           >
             <LogOut className="size-4" />
             Sign out
@@ -361,6 +373,9 @@ export function AgentSidebar({
 }) {
   const pathname = usePathname();
   const isV2 = useIsAgentUiV2();
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [agencyOpen, setAgencyOpen] = useState(false);
+  const railCollapsed = compact && !supportOpen && !agencyOpen;
   const { hasFullManagementAccess, needActionItems, platformBillingDisabled } = useAgentData();
   const selfManagedAccess = useSelfManagedAccess();
   const propertyNeedActionCount = needActionItems.length;
@@ -397,15 +412,15 @@ export function AgentSidebar({
       <aside
         className={cn(
           'agent-sidebar agent-sidebar-v2 group/sidebar z-30 hidden h-full shrink-0 flex-col overflow-hidden transition-[width,box-shadow] duration-[350ms] ease-[cubic-bezier(0.22,1,0.36,1)] lg:flex',
-          compact
+          railCollapsed
             ? 'w-[72px] hover:z-40 hover:w-[252px] hover:shadow-[8px_0_24px_-8px_rgba(0,0,0,0.12)]'
-            : 'w-[252px]',
+            : 'z-40 w-[252px]',
         )}
       >
         <div
           className={cn(
             'flex min-w-0 items-center gap-2 px-4 pt-4 pb-3',
-            compact ? 'justify-center group-hover/sidebar:justify-start' : '',
+            railCollapsed ? 'justify-center group-hover/sidebar:justify-start' : '',
           )}
         >
           <CrossubLogo
@@ -413,7 +428,7 @@ export function AgentSidebar({
             showWordmark
             href={ROUTES.DASHBOARD}
             className="min-w-0"
-            wordmarkClassName={cn(compact && 'hidden group-hover/sidebar:inline')}
+            wordmarkClassName={cn(railCollapsed && 'hidden group-hover/sidebar:inline')}
           />
         </div>
 
@@ -427,7 +442,7 @@ export function AgentSidebar({
                     {...item}
                     v2
                     active={isActive(pathname, item.href)}
-                    compact={compact}
+                    compact={railCollapsed}
                     badge={item.href === ROUTES.TASKS ? propertyNeedActionCount : undefined}
                     trailingChevron={'trailingChevron' in item && item.trailingChevron}
                   />
@@ -444,7 +459,7 @@ export function AgentSidebar({
                       v2
                       nested
                       active={isActive(pathname, child.href)}
-                      compact={compact}
+                      compact={railCollapsed}
                     />
                   </li>,
                 ];
@@ -458,14 +473,15 @@ export function AgentSidebar({
           <div className="border-border/50 mb-3 border-t" />
           {footerNav.length > 0 ? (
             <div className="mb-1">
-              <AgentSidebarSupport compact={compact} pathname={pathname} />
+              <AgentSidebarSupport compact={railCollapsed} pathname={pathname} onOpenChange={setSupportOpen} />
             </div>
           ) : null}
           <AgentSidebarAgency
-            compact={compact}
+            compact={railCollapsed}
             onLogout={onLogout}
             menuItems={agencyMenuItems}
             pathname={pathname}
+            onOpenChange={setAgencyOpen}
           />
         </div>
       </aside>
