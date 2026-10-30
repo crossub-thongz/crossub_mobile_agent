@@ -127,7 +127,7 @@ The rest of the boss's communication tool (agent and tenant, agent and owner, ag
 - [x] Staging check, agent side (29 Oct): New conversation as an app message to the tenant of 1008/19 Halifax Street, then an app reply on the same thread; both sent and tagged App (thread "[TEST] App message check"). Screenshots in `~/Downloads/crossub-agent-communication/`.
 - [ ] Staging check, tenant side: the tenant app shows the test thread. Skipped for now (Chan, 30 Oct): needs the Halifax tenant login.
 - [x] Owner bell dropped: built in 15e1d34a4, then removed in c9897a334, since there is no owner app and CROSSUB never messages an owner. The unused `MESSAGE` owner notification type stays in the database.
-- [x] Gaps closed (`crossub_web` f42d3a269): an app message is refused, with a prompt to email, when no current tenant of the property has ever signed in to the tenant app; the contractor app lists a thread linked to their job only when it names a contractor, so the agent's mail with the tenant or owner stays out of it. A CROSSUB maintenance thread names the contractor once one is assigned, so they keep it.
+- [x] Gaps closed (`crossub_web` 2b2e2cc7b): an app message is refused, with a prompt to email, when no current tenant of the property has ever signed in to the tenant app; the contractor app lists a thread linked to their job only when it names a contractor, so the agent's mail with the tenant or owner stays out of it. A CROSSUB maintenance thread names the contractor once one is assigned, so they keep it.
 
 ---
 
