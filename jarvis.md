@@ -47,7 +47,6 @@ Stages 1 to 4 are built and live on staging and production. Left open:
 - 1.1: Open buttons for inbox thread, notification, arrears and property, held back until every app runs 0935fba or later.
 - 2.1 and 2.4: tenant side checks (rent review offer and accept, the app message thread) need the Halifax tenant login.
 - 2.2: the briefing alert on a real phone, and the first 6am run with the new Tasks rows.
-- 2.3: waiting time and out of hours message not yet seen on staging.
 - 3: the payment promise follow up on 6 Nov, then clean up the Halifax test data (arrears and promise, the 3 Nov open, bond draft, MR-00199).
 - Later: the LiveKit voice call.
 
@@ -128,7 +127,7 @@ Decided (Chan, 28 Oct 2026): a shared CROSSUB team answers, and every handoff re
 - [x] Staff reply from the admin Message Center; replies show in the Cros chat as bubbles with the staff member's name (`GET /agent/gii/handoff`, `GET /agent/gii/handoff/:threadId`). Checked on staging 29 Oct: a staff reply showed in the chat within seconds.
 - [x] Delivery: the open chat checks for new replies every 5 seconds (app); on staging a staff reply showed within seconds. A staff reply is also pushed to the agent's phones and the alert opens Cros (eb4701659); checked on staging 29 Oct in desktop Chrome. A websocket comes later if polling is not fast enough.
 - [x] While a person holds the chat, Cros stays quiet: the composer writes to the team (`POST /agent/gii/handoff/:threadId/messages`, which rings the holder's bell). Checked on staging 29 Oct. The chat returns to Cros when staff mark the thread Done: the Message Center has Done and Reopen (crossub_web 2df4ef5fd), and a chat filed against a Self-Manage property opens for its staff (11c55c96b). Retested on staging 29 Oct: pass.
-- [~] Waiting time and out of hours: the chat shows how long the agent has waited since their first unanswered message, and outside 9 to 5 Sydney time on weekdays (`AI_ESCALATION_BUSINESS_DAY`) when the team is back. Public holidays are not counted. Not yet seen on staging.
+- [x] Waiting time and out of hours: the chat shows how long the agent has waited since their first unanswered message, and outside 9 to 5 Sydney time on weekdays (`AI_ESCALATION_BUSINESS_DAY`) when the team is back. Public holidays are not counted. Checked on staging Sat 31 Oct 00:40 Sydney time: the handoff card and reply said to expect an answer from Monday 02/11 09:00, the chat showed "Waiting 1 min"; the banner said the team is back Mon 6:00 am because it used the phone's clock (Malaysia), fixed to Sydney time (app 89bc796) and rechecked: "Waiting 22 min · The team is back Mon 9:00 am Sydney time". Screenshot `~/Downloads/cros-team-back-sydney-time.png`.
 
 ### 2.4 Conversations by app
 
@@ -249,3 +248,4 @@ Review items: AI-016 (spoken English first).
 | 2026-10-30 | 4 | Hands free loop checked by Chan on an iPhone: answers aloud and the mic reopens without a tap; Stage 4 items done, the gate needs a pilot agent |
 | 2026-10-30 | All | Tracker tidied: fixes marked waiting for push are live (staging 290e8fb9), checked items done, open work listed under Where it stands |
 | 2026-10-30 | 2.1 | Inspections fault fixed and rechecked on staging: counts by stage and type from the server, unsigned reports not waiting, offers only what the tools do, last routine by the day it was done (crossub_web 563fa3917, a7c9e32fe, 0760aca1f, 93915e004) |
+| 2026-10-30 | 2.3 | Out of hours checked on staging; team back time now in Sydney time (app 89bc796). App type check clean again, rent on lease expiry and open session lookup fixed (b821cb1). [TEST] handoff chat left open for staff to mark Done |
