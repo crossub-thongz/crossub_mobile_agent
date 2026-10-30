@@ -6,7 +6,7 @@ import { Building2, CalendarClock, ClipboardCheck, Clock3, Sparkles, X } from 'l
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
-import { inspectionDetail, ROUTES } from '@/constants/routes';
+import { inspectionCrossubInspector, ROUTES } from '@/constants/routes';
 import {
   buildServiceRecommendations,
   SERVICE_RECOMMENDATION_BATCH_COUNT,
@@ -119,7 +119,7 @@ export function ServiceRecommendation({
         <CrosBatchSuggestion
           count={scoped.length}
           includeWays={!urgent}
-          arrangeViaHref={inspectionDetail(lead.id)}
+          arrangeViaHref={inspectionCrossubInspector(lead.id)}
           onSnooze={() => snooze(scoped.map((offer) => offer.id))}
           onDismiss={() => dismiss(scoped.map((offer) => offer.id))}
         />
@@ -167,13 +167,13 @@ function AssistanceCard({
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {inspectionFirst ? (
           <>
-            <InspectionOnlyChoice href={inspectionDetail(offer.id)} primary={emphasizeInspection || !emphasizeFull} />
+            <InspectionOnlyChoice href={inspectionCrossubInspector(offer.id)} primary={emphasizeInspection || !emphasizeFull} />
             <FullServiceChoice primary={emphasizeFull} />
           </>
         ) : (
           <>
             <FullServiceChoice primary />
-            <InspectionOnlyChoice href={inspectionDetail(offer.id)} primary={false} />
+            <InspectionOnlyChoice href={inspectionCrossubInspector(offer.id)} primary={false} />
           </>
         )}
       </div>

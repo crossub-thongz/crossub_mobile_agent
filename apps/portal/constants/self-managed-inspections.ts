@@ -185,6 +185,22 @@ export const SELF_MANAGED_CONDUCTOR_COPY = {
   pricingLink: string;
 };
 
+/**
+ * Self-Manage: give one unbooked job of the agency's own to a CROSSUB inspector, paid by card at
+ * the Inspection Only rate (Daniel Zhou, 29 Oct 2026). Later routine visits stay with the agency.
+ */
+export const CROSSUB_INSPECTOR_COPY = {
+  title: 'Use a CROSSUB inspector?',
+  hint: 'CROSSUB sets the time with the tenant and sends an inspector for this visit. Your inspector comes off this job; later routine visits stay with you.',
+  payment:
+    'You pay by card now, at Inspection Only rates. The amount is shown on the payment screen, and it is refunded and handed back to you if no CROSSUB inspector accepts within 48 hours.',
+  pricingLink: 'See rates',
+  action: 'Use a CROSSUB inspector',
+  paymentTitle: 'CROSSUB inspector',
+  paid: 'Payment received',
+  done: 'CROSSUB will set a time and send an inspector',
+} as const;
+
 /** Inspections page header entry for Self-Manage agents. */
 export const INSPECTIONS_PAGE_ACTIONS = {
   book: 'Book inspection',

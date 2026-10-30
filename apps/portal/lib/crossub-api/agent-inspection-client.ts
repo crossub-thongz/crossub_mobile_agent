@@ -19,6 +19,7 @@ export type CreateAgencyInspectionInput = components['schemas']['AgentCreateAgen
 export type RejectAgencyInspectionReportInput = components['schemas']['RejectInspectionReportDto'];
 export type ReassignAgencyInspectionInput =
   components['schemas']['AgentReassignAgencyInspectionDto'];
+export type CrossubInspectorCharge = components['schemas']['AgentBillingChargeDto'];
 
 /** One inspection with what the agent can do next (`GET /agent/inspections/{inspectionId}`). */
 export async function fetchAgentInspectionDetail(
@@ -87,6 +88,31 @@ export async function setInspectionConductedBy(
     body,
   });
   return unwrapCrossubResult(result, "Couldn't change the inspector");
+}
+
+/**
+ * The Inspection Only charge for giving this unbooked agency job to a CROSSUB inspector, tied to
+ * the job and reused on a retry. Null when none is owed.
+ */
+export async function quoteCrossubInspectorCharge(
+  inspectionId: string,
+): Promise<CrossubInspectorCharge | null> {
+  const result = await crossub.POST('/agent/inspections/{inspectionId}/crossub-inspector/quote', {
+    params: { path: { inspectionId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't price a CROSSUB inspector").charge ?? null;
+}
+
+/** Once paid, the agency inspector comes off this job and CROSSUB sends one. */
+export async function orderCrossubInspector(
+  inspectionId: string,
+  platformChargeId: string | null,
+): Promise<AgentInspectionDetail> {
+  const result = await crossub.POST('/agent/inspections/{inspectionId}/crossub-inspector', {
+    params: { path: { inspectionId } },
+    body: platformChargeId ? { platformChargeId } : {},
+  });
+  return unwrapCrossubResult(result, "Couldn't hand the job to CROSSUB");
 }
 
 /**

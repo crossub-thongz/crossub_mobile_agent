@@ -14,6 +14,7 @@ import {
 } from '@/components/agent/self-managed-task/admin-task-chrome';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ServiceRecommendation } from '@/components/agent/service-recommendation-card';
+import { CrossubInspectorStep } from '@/components/agent/inspection-self-managed/crossub-inspector-step';
 import { Button } from '@/components/ui/button';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
 import { ROUTES, propertyDetail } from '@/constants/routes';
@@ -148,6 +149,7 @@ export function InspectionOpenedTask({
   const [tab, setTab] = useState<InspectionOpenedTab>('overview');
   const tabs = inspection.type === 'OPEN' ? TABS.filter((item) => item.id !== 'issues') : TABS;
   const assignedInspector = useAssignedInspectorName(inspection, inspector);
+  const { refresh } = useAgentData();
 
   return (
     <div className="flex min-h-0 flex-1 flex-col pb-10">
@@ -193,6 +195,7 @@ export function InspectionOpenedTask({
       </header>
       <div className="px-6 pt-4 lg:px-8">
         <ServiceRecommendation surface="task" inspectionId={inspection.id} />
+        <CrossubInspectorStep inspectionId={inspection.id} onChanged={() => void refresh()} />
       </div>
 
       <AdminTabStrip tabs={tabs} active={tab} onChange={setTab} />
