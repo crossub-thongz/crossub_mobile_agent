@@ -15,8 +15,16 @@ export interface RegisterAgentInput {
   agencyName: string;
   agencyCompany?: string;
   phone?: string;
+  /** Calling code for `phone`. Independent of `region`. */
+  phoneCountry?: 'AU' | 'NZ';
+  /** Country the agency operates in. */
+  region?: 'AU' | 'NZ';
+  /** Australian state. Omit for New Zealand. */
+  state?: 'NSW' | 'VIC' | 'QLD' | 'SA' | 'WA' | 'TAS' | 'ACT' | 'NT';
   abn?: string;
-  licenceNumber: string;
+  /** New Zealand Business Number. Omit for Australia. */
+  nzbn?: string;
+  licenceNumber?: string;
   officeAddress?: string;
   /** Self-Manage, Inspection Only or Full Service — the API rejects Legacy at signup. */
   portalServiceLevel: RegisterablePortalServiceLevel;
@@ -132,8 +140,10 @@ export async function registerAgentAccount(
     agencyName: input.agencyName.trim(),
     agencyCompany: input.agencyCompany?.trim() || undefined,
     phone: input.phone?.trim() || undefined,
-    abn: input.abn?.trim() || undefined,
-    licenceNumber: input.licenceNumber.trim(),
+    // The API this app calls still rejects unknown properties. phoneCountry,
+    // region, nzbn, and state are implemented locally but not on that server yet.
+    abn: input.region === 'NZ' ? undefined : input.abn?.trim() || undefined,
+    licenceNumber: input.licenceNumber?.trim() || undefined,
     officeAddress: input.officeAddress?.trim() || undefined,
     portalServiceLevel: input.portalServiceLevel,
     acceptTerms: input.acceptTerms,

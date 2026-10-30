@@ -277,7 +277,7 @@ export default function LoginPage() {
           <p className="mt-5 text-center text-sm text-[#52647C]">
             First time here?{' '}
             <Link href={ROUTES.REGISTER} className="font-semibold" style={{ color: AGENT_GREEN }}>
-              Create an agent account
+              Create an account
             </Link>
           </p>
         </section>

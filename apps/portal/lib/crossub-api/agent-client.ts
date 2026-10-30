@@ -23,9 +23,16 @@ type AgentPrimaryContactFields = {
   primaryContactUserId?: string | null;
 };
 
+/** Region and NZBN ship ahead of the next contract publish. */
+type AgentRegionFields = {
+  region?: 'AU' | 'NZ' | null;
+  nzbn?: string | null;
+};
+
 export type AgentAgency = components['schemas']['AgentAgencyResponseDto'] &
   AgentAccountManagerFields &
-  AgentPrimaryContactFields;
+  AgentPrimaryContactFields &
+  AgentRegionFields;
 export type AgentProperty = components['schemas']['AgentPropertyResponseDto'] &
   AgentAccountManagerFields & {
     assignedAgentUserId?: string | null;
@@ -653,7 +660,7 @@ export type AgentUpdateAgencyBillingInput =
 /** Agency ABN / licence / bank details for tax invoices. */
 export async function updateAgencyBilling(
   agencyId: string,
-  body: AgentUpdateAgencyBillingInput,
+  body: AgentUpdateAgencyBillingInput & { nzbn?: string },
 ): Promise<AgentAgency> {
   return agentFetch<AgentAgency>(`/agent/agencies/${agencyId}/billing`, {
     method: 'PATCH',

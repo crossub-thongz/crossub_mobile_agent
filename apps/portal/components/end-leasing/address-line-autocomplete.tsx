@@ -22,6 +22,9 @@ interface AddressLineAutocompleteProps {
   disabled?: boolean;
   placeholder?: string;
   className?: string;
+  inputClassName?: string;
+  /** Limits suggestions to one country. Defaults to Australia. */
+  country?: 'au' | 'nz';
 }
 
 /**
@@ -37,6 +40,8 @@ export function AddressLineAutocomplete({
   disabled,
   placeholder = 'Search or type key return address',
   className,
+  inputClassName,
+  country = 'au',
 }: AddressLineAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const placesAttributionRef = useRef<HTMLDivElement>(null);
@@ -72,7 +77,7 @@ export function AddressLineAutocomplete({
         if (cancelled || !inputRef.current || autocompleteRef.current) return;
 
         const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
-          componentRestrictions: { country: 'au' },
+          componentRestrictions: { country },
           fields: ['address_components', 'geometry', 'formatted_address', 'name', 'place_id'],
           types: ['address'],
         });
@@ -127,7 +132,7 @@ export function AddressLineAutocomplete({
         autocompleteRef.current = null;
       }
     };
-  }, [mapsEnabled, applyAddress]);
+  }, [mapsEnabled, applyAddress, country]);
 
   return (
     <div className={cn('space-y-1', className)}>
@@ -135,7 +140,7 @@ export function AddressLineAutocomplete({
       <div className="relative">
         {mapsEnabled ? (
           <MapPin
-            className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 size-4"
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
             aria-hidden
           />
         ) : null}
@@ -149,7 +154,7 @@ export function AddressLineAutocomplete({
           disabled={disabled}
           autoComplete="off"
           placeholder={placeholder}
-          className={mapsEnabled ? 'pl-9' : undefined}
+          className={cn(mapsEnabled ? 'pl-9' : undefined, inputClassName)}
         />
       </div>
       {mapsEnabled && !mapsReady && !mapsFailed ? (

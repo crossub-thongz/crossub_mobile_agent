@@ -110,8 +110,17 @@ export default function AgencyDetailPage() {
         </div>
 
         <InfoPanel title="Client contact" icon={Building2}>
-          <InfoRow label="Agency" value={agency.name} />
-          {agency.company && <InfoRow label="Company" value={agency.company} />}
+          {agency.region === 'NZ' ? (
+            <>
+              <InfoRow label="Company name" value={agency.name} />
+              {agency.company ? <InfoRow label="Agency name" value={agency.company} /> : null}
+            </>
+          ) : (
+            <>
+              <InfoRow label="Agency" value={agency.name} />
+              {agency.company ? <InfoRow label="Company" value={agency.company} /> : null}
+            </>
+          )}
           <InfoRow label="Status" value={STATUS_LABEL[agency.status] ?? agency.status} />
           <InfoRow label="Portal access">
             <PortalServiceLevelBadge

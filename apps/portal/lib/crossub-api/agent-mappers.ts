@@ -342,7 +342,9 @@ export function mapAgentAgencies(dtos: AgentAgency[]): Agency[] {
     membershipTier:
       (a as { membershipTier?: AgencyMembershipTier }).membershipTier ?? 'PRINCIPAL',
     propertyCount: 0,
+    region: a.region === 'NZ' ? 'NZ' : a.region === 'AU' ? 'AU' : undefined,
     abn: asString(a.abn),
+    nzbn: asString(a.nzbn),
     licenceNumber: asString(a.licenceNumber),
     bankName: asString(a.bankName),
     bankAccountName: asString(a.bankAccountName),

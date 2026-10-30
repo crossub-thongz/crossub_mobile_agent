@@ -1,186 +1,199 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  ArrowLeft,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  Loader2,
-  Lock,
-  Mail,
-  Phone,
-  UserPlus,
-} from 'lucide-react';
+import { ArrowRight, ChartColumn, ChevronDown, Eye, EyeOff, House, Lock, Mail, Users } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
 import { useAuth } from '@/components/providers/auth-provider';
-import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
-import { CrossubLogo } from '@/components/brand/crossub-logo';
-import { AddressLineAutocomplete } from '@/components/end-leasing/address-line-autocomplete';
-import { RegisterPricingPanel } from '@/components/register/register-pricing-panel';
-import {
-  RegisterConfirmPanel,
-  registerConfirmReady,
-} from '@/components/register/register-confirm-panel';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { RegisterReadyStep } from '@/components/register/register-ready-step';
+import { RegisterWorkspaceStep } from '@/components/register/register-workspace-step';
+import { AUSTRALIAN_STATE_ORDER } from '@/constants/api-enums';
 import { PASSWORD_MAX, PASSWORD_MIN } from '@/constants/auth';
 import { ROUTES } from '@/constants/routes';
 import {
   registerAgentAccount,
   registerAgentErrorMessage,
 } from '@/lib/agent-registration';
-import { registerLocalAccount } from '@/lib/local-auth';
+import {
+  readRegisterWorkspaceDraft,
+  saveRegisterAccountDraft,
+} from '@/lib/register-account-draft';
+import { DEFAULT_REGISTER_SERVICE_LEVEL } from '@/lib/portal-service-level';
 import { postAuthDestination } from '@/lib/system-access-agreement';
 import {
-  DEFAULT_REGISTER_SERVICE_LEVEL,
-  type RegisterablePortalServiceLevel,
-} from '@/lib/portal-service-level';
-import { ApiError } from '@/lib/api';
-import { AuthScreen, authPanelClass } from '@/lib/auth-page';
-import { cn } from '@/lib/utils';
+  registrationMobileMessage,
+  type RegistrationCountry,
+} from '@/lib/registration-mobile';
 
-const STEPS = ['Your details', 'Service & pricing', 'Confirm'] as const;
-type RegisterStep = (typeof STEPS)[number];
+const AGENT_GREEN = '#00bd85';
 
-const agentSchema = z.object({
-  email: z.string().email('Enter a valid email'),
-  password: z
-    .string()
-    .min(PASSWORD_MIN, `Min ${PASSWORD_MIN} characters`)
-    .max(PASSWORD_MAX),
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  agencyName: z.string().min(1, 'Agency name is required'),
-  agencyCompany: z.string().optional(),
-  phone: z.string().optional(),
-  abn: z.string().optional(),
-  licenceNumber: z.string().trim().min(1, 'Licence number is required'),
-  officeAddress: z.string().optional(),
-});
+const STEPS = ['Account', 'Workspace', 'Ready'] as const;
 
-type AgentValues = z.infer<typeof agentSchema>;
+const REGIONS: { code: RegistrationCountry; label: string; dial: string }[] = [
+  { code: 'AU', label: 'Australia', dial: '+61' },
+  { code: 'NZ', label: 'New Zealand', dial: '+64' },
+];
 
-function StepIndicator({ current }: { current: RegisterStep }) {
-  const index = STEPS.indexOf(current);
-  return (
-    <ol className="mb-6 flex items-center gap-2">
-      {STEPS.map((step, i) => (
-        <li key={step} className="flex min-w-0 flex-1 items-center gap-2">
-          <span
-            className={cn(
-              'flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-              i <= index
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground',
-            )}
-          >
-            {i + 1}
-          </span>
-          <span
-            className={cn(
-              'hidden truncate text-xs font-medium sm:inline',
-              i === index ? 'text-foreground' : 'text-muted-foreground',
-            )}
-          >
-            {step}
-          </span>
-          {i < STEPS.length - 1 ? (
-            <span className="bg-border hidden h-px flex-1 sm:block" />
-          ) : null}
-        </li>
-      ))}
-    </ol>
-  );
-}
+const LEGAL: Record<RegistrationCountry, { terms: string; privacy: string }> = {
+  AU: {
+    terms: 'https://www.crossub.com/AU/terms',
+    privacy: 'https://www.crossub.com/AU/privacy',
+  },
+  NZ: {
+    terms: 'https://www.crossub.com/NZ/terms',
+    privacy: 'https://www.crossub.com/NZ/privacy',
+  },
+};
+
+const schema = z
+  .object({
+    firstName: z.string().trim().min(1, 'Enter your first name.'),
+    lastName: z.string().trim().min(1, 'Enter your last name.'),
+    email: z
+      .string()
+      .trim()
+      .min(1, 'Enter your business email.')
+      .email('Enter a valid business email.'),
+    password: z
+      .string()
+      .min(1, 'Enter a password.')
+      .min(PASSWORD_MIN, `At least ${PASSWORD_MIN} characters.`)
+      .max(PASSWORD_MAX),
+    confirmPassword: z.string().min(1, 'Confirm your password.'),
+    phoneCountry: z.string(),
+    phone: z.string().trim().min(1, 'Enter a mobile number.'),
+    region: z.string(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.phoneCountry !== 'AU' && value.phoneCountry !== 'NZ') {
+      ctx.addIssue({ code: 'custom', path: ['phoneCountry'], message: 'Select a country code.' });
+    }
+    if (value.region !== 'AU' && value.region !== 'NZ') {
+      ctx.addIssue({ code: 'custom', path: ['region'], message: 'Select your region.' });
+    }
+    if (value.confirmPassword && value.password !== value.confirmPassword) {
+      ctx.addIssue({ code: 'custom', path: ['confirmPassword'], message: 'Passwords do not match.' });
+    }
+    if ((value.phoneCountry === 'AU' || value.phoneCountry === 'NZ') && value.phone.trim()) {
+      const message = registrationMobileMessage(value.phone, value.phoneCountry);
+      if (message) ctx.addIssue({ code: 'custom', path: ['phone'], message });
+    }
+  });
+
+type FormValues = z.infer<typeof schema>;
+
+const inputClass =
+  'h-12 w-full rounded-[9px] border border-[#CED9E4] bg-white px-3 text-sm outline-none placeholder:text-[#9AADC0] focus:border-[#00bd85]';
 
 export default function RegisterPage() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [starting, setStarting] = useState(false);
   const router = useRouter();
   const { refresh } = useAuth();
-  const isV2 = useIsAgentUiV2();
-  const [step, setStep] = useState<RegisterStep>('Your details');
-  const [showPassword, setShowPassword] = useState(false);
-  // Self-Manage is preselected; Inspection Only and Full Service are optional paid plans.
-  const [portalServiceLevel, setPortalServiceLevel] = useState<RegisterablePortalServiceLevel>(
-    DEFAULT_REGISTER_SERVICE_LEVEL,
-  );
-  const [acceptServiceAgreement, setAcceptServiceAgreement] = useState(false);
-  const [acceptPrivacyAgreement, setAcceptPrivacyAgreement] = useState(false);
+  const phoneCountryTouched = useRef(false);
 
-  const agentForm = useForm<AgentValues>({
-    resolver: zodResolver(agentSchema),
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
     defaultValues: {
-      email: '',
-      password: '',
       firstName: '',
       lastName: '',
-      agencyName: '',
-      agencyCompany: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      phoneCountry: '',
       phone: '',
-      abn: '',
-      licenceNumber: '',
-      officeAddress: '',
+      region: '',
     },
   });
 
-  const goToServiceStep = async () => {
-    const valid = await agentForm.trigger([
-      'firstName',
-      'lastName',
-      'agencyName',
-      'licenceNumber',
-      'email',
-      'password',
-    ]);
-    if (!valid) return;
-    setStep('Service & pricing');
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, touchedFields, isSubmitted },
+  } = form;
+
+  const region = watch('region');
+  const phoneCountry = watch('phoneCountry');
+  const phone = watch('phone');
+  const legal = region === 'AU' || region === 'NZ' ? LEGAL[region] : null;
+  const phoneLive =
+    phone.trim() && (phoneCountry === 'AU' || phoneCountry === 'NZ')
+      ? registrationMobileMessage(phone, phoneCountry)
+      : null;
+
+  useEffect(() => {
+    const country = new URLSearchParams(window.location.search).get('country')?.toUpperCase();
+    if (country !== 'AU' && country !== 'NZ') return;
+    setValue('region', country);
+    if (!phoneCountryTouched.current) setValue('phoneCountry', country);
+  }, [setValue]);
+
+  const chooseRegion = (next: string) => {
+    setValue('region', next, { shouldValidate: true });
+    if (!phoneCountryTouched.current && (next === 'AU' || next === 'NZ')) {
+      setValue('phoneCountry', next, { shouldValidate: Boolean(phone.trim()) });
+    }
   };
 
-  const goToConfirmStep = () => {
-    setAcceptServiceAgreement(false);
-    setAcceptPrivacyAgreement(false);
-    setStep('Confirm');
+  const onContinue = (values: FormValues) => {
+    if (values.phoneCountry !== 'AU' && values.phoneCountry !== 'NZ') return;
+    if (values.region !== 'AU' && values.region !== 'NZ') return;
+    saveRegisterAccountDraft({
+      firstName: values.firstName.trim(),
+      lastName: values.lastName.trim(),
+      email: values.email.trim(),
+      password: values.password,
+      phoneCountry: values.phoneCountry,
+      phone: values.phone.trim(),
+      region: values.region,
+    });
+    setWorkspaceOpen(true);
+    setStep(2);
   };
 
-  const onAgentRegister = async (values: AgentValues) => {
-    if (
-      !registerConfirmReady({
-        portalServiceLevel,
-        acceptServiceAgreement,
-        acceptPrivacyAgreement,
-      })
-    ) {
-      toast.error('Please accept the required agreements to continue.');
+  const startTrip = async () => {
+    const account = form.getValues();
+    const workspace = readRegisterWorkspaceDraft();
+    if (account.phoneCountry !== 'AU' && account.phoneCountry !== 'NZ') return;
+    if (account.region !== 'AU' && account.region !== 'NZ') return;
+    if (!workspace) {
+      toast.error('Go back and complete the workspace step.');
       return;
     }
+    const state = AUSTRALIAN_STATE_ORDER.find((code) => code === workspace.state);
 
-    let apiUnreachable = false;
-
+    setStarting(true);
     try {
       const user = await registerAgentAccount({
-        email: values.email,
-        password: values.password,
-        firstName: values.firstName,
-        lastName: values.lastName,
-        agencyName: values.agencyName,
-        agencyCompany: values.agencyCompany,
-        phone: values.phone,
-        abn: values.abn,
-        licenceNumber: values.licenceNumber,
-        officeAddress: values.officeAddress,
-        portalServiceLevel,
+        email: account.email,
+        password: account.password,
+        firstName: account.firstName,
+        lastName: account.lastName,
+        agencyName: workspace.companyName,
+        agencyCompany: workspace.agencyName || undefined,
+        phone: account.phone,
+        phoneCountry: account.phoneCountry,
+        region: account.region,
+        state: account.region === 'AU' ? state : undefined,
+        abn: account.region === 'AU' ? workspace.businessNumber || undefined : undefined,
+        nzbn: account.region === 'NZ' ? workspace.businessNumber || undefined : undefined,
+        licenceNumber: workspace.licenceNumber || undefined,
+        officeAddress: workspace.officeAddress,
+        portalServiceLevel: DEFAULT_REGISTER_SERVICE_LEVEL,
         acceptTerms: true,
       });
       await refresh();
-      toast.success('Account created — check your email to verify your address.');
       router.replace(
         postAuthDestination(
           user,
@@ -189,315 +202,339 @@ export default function RegisterPage() {
           ROUTES.CHANGE_PASSWORD,
         ),
       );
-      return;
     } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.status === 409) {
-          toast.error(registerAgentErrorMessage(err));
-          return;
-        }
-        if (err.status >= 500 || err.status === 0) {
-          apiUnreachable = true;
-        } else {
-          toast.error(registerAgentErrorMessage(err));
-          return;
-        }
-      } else {
-        apiUnreachable = true;
-      }
+      setStarting(false);
+      toast.error(registerAgentErrorMessage(err));
     }
-
-    if (apiUnreachable) {
-      try {
-        registerLocalAccount({
-          email: values.email,
-          password: values.password,
-          firstName: values.firstName,
-          lastName: values.lastName,
-          agencyName: values.agencyName,
-          agencyCompany: values.agencyCompany,
-          phone: values.phone,
-        });
-        await refresh();
-        toast.warning(
-          'Signed in offline only — start the API (pnpm dev:api) to sync your agency to crossub_web.',
-        );
-        router.replace(ROUTES.DASHBOARD);
-        return;
-      } catch (e) {
-        const message = e instanceof Error ? e.message : 'Registration failed.';
-        toast.error(message);
-        return;
-      }
-    }
-
-    toast.error('Registration failed.');
   };
 
-  const isSubmitting = agentForm.formState.isSubmitting;
-  const confirmReady = registerConfirmReady({
-    portalServiceLevel,
-    acceptServiceAgreement,
-    acceptPrivacyAgreement,
-  });
-
   return (
-    <AuthScreen isV2={isV2}>
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
-      <div className="mb-8 flex flex-col items-center gap-2">
-        <CrossubLogo href="" size="lg" showTagline className="items-center" />
-        <p className="text-muted-foreground text-sm">Agent registration</p>
-      </div>
+    <div
+      className="relative flex min-h-[calc(100dvh-var(--env-banner-height,0px))] flex-col pt-6 pb-16 text-[#0D1836]"
+      style={{
+        backgroundColor: '#F6FCFC',
+        backgroundImage: 'url(/login/agent-bg.svg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      <header className="mx-auto mb-2 w-full max-w-6xl px-5 sm:px-8 lg:px-10">
+        <div className="flex items-center gap-2.5">
+          <Image src="/crossub-logo.png" alt="" width={36} height={36} priority className="size-9" />
+          <span className="text-[16px] font-bold tracking-[0.16em]">CROSSUB</span>
+        </div>
+      </header>
 
-      <div
-        className={authPanelClass(
-          isV2,
-          step === 'Service & pricing' || step === 'Confirm' ? 'max-w-3xl' : 'max-w-lg',
-        )}
-      >
-        <StepIndicator current={step} />
-
-        {step === 'Your details' ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void goToServiceStep();
-            }}
-            className="space-y-4"
-          >
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              Create your agent account. Your email is your username — we&apos;ll send a
-              verification link after signup. Once you&apos;re in, we&apos;ll guide you to add
-              your first property.
+      <main className="mx-auto mt-12 grid w-full max-w-6xl items-start gap-10 px-5 sm:px-8 lg:mt-16 lg:grid-cols-[minmax(0,1.05fr)_480px] lg:gap-16 lg:px-10">
+        <section className="max-w-xl">
+          <div className="flex items-center gap-3">
+            <span className="h-0.5 w-8 rounded-full" style={{ backgroundColor: AGENT_GREEN }} />
+            <p className="text-xs font-semibold tracking-[0.16em]" style={{ color: AGENT_GREEN }}>
+              AGENT PORTAL
             </p>
+          </div>
+          <h1 className="mt-5 text-4xl font-semibold tracking-tight text-[#0D1836] sm:text-5xl sm:leading-[1.05]">
+            Smarter property management
+          </h1>
+          <p className="mt-6 max-w-md text-base leading-7 text-[#52647C]">
+            Everything you need to manage properties, tenants and growth in one powerful platform.
+          </p>
+          <ul className="mt-10 space-y-7">
+            <Feature
+              icon={ChartColumn}
+              title="Streamline operations"
+              body="Save time with automated workflows and rent tracking."
+            />
+            <Feature
+              icon={Users}
+              title="Build stronger relationships"
+              body="Keep owners and tenants happier, all in one place."
+            />
+            <Feature
+              icon={House}
+              title="Grow your portfolio"
+              body="Powerful insights to help you scale with confidence."
+            />
+          </ul>
+        </section>
+
+        <section className="w-full justify-self-end rounded-[22px] bg-white p-6 shadow-[0_18px_48px_rgba(13,24,54,0.10)] sm:p-8">
+          <ol className="mb-6 flex items-center">
+            {STEPS.map((label, index) => (
+              <li key={label} className="flex min-w-0 flex-1 items-center">
+                <span
+                  className="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+                  style={{
+                    backgroundColor: index < step ? AGENT_GREEN : '#D5DEE8',
+                    color: index < step ? '#fff' : '#6D8094',
+                  }}
+                >
+                  {index + 1}
+                </span>
+                <span
+                  className="ml-2 truncate text-xs font-medium"
+                  style={{ color: index < step ? '#0D1836' : '#8AA0B5' }}
+                >
+                  {label}
+                </span>
+                {index < STEPS.length - 1 ? (
+                  <span className="mx-2 h-px flex-1 bg-[#E3EAF1]" />
+                ) : null}
+              </li>
+            ))}
+          </ol>
+
+          <div className={step === 1 ? undefined : 'hidden'}>
+          <h2 className="text-2xl font-semibold tracking-tight">Create your free account</h2>
+          <p className="mt-1 text-sm text-[#52647C]">
+            Let&apos;s get you started. Your free workspace is just a few steps away.
+          </p>
+
+          <form onSubmit={handleSubmit(onContinue)} className="mt-6 space-y-4" noValidate>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First name</Label>
-                <Input id="firstName" inputKind="person_name" {...agentForm.register('firstName')} />
-                {agentForm.formState.errors.firstName ? (
-                  <p className="text-xs text-destructive">
-                    {agentForm.formState.errors.firstName.message}
-                  </p>
-                ) : null}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last name</Label>
-                <Input id="lastName" inputKind="person_name" {...agentForm.register('lastName')} />
-                {agentForm.formState.errors.lastName ? (
-                  <p className="text-xs text-destructive">
-                    {agentForm.formState.errors.lastName.message}
-                  </p>
-                ) : null}
-              </div>
+              <Field id="firstName" label="First name" error={errors.firstName?.message}>
+                <input id="firstName" autoComplete="given-name" className={inputClass} {...register('firstName')} />
+              </Field>
+              <Field id="lastName" label="Last name" error={errors.lastName?.message}>
+                <input id="lastName" autoComplete="family-name" className={inputClass} {...register('lastName')} />
+              </Field>
             </div>
 
-            <div className="rounded-lg border border-border/60 bg-secondary/20 p-3">
-              <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Agency details
-              </p>
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="agencyName">Agency name</Label>
-                  <Input
-                    id="agencyName"
-                    placeholder="e.g. Skyline Realty"
-                    {...agentForm.register('agencyName')}
-                  />
-                  {agentForm.formState.errors.agencyName ? (
-                    <p className="text-xs text-destructive">
-                      {agentForm.formState.errors.agencyName.message}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="agencyCompany">Company (legal name)</Label>
-                  <Input
-                    id="agencyCompany"
-                    placeholder="e.g. Skyline Realty Pty Ltd"
-                    {...agentForm.register('agencyCompany')}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="abn">ABN</Label>
-                    <Input id="abn" placeholder="Optional" {...agentForm.register('abn')} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="licenceNumber">Licence no.</Label>
-                    <Input
-                      id="licenceNumber"
-                      placeholder="e.g. 123456789"
-                      {...agentForm.register('licenceNumber')}
-                    />
-                    {agentForm.formState.errors.licenceNumber ? (
-                      <p className="text-xs text-destructive">
-                        {agentForm.formState.errors.licenceNumber.message}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="officeAddress">Office address</Label>
-                  <AddressLineAutocomplete
-                    id="officeAddress"
-                    value={agentForm.watch('officeAddress') ?? ''}
-                    onChange={(value) =>
-                      agentForm.setValue('officeAddress', value, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      })
-                    }
-                    placeholder="Search agency office address"
-                  />
-                  <p className="text-muted-foreground text-xs">
-                    Start typing to search — the formatted address is saved when you pick a result.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email (username)</Label>
+            <Field id="email" label="Business email" error={errors.email?.message}>
               <div className="relative">
-                <Mail className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
+                <Mail className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8AA0B5]" />
+                <input
                   id="email"
                   type="email"
-                  className="pl-10"
+                  autoComplete="email"
                   placeholder="you@agency.com"
-                  {...agentForm.register('email')}
+                  className={`${inputClass} pr-3 pl-10`}
+                  {...register('email')}
                 />
               </div>
-              {agentForm.formState.errors.email ? (
-                <p className="text-xs text-destructive">
-                  {agentForm.formState.errors.email.message}
-                </p>
-              ) : (
-                <p className="text-muted-foreground text-xs">
-                  Used to sign in. Email verification is required before full access.
-                </p>
-              )}
-            </div>
+            </Field>
 
-            <div className="space-y-2">
-              <Label htmlFor="phone">Mobile</Label>
+            <Field id="password" label="Password" error={errors.password?.message}>
               <div className="relative">
-                <Phone className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="phone"
-                  type="tel"
-                  className="pl-10"
-                  placeholder="Optional"
-                  {...agentForm.register('phone')}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
+                <Lock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8AA0B5]" />
+                <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  className="pl-10 pr-10"
+                  autoComplete="new-password"
                   placeholder={`At least ${PASSWORD_MIN} characters`}
-                  {...agentForm.register('password')}
+                  className={`${inputClass} pr-10 pl-10`}
+                  {...register('password')}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground"
-                >
-                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
+                <PasswordToggle shown={showPassword} onToggle={() => setShowPassword((value) => !value)} />
               </div>
-              {agentForm.formState.errors.password ? (
-                <p className="text-xs text-destructive">
-                  {agentForm.formState.errors.password.message}
-                </p>
-              ) : null}
-            </div>
+            </Field>
 
-            <Button type="submit" className="w-full">
-              Continue to pricing <ArrowRight className="size-4" />
-            </Button>
+            <Field id="confirmPassword" label="Confirm password" error={errors.confirmPassword?.message}>
+              <div className="relative">
+                <Lock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8AA0B5]" />
+                <input
+                  id="confirmPassword"
+                  type={showConfirm ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Re-enter your password"
+                  className={`${inputClass} pr-10 pl-10`}
+                  {...register('confirmPassword')}
+                />
+                <PasswordToggle
+                  shown={showConfirm}
+                  label="confirm password"
+                  onToggle={() => setShowConfirm((value) => !value)}
+                />
+              </div>
+            </Field>
+
+            <Field
+              id="phone"
+              label="Mobile number"
+              error={
+                errors.phoneCountry?.message ||
+                (touchedFields.phone || isSubmitted
+                  ? phone.trim()
+                    ? phoneLive || undefined
+                    : errors.phone?.message
+                  : undefined)
+              }
+            >
+              <div className="flex h-12 w-full overflow-hidden rounded-[9px] border border-[#CED9E4] bg-white focus-within:border-[#00bd85]">
+                <div className="relative h-full shrink-0">
+                  <select
+                    id="phoneCountry"
+                    aria-label="Mobile country code"
+                    className="h-full w-[6.75rem] appearance-none border-0 bg-transparent pr-8 pl-3 text-sm outline-none"
+                    value={phoneCountry}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    phoneCountryTouched.current = true;
+                    setValue('phoneCountry', next, { shouldValidate: true });
+                    if (next === 'AU' || next === 'NZ') {
+                      setValue('region', next, { shouldValidate: true });
+                    }
+                  }}
+                  >
+                    <option value="">Code</option>
+                    {REGIONS.map((item) => (
+                      <option key={item.code} value={item.code}>
+                        {item.dial}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-[#52647C]" />
+                </div>
+                <input
+                  id="phone"
+                  type="tel"
+                  autoComplete="tel-national"
+                  placeholder={phoneCountry === 'NZ' ? '021 123 4567' : '0412 345 678'}
+                  className="h-full min-w-0 flex-1 border-0 border-l border-[#CED9E4] bg-transparent px-3 text-sm outline-none placeholder:text-[#9AADC0]"
+                  {...register('phone')}
+                />
+              </div>
+            </Field>
+
+            <Field id="region" label="Select your region" error={errors.region?.message}>
+              <div className="relative">
+                <select
+                  id="region"
+                  className="h-12 w-full cursor-pointer appearance-none rounded-[9px] border border-[#CED9E4] bg-white pr-10 pl-3 text-sm font-medium text-[#171E4B] outline-none focus:border-[#00bd85]"
+                  value={region}
+                  onChange={(event) => chooseRegion(event.target.value)}
+                >
+                  <option value="">Select your region</option>
+                  {REGIONS.map((item) => (
+                    <option key={item.code} value={item.code}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-[#52647C]" />
+              </div>
+            </Field>
+
+            <button
+              type="submit"
+              className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[9px] text-sm font-semibold text-white"
+              style={{ backgroundColor: AGENT_GREEN }}
+            >
+              Continue to workspace
+              <ArrowRight className="size-4" />
+            </button>
           </form>
-        ) : null}
 
-        {step === 'Service & pricing' ? (
-          <div className="space-y-4">
-            <RegisterPricingPanel
-              selectedLevel={portalServiceLevel}
-              onSelectLevel={setPortalServiceLevel}
-            />
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setStep('Your details')}>
-                <ArrowLeft className="size-4" /> Back
-              </Button>
-              <Button type="button" className="flex-1" onClick={goToConfirmStep}>
-                Continue <ArrowRight className="size-4" />
-              </Button>
-            </div>
+          <p className="mt-4 text-center text-xs leading-5 text-[#8AA0B5]">
+            By continuing, you agree to the{' '}
+            {legal ? (
+              <a href={legal.terms} target="_blank" rel="noopener noreferrer" className="font-medium underline" style={{ color: AGENT_GREEN }}>
+                Terms of Use
+              </a>
+            ) : (
+              <span>Terms of Use</span>
+            )}{' '}
+            and{' '}
+            {legal ? (
+              <a href={legal.privacy} target="_blank" rel="noopener noreferrer" className="font-medium underline" style={{ color: AGENT_GREEN }}>
+                Privacy Policy
+              </a>
+            ) : (
+              <span>Privacy Policy</span>
+            )}
+            .
+          </p>
+
+          <p className="mt-5 text-center text-sm text-[#52647C]">
+            Already registered?{' '}
+            <Link href={ROUTES.LOGIN} className="font-semibold" style={{ color: AGENT_GREEN }}>
+              Sign in
+            </Link>
+          </p>
           </div>
-        ) : null}
 
-        {step === 'Confirm' ? (
-          <form
-            onSubmit={agentForm.handleSubmit(onAgentRegister)}
-            className="space-y-4"
-          >
-            <RegisterConfirmPanel
-              summary={{
-                firstName: agentForm.watch('firstName'),
-                lastName: agentForm.watch('lastName'),
-                email: agentForm.watch('email'),
-                agencyName: agentForm.watch('agencyName'),
-                agencyCompany: agentForm.watch('agencyCompany'),
-                phone: agentForm.watch('phone'),
-                abn: agentForm.watch('abn'),
-                licenceNumber: agentForm.watch('licenceNumber'),
-                officeAddress: agentForm.watch('officeAddress'),
-              }}
-              portalServiceLevel={portalServiceLevel}
-              acceptServiceAgreement={acceptServiceAgreement}
-              acceptPrivacyAgreement={acceptPrivacyAgreement}
-              onAcceptServiceAgreementChange={setAcceptServiceAgreement}
-              onAcceptPrivacyAgreementChange={setAcceptPrivacyAgreement}
-            />
-
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setStep('Service & pricing')}
-              >
-                <ArrowLeft className="size-4" /> Back
-              </Button>
-              <Button type="submit" disabled={!confirmReady || isSubmitting} className="flex-1">
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" /> Creating account...
-                  </>
-                ) : (
-                  <>
-                    Create agent account <UserPlus className="size-4" />
-                  </>
-                )}
-              </Button>
+          {workspaceOpen && (region === 'AU' || region === 'NZ') ? (
+            <div className={step === 2 ? undefined : 'hidden'}>
+              <h2 className="text-2xl font-semibold tracking-tight">Set up your workspace</h2>
+              <p className="mt-1 text-sm text-[#52647C]">
+                Tell us a little about your agency. You can complete optional details later.
+              </p>
+              <RegisterWorkspaceStep
+                region={region}
+                onBack={() => setStep(1)}
+                onContinue={() => setStep(3)}
+              />
             </div>
-          </form>
-        ) : null}
+          ) : null}
 
-        <p className="text-muted-foreground mt-6 text-center text-sm">
-          Already registered?{' '}
-          <Link href={ROUTES.LOGIN} className="text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </AuthScreen>
+          {step === 3 ? <RegisterReadyStep pending={starting} onStart={() => void startTrip()} /> : null}
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function Field({
+  id,
+  label,
+  error,
+  children,
+}: {
+  id: string;
+  label: string;
+  error?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="text-sm font-medium">
+        {label}
+      </label>
+      {children}
+      {error ? <p className="text-xs text-[#D45656]">{error}</p> : null}
+    </div>
+  );
+}
+
+function PasswordToggle({
+  shown,
+  onToggle,
+  label = 'password',
+}: {
+  shown: boolean;
+  onToggle: () => void;
+  label?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="absolute top-1/2 right-3 -translate-y-1/2 text-[#8AA0B5]"
+      aria-label={shown ? `Hide ${label}` : `Show ${label}`}
+    >
+      {shown ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+    </button>
+  );
+}
+
+function Feature({
+  icon: Icon,
+  title,
+  body,
+}: {
+  icon: typeof House;
+  title: string;
+  body: string;
+}) {
+  return (
+    <li className="flex items-start gap-3">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#E2FAF1] text-[#00bd85]">
+        <Icon className="size-5" strokeWidth={1.75} />
+      </span>
+      <span>
+        <span className="block text-sm font-semibold">{title}</span>
+        <span className="mt-1.5 block text-sm leading-6 text-[#52647C]">{body}</span>
+      </span>
+    </li>
   );
 }

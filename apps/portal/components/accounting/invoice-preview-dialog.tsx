@@ -22,10 +22,12 @@ export function InvoicePreviewDialog({
   open,
   onOpenChange,
   invoiceId,
+  businessNumberLabel = 'ABN',
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   invoiceId: string | null;
+  businessNumberLabel?: 'ABN' | 'NZBN';
 }) {
   const [loading, setLoading] = useState(false);
   const [model, setModel] = useState<InvoiceDocumentModel | null>(null);
@@ -49,6 +51,7 @@ export function InvoicePreviewDialog({
           reference: detail.reference,
           email: detail.email,
           abn: detail.abn,
+          businessNumberLabel,
           managementFee: detail.managementFee,
           lettingTribunal: detail.lettingTribunal,
           otherService: detail.otherService,
@@ -71,7 +74,7 @@ export function InvoicePreviewDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, invoiceId, onOpenChange]);
+  }, [open, invoiceId, onOpenChange, businessNumberLabel]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

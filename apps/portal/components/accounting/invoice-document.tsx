@@ -32,6 +32,8 @@ export type InvoiceDocumentModel = {
   reference?: string | null;
   email?: string | null;
   abn?: string | null;
+  /** Printed beside the business number. New Zealand agencies use NZBN. */
+  businessNumberLabel?: 'ABN' | 'NZBN';
   managementFee: InvoiceDocManagementLine[];
   lettingTribunal: InvoiceDocSimpleLine[];
   otherService: InvoiceDocSimpleLine[];
@@ -84,7 +86,10 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentModel }) 
           <MetaRow label="Invoice Date" value={formatInvoiceDate(invoice.invoiceDate)} />
           <MetaRow label="Reference" value={invoice.reference?.trim() || '—'} />
           <MetaRow label="Due Date" value={formatInvoiceDate(invoice.dueDate)} />
-          <MetaRow label="ABN" value={invoice.abn?.trim() || '—'} />
+          <MetaRow
+            label={invoice.businessNumberLabel === 'NZBN' ? 'NZBN' : 'ABN'}
+            value={invoice.abn?.trim() || '—'}
+          />
           <MetaRow label="E-mail" value={invoice.email?.trim() || '—'} />
         </dl>
       </div>
@@ -150,7 +155,9 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentModel }) 
         <p className="font-semibold uppercase tracking-wide">Bank Details</p>
         <p>Bank Name: {invoice.bank.bankName?.trim() || '—'}</p>
         <p>Account Name: {invoice.bank.accountName?.trim() || '—'}</p>
-        <p>BSB: {invoice.bank.bsb?.trim() || '—'}</p>
+        {invoice.businessNumberLabel === 'NZBN' ? null : (
+          <p>BSB: {invoice.bank.bsb?.trim() || '—'}</p>
+        )}
         <p>Account Number: {invoice.bank.accountNumber?.trim() || '—'}</p>
       </div>
     </div>

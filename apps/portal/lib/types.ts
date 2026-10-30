@@ -205,8 +205,11 @@ export interface Agency {
   membershipTier?: AgencyMembershipTier;
   /** Properties under this agency in the agent's book — derived from the live `properties`. */
   propertyCount: number;
-  /** Billing fields used on tax invoices. */
+  /** Country the agency operates in. Absent on older responses, which stay Australia. */
+  region?: 'AU' | 'NZ';
+  /** Billing fields used on tax invoices. `nzbn` is set for a New Zealand agency. */
   abn?: string;
+  nzbn?: string;
   licenceNumber?: string;
   bankName?: string;
   bankAccountName?: string;

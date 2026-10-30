@@ -158,7 +158,7 @@ export function InvoiceEditorDialog({
       setPeriodEnd(period.periodEnd);
       setReference('');
       setEmail(agency?.contactEmail ?? '');
-      setAbn(agency?.abn ?? '');
+      setAbn(agency?.region === 'NZ' ? (agency.nzbn ?? '') : (agency?.abn ?? ''));
       setLicenceNumber(agency?.licenceNumber ?? '');
       setBankName(agency?.bankName ?? '');
       setBankAccountName(agency?.bankAccountName ?? '');
@@ -305,6 +305,7 @@ export function InvoiceEditorDialog({
     reference,
     email,
     abn,
+    businessNumberLabel: agency?.region === 'NZ' ? 'NZBN' : 'ABN',
     managementFee: managementFee
       .filter((l) => l.propertyId)
       .map((l) => ({
@@ -531,7 +532,10 @@ export function InvoiceEditorDialog({
                         disabled={saving}
                       />
                     </Field>
-                    <Field label="ABN" className="sm:col-span-1 xl:col-span-2">
+                    <Field
+                      label={agency?.region === 'NZ' ? 'NZBN' : 'ABN'}
+                      className="sm:col-span-1 xl:col-span-2"
+                    >
                       <Input
                         className={cellInputClass}
                         value={abn}
@@ -771,14 +775,16 @@ export function InvoiceEditorDialog({
                         disabled={saving}
                       />
                     </Field>
-                    <Field label="BSB">
-                      <Input
-                        className={cellInputClass}
-                        value={bankBsb}
-                        onChange={(e) => setBankBsb(e.target.value)}
-                        disabled={saving}
-                      />
-                    </Field>
+                    {agency?.region === 'NZ' ? null : (
+                      <Field label="BSB">
+                        <Input
+                          className={cellInputClass}
+                          value={bankBsb}
+                          onChange={(e) => setBankBsb(e.target.value)}
+                          disabled={saving}
+                        />
+                      </Field>
+                    )}
                     <Field label="Account number">
                       <Input
                         className={cellInputClass}

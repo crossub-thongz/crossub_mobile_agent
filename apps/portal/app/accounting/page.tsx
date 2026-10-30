@@ -400,6 +400,7 @@ export default function AccountingPage() {
         open={previewOpen}
         onOpenChange={setPreviewOpen}
         invoiceId={previewInvoiceId}
+        businessNumberLabel={primaryAgency?.region === 'NZ' ? 'NZBN' : 'ABN'}
       />
 
       <RentReconciliationPropertyPickerDialog

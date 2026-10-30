@@ -26,6 +26,7 @@ type ProfileTab = 'history' | 'contacts';
 
 type InvoiceBillingFields = {
   abn: string;
+  nzbn: string;
   licenceNumber: string;
   bankName: string;
   bankAccountName: string;
@@ -35,6 +36,7 @@ type InvoiceBillingFields = {
 
 const EMPTY_BILLING: InvoiceBillingFields = {
   abn: '',
+  nzbn: '',
   licenceNumber: '',
   bankName: '',
   bankAccountName: '',
@@ -46,6 +48,7 @@ function billingFromAgency(agency: Agency | null | undefined): InvoiceBillingFie
   if (!agency) return EMPTY_BILLING;
   return {
     abn: agency.abn ?? '',
+    nzbn: agency.nzbn ?? '',
     licenceNumber: agency.licenceNumber ?? '',
     bankName: agency.bankName ?? '',
     bankAccountName: agency.bankAccountName ?? '',
@@ -75,6 +78,7 @@ export default function ProfilePage() {
   const [billingEditing, setBillingEditing] = useState(false);
   const [savedBilling, setSavedBilling] = useState<InvoiceBillingFields>(EMPTY_BILLING);
   const [abn, setAbn] = useState('');
+  const [nzbn, setNzbn] = useState('');
   const [licenceNumber, setLicenceNumber] = useState('');
   const [bankName, setBankName] = useState('');
   const [bankAccountName, setBankAccountName] = useState('');
@@ -93,6 +97,7 @@ export default function ProfilePage() {
     }
     setSavedBilling(next);
     setAbn(next.abn);
+    setNzbn(next.nzbn);
     setLicenceNumber(next.licenceNumber);
     setBankName(next.bankName);
     setBankAccountName(next.bankAccountName);
@@ -129,6 +134,8 @@ export default function ProfilePage() {
   const phonebookCount = phonebook.landlords.length + phonebook.tenants.length;
 
   const localAccount = getLocalSessionAccount();
+  const isNzAgency = primaryAgency?.region === 'NZ';
+  const businessNumberLabel = isNzAgency ? 'NZBN' : 'ABN';
   const agencyName = primaryAgency?.name ?? localAccount?.agencyName ?? '—';
   const agencyCompany =
     primaryAgency?.company ?? localAccount?.agencyCompany ?? '—';
@@ -275,8 +282,17 @@ export default function ProfilePage() {
             )}
           </div>
           <dl className="mt-3 space-y-2.5 text-sm">
-            <ProfileRow label="Agency name" value={agencyName} />
-            <ProfileRow label="Company" value={agencyCompany} />
+            {isNzAgency ? (
+              <>
+                <ProfileRow label="Company name" value={agencyName} />
+                <ProfileRow label="Agency name" value={agencyCompany} />
+              </>
+            ) : (
+              <>
+                <ProfileRow label="Agency name" value={agencyName} />
+                <ProfileRow label="Company" value={agencyCompany} />
+              </>
+            )}
             {primaryAgency && portalAccessReady ? (
               <div className="flex items-baseline justify-between gap-4">
                 <dt className="text-muted-foreground shrink-0 text-xs">Portal access</dt>
@@ -347,16 +363,19 @@ export default function ProfilePage() {
           <section className="rounded-xl border bg-card p-4">
             <h2 className="text-sm font-semibold">Invoice billing details</h2>
             <p className="text-muted-foreground mt-1 text-xs">
-              ABN, licence, and bank details used on Crossub tax invoices.
+              {businessNumberLabel}, licence, and bank details used on Crossub tax invoices.
             </p>
             {hasInvoiceBillingDetails(savedBilling) && !billingEditing ? (
               <>
                 <dl className="mt-3 space-y-2">
-                  <ProfileRow label="ABN" value={savedBilling.abn} />
+                  <ProfileRow
+                    label={businessNumberLabel}
+                    value={isNzAgency ? savedBilling.nzbn : savedBilling.abn}
+                  />
                   <ProfileRow label="Licence number" value={savedBilling.licenceNumber} />
                   <ProfileRow label="Bank name" value={savedBilling.bankName} />
                   <ProfileRow label="Account name" value={savedBilling.bankAccountName} />
-                  <ProfileRow label="BSB" value={savedBilling.bankBsb} />
+                  {isNzAgency ? null : <ProfileRow label="BSB" value={savedBilling.bankBsb} />}
                   <ProfileRow label="Account number" value={savedBilling.bankAccountNumber} />
                 </dl>
                 <Button
@@ -366,6 +385,7 @@ export default function ProfilePage() {
                   variant="outline"
                   onClick={() => {
                     setAbn(savedBilling.abn);
+                    setNzbn(savedBilling.nzbn);
                     setLicenceNumber(savedBilling.licenceNumber);
                     setBankName(savedBilling.bankName);
                     setBankAccountName(savedBilling.bankAccountName);
@@ -380,8 +400,12 @@ export default function ProfilePage() {
             ) : (
               <>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <BillingField label="ABN">
-                    <Input value={abn} onChange={(e) => setAbn(e.target.value)} disabled={billingSaving} />
+                  <BillingField label={businessNumberLabel}>
+                    <Input
+                      value={isNzAgency ? nzbn : abn}
+                      onChange={(e) => (isNzAgency ? setNzbn(e.target.value) : setAbn(e.target.value))}
+                      disabled={billingSaving}
+                    />
                   </BillingField>
                   <BillingField label="Licence number">
                     <Input
@@ -405,13 +429,15 @@ export default function ProfilePage() {
                       disabled={billingSaving}
                     />
                   </BillingField>
-                  <BillingField label="BSB">
-                    <Input
-                      value={bankBsb}
-                      onChange={(e) => setBankBsb(e.target.value)}
-                      disabled={billingSaving}
-                    />
-                  </BillingField>
+                  {isNzAgency ? null : (
+                    <BillingField label="BSB">
+                      <Input
+                        value={bankBsb}
+                        onChange={(e) => setBankBsb(e.target.value)}
+                        disabled={billingSaving}
+                      />
+                    </BillingField>
+                  )}
                   <BillingField label="Account number">
                     <Input
                       value={bankAccountNumber}
@@ -430,11 +456,13 @@ export default function ProfilePage() {
                         setBillingSaving(true);
                         try {
                           const updated = await updateAgencyBilling(primaryAgency.id, {
-                            abn: abn.trim() || undefined,
+                            ...(isNzAgency
+                              ? { nzbn: nzbn.trim() || undefined }
+                              : { abn: abn.trim() || undefined }),
                             licenceNumber: licenceNumber.trim() || undefined,
                             bankName: bankName.trim() || undefined,
                             bankAccountName: bankAccountName.trim() || undefined,
-                            bankBsb: bankBsb.trim() || undefined,
+                            ...(isNzAgency ? {} : { bankBsb: bankBsb.trim() || undefined }),
                             bankAccountNumber: bankAccountNumber.trim() || undefined,
                           });
                           const mapped = mapAgentAgencies([updated])[0];
@@ -442,6 +470,7 @@ export default function ProfilePage() {
                             ? billingFromAgency(mapped)
                             : {
                                 abn: abn.trim(),
+                                nzbn: nzbn.trim(),
                                 licenceNumber: licenceNumber.trim(),
                                 bankName: bankName.trim(),
                                 bankAccountName: bankAccountName.trim(),
@@ -450,6 +479,7 @@ export default function ProfilePage() {
                               };
                           setSavedBilling(next);
                           setAbn(next.abn);
+                          setNzbn(next.nzbn);
                           setLicenceNumber(next.licenceNumber);
                           setBankName(next.bankName);
                           setBankAccountName(next.bankAccountName);
