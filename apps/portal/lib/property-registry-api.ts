@@ -96,7 +96,8 @@ export interface PropertyPortalLedgerEntry {
 
 export interface PropertyPortalDebtCollectionEvent {
   id: string;
-  channel: 'email' | 'sms' | 'phone' | 'reminder';
+  /** `promise`: a payment the tenant promised, recorded by CROS (Jarvis 3.3). */
+  channel: 'email' | 'sms' | 'phone' | 'reminder' | 'promise';
   timestamp: string;
   summary: string;
 }
