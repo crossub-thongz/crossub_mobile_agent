@@ -232,4 +232,5 @@ Review items: AI-016 (spoken English first).
 | 2026-10-30 | 3 | Leasing and bond outcome checked on staging; open date and case reference fixed (c049eba91) |
 | 2026-10-30 | 3 | Trust read tools built: overview, ledger, owner statements (crossub_web a521b9b9c) |
 | 2026-10-30 | 3 | Trust checked on staging, figures match; opening balance and open weekday fixed |
-| 2026-10-30 | 4 | Stage 4 built: spoken replies (`spoken`), voice confirm rules (`readBack`, `confirmBy`, `byVoice`), billing reads; hands free chosen as an in-app loop, LiveKit call left for later (crossub_web 8f97fab6f, d1ccb884d; contract 0.67.0) |
+| 2026-10-30 | 4 | Stage 4 built: spoken replies (`spoken`), voice confirm rules (`readBack`, `confirmBy`, `byVoice`), billing reads; hands free chosen as an in-app loop, LiveKit call left for later (crossub_web main 290e8fb9d; contract 0.67.0) |
+| 2026-10-30 | 4 | Stage 4 checked on staging: billing summary read, `spoken` cut long replies, maintenance card read back and confirmed with `byVoice` (MR-00199, [TEST]), property details card refused a voice yes and rent stayed $1,100, mute toggle kept per device; hands free mic loop and iPhone still need a real phone |
