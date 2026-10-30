@@ -1,4 +1,4 @@
-import type { RegistrationCountry } from '@/lib/registration-mobile';
+import { isPhoneCountry, type PhoneCountry, type RegistrationCountry } from '@/lib/registration-mobile';
 
 const STORAGE_KEY = 'crossub.register.account';
 
@@ -8,7 +8,7 @@ export type RegisterAccountDraft = {
   lastName: string;
   email: string;
   password: string;
-  phoneCountry: RegistrationCountry;
+  phoneCountry: PhoneCountry;
   phone: string;
   region: RegistrationCountry;
 };
@@ -62,7 +62,8 @@ export function readRegisterAccountDraft(): RegisterAccountDraft | null {
       !parsed.lastName ||
       !parsed.email ||
       !parsed.password ||
-      (parsed.phoneCountry !== 'AU' && parsed.phoneCountry !== 'NZ') ||
+      !parsed.phoneCountry ||
+      !isPhoneCountry(parsed.phoneCountry) ||
       !parsed.phone ||
       (parsed.region !== 'AU' && parsed.region !== 'NZ')
     ) {

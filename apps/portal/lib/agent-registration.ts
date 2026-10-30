@@ -1,4 +1,5 @@
 import { api, ApiError } from '@/lib/api';
+import { normalizeRegistrationMobile, type PhoneCountry } from '@/lib/registration-mobile';
 import type { AuthUser } from '@/lib/auth-types';
 import {
   isSelfManagedLevel,
@@ -16,7 +17,7 @@ export interface RegisterAgentInput {
   agencyCompany?: string;
   phone?: string;
   /** Calling code for `phone`. Independent of `region`. */
-  phoneCountry?: 'AU' | 'NZ';
+  phoneCountry?: PhoneCountry;
   /** Country the agency operates in. */
   region?: 'AU' | 'NZ';
   /** Australian state. Omit for New Zealand. */
@@ -139,7 +140,12 @@ export async function registerAgentAccount(
     lastName: input.lastName.trim(),
     agencyName: input.agencyName.trim(),
     agencyCompany: input.agencyCompany?.trim() || undefined,
-    phone: input.phone?.trim() || undefined,
+    phone:
+      (input.phoneCountry
+        ? normalizeRegistrationMobile(input.phone, input.phoneCountry)
+        : null) ||
+      input.phone?.trim() ||
+      undefined,
     // The API this app calls still rejects unknown properties. phoneCountry,
     // region, nzbn, and state are implemented locally but not on that server yet.
     abn: input.region === 'NZ' ? undefined : input.abn?.trim() || undefined,

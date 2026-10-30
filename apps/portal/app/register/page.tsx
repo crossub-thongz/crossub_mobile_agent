@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 
 import { useAuth } from '@/components/providers/auth-provider';
+import { PhoneCountryField } from '@/components/register/phone-country-field';
 import { RegisterReadyStep } from '@/components/register/register-ready-step';
 import { RegisterWorkspaceStep } from '@/components/register/register-workspace-step';
 import { AUSTRALIAN_STATE_ORDER } from '@/constants/api-enums';
@@ -27,7 +28,10 @@ import {
 import { DEFAULT_REGISTER_SERVICE_LEVEL } from '@/lib/portal-service-level';
 import { postAuthDestination } from '@/lib/system-access-agreement';
 import {
+  isPhoneCountry,
+  phoneCountryMeta,
   registrationMobileMessage,
+  type PhoneCountry,
   type RegistrationCountry,
 } from '@/lib/registration-mobile';
 
@@ -71,7 +75,7 @@ const schema = z
     region: z.string(),
   })
   .superRefine((value, ctx) => {
-    if (value.phoneCountry !== 'AU' && value.phoneCountry !== 'NZ') {
+    if (!isPhoneCountry(value.phoneCountry)) {
       ctx.addIssue({ code: 'custom', path: ['phoneCountry'], message: 'Select a country code.' });
     }
     if (value.region !== 'AU' && value.region !== 'NZ') {
@@ -80,7 +84,7 @@ const schema = z
     if (value.confirmPassword && value.password !== value.confirmPassword) {
       ctx.addIssue({ code: 'custom', path: ['confirmPassword'], message: 'Passwords do not match.' });
     }
-    if ((value.phoneCountry === 'AU' || value.phoneCountry === 'NZ') && value.phone.trim()) {
+    if (isPhoneCountry(value.phoneCountry) && value.phone.trim()) {
       const message = registrationMobileMessage(value.phone, value.phoneCountry);
       if (message) ctx.addIssue({ code: 'custom', path: ['phone'], message });
     }
@@ -100,6 +104,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const { refresh } = useAuth();
   const phoneCountryTouched = useRef(false);
+  const regionTouched = useRef(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -109,9 +114,9 @@ export default function RegisterPage() {
       email: '',
       password: '',
       confirmPassword: '',
-      phoneCountry: '',
+      phoneCountry: 'AU',
       phone: '',
-      region: '',
+      region: 'AU',
     },
   });
 
@@ -128,18 +133,37 @@ export default function RegisterPage() {
   const phone = watch('phone');
   const legal = region === 'AU' || region === 'NZ' ? LEGAL[region] : null;
   const phoneLive =
-    phone.trim() && (phoneCountry === 'AU' || phoneCountry === 'NZ')
+    phone.trim() && isPhoneCountry(phoneCountry)
       ? registrationMobileMessage(phone, phoneCountry)
       : null;
 
   useEffect(() => {
-    const country = new URLSearchParams(window.location.search).get('country')?.toUpperCase();
-    if (country !== 'AU' && country !== 'NZ') return;
-    setValue('region', country);
-    if (!phoneCountryTouched.current) setValue('phoneCountry', country);
+    const apply = (country: 'AU' | 'NZ') => {
+      if (!regionTouched.current) setValue('region', country);
+      if (!phoneCountryTouched.current) setValue('phoneCountry', country);
+    };
+    const requested = new URLSearchParams(window.location.search).get('country')?.toUpperCase();
+    if (requested === 'AU' || requested === 'NZ') {
+      apply(requested);
+      return;
+    }
+    let cancelled = false;
+    void fetch('/api/geo-country')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { country?: string | null } | null) => {
+        if (cancelled || phoneCountryTouched.current) return;
+        apply(body?.country === 'NZ' ? 'NZ' : 'AU');
+      })
+      .catch(() => {
+        if (!cancelled && !phoneCountryTouched.current) apply('AU');
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [setValue]);
 
   const chooseRegion = (next: string) => {
+    regionTouched.current = true;
     setValue('region', next, { shouldValidate: true });
     if (!phoneCountryTouched.current && (next === 'AU' || next === 'NZ')) {
       setValue('phoneCountry', next, { shouldValidate: Boolean(phone.trim()) });
@@ -147,14 +171,14 @@ export default function RegisterPage() {
   };
 
   const onContinue = (values: FormValues) => {
-    if (values.phoneCountry !== 'AU' && values.phoneCountry !== 'NZ') return;
+    if (!isPhoneCountry(values.phoneCountry)) return;
     if (values.region !== 'AU' && values.region !== 'NZ') return;
     saveRegisterAccountDraft({
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
       email: values.email.trim(),
       password: values.password,
-      phoneCountry: values.phoneCountry,
+      phoneCountry: values.phoneCountry as PhoneCountry,
       phone: values.phone.trim(),
       region: values.region,
     });
@@ -165,7 +189,7 @@ export default function RegisterPage() {
   const startTrip = async () => {
     const account = form.getValues();
     const workspace = readRegisterWorkspaceDraft();
-    if (account.phoneCountry !== 'AU' && account.phoneCountry !== 'NZ') return;
+    if (!isPhoneCountry(account.phoneCountry)) return;
     if (account.region !== 'AU' && account.region !== 'NZ') return;
     if (!workspace) {
       toast.error('Go back and complete the workspace step.');
@@ -225,7 +249,7 @@ export default function RegisterPage() {
         </div>
       </header>
 
-      <main className="mx-auto mt-12 grid w-full max-w-6xl items-start gap-10 px-5 sm:px-8 lg:mt-16 lg:grid-cols-[minmax(0,1.05fr)_480px] lg:gap-16 lg:px-10">
+      <main className="mx-auto mt-12 grid w-full max-w-6xl items-start gap-10 px-5 sm:px-8 lg:mt-16 lg:grid-cols-2 lg:gap-16 lg:px-10">
         <section className="max-w-xl">
           <div className="flex items-center gap-3">
             <span className="h-0.5 w-8 rounded-full" style={{ backgroundColor: AGENT_GREEN }} />
@@ -290,15 +314,13 @@ export default function RegisterPage() {
             Let&apos;s get you started. Your free workspace is just a few steps away.
           </p>
 
-          <form onSubmit={handleSubmit(onContinue)} className="mt-6 space-y-4" noValidate>
-            <div className="grid grid-cols-2 gap-3">
-              <Field id="firstName" label="First name" error={errors.firstName?.message}>
-                <input id="firstName" autoComplete="given-name" className={inputClass} {...register('firstName')} />
-              </Field>
-              <Field id="lastName" label="Last name" error={errors.lastName?.message}>
-                <input id="lastName" autoComplete="family-name" className={inputClass} {...register('lastName')} />
-              </Field>
-            </div>
+          <form onSubmit={handleSubmit(onContinue)} className="mt-6 grid gap-4 sm:grid-cols-2" noValidate>
+            <Field id="firstName" label="First name" error={errors.firstName?.message}>
+              <input id="firstName" autoComplete="given-name" className={inputClass} {...register('firstName')} />
+            </Field>
+            <Field id="lastName" label="Last name" error={errors.lastName?.message}>
+              <input id="lastName" autoComplete="family-name" className={inputClass} {...register('lastName')} />
+            </Field>
 
             <Field id="email" label="Business email" error={errors.email?.message}>
               <div className="relative">
@@ -329,73 +351,6 @@ export default function RegisterPage() {
               </div>
             </Field>
 
-            <Field id="confirmPassword" label="Confirm password" error={errors.confirmPassword?.message}>
-              <div className="relative">
-                <Lock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8AA0B5]" />
-                <input
-                  id="confirmPassword"
-                  type={showConfirm ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="Re-enter your password"
-                  className={`${inputClass} pr-10 pl-10`}
-                  {...register('confirmPassword')}
-                />
-                <PasswordToggle
-                  shown={showConfirm}
-                  label="confirm password"
-                  onToggle={() => setShowConfirm((value) => !value)}
-                />
-              </div>
-            </Field>
-
-            <Field
-              id="phone"
-              label="Mobile number"
-              error={
-                errors.phoneCountry?.message ||
-                (touchedFields.phone || isSubmitted
-                  ? phone.trim()
-                    ? phoneLive || undefined
-                    : errors.phone?.message
-                  : undefined)
-              }
-            >
-              <div className="flex h-12 w-full overflow-hidden rounded-[9px] border border-[#CED9E4] bg-white focus-within:border-[#00bd85]">
-                <div className="relative h-full shrink-0">
-                  <select
-                    id="phoneCountry"
-                    aria-label="Mobile country code"
-                    className="h-full w-[6.75rem] appearance-none border-0 bg-transparent pr-8 pl-3 text-sm outline-none"
-                    value={phoneCountry}
-                  onChange={(event) => {
-                    const next = event.target.value;
-                    phoneCountryTouched.current = true;
-                    setValue('phoneCountry', next, { shouldValidate: true });
-                    if (next === 'AU' || next === 'NZ') {
-                      setValue('region', next, { shouldValidate: true });
-                    }
-                  }}
-                  >
-                    <option value="">Code</option>
-                    {REGIONS.map((item) => (
-                      <option key={item.code} value={item.code}>
-                        {item.dial}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-[#52647C]" />
-                </div>
-                <input
-                  id="phone"
-                  type="tel"
-                  autoComplete="tel-national"
-                  placeholder={phoneCountry === 'NZ' ? '021 123 4567' : '0412 345 678'}
-                  className="h-full min-w-0 flex-1 border-0 border-l border-[#CED9E4] bg-transparent px-3 text-sm outline-none placeholder:text-[#9AADC0]"
-                  {...register('phone')}
-                />
-              </div>
-            </Field>
-
             <Field id="region" label="Select your region" error={errors.region?.message}>
               <div className="relative">
                 <select
@@ -415,9 +370,57 @@ export default function RegisterPage() {
               </div>
             </Field>
 
+            <Field id="confirmPassword" label="Confirm password" error={errors.confirmPassword?.message}>
+              <div className="relative">
+                <Lock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8AA0B5]" />
+                <input
+                  id="confirmPassword"
+                  type={showConfirm ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Re-enter your password"
+                  className={`${inputClass} pr-10 pl-10`}
+                  {...register('confirmPassword')}
+                />
+                <PasswordToggle
+                  shown={showConfirm}
+                  label="confirm password"
+                  onToggle={() => setShowConfirm((value) => !value)}
+                />
+              </div>
+            </Field>
+
+            <div className="sm:col-span-2">
+            <Field
+              id="phone"
+              label="Mobile number"
+              error={
+                errors.phoneCountry?.message ||
+                (touchedFields.phone || isSubmitted
+                  ? phone.trim()
+                    ? phoneLive || undefined
+                    : errors.phone?.message
+                  : undefined)
+              }
+            >
+              <PhoneCountryField
+                country={isPhoneCountry(phoneCountry) ? phoneCountry : 'AU'}
+                placeholder={phoneCountryMeta(isPhoneCountry(phoneCountry) ? phoneCountry : 'AU').placeholder}
+                phoneProps={{ id: 'phone', ...register('phone') }}
+                onCountryChange={(next) => {
+                  phoneCountryTouched.current = true;
+                  setValue('phoneCountry', next, { shouldValidate: Boolean(phone.trim()) });
+                  if (next === 'AU' || next === 'NZ') {
+                    regionTouched.current = true;
+                    setValue('region', next, { shouldValidate: true });
+                  }
+                }}
+              />
+            </Field>
+            </div>
+
             <button
               type="submit"
-              className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[9px] text-sm font-semibold text-white"
+              className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[9px] text-sm font-semibold text-white sm:col-span-2"
               style={{ backgroundColor: AGENT_GREEN }}
             >
               Continue to workspace

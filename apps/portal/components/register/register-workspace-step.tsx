@@ -96,7 +96,7 @@ export function RegisterWorkspaceStep({
   };
 
   return (
-    <form onSubmit={handleSubmit(onCreate)} className="mt-6 space-y-4" noValidate>
+    <form onSubmit={handleSubmit(onCreate)} className="mt-6 grid gap-4 sm:grid-cols-2" noValidate>
       <Field id="companyName" label="Company name" error={errors.companyName?.message}>
         <input
           id="companyName"
@@ -115,24 +115,22 @@ export function RegisterWorkspaceStep({
         <input id="agencyName" className={inputClass} {...register('agencyName')} />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field id="businessNumber" label={businessLabel} optional>
-          <input
-            id="businessNumber"
-            placeholder={businessPlaceholder}
-            className={inputClass}
-            {...register('businessNumber')}
-          />
-        </Field>
-        <Field id="licenceNumber" label="Licence number" optional>
-          <input
-            id="licenceNumber"
-            placeholder="Licence number"
-            className={inputClass}
-            {...register('licenceNumber')}
-          />
-        </Field>
-      </div>
+      <Field id="businessNumber" label={businessLabel} optional>
+        <input
+          id="businessNumber"
+          placeholder={businessPlaceholder}
+          className={inputClass}
+          {...register('businessNumber')}
+        />
+      </Field>
+      <Field id="licenceNumber" label="Licence number" optional>
+        <input
+          id="licenceNumber"
+          placeholder="Licence number"
+          className={inputClass}
+          {...register('licenceNumber')}
+        />
+      </Field>
 
       {region === 'AU' ? (
         <Field id="state" label="State" error={errors.state?.message}>
@@ -146,7 +144,12 @@ export function RegisterWorkspaceStep({
         </Field>
       ) : null}
 
-      <Field id="officeAddress" label="Office address" error={errors.officeAddress?.message}>
+      <Field
+        id="officeAddress"
+        label="Office address"
+        error={errors.officeAddress?.message}
+        className={region === 'AU' ? undefined : 'sm:col-span-2'}
+      >
         <AddressLineAutocomplete
           id="officeAddress"
           value={officeAddress}
@@ -157,7 +160,7 @@ export function RegisterWorkspaceStep({
         />
       </Field>
 
-      <p className="rounded-[12px] bg-[#E7FBF4] px-4 py-3 text-sm leading-6 text-[#147A5A]">
+      <p className="rounded-[12px] bg-[#E7FBF4] px-4 py-3 text-sm leading-6 text-[#147A5A] sm:col-span-2">
         <span className="mr-1.5" aria-hidden>
           ✓
         </span>
@@ -166,7 +169,7 @@ export function RegisterWorkspaceStep({
 
       <button
         type="submit"
-        className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[9px] text-sm font-semibold text-white"
+        className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[9px] text-sm font-semibold text-white sm:col-span-2"
         style={{ backgroundColor: AGENT_GREEN }}
       >
         Create my free workspace
@@ -176,7 +179,7 @@ export function RegisterWorkspaceStep({
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex items-center gap-1 text-sm text-[#52647C]"
+        className="inline-flex items-center gap-1 text-sm text-[#52647C] sm:col-span-2"
       >
         <ArrowLeft className="size-4" />
         Back to account
@@ -190,16 +193,18 @@ function Field({
   label,
   optional,
   error,
+  className,
   children,
 }: {
   id: string;
   label: string;
   optional?: boolean;
   error?: string;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className={`space-y-1.5 ${className ?? ''}`}>
       <label htmlFor={id} className="text-sm font-medium">
         {label}
         {optional ? <span className="font-normal text-[#8AA0B5]"> (optional)</span> : null}
