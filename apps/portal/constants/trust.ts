@@ -80,23 +80,90 @@ export const TRUST_TAB = {
   BANK_STATEMENT: 'bank-statement',
   RECONCILIATION: 'reconciliation',
   REPORTS: 'reports',
+  AUDIT_LOG: 'audit-log',
   SETTINGS: 'settings',
 } as const;
 
 export type TrustTab = (typeof TRUST_TAB)[keyof typeof TRUST_TAB];
 
-export const TRUST_TABS: readonly { id: TrustTab; label: string }[] = [
-  { id: TRUST_TAB.OVERVIEW, label: 'Overview' },
-  { id: TRUST_TAB.LEDGERS, label: 'Ledgers' },
-  { id: TRUST_TAB.TRANSACTIONS, label: 'Transactions' },
-  { id: TRUST_TAB.RENT, label: 'Rent' },
-  { id: TRUST_TAB.BILLS, label: 'Bills' },
-  { id: TRUST_TAB.DISBURSE, label: 'Disburse' },
-  { id: TRUST_TAB.BANK_FILES, label: 'Bank files' },
-  { id: TRUST_TAB.BANK_STATEMENT, label: 'Bank statement' },
-  { id: TRUST_TAB.RECONCILIATION, label: 'Reconciliation' },
-  { id: TRUST_TAB.REPORTS, label: 'Reports' },
-  { id: TRUST_TAB.SETTINGS, label: 'Settings' },
+/** Menu groups, matching the admin Trust Accounting sidebar. */
+export const TRUST_NAV_SECTION = {
+  OVERVIEW: 'overview',
+  DAILY: 'daily',
+  LEDGER_CONTROL: 'ledger-control',
+  ADMINISTRATION: 'administration',
+} as const;
+
+export type TrustNavSection = (typeof TRUST_NAV_SECTION)[keyof typeof TRUST_NAV_SECTION];
+
+export const TRUST_NAV_SECTION_LABEL: Record<TrustNavSection, string> = {
+  [TRUST_NAV_SECTION.OVERVIEW]: 'Overview',
+  [TRUST_NAV_SECTION.DAILY]: 'Daily accounting',
+  [TRUST_NAV_SECTION.LEDGER_CONTROL]: 'Ledger & control',
+  [TRUST_NAV_SECTION.ADMINISTRATION]: 'Administration',
+};
+
+/** Menu names. The screen title uses the same words, except the dashboard. */
+export const TRUST_NAV_LABEL: Record<TrustTab, string> = {
+  [TRUST_TAB.OVERVIEW]: 'Dashboard',
+  [TRUST_TAB.TRANSACTIONS]: 'Transactions',
+  [TRUST_TAB.RENT]: 'Rent Payments',
+  [TRUST_TAB.BILLS]: 'Bills & Invoices',
+  [TRUST_TAB.DISBURSE]: 'Disbursement',
+  [TRUST_TAB.BANK_FILES]: 'Bank files',
+  [TRUST_TAB.BANK_STATEMENT]: 'Bank statement',
+  [TRUST_TAB.LEDGERS]: 'Folios',
+  [TRUST_TAB.RECONCILIATION]: 'Reconciliation',
+  [TRUST_TAB.REPORTS]: 'Reports',
+  [TRUST_TAB.AUDIT_LOG]: 'Audit Log',
+  [TRUST_TAB.SETTINGS]: 'Trust Settings',
+};
+
+/** The title at the top of the open screen. */
+export const TRUST_SCREEN_TITLE: Record<TrustTab, string> = {
+  ...TRUST_NAV_LABEL,
+  [TRUST_TAB.OVERVIEW]: 'Trust Accounting Overview',
+};
+
+export const TRUST_SCREEN_SUBTITLE: Record<TrustTab, string> = {
+  [TRUST_TAB.OVERVIEW]: 'Your daily accounting workspace',
+  [TRUST_TAB.TRANSACTIONS]: 'All trust money movements',
+  [TRUST_TAB.RENT]: 'Paid-to, arrears and tenancy rent position',
+  [TRUST_TAB.BILLS]: 'Owner bills to pay and tenant invoices to collect',
+  [TRUST_TAB.DISBURSE]: 'Pay owners, suppliers and the agency from the trust account',
+  [TRUST_TAB.BANK_FILES]: 'ABA files for payments leaving the trust account',
+  [TRUST_TAB.BANK_STATEMENT]: 'Import a bank file and match its lines',
+  [TRUST_TAB.LEDGERS]: 'Property-linked folios and their parties',
+  [TRUST_TAB.RECONCILIATION]: 'Cash book, folios and the bank balance for the month',
+  [TRUST_TAB.REPORTS]: 'Trust reports for this account',
+  [TRUST_TAB.AUDIT_LOG]: 'Every accounting change in this workspace, newest first',
+  [TRUST_TAB.SETTINGS]: 'Trust bank accounts, ABA details and account codes',
+};
+
+export const TRUST_NAV_SECTIONS: readonly {
+  id: TrustNavSection;
+  items: readonly TrustTab[];
+}[] = [
+  { id: TRUST_NAV_SECTION.OVERVIEW, items: [TRUST_TAB.OVERVIEW] },
+  {
+    id: TRUST_NAV_SECTION.DAILY,
+    items: [
+      TRUST_TAB.TRANSACTIONS,
+      TRUST_TAB.RENT,
+      TRUST_TAB.BILLS,
+      TRUST_TAB.DISBURSE,
+      TRUST_TAB.BANK_FILES,
+      TRUST_TAB.BANK_STATEMENT,
+    ],
+  },
+  {
+    id: TRUST_NAV_SECTION.LEDGER_CONTROL,
+    items: [TRUST_TAB.LEDGERS, TRUST_TAB.RECONCILIATION, TRUST_TAB.REPORTS],
+  },
+  {
+    id: TRUST_NAV_SECTION.ADMINISTRATION,
+    items: [TRUST_TAB.AUDIT_LOG, TRUST_TAB.SETTINGS],
+  },
 ];
 
 /** Chart-of-accounts code kinds: a bill takes an EXPENSE code. */

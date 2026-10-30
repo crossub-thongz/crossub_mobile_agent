@@ -345,10 +345,6 @@ export const VACATING_WORKSPACE_COPY: ModuleWorkspaceCopy = {
   detailPlaceholder: 'Select a case to work on it here.',
 };
 
-export const TENANCY_REVIEW_PANE_COPY = {
-  title: 'Review workspace',
-} as const;
-
 export const MODULE_WORKSPACE_LABELS = {
   allLane: 'All',
   openFullDetail: 'Open full job',

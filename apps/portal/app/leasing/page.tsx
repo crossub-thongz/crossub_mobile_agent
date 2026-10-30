@@ -23,8 +23,8 @@ const VIEW_OPTIONS = Object.values(LEASING_PAGE_VIEW).map((id) => ({
 
 /**
  * Leasing list hub is retired for every other tier: they view and create jobs on Tasks.
- * Self-Manage agents get the desktop leasing page. A letting opens the full task. Tenancy
- * reviews stay in the list-and-detail pane. Vacating opens the same end-of-lease task as Tasks.
+ * Self-Manage agents get the desktop leasing page. A row on Lettings, Tenancy reviews, or
+ * Vacating opens the full task.
  */
 export default function LeasingPage() {
   const { ready, selfManaged } = useSelfManagedAccess();

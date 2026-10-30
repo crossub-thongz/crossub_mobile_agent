@@ -207,7 +207,12 @@ export function AgentShell({
       <Suspense fallback={null}>
         <PortalNavigationTracker />
       </Suspense>
-      {persistentChrome ? null : <AgentSidebar onLogout={() => void logout()} />}
+      {persistentChrome ? null : (
+        <AgentSidebar
+          compact={pathname === ROUTES.TRUST || pathname.startsWith(`${ROUTES.TRUST}/`)}
+          onLogout={() => void logout()}
+        />
+      )}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {isV2 && !immersive && !persistentChrome ? (

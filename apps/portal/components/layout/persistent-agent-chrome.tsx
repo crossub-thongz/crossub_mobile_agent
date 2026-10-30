@@ -7,7 +7,7 @@ import { AgentSidebar } from '@/components/layout/agent-sidebar';
 import { AgentShellV2Header } from '@/components/layout/agent-shell-v2-header';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
-import { isPortalWelcomeDeferredRoute, isPublicRoute } from '@/constants/routes';
+import { isPortalWelcomeDeferredRoute, isPublicRoute, ROUTES } from '@/constants/routes';
 
 const ShellPersistenceContext = createContext(false);
 
@@ -34,7 +34,10 @@ export function PersistentAgentChrome({ children }: { children: React.ReactNode 
   return (
     <ShellPersistenceContext.Provider value={true}>
       <div className="v2-dashboard-canvas flex h-[calc(100dvh-var(--env-banner-height,0px))] overflow-hidden">
-        <AgentSidebar onLogout={() => void logout()} />
+        <AgentSidebar
+          compact={pathname === ROUTES.TRUST || pathname.startsWith(`${ROUTES.TRUST}/`)}
+          onLogout={() => void logout()}
+        />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <AgentShellV2Header />
           <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">{children}</div>

@@ -29,7 +29,7 @@ export default function TrustPage() {
   if (!ready || redirect) return null;
 
   return (
-    <AgentShell title={TRUST_PAGE_COPY.title} wide hideNeedAction>
+    <AgentShell title={TRUST_PAGE_COPY.title} wide fillMain hideNeedAction>
       <TrustWorkspace agencies={trustAgencies} />
     </AgentShell>
   );

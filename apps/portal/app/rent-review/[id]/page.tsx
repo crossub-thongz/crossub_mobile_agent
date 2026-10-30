@@ -11,6 +11,7 @@ import { useAgentNotificationDialog } from '@/components/providers/agent-notific
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { ROUTES, rentReviewDetail } from '@/constants/routes';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
+import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 import { useRecordRecentCaseVisit } from '@/hooks/use-record-recent-visit';
 
 export default function RentReviewDetailPage() {
@@ -18,7 +19,8 @@ export default function RentReviewDetailPage() {
   const router = useRouter();
   const id = String(params.id);
   const isV2 = useIsAgentUiV2();
-  const back = useBackNavigation(ROUTES.TASKS, 'Tasks');
+  const { selfManaged } = useSelfManagedAccess();
+  const back = useBackNavigation(selfManaged ? ROUTES.LEASING : ROUTES.TASKS, selfManaged ? 'Leasing' : 'Tasks');
   const { loading, rentReviews, apiConnected } = useAgentData();
   const { openNotificationHref } = useAgentNotificationDialog();
 

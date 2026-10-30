@@ -3,102 +3,123 @@
 import { TrendingUp } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 
-import { ModuleCaseDetail } from '@/components/agent/module-workspace/module-case-detail';
 import {
-  ModuleCellText,
   ModuleLanePill,
   ModuleWorkspace,
-  formatModuleDate,
   type ModuleWorkspaceColumn,
 } from '@/components/agent/module-workspace/module-workspace';
+import {
+  DueCell,
+  NextActionCell,
+  TaskStatusPill,
+  sinceLabel,
+} from '@/components/agent/module-workspace/task-list-cells';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { RentReviewDetailView } from '@/components/rent-review/rent-review-detail-view';
 import {
   MODULE_FIELD_LABELS,
   MODULE_WORKSPACE_LABELS,
+  TENANCY_REVIEW_LANE,
   TENANCY_REVIEW_LANES,
-  TENANCY_REVIEW_PANE_COPY,
   TENANCY_REVIEW_WORKSPACE_COPY,
 } from '@/constants/module-workspace';
-import { OWNER_DECISION_MODULE } from '@/constants/owner-decision';
 import { rentReviewDetail } from '@/constants/routes';
 import { useSelfManagedPropertyIds } from '@/hooks/use-self-managed-access';
+import { rentReviewWorkflowProgress } from '@/lib/case-workflows/rent-review';
 import { compareNumbers, compareSortTime, compareStrings } from '@/lib/client-table-sort';
 import { findLaneDefinition, tenancyReviewLane } from '@/lib/module-workspace-lanes';
 import type { RentReviewCase } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 
-type TenancyReviewSortKey = 'lane' | 'reference' | 'property' | 'tenant' | 'rent' | 'due' | 'created';
-
-/** Wide like the letting pane: it hosts the whole review workflow. */
-const DETAIL_PANE_CLASS = 'lg:w-[500px] xl:w-[600px] 2xl:w-[720px]';
+type TenancyReviewSortKey = 'property' | 'lane' | 'stage' | 'due' | 'tenant' | 'rent';
 
 const laneOf = (r: RentReviewCase) => findLaneDefinition(TENANCY_REVIEW_LANES, tenancyReviewLane(r));
 const laneIndex = (r: RentReviewCase) => TENANCY_REVIEW_LANES.indexOf(laneOf(r));
 const referenceOf = (r: RentReviewCase) => workflowCaseReferenceLabel(r.id, 'rent_review');
 const tenantOf = (r: RentReviewCase) => r.tenantName ?? MODULE_WORKSPACE_LABELS.noValue;
+const settled = (r: RentReviewCase) => {
+  const lane = tenancyReviewLane(r);
+  return lane === TENANCY_REVIEW_LANE.COMPLETED || lane === TENANCY_REVIEW_LANE.CLOSED;
+};
+const stageOf = (r: RentReviewCase) => rentReviewWorkflowProgress(r).currentStepLabel;
 
 const COLUMNS: readonly ModuleWorkspaceColumn<RentReviewCase, TenancyReviewSortKey>[] = [
-  {
-    id: 'lane',
-    label: MODULE_FIELD_LABELS.status,
-    sortKey: 'lane',
-    className: 'w-[15%]',
-    cell: (r) => <ModuleLanePill lane={laneOf(r)} />,
-  },
-  {
-    id: 'reference',
-    label: MODULE_FIELD_LABELS.reference,
-    sortKey: 'reference',
-    className: 'w-[11%]',
-    cell: (r) => <ModuleCellText muted className="font-mono text-xs">{referenceOf(r)}</ModuleCellText>,
-  },
   {
     id: 'property',
     label: MODULE_FIELD_LABELS.property,
     sortKey: 'property',
-    className: 'w-[28%]',
-    cell: (r) => <ModuleCellText className="font-medium">{r.propertyAddress}</ModuleCellText>,
+    className: 'pl-4',
+    cell: (r) => (
+      <div className="min-w-0 max-w-[18rem]">
+        <p className="truncate text-sm font-medium" title={r.propertyAddress}>
+          {r.propertyAddress}
+        </p>
+        <p className="text-muted-foreground mt-0.5 truncate text-[11px]">{referenceOf(r)}</p>
+      </div>
+    ),
   },
   {
-    id: 'tenant',
-    label: MODULE_FIELD_LABELS.tenant,
-    sortKey: 'tenant',
-    className: 'w-[16%]',
-    cell: (r) => <ModuleCellText>{tenantOf(r)}</ModuleCellText>,
+    id: 'lane',
+    label: MODULE_FIELD_LABELS.stage,
+    sortKey: 'lane',
+    cell: (r) => <TaskStatusPill lane={laneOf(r)} />,
   },
   {
-    id: 'rent',
-    label: MODULE_FIELD_LABELS.rent,
-    sortKey: 'rent',
-    className: 'w-[10%]',
-    cell: (r) => <ModuleCellText muted>{formatCurrency(r.currentRent)}</ModuleCellText>,
+    id: 'stage',
+    label: MODULE_FIELD_LABELS.nextAction,
+    sortKey: 'stage',
+    cell: (r) => {
+      const closed = settled(r);
+      const yours = tenancyReviewLane(r) === TENANCY_REVIEW_LANE.AWAITING_YOU;
+      return (
+        <div className="flex min-w-0 max-w-[20rem] items-center gap-2">
+          {closed ? null : (
+            <span
+              className={
+                yours
+                  ? 'shrink-0 rounded-full border border-violet-500/40 bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-200'
+                  : 'border-border text-muted-foreground shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium'
+              }
+            >
+              {yours ? 'Your turn' : 'Waiting'}
+            </span>
+          )}
+          <NextActionCell
+            action={closed ? 'No further action' : stageOf(r)}
+            since={closed ? null : sinceLabel(r.createdAt)}
+          />
+        </div>
+      );
+    },
   },
   {
     id: 'due',
     label: MODULE_FIELD_LABELS.reviewDue,
     sortKey: 'due',
-    className: 'w-[10%]',
-    cell: (r) => <ModuleCellText muted>{formatModuleDate(r.reviewDue)}</ModuleCellText>,
+    cell: (r) => <DueCell iso={r.reviewDue} settled={settled(r)} />,
   },
   {
-    id: 'created',
-    label: MODULE_FIELD_LABELS.created,
-    sortKey: 'created',
-    className: 'w-[10%]',
-    cell: (r) => <ModuleCellText muted>{formatModuleDate(r.createdAt)}</ModuleCellText>,
+    id: 'tenant',
+    label: MODULE_FIELD_LABELS.tenant,
+    sortKey: 'tenant',
+    cell: (r) => <span className="block max-w-[12rem] truncate text-[13px]">{tenantOf(r)}</span>,
+  },
+  {
+    id: 'rent',
+    label: MODULE_FIELD_LABELS.rent,
+    sortKey: 'rent',
+    className: 'pr-6 text-right',
+    cell: (r) => <span className="text-[13px] tabular-nums">{formatCurrency(r.currentRent)}</span>,
   },
 ];
 
 const SORT: Record<TenancyReviewSortKey, (a: RentReviewCase, b: RentReviewCase) => number> = {
-  lane: (a, b) => compareNumbers(laneIndex(a), laneIndex(b)),
-  reference: (a, b) => compareStrings(referenceOf(a), referenceOf(b)),
   property: (a, b) => compareStrings(a.propertyAddress, b.propertyAddress),
+  lane: (a, b) => compareNumbers(laneIndex(a), laneIndex(b)),
+  stage: (a, b) => compareStrings(stageOf(a), stageOf(b)),
+  due: (a, b) => compareSortTime(a.reviewDue, b.reviewDue),
   tenant: (a, b) => compareStrings(tenantOf(a), tenantOf(b)),
   rent: (a, b) => compareNumbers(a.currentRent, b.currentRent),
-  due: (a, b) => compareSortTime(a.reviewDue, b.reviewDue),
-  created: (a, b) => compareSortTime(a.createdAt, b.createdAt),
 };
 
 function searchText(r: RentReviewCase): string {
@@ -122,12 +143,9 @@ function MobileRow({ r }: { r: RentReviewCase }) {
   );
 }
 
-/**
- * Self-Manage Leasing page, Tenancy reviews: rent reviews and lease renewals the agency runs
- * itself, with the selected review's workflow in the split pane.
- */
+/** Self-Manage tenancy reviews. A row opens the full rent-review task. */
 export function TenancyReviewModule() {
-  const { rentReviews, apiConnected } = useAgentData();
+  const { rentReviews } = useAgentData();
   const scope = useSelfManagedPropertyIds();
   const rows = useMemo(
     () => rentReviews.filter((r) => scope.has(r.propertyId)),
@@ -148,38 +166,10 @@ export function TenancyReviewModule() {
       lanes={TENANCY_REVIEW_LANES}
       columns={COLUMNS}
       sortComparators={SORT}
-      defaultSortKey="created"
+      defaultSortKey="due"
+      defaultSortDirection="asc"
+      detailPresentation="navigate"
       mobileRow={(r) => <MobileRow r={r} />}
-      detailClassName={DETAIL_PANE_CLASS}
-      renderDetail={(r) => (
-        <ModuleCaseDetail
-          module={OWNER_DECISION_MODULE.TENANCY_REVIEW}
-          caseId={r.id}
-          propertyId={r.propertyId}
-          propertyAddress={r.propertyAddress}
-          reference={referenceOf(r)}
-          title={r.status}
-          lane={laneOf(r)}
-          detailHref={rowHref(r)}
-          actions={{
-            title: TENANCY_REVIEW_PANE_COPY.title,
-            content: (
-              <RentReviewDetailView
-                reviewId={r.id}
-                leaseEndDate={r.leaseEnd || null}
-                apiConnected={apiConnected}
-                hideHeader
-              />
-            ),
-          }}
-          fields={[
-            { label: MODULE_FIELD_LABELS.tenant, value: tenantOf(r) },
-            { label: MODULE_FIELD_LABELS.rent, value: formatCurrency(r.currentRent) },
-            { label: MODULE_FIELD_LABELS.reviewDue, value: formatModuleDate(r.reviewDue) },
-            { label: MODULE_FIELD_LABELS.created, value: formatModuleDate(r.createdAt) },
-          ]}
-        />
-      )}
     />
   );
 }
