@@ -11,6 +11,7 @@
 - Settings has a CROS section: email tone (friendly, formal, brief), your own sign off, quiet hours with no phone alerts from CROS (Sydney time), and a link to your agency's preferred contractors in People; the same preferences CROS changes when asked in chat (contract 0.64.0).
 
 ### Fixed
+- A link straight to a property's Financials (such as a CROS arrears button) opens Financials instead of bouncing to Overview while the agency list loads
 - Dashboard lease expiry items show the current weekly rent again (they read a field the property never has)
 - Booking an open inspection from a letting finds its viewing session (the wizard looked for it in the wrong place, so the open was never picked up)
 - Type check clean again: removed two registration banners and an open inspection check that could never show, and fixed route and event types

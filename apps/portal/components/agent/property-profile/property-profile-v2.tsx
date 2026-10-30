@@ -508,7 +508,7 @@ export function PropertyProfileV2({
   deletedEndLeasingCases?: ArchivedEndLeasingCase[];
   deletedRentReviews?: ArchivedRentReview[];
 }) {
-  const { agencies, hasFullManagementAccess } = useAgentData();
+  const { agencies, hasFullManagementAccess, portalAccessReady } = useAgentData();
   const activeCycle = leasingCycles[0];
   // Self-Manage is the API's per-property answer (a live management override counts), the same
   // rule the tenancy writes enforce. Until it answers, or if it fails, today's Overview shows.
@@ -519,11 +519,13 @@ export function PropertyProfileV2({
     onRefresh?.();
   };
 
+  // Wait for the agencies: until they load, access reads false and a link to Financials (a Cros
+  // arrears button) would always bounce to Overview.
   useEffect(() => {
-    if (section === 'financials' && !hasFullManagementAccess) {
+    if (portalAccessReady && section === 'financials' && !hasFullManagementAccess) {
       onSectionChange('overview');
     }
-  }, [hasFullManagementAccess, onSectionChange, section]);
+  }, [hasFullManagementAccess, onSectionChange, portalAccessReady, section]);
 
   useEffect(() => {
     if (section === 'tenancies' && tenancyOverview.settled && !isSelfManaged) {
