@@ -3,6 +3,9 @@
 ## 2026-10-30
 
 ### Added
+- CROS reads aloud its answer to a question you asked by voice: a short answer in full, a long one as its opening then "the rest is on your screen"; a speaker button in the CROS header mutes it on this device (contract 0.67.0)
+- Hands free in CROS: tap the headphones in the CROS header and CROS answers aloud, then listens again by itself; say "stop" or "that's all", tap again, or go quiet to finish
+- CROS reads a Confirm card back before anything is made; after it, say "yes" to confirm or "no" to cancel. Cards that move money or are a legal step still need a tap on Confirm
 - A property's arrears activity lists payments the tenant promised, recorded by CROS, with the amount and day.
 - Self-Manage inspection page offers "Use a CROSSUB inspector?" on an unbooked routine, ingoing or outgoing job the agency runs: pay by card at Inspection Only rates and CROSSUB sets the time and sends an inspector; later routine visits stay with the agency (contract 0.65.0)
 - Settings has a CROS section: email tone (friendly, formal, brief), your own sign off, quiet hours with no phone alerts from CROS (Sydney time), and a link to your agency's preferred contractors in People; the same preferences CROS changes when asked in chat (contract 0.64.0).

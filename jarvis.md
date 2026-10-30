@@ -150,10 +150,10 @@ Review items: AI-006, AI-014, AI-030, AI-032, AI-033, AI-037, AI-043, AI-068, AI
 Gate: a pilot agent raises and confirms a maintenance request entirely by voice.
 Review items: AI-016 (spoken English first).
 
-- [ ] Spoken replies with a mute toggle and short spoken versions of long answers.
-- [ ] Portal connects to `POST /v1/agent/voice/session` for a full voice conversation.
-- [ ] Voice confirm reads the change back before acting; money and legal steps never by voice alone.
-- [ ] Billing and agency invoices: explain charges (read only).
+- [~] Spoken replies with a mute toggle and short spoken versions of long answers. Built: chat and Confirm answers carry `spoken` (short reply in full, long one as its opening then "the rest is on your screen", lists never read out, dates written out; crossub_web 8f97fab6f, contract 0.67.0); the panel reads aloud answers to questions asked by voice with the phone's own voice, speaker button mutes it per device. Needs contract publish, then a staging and real phone check.
+- [~] Full voice conversation. Chosen 30 Oct: an in-app hands free loop, not the LiveKit call (staging has no LiveKit and the worker has no staff mode). Headphones button in the CROS header: CROS answers aloud and listens again until "stop", a tap, or silence. The LiveKit call (`POST /v1/agent/voice/session`) stays for later. Needs a real phone check (iOS reopening the mic without a tap).
+- [~] Voice confirm reads the change back before acting; money and legal steps never by voice alone. Built: cards carry `readBack` and `confirmBy` (`GII_TOOL_CONFIRM_BY`, total over write tools: quote approval, owner quote reply, rent offer, notice and acceptance, termination, property figures, owner decisions, arrears, payment promise, bond, closing a job are screen only); a dictated yes or no answers the card; `confirm` takes `byVoice` and refuses a spoken yes on screen-only cards (crossub_web d1ccb884d).
+- [~] Billing and agency invoices: explain charges (read only). Built: `get_billing_summary`, `list_billing_charges`, `get_billing_invoice` through the Bill screen's own reads; billing bundle opens on Bill and Pricing (crossub_web d1ccb884d). Needs a staging check.
 
 ---
 
@@ -232,3 +232,4 @@ Review items: AI-016 (spoken English first).
 | 2026-10-30 | 3 | Leasing and bond outcome checked on staging; open date and case reference fixed (c049eba91) |
 | 2026-10-30 | 3 | Trust read tools built: overview, ledger, owner statements (crossub_web a521b9b9c) |
 | 2026-10-30 | 3 | Trust checked on staging, figures match; opening balance and open weekday fixed |
+| 2026-10-30 | 4 | Stage 4 built: spoken replies (`spoken`), voice confirm rules (`readBack`, `confirmBy`, `byVoice`), billing reads; hands free chosen as an in-app loop, LiveKit call left for later (crossub_web 8f97fab6f, d1ccb884d; contract 0.67.0) |

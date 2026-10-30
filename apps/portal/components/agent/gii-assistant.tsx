@@ -2,13 +2,24 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, Maximize2, Mic, Minimize2, Send, X } from 'lucide-react';
+import { Building2, Headphones, Maximize2, Mic, Minimize2, Send, Volume2, VolumeX, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CrosAssistantLogo, CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
 import { GiiProposalCard } from '@/components/agent/gii-proposal-card';
 import { GII_PROPOSAL_COPY } from '@/constants/gii-proposal';
+import { GII_HANDS_FREE_COPY, GII_SPEECH_COPY } from '@/constants/gii-speech-output';
+import { GII_CONFIRM_BY, GII_VOICE_ANSWER, GII_VOICE_CONFIRM_COPY } from '@/constants/gii-voice-confirm';
+import { giiHandsFreeEnds, giiVoiceAnswer } from '@/utils/gii-voice-answer';
+import {
+  giiSpeechSupported,
+  primeGiiSpeech,
+  readGiiSpeechMuted,
+  speakGii,
+  stopGiiSpeech,
+  writeGiiSpeechMuted,
+} from '@/lib/gii-speech-output';
 import {
   GII_CONVERSATION_COPY,
   GII_CHAT_MAX_MESSAGES,
@@ -58,6 +69,7 @@ import { stripEmojis } from '@/lib/strip-emojis';
 import { ROUTES } from '@/constants/routes';
 import {
   VOICE_BUTTON_ARIA_LABEL,
+  VOICE_ERROR,
   VOICE_PHASE,
   VOICE_STATUS_LABEL,
   VOICE_WAVE_BARS,
@@ -362,6 +374,23 @@ export function GiiAssistant({
   const [earlierSummary, setEarlierSummary] = useState<GiiEarlierSummary | null>(null);
   const summarisingRef = useRef(false);
   const voiceCaptureRef = useRef<GiiVoiceCapture | null>(null);
+  /** Spoken replies (Jarvis 4.1): only a question asked by voice is answered aloud. */
+  const [speechAvailable, setSpeechAvailable] = useState(false);
+  const [speechMuted, setSpeechMuted] = useState(false);
+  const speechMutedRef = useRef(false);
+  speechMutedRef.current = speechMuted;
+  /** The next turn was dictated; read once by runQuery. */
+  const askedByVoiceRef = useRef(false);
+  /** The last answer was to a dictated question, so its Confirm result is spoken too. */
+  const answeringVoiceRef = useRef(false);
+  /** Hands free (Jarvis 4.2): the mic reopens after each spoken answer until the agent stops. */
+  const [handsFree, setHandsFree] = useState(false);
+  const handsFreeRef = useRef(false);
+  /** Starts the next listen; set each render so it reads the latest chat. */
+  const listenAgainRef = useRef<() => void>(() => {});
+  const resumeHandsFree = useCallback(() => {
+    if (handsFreeRef.current && !voiceCaptureRef.current) listenAgainRef.current();
+  }, []);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -773,6 +802,10 @@ export function GiiAssistant({
     const hasAttachments = attachmentFiles.length > 0;
     if ((!trimmed && !hasAttachments) || sending) return;
     if (portfolioCrosRef.current) setCrosView('chat');
+    const byVoice = askedByVoiceRef.current;
+    askedByVoiceRef.current = false;
+    answeringVoiceRef.current = byVoice;
+    stopGiiSpeech();
 
     const attachmentViews = attachmentFiles.map(pendingToView);
     const userLine: ChatLine = {
@@ -890,6 +923,10 @@ export function GiiAssistant({
       if (jobCases.length > 0) {
         void refreshPortfolio();
       }
+      // A card is read back in full before anything is made (Jarvis 4.3).
+      if (byVoice && !speechMutedRef.current) {
+        speakGii(res.proposal ? res.proposal.readBack : res.spoken, resumeHandsFree);
+      }
     } catch {
       setLines((prev) =>
         prev.map((l) =>
@@ -902,10 +939,14 @@ export function GiiAssistant({
             : l,
         ),
       );
+      if (handsFreeRef.current) {
+        handsFreeRef.current = false;
+        setHandsFree(false);
+      }
     } finally {
       setSending(false);
     }
-  }, [earlierSummary, lines, pendingAttachments, refreshPortfolio, sending]);
+  }, [earlierSummary, lines, pendingAttachments, refreshPortfolio, resumeHandsFree, sending]);
 
   /**
    * What the composer sends: to Cros, or, while a CROSSUB person holds the chat (Jarvis 2.3),
@@ -967,12 +1008,13 @@ export function GiiAssistant({
   );
 
   const confirmProposal = useCallback(
-    async (lineId: string, proposal: GiiProposal) => {
+    async (lineId: string, proposal: GiiProposal, byVoice = false) => {
       if (confirmingLineId) return;
       setConfirmingLineId(lineId);
       try {
-        const result = await confirmGiiProposal(proposal.token);
+        const result = await confirmGiiProposal(proposal.token, byVoice);
         const replyId = settleProposal(lineId, { text: result.message, jobCases: result.jobCases });
+        if (answeringVoiceRef.current && !speechMutedRef.current) speakGii(result.spoken, resumeHandsFree);
         if (result.done) void refreshPortfolio();
         if (result.handoffThreadId) {
           setHandoffAnchorId(replyId);
@@ -980,11 +1022,12 @@ export function GiiAssistant({
         }
       } catch {
         settleProposal(lineId, { text: GII_PROPOSAL_COPY.UNREACHABLE });
+        if (answeringVoiceRef.current && !speechMutedRef.current) speakGii(GII_PROPOSAL_COPY.UNREACHABLE, resumeHandsFree);
       } finally {
         setConfirmingLineId(null);
       }
     },
-    [confirmingLineId, refreshPortfolio, settleProposal, teamChat],
+    [confirmingLineId, refreshPortfolio, resumeHandsFree, settleProposal, teamChat],
   );
 
   const cancelProposal = useCallback(
@@ -1143,6 +1186,34 @@ export function GiiAssistant({
   };
 
   /**
+   * A dictated "yes" or "no" while a Confirm card waits answers the card (Jarvis 4.3). A card
+   * that moves money or is a legal step is never confirmed by voice; Cros says it needs a tap.
+   * Returns false when the words were not an answer, so they go to Cros as a new request.
+   */
+  const answerCardByVoice = (text: string): boolean => {
+    const card = [...lines].reverse().find((l) => l.proposal);
+    const answer = card?.proposal ? giiVoiceAnswer(text) : null;
+    if (!card?.proposal || !answer) return false;
+    setQuery('');
+    const say = (words: string) => {
+      if (!speechMutedRef.current) speakGii(words, resumeHandsFree);
+    };
+    if (answer === GII_VOICE_ANSWER.NO) {
+      cancelProposal(card.id);
+      say(GII_PROPOSAL_COPY.CANCELLED);
+      return true;
+    }
+    if (card.proposal.confirmBy !== GII_CONFIRM_BY.VOICE) {
+      toast.message(GII_VOICE_CONFIRM_COPY.SCREEN_ONLY);
+      say(GII_VOICE_CONFIRM_COPY.SCREEN_ONLY);
+      return true;
+    }
+    answeringVoiceRef.current = true;
+    void confirmProposal(card.id, card.proposal, true);
+    return true;
+  };
+
+  /**
    * Tap to start, tap again to send. The session also ends itself on a short run of silence,
    * so a mic left listening closes on its own.
    */
@@ -1153,7 +1224,38 @@ export function GiiAssistant({
       active.stop();
       return;
     }
+    startListening();
+  };
 
+  const endHandsFree = (sayBye: boolean) => {
+    handsFreeRef.current = false;
+    setHandsFree(false);
+    voiceCaptureRef.current?.abort();
+    if (sayBye && !speechMutedRef.current) speakGii(GII_HANDS_FREE_COPY.ENDED);
+    else stopGiiSpeech();
+  };
+
+  /** Hands free on: Cros answers aloud and listens again after each answer. A tap starts it. */
+  const toggleHandsFree = () => {
+    if (handsFreeRef.current) {
+      endHandsFree(false);
+      return;
+    }
+    if (!giiSpeechSupported()) {
+      toast.error(GII_HANDS_FREE_COPY.NO_SPEECH);
+      return;
+    }
+    setSpeechMuted(false);
+    handsFreeRef.current = true;
+    setHandsFree(true);
+    toast.message(GII_HANDS_FREE_COPY.STARTED);
+    if (!voiceCaptureRef.current) startListening();
+  };
+
+  const startListening = () => {
+    // Cros stops talking when the agent starts, and the tap lets Safari speak the answer.
+    stopGiiSpeech();
+    primeGiiSpeech();
     const capture = startGiiVoiceCapture({
       onListening: () => setVoicePhase(VOICE_PHASE.LISTENING),
       onWrapping: () => {
@@ -1171,24 +1273,64 @@ export function GiiAssistant({
         voiceCaptureRef.current = null;
         setVoicePhase(VOICE_PHASE.IDLE);
         setVoiceLevel(null);
+        if (handsFreeRef.current && giiHandsFreeEnds(text)) {
+          setQuery('');
+          endHandsFree(true);
+          return;
+        }
+        // A CROSSUB person holding the chat answers in writing, so hands free ends there.
+        if (handsFreeRef.current && teamChat.held) endHandsFree(false);
+        if (answerCardByVoice(text)) return;
+        askedByVoiceRef.current = true;
         void submitQuery(text);
       },
       onError: (message) => {
         voiceCaptureRef.current = null;
         setVoicePhase(VOICE_PHASE.IDLE);
         setVoiceLevel(null);
+        if (handsFreeRef.current) {
+          endHandsFree(false);
+          // Going quiet is how a hands free chat usually ends; it is not a fault.
+          if (message === VOICE_ERROR.NO_SPEECH || message === VOICE_ERROR.TOO_SHORT) {
+            toast.message(GII_HANDS_FREE_COPY.QUIET);
+            return;
+          }
+        }
         toast.error(message);
       },
     });
     if (capture) voiceCaptureRef.current = capture;
   };
+  listenAgainRef.current = startListening;
 
   useEffect(
     () => () => {
       voiceCaptureRef.current?.abort();
+      stopGiiSpeech();
     },
     [],
   );
+
+  useEffect(() => {
+    setSpeechAvailable(giiSpeechSupported());
+    setSpeechMuted(readGiiSpeechMuted());
+  }, []);
+
+  useEffect(() => {
+    if (open) return;
+    handsFreeRef.current = false;
+    setHandsFree(false);
+    stopGiiSpeech();
+  }, [open]);
+
+  const toggleSpeechMuted = () => {
+    const muted = !speechMuted;
+    setSpeechMuted(muted);
+    writeGiiSpeechMuted(muted);
+    if (muted && handsFreeRef.current) endHandsFree(false);
+    else if (muted) stopGiiSpeech();
+    toast.message(muted ? GII_SPEECH_COPY.MUTED_TOAST : GII_SPEECH_COPY.UNMUTED_TOAST);
+  };
 
   // Ask once, while the panel opens, which transcriber this environment has — by the time the
   // agent reaches the mic the answer is in, so the first press records the right way.
@@ -1525,8 +1667,37 @@ export function GiiAssistant({
             </p>
           </div>
         </div>
-        {onToggleWorkspace || onClose ? (
+        {onToggleWorkspace || onClose || speechAvailable ? (
           <div className="flex shrink-0 items-center">
+            {speechAvailable ? (
+              <button
+                type="button"
+                onClick={toggleHandsFree}
+                className={cn(
+                  'flex size-10 items-center justify-center rounded-lg',
+                  handsFree
+                    ? 'bg-primary/10 text-primary animate-voice-pulse-ring'
+                    : 'text-muted-foreground hover:bg-secondary hover:text-primary',
+                )}
+                aria-label={handsFree ? GII_HANDS_FREE_COPY.STOP : GII_HANDS_FREE_COPY.START}
+                aria-pressed={handsFree}
+                title={handsFree ? GII_HANDS_FREE_COPY.STOP : GII_HANDS_FREE_COPY.START}
+              >
+                <Headphones className="size-4" />
+              </button>
+            ) : null}
+            {speechAvailable ? (
+              <button
+                type="button"
+                onClick={toggleSpeechMuted}
+                className="text-muted-foreground hover:bg-secondary hover:text-primary flex size-10 items-center justify-center rounded-lg"
+                aria-label={speechMuted ? GII_SPEECH_COPY.UNMUTE : GII_SPEECH_COPY.MUTE}
+                aria-pressed={speechMuted}
+                title={speechMuted ? GII_SPEECH_COPY.UNMUTE : GII_SPEECH_COPY.MUTE}
+              >
+                {speechMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+              </button>
+            ) : null}
             {onToggleWorkspace ? (
               <button
                 type="button"

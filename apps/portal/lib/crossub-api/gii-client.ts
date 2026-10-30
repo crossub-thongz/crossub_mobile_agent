@@ -109,6 +109,8 @@ export async function sendGiiMessage(args: {
 export type GiiConfirmResult = {
   done: boolean;
   message: string;
+  /** `message` as Cros reads it aloud (Jarvis 4.1). */
+  spoken: string;
   jobCases: GiiJobCaseLink[];
   /** Set when the change handed the chat to the CROSSUB team (Jarvis 2.3). */
   handoffThreadId: string | null;
@@ -120,19 +122,22 @@ export type GiiConfirmResult = {
  * not permitted) comes back as `done: false` with its reason; only an unreachable server
  * throws.
  */
-export async function confirmGiiProposal(token: string): Promise<GiiConfirmResult> {
-  const { data, error } = await crossub.POST('/agent/gii/confirm', { body: { token } });
+export async function confirmGiiProposal(token: string, byVoice = false): Promise<GiiConfirmResult> {
+  const { data, error } = await crossub.POST('/agent/gii/confirm', {
+    body: byVoice ? { token, byVoice } : { token },
+  });
   if (data) {
     return {
       done: data.done,
       message: data.message,
+      spoken: data.spoken,
       jobCases: data.jobCases,
       handoffThreadId: data.handoffThreadId,
     };
   }
   const reason = (error as { message?: unknown } | undefined)?.message;
   if (typeof reason === 'string' && reason.trim()) {
-    return { done: false, message: reason, jobCases: [], handoffThreadId: null };
+    return { done: false, message: reason, spoken: reason, jobCases: [], handoffThreadId: null };
   }
   throw new Error(`${CROS_ASSISTANT_NAME} could not confirm`);
 }
