@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-30
+
+### Added
+- Settings has a CROS section: email tone (friendly, formal, brief), your own sign off, quiet hours with no phone alerts from CROS (Sydney time), and a link to your agency's preferred contractors in People; the same preferences CROS changes when asked in chat (contract 0.64.0).
+
 ## 2026-10-29
 
 ### Added

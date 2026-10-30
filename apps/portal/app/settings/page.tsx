@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronRight, Moon, Sun } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { GiiPreferencesSetting } from '@/components/agent/gii-preferences-setting';
 import { PlanSettingsCard } from '@/components/agent/plan-settings-card';
 import { PushAlertsSetting } from '@/components/agent/push-alerts-setting';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -118,6 +119,8 @@ export default function SettingsPage() {
             notification bell and live pop-ups.
           </p>
         </section>
+
+        <GiiPreferencesSetting />
 
         <section className="space-y-2">
           <h2 className="text-sm font-semibold">Help</h2>

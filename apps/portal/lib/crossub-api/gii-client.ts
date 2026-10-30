@@ -1,5 +1,6 @@
 import type { components } from '@crossub-thongz/api-contract';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import { GII_PREFERENCES_COPY } from '@/constants/gii-preferences';
 import type { GiiPageContext } from '@/utils/gii-page-context';
 
 import { crossub } from './client';
@@ -284,4 +285,24 @@ export async function transcribeGiiVoice(args: {
     throw err;
   }
   return res.json() as Promise<{ text: string; provider?: string }>;
+}
+
+/** The agent's Cros preferences (Jarvis 3.2): email tone, sign off and quiet hours. */
+export type GiiPreferences = components['schemas']['AgentGiiPreferencesDto'];
+export type GiiPreferencesChange = components['schemas']['UpdateAgentGiiPreferencesDto'];
+
+export async function getGiiPreferences(): Promise<GiiPreferences> {
+  const { data, error } = await crossub.GET('/agent/gii/preferences');
+  if (error || !data) throw new Error(GII_PREFERENCES_COPY.LOAD_FAILED);
+  return data;
+}
+
+/** Save a change; the server's reason comes back as the error when it refuses one. */
+export async function updateGiiPreferences(change: GiiPreferencesChange): Promise<GiiPreferences> {
+  const { data, error } = await crossub.PUT('/agent/gii/preferences', { body: change });
+  if (error || !data) {
+    const reason = (error as { message?: unknown } | undefined)?.message;
+    throw new Error(typeof reason === 'string' && reason ? reason : GII_PREFERENCES_COPY.SAVE_FAILED);
+  }
+  return data;
 }
