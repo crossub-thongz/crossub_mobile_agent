@@ -13,7 +13,7 @@ export const GII_HANDOFF_COPY = {
   WITH: (name: string | null) => (name ? `With ${name}, ${GII_HANDOFF_TEAM}` : `With the ${GII_HANDOFF_TEAM}`),
   WAITING: (wait: string) => `Waiting ${wait}`,
   ANSWERED: 'Answered',
-  BACK_FROM: (when: string) => `The team is back ${when}`,
+  BACK_FROM: (when: string) => `The team is back ${when} Sydney time`,
   CLOSED: (name: string | null) => `${name ?? `The ${GII_HANDOFF_TEAM}`} handed the chat back to Cros.`,
   PLACEHOLDER: (name: string | null) => `Message ${name ?? `the ${GII_HANDOFF_TEAM}`}…`,
   SEND_FAILED: 'Your message could not be sent to the CROSSUB team. Please try again.',

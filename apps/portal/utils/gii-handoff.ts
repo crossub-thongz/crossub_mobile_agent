@@ -1,4 +1,5 @@
 import { GII_HANDOFF_COPY, GII_HANDOFF_WAIT_HOUR_MINUTES } from '@/constants/gii-handoff';
+import { PROPERTY_TIME_ZONE } from '@/constants/time-zone';
 import type { GiiHandoff, GiiHandoffMessage } from '@/lib/crossub-api/gii-client';
 
 const MINUTE_MS = 60_000;
@@ -21,9 +22,14 @@ export function giiHandoffWaitLabel(since: string, now: Date): string {
     : `${Math.floor(minutes / GII_HANDOFF_WAIT_HOUR_MINUTES)} h`;
 }
 
-/** "Mon 9:00 am", in the agent's own clock. */
+/** "Mon 9:00 am" on the team's Sydney clock, as their hours are given, whatever the phone's zone. */
 function opensLabel(iso: string): string {
-  return new Date(iso).toLocaleString('en-AU', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+  return new Date(iso).toLocaleString('en-AU', {
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: PROPERTY_TIME_ZONE,
+  });
 }
 
 /** The status line under the header: the wait, the team's hours, or that they answered. */
