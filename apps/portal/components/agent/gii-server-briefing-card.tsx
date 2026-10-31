@@ -14,7 +14,7 @@ import {
 } from '@/constants/gii-briefing';
 import { ROUTES } from '@/constants/routes';
 import type { GiiJobCaseLink, GiiServerBriefing, GiiServerBriefingItem } from '@/lib/crossub-api/gii-client';
-import { briefingSummaryWithTasks, briefingTaskDetail } from '@/lib/gii-server-briefing';
+import { briefingTaskDetail } from '@/lib/gii-server-briefing';
 import type { TaskListV2Row } from '@/lib/task-list-v2';
 import { cn } from '@/lib/utils';
 
@@ -98,7 +98,6 @@ export function GiiServerBriefingCard({
   if (total === 0) return null;
   const items = briefing.items.slice(0, BRIEFING_MAX_ROWS);
   const taskRows = tasks.slice(0, BRIEFING_MAX_ROWS - items.length);
-  const summary = briefingSummaryWithTasks(briefing.summary, tasks.length);
   const now = new Date();
 
   return (
@@ -112,8 +111,6 @@ export function GiiServerBriefingCard({
           {total}
         </span>
       </div>
-
-      {summary ? <p className="text-muted-foreground border-b px-3 py-1.5 text-[11px]">{summary}</p> : null}
 
       <ul className="divide-y">
         {items.map((item, index) => {

@@ -150,3 +150,17 @@ export const BRIEFING_TASK_NOUN = {
   OTHER_ONE: 'other task',
   OTHER_MANY: 'other tasks',
 } as const;
+
+/**
+ * The first suggested question on Cros's Discover. It sends the briefing's rows with it, unseen,
+ * so Cros goes through the same list the card shows instead of guessing from a count.
+ */
+export const CROS_TODAY_QUESTION = {
+  ID: 'today',
+  LABEL: 'What needs me today?',
+  TEXT: 'What needs me today?',
+  CONTEXT_LABEL: "today's briefing, as the agent sees it",
+  CONTEXT_LEAD: (total: number) =>
+    `The agent's briefing lists ${total} ${total === 1 ? 'thing' : 'things'} for today, most urgent first. ` +
+    'Go through them in this order, briefly, and say what to do first. Do not add, drop or recount rows.',
+} as const;

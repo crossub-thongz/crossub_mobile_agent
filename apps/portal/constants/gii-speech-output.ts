@@ -54,6 +54,9 @@ export const GII_HANDS_FREE_END = new Set([
 export const GII_HANDS_FREE_COPY = {
   START: `Talk with ${CROS_ASSISTANT_NAME} hands free`,
   STOP: 'Stop hands free',
+  /** The words on the header button, so it is not a bare headphones icon. */
+  BUTTON: 'Talk',
+  BUTTON_ACTIVE: 'Stop',
   STARTED: `Hands free: ${CROS_ASSISTANT_NAME} answers aloud and listens again. Say "stop" to finish.`,
   ENDED: 'Okay, I will stop listening.',
   QUIET: `Hands free stopped: ${CROS_ASSISTANT_NAME} did not hear anything.`,

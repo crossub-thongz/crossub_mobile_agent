@@ -7,11 +7,16 @@
 - The word CROS in a notification is highlighted; tapping it opens CROS
 
 ### Fixed
+- CROS opens at the top of Discover, Insights and History; it no longer jumps past the greeting and briefing as the briefing refreshes
+- The microphone button shows in green (red while listening); the v2 look had removed its background, so it looked switched off
 - A notification's heading is its own title, with the address underneath; times such as 12:08 are no longer cut in half
 - Tapping the morning briefing opens CROS in place from any page, from the list, the bell or the pop up alert
 - A second Ask CROS (from a notification or a highlight) sends its question; only the first one did until the page reloaded
 
 ### Changed
+- CROS's first suggestion is "What needs me today?", and CROS goes through the same rows the briefing card shows, in order, instead of guessing from a count
+- The briefing card says its summary once (in CROS's greeting), and its task rows no longer show reference numbers; CROS still gets the reference when asked about a row
+- The hands free button in the CROS header reads "Talk" ("Stop" while on) instead of a bare headphones icon
 - The bell says "Nothing new" when nothing is unread, instead of "You're all caught up"
 
 ### Removed

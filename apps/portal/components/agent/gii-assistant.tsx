@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { CrosAssistantLogo, CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
 import { GiiProposalCard } from '@/components/agent/gii-proposal-card';
+import { CROS_TODAY_QUESTION } from '@/constants/gii-briefing';
 import { GII_PROPOSAL_COPY } from '@/constants/gii-proposal';
 import { GII_HANDS_FREE_COPY, GII_SPEECH_COPY } from '@/constants/gii-speech-output';
 import { GII_CONFIRM_BY, GII_VOICE_ANSWER, GII_VOICE_CONFIRM_COPY } from '@/constants/gii-voice-confirm';
@@ -83,7 +84,12 @@ import {
 } from '@/constants/gii-prompts';
 import { MESSAGE_GII_PROMPTS } from '@/constants/gii-message-prompts';
 import { buildGiiBriefing, type GiiBriefing } from '@/lib/gii-briefing';
-import { briefingExtraTasks, briefingTaskDetail, serverBriefingGreeting } from '@/lib/gii-server-briefing';
+import {
+  briefingContextForCros,
+  briefingExtraTasks,
+  briefingTaskDetailForCros,
+  serverBriefingGreeting,
+} from '@/lib/gii-server-briefing';
 import type { TaskListV2Row } from '@/lib/task-list-v2';
 import {
   primeGiiVoiceStatus,
@@ -401,6 +407,8 @@ export function GiiAssistant({
   const contextRef = useRef<GiiContext | null>(null);
   const messageContextRef = useRef<string | null>(null);
   const propertyContextRef = useRef<string | null>(null);
+  /** Today's briefing rows, sent unseen after the agent asks what needs them today. */
+  const briefingContextRef = useRef<string | null>(null);
   messageContextRef.current = effectiveLaunch.messageContext?.trim() || null;
   const pendingAttachmentsRef = useRef<GiiPendingAttachment[]>([]);
   pendingAttachmentsRef.current = pendingAttachments;
@@ -781,10 +789,19 @@ export function GiiAssistant({
   }, [isEmbedded, lines, scrollChatToBottom]);
 
   // Live briefing refreshes (5s poll) — page-scroll surfaces only; never yank scroll position.
+  // Not on Cros's Discover, Insights or History: they read from the top, and following the
+  // poll dropped the agent past the greeting and the briefing.
+  const portfolioListView = isPortfolioCros && crosView !== 'chat';
   useEffect(() => {
-    if (usePageScroll || !stickToBottomRef.current) return;
+    if (usePageScroll || portfolioListView || !stickToBottomRef.current) return;
     scrollChatToBottom('smooth');
-  }, [liveBriefing, scrollChatToBottom, usePageScroll]);
+  }, [liveBriefing, portfolioListView, scrollChatToBottom, usePageScroll]);
+
+  // Opening Cros, or moving to a list view, starts at the top.
+  useEffect(() => {
+    if (!open || !portfolioListView) return;
+    scrollContainerRef.current?.scrollTo({ top: 0 });
+  }, [crosView, open, portfolioListView]);
 
   /**
    * A turn is just the assistant on the API — it does the understanding and the maths.
@@ -848,16 +865,18 @@ export function GiiAssistant({
             : {}),
       }));
 
-      const invisibleContext = messageContextRef.current ?? propertyContextRef.current;
+      const invisibleContext =
+        messageContextRef.current ?? propertyContextRef.current ?? briefingContextRef.current;
+      const contextLabel = messageContextRef.current
+        ? 'property, listing, and message thread'
+        : propertyContextRef.current
+          ? 'property and listing details'
+          : CROS_TODAY_QUESTION.CONTEXT_LABEL;
       const contextSeed: GiiChatMessage | null = invisibleContext
         ? {
             role: 'user',
             content: truncateGiiChatContent(
-              `[Context — ${
-                messageContextRef.current
-                  ? 'property, listing, and message thread'
-                  : 'property and listing details'
-              }. Use this information; do not ask the agent to repeat it. ${replyLanguageDirective(trimmed)}]\n\n${invisibleContext}`,
+              `[Context — ${contextLabel}. Use this information; do not ask the agent to repeat it. ${replyLanguageDirective(trimmed)}]\n\n${invisibleContext}`,
             ),
           }
         : null;
@@ -1132,6 +1151,7 @@ export function GiiAssistant({
   };
 
   const startCrosChat = () => {
+    briefingContextRef.current = null;
     crosHistoryIdRef.current = null;
     crosSavedKeyRef.current = null;
     setLines([]);
@@ -1139,7 +1159,14 @@ export function GiiAssistant({
     setCrosView('discover');
   };
 
-  /** Ask Gii conversationally about a briefing row — scoped to that property automatically. */
+  /** "What needs me today?" with the briefing card's own rows, so the answer matches the card. */
+  const askWhatNeedsMeToday = () => {
+    briefingContextRef.current = serverBriefing
+      ? briefingContextForCros(serverBriefing, briefingTasks, new Date())
+      : null;
+    void runQuery(CROS_TODAY_QUESTION.TEXT);
+  };
+
   /** Ask Cros about a server briefing item, scoped to its property when it has one. */
   const askAboutBriefingItem = (item: GiiServerBriefingItem) => {
     if (item.propertyId) {
@@ -1159,7 +1186,7 @@ export function GiiAssistant({
   const askAboutTask = (row: TaskListV2Row) => {
     contextRef.current = { propertyId: row.propertyId, propertyLabel: row.propertyAddress };
     propertyContextRef.current = buildGiiPropertyContext({ property: row.property, address: row.propertyAddress });
-    void runQuery(`Give me an update on ${row.task.title} (${briefingTaskDetail(row, new Date())}).`);
+    void runQuery(`Give me an update on ${row.task.title} (${briefingTaskDetailForCros(row, new Date())}).`);
   };
 
   const askAboutRow = (row: PropertyNeedAction) => {
@@ -1543,10 +1570,12 @@ export function GiiAssistant({
                           // Red means "the mic is open" and nothing else. Holding it through
                           // transcription reads as still recording, so the wait looks like
                           // the app ignoring you rather than working.
-                          listening && 'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600',
-                          wrappingUp && 'bg-gradient-to-br from-slate-400 to-slate-500',
+                          listening && 'bg-rose-500 bg-gradient-to-br from-rose-500 via-red-500 to-rose-600',
+                          wrappingUp && 'bg-slate-400 bg-gradient-to-br from-slate-400 to-slate-500',
+                          // The v2 look drops gradients, so each state has a solid colour under it; without
+                          // one the white mic sat on nothing and looked switched off.
                           !voiceActive &&
-                            'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
+                            'bg-primary bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
                         )}
                         aria-label={
                           wrappingUp
@@ -1680,16 +1709,17 @@ export function GiiAssistant({
                 type="button"
                 onClick={toggleHandsFree}
                 className={cn(
-                  'flex size-10 items-center justify-center rounded-lg',
+                  'mr-1 inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold',
                   handsFree
-                    ? 'bg-primary/10 text-primary animate-voice-pulse-ring'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-primary',
+                    ? 'border-primary bg-primary/10 text-primary animate-voice-pulse-ring'
+                    : 'border-primary/30 text-primary hover:bg-primary/10',
                 )}
                 aria-label={handsFree ? GII_HANDS_FREE_COPY.STOP : GII_HANDS_FREE_COPY.START}
                 aria-pressed={handsFree}
                 title={handsFree ? GII_HANDS_FREE_COPY.STOP : GII_HANDS_FREE_COPY.START}
               >
-                <Headphones className="size-4" />
+                <Headphones className="size-3.5" />
+                {handsFree ? GII_HANDS_FREE_COPY.BUTTON_ACTIVE : GII_HANDS_FREE_COPY.BUTTON}
               </button>
             ) : null}
             {speechAvailable ? (
@@ -1788,6 +1818,7 @@ export function GiiAssistant({
               ) : null
             }
             onAsk={(prompt) => void runQuery(prompt)}
+            onAskToday={askWhatNeedsMeToday}
             history={crosHistory}
             onOpenHistory={(entry) => void openCrosHistory(entry)}
             onDeleteHistory={(entry) => void deleteCrosHistory(entry)}
@@ -2028,9 +2059,9 @@ export function GiiAssistant({
                     'transition-all duration-300 ease-out active:scale-95',
                     // Red is "the mic is open", never "please wait" — see the compact button.
                     listening &&
-                      'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600 animate-voice-pulse-ring scale-110',
-                    wrappingUp && 'bg-gradient-to-br from-slate-400 to-slate-500 scale-105',
-                    !voiceActive && 'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
+                      'bg-rose-500 bg-gradient-to-br from-rose-500 via-red-500 to-rose-600 animate-voice-pulse-ring scale-110',
+                    wrappingUp && 'bg-slate-400 bg-gradient-to-br from-slate-400 to-slate-500 scale-105',
+                    !voiceActive && 'bg-primary bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
                   )}
                   aria-label={
                     wrappingUp

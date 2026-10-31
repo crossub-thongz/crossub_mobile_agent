@@ -1,5 +1,6 @@
 import {
   BRIEFING_TASK_NOUN,
+  CROS_TODAY_QUESTION,
   SERVER_BRIEFING_CHANGES_NAMED,
   SERVER_BRIEFING_UNAVAILABLE_LABEL,
 } from '@/constants/gii-briefing';
@@ -25,11 +26,17 @@ export function briefingExtraTasks(briefing: GiiServerBriefing, rows: TaskListV2
   return sortTasksByDueDate(needAction.filter((row) => !listed.has(row.task.jobRow?.id ?? row.id)));
 }
 
-/** "EL-4047994 · Agent approval · Overdue 3 days · 1008/19 Halifax Street", as the Tasks page reads. */
+/**
+ * "Agent approval · Overdue 3 days · 1008/19 Halifax Street", as the Tasks page reads, without the
+ * reference: an internal number means nothing to the agent on a briefing row.
+ */
 export function briefingTaskDetail(row: TaskListV2Row, now: Date): string {
-  return [taskReference(row), taskSubtypeLabel(row), taskDueMeta(row, now).primary, row.propertyAddress]
-    .filter(Boolean)
-    .join(' · ');
+  return [taskSubtypeLabel(row), taskDueMeta(row, now).primary, row.propertyAddress].filter(Boolean).join(' · ');
+}
+
+/** The row's detail with its reference first, for Cros, which finds the job by it. */
+export function briefingTaskDetailForCros(row: TaskListV2Row, now: Date): string {
+  return [taskReference(row), briefingTaskDetail(row, now)].filter(Boolean).join(' · ');
 }
 
 /** "1 quote waiting · 3 other tasks", or null when there is nothing. */
@@ -79,4 +86,16 @@ export function serverBriefingGreeting(
     parts.push(`I could not check ${missing} just now, so this list may be missing some.`);
   }
   return parts.join('\n\n');
+}
+
+/**
+ * The briefing as Cros reads it when the agent asks what needs them today: every row the card
+ * shows, in its order, server rows then the app's tasks. Pure, with `now` passed in.
+ */
+export function briefingContextForCros(briefing: GiiServerBriefing, tasks: TaskListV2Row[], now: Date): string {
+  const rows = [
+    ...briefing.items.map((item) => [item.title, item.detail, item.propertyAddress].filter(Boolean).join(' · ')),
+    ...tasks.map((row) => `${row.task.title} · ${briefingTaskDetailForCros(row, now)}`),
+  ];
+  return [CROS_TODAY_QUESTION.CONTEXT_LEAD(rows.length), ...rows.map((row, i) => `${i + 1}. ${row}`)].join('\n');
 }

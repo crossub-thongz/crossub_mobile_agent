@@ -16,6 +16,7 @@ import { ServiceRecommendation } from '@/components/agent/service-recommendation
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import { CROS_TODAY_QUESTION } from '@/constants/gii-briefing';
 import { GII_CONVERSATION_COPY } from '@/constants/gii-conversation';
 import {
   inspectionDetail,
@@ -192,13 +193,7 @@ export function useCrosPortfolioModel() {
 
     const weekCount = events.filter((event) => event.sort <= 7).length;
     const prompts: { id: string; label: string; prompt: string }[] = [];
-    if (attention.length > 0) {
-      prompts.push({
-        id: 'attention',
-        label: 'What needs my attention?',
-        prompt: `What needs my attention? There are ${plural(attention.length, 'item')} waiting in my portfolio.`,
-      });
-    }
+    prompts.push({ id: CROS_TODAY_QUESTION.ID, label: CROS_TODAY_QUESTION.LABEL, prompt: CROS_TODAY_QUESTION.TEXT });
     if (fullService && board.attention.rentReviews.overdue > 0) {
       const overdue = board.attention.rentReviews.overdue;
       prompts.push({
@@ -212,13 +207,6 @@ export function useCrosPortfolioModel() {
         id: 'week',
         label: 'Summarise this week',
         prompt: `Summarise the ${plural(weekCount, 'portfolio event')} due within the next 7 days.`,
-      });
-    }
-    if (prompts.length === 0) {
-      prompts.push({
-        id: 'portfolio',
-        label: 'Summarise my portfolio',
-        prompt: 'Summarise what is happening across my portfolio right now.',
       });
     }
 
@@ -362,6 +350,7 @@ export function CrosPortfolioBody({
   wide = false,
   briefing = null,
   onAsk,
+  onAskToday,
   history,
   onOpenHistory,
   onDeleteHistory,
@@ -372,6 +361,8 @@ export function CrosPortfolioBody({
   /** Today's server briefing (Jarvis 2.2), shown first on Discover when it loaded. */
   briefing?: ReactNode;
   onAsk: (prompt: string) => void;
+  /** "What needs me today?": asks with the briefing's rows, when the panel has them. */
+  onAskToday?: () => void;
   history: GiiConversationSummary[];
   onOpenHistory: (entry: GiiConversationSummary) => void;
   onDeleteHistory: (entry: GiiConversationSummary) => void;
@@ -397,7 +388,9 @@ export function CrosPortfolioBody({
               <button
                 key={item.id}
                 type="button"
-                onClick={() => onAsk(item.prompt)}
+                onClick={() =>
+                  item.id === CROS_TODAY_QUESTION.ID && onAskToday ? onAskToday() : onAsk(item.prompt)
+                }
                 className="rounded-full border border-[#d7eee6] bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:border-[#00bd85]"
               >
                 {item.label} <span className="text-[#00bd85]">↗</span>
