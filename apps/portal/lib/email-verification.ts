@@ -28,10 +28,14 @@ export const EMAIL_VERIFICATION_GATE_EXEMPT = [
 export const EMAIL_VERIFICATION_BLOCK_MESSAGE =
   'Verify your email address before using this feature.';
 
+/** Staging QA login used to exercise create flows without an inbox. */
+const EMAIL_VERIFICATION_SKIP = new Set(['qa.cros.arrange.20261030@crossub.com.au']);
+
 export function needsEmailVerification(
-  user: Pick<AuthUser, 'emailVerified'> | null | undefined,
+  user: Pick<AuthUser, 'emailVerified' | 'email'> | null | undefined,
 ): boolean {
-  return Boolean(user && user.emailVerified === false);
+  if (!user || user.emailVerified !== false) return false;
+  return !EMAIL_VERIFICATION_SKIP.has(user.email.toLowerCase());
 }
 
 export function isEmailVerificationBlockedRoute(pathname: string): boolean {

@@ -190,7 +190,7 @@ export default function LoginPage() {
           <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
           <p className="mt-1 text-sm text-[#52647C]">Sign in to your agent account</p>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+          <form method="post" onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
             <div className="space-y-1.5">
               <label htmlFor="email" className="text-sm font-medium">
                 Email address

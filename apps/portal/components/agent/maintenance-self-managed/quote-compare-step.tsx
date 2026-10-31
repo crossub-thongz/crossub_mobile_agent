@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { FieldLabel, StepCard } from '@/components/agent/maintenance-self-managed/step-card';
@@ -29,6 +29,7 @@ import {
 } from '@/lib/crossub-api/maintenance-client';
 import { prepareCrossubMaintenancePayment } from '@/lib/billing/crossub-maintenance-payment';
 import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-payment';
+import { fetchQuoteOffer } from '@/lib/crossub-api/service-offer-client';
 import { crossubFeeLabel, crossubPayableAud } from '@/lib/maintenance/crossub-maintenance';
 import {
   awaitingOwnerQuoteApproval,
@@ -70,6 +71,33 @@ export function QuoteCompareStep({
   const [ownerEmail, setOwnerEmail] = useState('');
   const [paying, setPaying] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmForOwner, setConfirmForOwner] = useState(false);
+  const [confirmBeforePay, setConfirmBeforePay] = useState<{
+    note: string;
+    feeExGstAud: number | null;
+    feeIncGstAud: number | null;
+  }>({ note: '', feeExGstAud: null, feeIncGstAud: null });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchQuoteOffer(detail.id)
+      .then((offer) => {
+        if (!cancelled) {
+          setConfirmBeforePay({
+            note: offer.confirmBeforePay,
+            feeExGstAud: offer.feeExGstAud,
+            feeIncGstAud: offer.feeIncGstAud,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setConfirmBeforePay({ note: '', feeExGstAud: null, feeIncGstAud: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [detail.id]);
   const pendingApproval = useRef<((chargeId: string) => Promise<unknown>) | null>(null);
   const submitted = detail.quotes.filter((q) => q.status === MAINTENANCE_QUOTE_STATUS.SUBMITTED);
   if (submitted.length === 0) return null;
@@ -237,7 +265,12 @@ export function QuoteCompareStep({
                   size="sm"
                   className="h-7 px-2.5 text-xs"
                   disabled={blocked || (crossub && payable === null)}
-                  onClick={() => void approve(q.id, crossub)}
+                  onClick={() => {
+                    if (crossub) {
+                      setConfirmForOwner(false);
+                      setConfirmingId(q.id);
+                    } else void approve(q.id, false);
+                  }}
                 >
                   {crossub && payable ? COPY.crossubPayApprove(payable) : COPY.approve}
                 </Button>
@@ -261,6 +294,24 @@ export function QuoteCompareStep({
                 </Button>
               </div>
 
+              {crossub && confirmingId === q.id ? (
+                <QuotePayConfirm
+                  quote={q}
+                  feeLabel={offer ? crossubFeeLabel(offer) : null}
+                  note={confirmBeforePay.note}
+                  feeExGstAud={confirmBeforePay.feeExGstAud}
+                  feeIncGstAud={confirmBeforePay.feeIncGstAud}
+                  disabled={blocked}
+                  onCancel={() => setConfirmingId(null)}
+                  onContinue={() => {
+                    const forOwner = confirmForOwner;
+                    setConfirmingId(null);
+                    if (forOwner) void ownerApprove(q.id, true);
+                    else void approve(q.id, true);
+                  }}
+                />
+              ) : null}
+
               {awaiting ? (
                 <div className="space-y-1.5 rounded-md border border-amber-500/40 bg-amber-500/5 p-2">
                   <p className="text-xs">{COPY.ownerAwaiting(formatDateTime(awaiting.sentAt))}</p>
@@ -269,7 +320,12 @@ export function QuoteCompareStep({
                       size="sm"
                       className="h-7 px-2.5 text-xs"
                       disabled={blocked}
-                      onClick={() => void ownerApprove(q.id, crossub)}
+                      onClick={() => {
+                        if (crossub) {
+                          setConfirmForOwner(true);
+                          setConfirmingId(q.id);
+                        } else void ownerApprove(q.id, false);
+                      }}
                     >
                       {crossub && payable
                         ? COPY.crossubOwnerPayApprove(payable)
@@ -397,4 +453,66 @@ export function QuoteCompareStep({
       />
     </StepCard>
   );
+}
+
+function QuotePayConfirm({
+  quote,
+  feeLabel,
+  note,
+  feeExGstAud,
+  feeIncGstAud,
+  disabled,
+  onCancel,
+  onContinue,
+}: {
+  quote: AgentMaintenanceDetail['quotes'][number];
+  feeLabel: string | null;
+  note: string;
+  feeExGstAud: number | null;
+  feeIncGstAud: number | null;
+  disabled: boolean;
+  onCancel: () => void;
+  onContinue: () => void;
+}) {
+  const lines = quoteLines(quote);
+  return (
+    <div className="space-y-2 rounded-md border p-2">
+      {note ? <p className="text-xs">{note}</p> : null}
+      {feeExGstAud != null && feeIncGstAud != null ? (
+        <p className="text-xs">
+          Assistance fee {formatCurrency(feeExGstAud)} ex GST, {formatCurrency(feeIncGstAud)} inc GST.
+        </p>
+      ) : null}
+      {lines.length > 0 ? (
+        <ul className="space-y-1 text-xs">
+          {lines.map((line) => (
+            <li key={line.description} className="flex justify-between gap-2">
+              <span>{line.description}</span>
+              <span className="tabular-nums">{formatCurrency(line.amountIncGst)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : quote.total != null ? (
+        <p className="text-xs">Quote {formatCurrency(quote.total)}</p>
+      ) : null}
+      <p className="text-xs">{feeLabel ? `CROSSUB fee ${feeLabel}` : 'No CROSSUB fee on top of the quote.'}</p>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" className="h-7 px-2.5 text-xs" disabled={disabled} onClick={onContinue}>
+          Continue
+        </Button>
+        <Button size="sm" variant="ghost" className="h-7 px-2.5 text-xs" disabled={disabled} onClick={onCancel}>
+          {COPY.cancel}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function quoteLines(quote: AgentMaintenanceDetail['quotes'][number]): Array<{ description: string; amountIncGst: number }> {
+  const raw = (quote as { lineItems?: Array<{ description?: string | null; amountIncGst?: number | null }> }).lineItems;
+  if (!raw) return [];
+  return raw.flatMap((line) => {
+    if (!line.description || line.amountIncGst == null) return [];
+    return [{ description: line.description, amountIncGst: line.amountIncGst }];
+  });
 }

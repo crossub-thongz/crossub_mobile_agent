@@ -40,6 +40,8 @@ export const ROUTES = {
   PRICING: '/pricing',
   /** Pricing page, scrolled to the Full management section. */
   PRICING_FULL_MANAGEMENT: '/pricing#full-management',
+  /** Self-Manage Full Service application: choose properties, read the terms, submit. */
+  FULL_SERVICE: '/full-service',
   SYSTEM_ACCESS_AGREEMENT: '/system-access-agreement',
   TENANT_SELECTION: '/tenant-selection',
   TENANTS: '/tenants',

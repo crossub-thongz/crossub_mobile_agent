@@ -26,11 +26,12 @@ export function CrossubArrangeStep({
   busy: boolean;
   run: SelfManagedMaintenanceRun;
 }) {
+  const name = offer.offerName || 'Crossub Assistance';
   return (
-    <StepCard title={COPY.crossubTitle} hint={COPY.crossubHint(offer.partnerName)}>
+    <StepCard title={name} hint={COPY.crossubHint(name)}>
       <p className="text-muted-foreground text-xs">{COPY.crossubFee(crossubFeeLabel(offer))}</p>
       {offer.requested ? (
-        <p className="text-xs font-medium">{COPY.crossubAsked(offer.partnerName)}</p>
+        <p className="text-xs font-medium">{COPY.crossubAsked(name)}</p>
       ) : (
         <Button
           size="sm"
