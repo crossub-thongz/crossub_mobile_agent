@@ -1,25 +1,19 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { Button } from '@/components/ui/button';
-import { useSelfManagedPropertyIds } from '@/hooks/use-self-managed-access';
+import { useRecommendationPicture } from '@/hooks/use-recommendation-picture';
 import { requestCrossubMaintenanceQuote } from '@/lib/crossub-api/maintenance-client';
 import {
   QUOTE_CHOICE,
-  SERVICE_OFFER_KIND,
   dismissQuoteOffer,
-  fetchQuoteOffer,
-  focusServiceOffer,
   notifyServiceOffersChanged,
   snoozeQuoteOffer,
-  type QuoteOffer,
 } from '@/lib/crossub-api/service-offer-client';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
-import type { MaintenanceRequest } from '@/lib/types';
 
 const COPY = {
   badge: 'Suggestion',
@@ -35,11 +29,6 @@ const COPY = {
   requested: 'Crossub will arrange the quote. Any fee is shown before you confirm.',
 };
 
-function closedJob(job: MaintenanceRequest): boolean {
-  const status = (job.apiStatus ?? job.status).toLowerCase();
-  return status === 'completed' || status === 'cancelled' || status === 'closed';
-}
-
 /**
  * The maintenance quote offer, in the same suggestion card as an inspection.
  * Wayne's quote-offer API decides whether this job should see it.
@@ -53,59 +42,15 @@ export function QuoteRecommendation({
   onAccepted?: () => void;
 }) {
   const { maintenanceAll: maintenance } = useAgentData();
-  const selfManagedIds = useSelfManagedPropertyIds();
-  const [match, setMatch] = useState<{ id: string; offer: QuoteOffer; extra: number } | null>(null);
+  const { picture, ready } = useRecommendationPicture(requestId);
   const [busy, setBusy] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
+  const open = requestId
+    ? picture.quotes.filter((row) => row.id === requestId)
+    : picture.quotes;
+  const lead = open[0];
 
-  const load = useCallback(() => {
-    const rows = maintenance ?? [];
-    const jobs = requestId
-      ? rows.filter((job) => job.id === requestId)
-      : rows.filter((job) => selfManagedIds.has(job.propertyId) && !closedJob(job));
-    const ids = (requestId ? [requestId] : jobs.map((job) => job.id)).slice(0, 8);
-    if (ids.length === 0) {
-      setMatch(null);
-      return;
-    }
-    Promise.all(
-      ids.map(async (id) => {
-        try {
-          return { id, offer: await fetchQuoteOffer(id) };
-        } catch {
-          return null;
-        }
-      }),
-    )
-      .then((rows) => {
-        const open = rows.filter(
-          (row): row is { id: string; offer: QuoteOffer } =>
-            row != null && row.offer.showModal && !row.offer.deferForUrgent,
-        );
-        const lead = open[0];
-        setMatch(lead ? { ...lead, extra: open.length - 1 } : null);
-      })
-      .catch(() => setMatch(null));
-  }, [maintenance, requestId, selfManagedIds]);
-
-  useEffect(() => {
-    load();
-  }, [load, reloadKey]);
-
-  useEffect(() => {
-    const refresh = () => setReloadKey((key) => key + 1);
-    window.addEventListener('crossub-service-offers-changed', refresh);
-    return () => window.removeEventListener('crossub-service-offers-changed', refresh);
-  }, []);
-
-  useEffect(() => {
-    if (!match) return;
-    void focusServiceOffer(SERVICE_OFFER_KIND.QUOTE)
-      .then(() => notifyServiceOffersChanged())
-      .catch(() => undefined);
-  }, [match?.id]);
-
-  if (!match) return null;
+  if (!ready || !lead) return null;
+  const match = { ...lead, extra: Math.max(0, open.length - 1) };
 
   const job = (maintenance ?? []).find((row) => row.id === match.id);
   const address = job?.propertyAddress;
@@ -120,7 +65,6 @@ export function QuoteRecommendation({
       notifyServiceOffersChanged();
       if (done) toast.success(done);
       onAccepted?.();
-      setReloadKey((key) => key + 1);
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
@@ -157,26 +101,25 @@ export function QuoteRecommendation({
       {match.offer.confirmBeforePay ? (
         <p className="mt-2 text-xs text-slate-500">{match.offer.confirmBeforePay}</p>
       ) : null}
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button
+      <div className="mt-3 grid grid-cols-2 items-stretch gap-2">
+        <button
           type="button"
-          size="sm"
+          className="flex min-h-10 items-center justify-center rounded-lg bg-[#00bd85] px-3 py-2 text-center text-sm leading-tight font-semibold text-white transition-colors hover:bg-[#00a876] disabled:opacity-50"
           disabled={busy}
           onClick={() =>
             void finish(() => requestCrossubMaintenanceQuote(match.id), COPY.requested)
           }
         >
           {COPY.crossub}
-        </Button>
-        <Button
+        </button>
+        <button
           type="button"
-          size="sm"
-          variant="outline"
+          className="flex min-h-10 items-center justify-center rounded-lg border border-[#ccece3] bg-white px-3 py-2 text-center text-sm leading-tight font-semibold text-[#067a56] transition-colors hover:border-[#00bd85] hover:bg-[#f3fbf8] disabled:opacity-50"
           disabled={busy}
           onClick={() => void finish(() => dismissQuoteOffer(match.id))}
         >
           {ownLabel}
-        </Button>
+        </button>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
         <button

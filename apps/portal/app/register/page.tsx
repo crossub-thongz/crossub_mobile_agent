@@ -242,16 +242,13 @@ export default function RegisterPage() {
         backgroundPosition: 'center',
       }}
     >
-      <header className="mx-auto mb-2 w-full max-w-6xl px-5 sm:px-8 lg:px-10">
-        <div className="flex items-center gap-2.5">
-          <Image src="/crossub-logo.png" alt="" width={36} height={36} priority className="size-9" />
-          <span className="text-[16px] font-bold tracking-[0.16em]">CROSSUB</span>
-        </div>
-      </header>
-
-      <main className="mx-auto mt-12 grid w-full max-w-6xl items-start gap-10 px-5 sm:px-8 lg:mt-16 lg:grid-cols-2 lg:gap-16 lg:px-10">
+      <main className="mx-auto mt-6 grid w-full max-w-6xl items-start gap-10 px-5 sm:px-8 lg:mt-8 lg:grid-cols-2 lg:gap-16 lg:px-10">
         <section className="max-w-xl">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <Image src="/crossub-logo.png" alt="" width={36} height={36} priority className="size-9" />
+            <span className="text-[16px] font-bold tracking-[0.16em]">CROSSUB</span>
+          </div>
+          <div className="mt-10 flex items-center gap-3">
             <span className="h-0.5 w-8 rounded-full" style={{ backgroundColor: AGENT_GREEN }} />
             <p className="text-xs font-semibold tracking-[0.16em]" style={{ color: AGENT_GREEN }}>
               AGENT PORTAL

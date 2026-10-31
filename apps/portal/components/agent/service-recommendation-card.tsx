@@ -1,23 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
 import { Building2, CalendarClock, ClipboardCheck, Clock3, Sparkles, X } from 'lucide-react';
 
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { INSPECTION_CROSSUB_QUERY, inspectionCrossubInspector, inspectionNew, ROUTES } from '@/constants/routes';
+import { useRecommendationPicture } from '@/hooks/use-recommendation-picture';
 import {
   dismissServiceOffer,
-  fetchServiceRecommendations,
-  focusServiceOffer,
   notifyServiceOffersChanged,
-  onServiceOffersChanged,
   RECOMMENDATION_BUTTON,
   SERVICE_OFFER_KIND,
   snoozeServiceOffer,
   type RecommendationButton,
   type ServiceOfferInspection,
-  type ServiceRecommendations,
 } from '@/lib/crossub-api/service-offer-client';
 import { cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
@@ -72,34 +68,8 @@ export function ServiceRecommendation({
    */
   propertyId?: string;
 }) {
-  const [data, setData] = useState<ServiceRecommendations | null>(null);
-  const [ready, setReady] = useState(false);
-
-  const load = useCallback(() => {
-    let cancelled = false;
-    fetchServiceRecommendations()
-      .then((next) => {
-        if (!cancelled) setData(next);
-      })
-      .catch(() => {
-        if (!cancelled) setData(null);
-      })
-      .finally(() => {
-        if (!cancelled) setReady(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => load(), [load]);
-
-  useEffect(() => onServiceOffersChanged(load), [load]);
-
-  useEffect(() => {
-    if (!data?.kind) return;
-    void focusServiceOffer(data.kind).catch(() => undefined);
-  }, [data?.kind]);
+  const { picture, ready } = useRecommendationPicture();
+  const data = picture.recommendations;
 
   if (!ready || !data?.kind) return null;
 
@@ -302,23 +272,28 @@ function CrosSuggestion({
   const these = count === 1 ? 'this' : 'these';
 
   return (
-    <section className="rounded-xl border border-[#d7eee6] bg-[#f7faf9] p-3">
-      <p className="inline-flex items-center gap-2 text-sm font-semibold">
+    <section className="rounded-2xl border border-[#d7eee6] bg-[#f7faf9] p-4">
+      <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
         <Sparkles className="size-4 text-[#067a56]" />
         {CROS_ASSISTANT_NAME}
-        <span className="rounded-full bg-[#e7f8f2] px-2 py-0.5 text-[11px] font-semibold text-[#067a56]">Suggestion</span>
+        <span className="rounded-full bg-[#e7f8f2] px-2 py-0.5 text-[11px] font-semibold text-[#067a56]">
+          Suggestion
+        </span>
       </p>
       {count > 0 ? (
-        <p className="mt-2 text-sm">
+        <p className="mt-3 text-sm text-slate-800">
           You have {count} upcoming inspection{count === 1 ? '' : 's'} that {count === 1 ? "hasn't" : "haven't"} been arranged yet.
         </p>
       ) : null}
       <p className="text-muted-foreground mt-1 text-sm">{crosHelpCopy(showArrange, showFull, these)}</p>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         {showArrange ? (
           <Link
             href={lead ? arrangeHref(lead) : ROUTES.INSPECTIONS}
-            className="rounded-lg bg-[#00bd85] px-3 py-2 text-sm font-semibold text-white"
+            className={cn(
+              'flex min-h-10 items-center justify-center rounded-lg bg-[#00bd85] px-3 py-2 text-center text-sm font-semibold text-white transition-colors hover:bg-[#00a876]',
+              !showFull && 'col-span-2',
+            )}
           >
             Arrange inspections
           </Link>
@@ -327,8 +302,10 @@ function CrosSuggestion({
           <Link
             href={ROUTES.FULL_SERVICE}
             className={cn(
-              'rounded-lg px-3 py-2 text-sm font-semibold',
-              showArrange ? 'border border-[#ccece3] text-[#067a56]' : 'bg-[#00bd85] text-white',
+              'flex min-h-10 items-center justify-center rounded-lg px-3 py-2 text-center text-sm font-semibold transition-colors',
+              showArrange
+                ? 'border border-[#ccece3] bg-white text-[#067a56] hover:border-[#00bd85] hover:bg-[#f3fbf8]'
+                : 'col-span-2 bg-[#00bd85] text-white hover:bg-[#00a876]',
             )}
           >
             Explore Full Service

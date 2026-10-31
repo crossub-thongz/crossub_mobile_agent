@@ -111,6 +111,11 @@ export function focusServiceOffer(kind: ServiceOfferKind): Promise<{ kind: Servi
   return apiV1.post('/agent/service-recommendations/focus', { kind });
 }
 
+/** Drops the offer currently holding the screen, so another page can show its own card. */
+export function clearServiceOfferFocus(): Promise<{ kind: null }> {
+  return apiV1.delete('/agent/service-recommendations/focus');
+}
+
 export function snoozeServiceOffer(offer: Pick<ServiceOfferInspection, 'subjectType' | 'subjectId'>): Promise<{ snoozeUntil: string }> {
   const path =
     offer.subjectType === OFFER_SUBJECT.ROUTINE_SCHEDULE
