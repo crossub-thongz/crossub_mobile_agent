@@ -363,14 +363,14 @@ export const SELF_MANAGED_MAINTENANCE_COPY = {
   alreadyQuoted: 'already out for quotes',
 
   crossubTitle: 'Let CROSSUB arrange this?',
-  crossubHint: (partner: string) =>
-    `CROSSUB sends ${partner} to quote. If you approve, you pay CROSSUB by card and CROSSUB pays ${partner}. Your own tradies stay free.`,
+  crossubHint: (name: string) =>
+    `${name} arranges the quote. If you approve, you pay CROSSUB by card and CROSSUB pays the tradie. Your own tradies stay free.`,
   crossubFee: (fee: string | null) =>
     fee === null ? 'No CROSSUB fee on top of the quote.' : `CROSSUB fee ${fee} inc GST on top of the quote.`,
-  crossubAsk: 'Get a CROSSUB quote',
-  crossubAsked: (partner: string) =>
-    `${partner} has been asked to quote. Their quote appears under Compare quotes.`,
-  crossubRequested: 'CROSSUB quote requested',
+  crossubAsk: 'Get a Quote with Crossub',
+  crossubAsked: (name: string) =>
+    `${name} has been asked to quote. Their quote appears under Compare quotes.`,
+  crossubRequested: 'Crossub Assistance quote requested',
   crossubBadge: 'CROSSUB',
   crossubPayApprove: (amount: string) => `Pay ${amount} & approve`,
   crossubOwnerPayApprove: (amount: string) => `Owner approved: pay ${amount} & approve`,

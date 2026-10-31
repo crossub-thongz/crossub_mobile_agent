@@ -1,156 +1,175 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Building2, CalendarClock, ClipboardCheck, Clock3, Sparkles, X } from 'lucide-react';
 
-import { useAgentData } from '@/components/providers/agent-data-provider';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
-import { inspectionCrossubInspector, ROUTES } from '@/constants/routes';
+import { INSPECTION_CROSSUB_QUERY, inspectionCrossubInspector, inspectionNew, ROUTES } from '@/constants/routes';
 import {
-  buildServiceRecommendations,
-  SERVICE_RECOMMENDATION_BATCH_COUNT,
-  SERVICE_RECOMMENDATION_SNOOZE_DAYS,
-  SERVICE_RECOMMENDATION_URGENT_DAYS,
-  type ServiceRecommendationOffer,
-} from '@/lib/service-recommendation';
+  dismissServiceOffer,
+  fetchServiceRecommendations,
+  focusServiceOffer,
+  notifyServiceOffersChanged,
+  onServiceOffersChanged,
+  RECOMMENDATION_BUTTON,
+  SERVICE_OFFER_KIND,
+  snoozeServiceOffer,
+  type RecommendationButton,
+  type ServiceOfferInspection,
+  type ServiceRecommendations,
+} from '@/lib/crossub-api/service-offer-client';
 import { cn } from '@/lib/utils';
+import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
-const STORAGE_KEY = 'crossub.service-recommendation.v1';
-
-type RecommendationMemory = {
-  snoozeUntil?: string;
-  dismissed?: boolean;
-};
+const SNOOZE_DAYS = 7;
 
 type Surface = 'home' | 'inspections' | 'task' | 'cros';
 
-function readMemory(): Record<string, RecommendationMemory> {
-  if (typeof window === 'undefined') return {};
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '{}') as Record<
-      string,
-      RecommendationMemory
-    >;
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch {
-    return {};
-  }
+function daysUntil(dueOn: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(`${dueOn}T00:00:00`);
+  return Math.round((due.getTime() - today.getTime()) / 86_400_000);
 }
 
-function visibleOffers(
-  offers: ServiceRecommendationOffer[],
-  memory: Record<string, RecommendationMemory>,
-  now: number,
-): ServiceRecommendationOffer[] {
-  return offers.filter((offer) => {
-    const entry = memory[offer.id];
-    if (!entry) return true;
-    if (entry.dismissed) return false;
-    if (entry.snoozeUntil && Date.parse(entry.snoozeUntil) > now) return false;
-    return true;
-  });
+function dueLabel(days: number): string {
+  if (days < 0) {
+    const count = Math.abs(days);
+    return `Routine inspection is ${count} day${count === 1 ? '' : 's'} overdue and still not booked.`;
+  }
+  if (days === 0) return 'Routine inspection is due today and still not booked.';
+  if (days === 1) return 'Routine inspection is due in 1 day.';
+  return `Routine inspection is due in ${days} days.`;
+}
+
+function arrangeHref(offer: ServiceOfferInspection): string {
+  if (offer.subjectType === 'INSPECTION') return inspectionCrossubInspector(offer.subjectId);
+  // A routine that is not a case yet has no inspector step. Create it, then the new
+  // page opens the same payment step an existing inspection uses.
+  const params = new URLSearchParams();
+  if (offer.propertyId) params.set('property', offer.propertyId);
+  params.set('type', 'ROUTINE');
+  params.set(INSPECTION_CROSSUB_QUERY, '1');
+  return `${inspectionNew()}?${params.toString()}`;
 }
 
 /**
- * Self-Manage assistance card. Home, Inspections, the inspection task and CROS share one
- * snooze/dismiss record, so hiding it in one place hides it in the others.
+ * Self-Manage assistance card. Home, Inspections, the inspection task and CROS render only
+ * what `GET /agent/service-recommendations` allows, and share its snooze and dismiss.
  */
 export function ServiceRecommendation({
   surface,
   inspectionId,
+  propertyId,
 }: {
   surface: Surface;
   /** On an inspection task, only that job's offer is shown. */
   inspectionId?: string;
+  /**
+   * Passed for a task that has no visit date. An unarranged routine is keyed to the
+   * schedule until a case exists, so the same property's offer is the one to show.
+   */
+  propertyId?: string;
 }) {
-  const { inspections, properties, agencies, needActionItems } = useAgentData();
-  const [memory, setMemory] = useState<Record<string, RecommendationMemory>>({});
+  const [data, setData] = useState<ServiceRecommendations | null>(null);
   const [ready, setReady] = useState(false);
 
+  const load = useCallback(() => {
+    let cancelled = false;
+    fetchServiceRecommendations()
+      .then((next) => {
+        if (!cancelled) setData(next);
+      })
+      .catch(() => {
+        if (!cancelled) setData(null);
+      })
+      .finally(() => {
+        if (!cancelled) setReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => load(), [load]);
+
+  useEffect(() => onServiceOffersChanged(load), [load]);
+
   useEffect(() => {
-    setMemory(readMemory());
-    setReady(true);
-  }, []);
+    if (!data?.kind) return;
+    void focusServiceOffer(data.kind).catch(() => undefined);
+  }, [data?.kind]);
 
-  const save = useCallback((next: Record<string, RecommendationMemory>) => {
-    setMemory(next);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }, []);
+  if (!ready || !data?.kind) return null;
 
-  const offers = useMemo(
-    () => buildServiceRecommendations({ inspections, properties, agencies }),
-    [agencies, inspections, properties],
-  );
-  const shown = useMemo(
-    () => visibleOffers(offers, memory, Date.now()),
-    [memory, offers],
-  );
-  const scoped = inspectionId ? shown.filter((offer) => offer.id === inspectionId) : shown;
-  const lead = scoped[0];
-  const batch = surface === 'cros' && scoped.length >= SERVICE_RECOMMENDATION_BATCH_COUNT;
-  const urgent = lead != null && lead.days <= SERVICE_RECOMMENDATION_URGENT_DAYS;
+  const inspections = [...data.inspections].sort((a, b) => a.dueOn.localeCompare(b.dueOn));
+  const lead = inspectionId
+    ? inspections.find((offer) => offer.subjectId === inspectionId) ??
+      (propertyId ? inspections.find((offer) => offer.propertyId === propertyId) : undefined)
+    : inspections[0];
 
-  if (!ready || !lead) return null;
-  if (surface === 'cros' && !batch && !urgent) return null;
-
-  const remember = (ids: string[], entry: RecommendationMemory) => {
-    const next = { ...memory };
-    for (const id of ids) next[id] = entry;
-    save(next);
+  const snooze = async (offer: ServiceOfferInspection) => {
+    await settleOffers([offer], snoozeServiceOffer);
   };
-  const snooze = (ids: string[]) => {
-    const until = new Date();
-    until.setDate(until.getDate() + SERVICE_RECOMMENDATION_SNOOZE_DAYS);
-    remember(ids, { snoozeUntil: until.toISOString() });
-  };
-  const dismiss = (ids: string[]) => {
-    remember(ids, { dismissed: true });
+  const dismiss = async (offer: ServiceOfferInspection) => {
+    await settleOffers([offer], dismissServiceOffer);
   };
 
-  const emphasizeFull =
-    surface === 'home' &&
-    needActionItems.length >= SERVICE_RECOMMENDATION_BATCH_COUNT &&
-    lead.days > SERVICE_RECOMMENDATION_URGENT_DAYS;
+  if (surface === 'cros') {
+    return <CrosSuggestion buttons={data.cros?.buttons ?? []} inspections={inspections} />;
+  }
 
+  if (surface === 'home' && data.kind === SERVICE_OFFER_KIND.FULL_SERVICE && data.home) {
+    return <FullServiceOffer buttons={data.home.buttons} />;
+  }
+
+  if (!lead) return null;
   return (
-    <div className="space-y-3">
-      {batch ? (
-        <CrosBatchSuggestion
-          count={scoped.length}
-          includeWays={!urgent}
-          arrangeViaHref={inspectionCrossubInspector(lead.id)}
-          onSnooze={() => snooze(scoped.map((offer) => offer.id))}
-          onDismiss={() => dismiss(scoped.map((offer) => offer.id))}
-        />
-      ) : null}
-      {surface === 'cros' && batch && !urgent ? null : (
-        <AssistanceCard
-          offer={lead}
-          emphasizeFull={emphasizeFull}
-          emphasizeInspection={urgent}
-          onSnooze={() => snooze([lead.id])}
-          onDismiss={() => dismiss([lead.id])}
-        />
-      )}
-    </div>
+    <AssistanceCard
+      offer={lead}
+      emphasizeFull={false}
+      onSnooze={() => void snooze(lead)}
+      onDismiss={() => void dismiss(lead)}
+    />
   );
+}
+
+async function settleOffers(
+  offers: ServiceOfferInspection[],
+  action: (offer: ServiceOfferInspection) => Promise<unknown>,
+): Promise<void> {
+  for (const offer of offers) {
+    try {
+      await action(offer);
+    } catch (err) {
+      console.error(apiErrorMessage(err));
+    }
+  }
+  notifyServiceOffersChanged();
+}
+
+function hasButton(buttons: RecommendationButton[], button: RecommendationButton): boolean {
+  return buttons.includes(button);
 }
 
 function AssistanceCard({
   offer,
   emphasizeFull,
-  emphasizeInspection,
   onSnooze,
   onDismiss,
 }: {
-  offer: ServiceRecommendationOffer;
+  offer: ServiceOfferInspection;
   emphasizeFull: boolean;
-  emphasizeInspection: boolean;
   onSnooze: () => void;
   onDismiss: () => void;
 }) {
-  const inspectionFirst = !emphasizeFull;
+  const showInspection = hasButton(offer.buttons, RECOMMENDATION_BUTTON.ARRANGE_INSPECTIONS);
+  const showFull = hasButton(offer.buttons, RECOMMENDATION_BUTTON.EXPLORE_FULL_SERVICE);
+  if (!showInspection && !showFull) return null;
+  const inspectionFirst = !emphasizeFull || !showFull;
+  const days = daysUntil(offer.dueOn);
+
   return (
     <section className="rounded-2xl border border-[#d7eee6] bg-white p-4 shadow-[0_9px_26px_rgba(26,89,70,0.04)]">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -162,33 +181,46 @@ function AssistanceCard({
       </div>
       <h2 className="mt-3 text-lg font-semibold tracking-tight">Would you like Crossub to help?</h2>
       <p className="text-muted-foreground mt-1 text-sm">
-        {offer.dueLabel} Choose how you&apos;d like to manage this property.
+        {dueLabel(days)} Choose how you&apos;d like to manage this property.
       </p>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      <div className={cn('mt-3 grid gap-2', showInspection && showFull ? 'sm:grid-cols-2' : '')}>
         {inspectionFirst ? (
           <>
-            <InspectionOnlyChoice href={inspectionCrossubInspector(offer.id)} primary={emphasizeInspection || !emphasizeFull} />
-            <FullServiceChoice primary={emphasizeFull} />
+            {showInspection ? <InspectionOnlyChoice href={arrangeHref(offer)} primary /> : null}
+            {showFull ? <FullServiceChoice primary={emphasizeFull && !showInspection} /> : null}
           </>
         ) : (
           <>
-            <FullServiceChoice primary />
-            <InspectionOnlyChoice href={inspectionCrossubInspector(offer.id)} primary={false} />
+            {showFull ? <FullServiceChoice primary /> : null}
+            {showInspection ? <InspectionOnlyChoice href={arrangeHref(offer)} primary={false} /> : null}
           </>
         )}
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-muted-foreground text-xs">You can always continue managing it yourself.</p>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={onSnooze} className="text-muted-foreground inline-flex items-center gap-1 text-xs font-semibold">
-            <Clock3 className="size-3.5" />
-            Remind me in {SERVICE_RECOMMENDATION_SNOOZE_DAYS} days
-          </button>
-          <button type="button" onClick={onDismiss} className="text-muted-foreground hover:text-foreground" aria-label="Not interested">
-            <X className="size-3.5" />
-          </button>
-        </div>
+        <SnoozeDismiss onSnooze={onSnooze} onDismiss={onDismiss} />
       </div>
+      <WaysCrosHelps />
+    </section>
+  );
+}
+
+function FullServiceOffer({ buttons }: { buttons: RecommendationButton[] }) {
+  if (!hasButton(buttons, RECOMMENDATION_BUTTON.EXPLORE_FULL_SERVICE)) return null;
+  return (
+    <section className="rounded-2xl border border-[#d7eee6] bg-white p-4 shadow-[0_9px_26px_rgba(26,89,70,0.04)]">
+      <h2 className="text-lg font-semibold tracking-tight">Would you like Crossub to help?</h2>
+      <p className="text-muted-foreground mt-1 text-sm">
+        Several inspections are still unarranged. Full Service can take on inspections, tenant
+        communication and daily work for the properties you choose.
+      </p>
+      <div className="mt-3">
+        <FullServiceChoice primary />
+      </div>
+      <p className="text-muted-foreground mt-3 text-xs">
+        Price, scope and start date are confirmed on the next page. This does not change the
+        property&apos;s management.
+      </p>
       <WaysCrosHelps />
     </section>
   );
@@ -229,7 +261,7 @@ function FullServiceChoice({ primary }: { primary: boolean }) {
         Price, scope and start date are confirmed on the next page. This does not change the property&apos;s management.
       </p>
       <Link
-        href={ROUTES.PRICING_FULL_MANAGEMENT}
+        href={ROUTES.FULL_SERVICE}
         className={cn(
           'mt-3 inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold',
           primary ? 'bg-[#00bd85] text-white' : 'border border-[#ccece3] text-[#067a56]',
@@ -241,19 +273,34 @@ function FullServiceChoice({ primary }: { primary: boolean }) {
   );
 }
 
-function CrosBatchSuggestion({
-  count,
-  includeWays,
-  arrangeViaHref,
-  onSnooze,
-  onDismiss,
+function SnoozeDismiss({ onSnooze, onDismiss }: { onSnooze: () => void; onDismiss: () => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <button type="button" onClick={onSnooze} className="text-muted-foreground inline-flex items-center gap-1 text-xs font-semibold">
+        <Clock3 className="size-3.5" />
+        Remind me in {SNOOZE_DAYS} days
+      </button>
+      <button type="button" onClick={onDismiss} className="text-muted-foreground hover:text-foreground" aria-label="Not interested">
+        <X className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function CrosSuggestion({
+  buttons,
+  inspections,
 }: {
-  count: number;
-  includeWays: boolean;
-  arrangeViaHref: string;
-  onSnooze: () => void;
-  onDismiss: () => void;
+  buttons: RecommendationButton[];
+  inspections: ServiceOfferInspection[];
 }) {
+  const showArrange = hasButton(buttons, RECOMMENDATION_BUTTON.ARRANGE_INSPECTIONS);
+  const showFull = hasButton(buttons, RECOMMENDATION_BUTTON.EXPLORE_FULL_SERVICE);
+  if (!showArrange && !showFull) return null;
+  const count = inspections.length;
+  const lead = inspections[0];
+  const these = count === 1 ? 'this' : 'these';
+
   return (
     <section className="rounded-xl border border-[#d7eee6] bg-[#f7faf9] p-3">
       <p className="inline-flex items-center gap-2 text-sm font-semibold">
@@ -261,39 +308,45 @@ function CrosBatchSuggestion({
         {CROS_ASSISTANT_NAME}
         <span className="rounded-full bg-[#e7f8f2] px-2 py-0.5 text-[11px] font-semibold text-[#067a56]">Suggestion</span>
       </p>
-      <p className="mt-2 text-sm">
-        You have <span className="mr-1">{count}</span>
-        upcoming inspections that haven&apos;t been arranged yet.
-      </p>
-      <p className="text-muted-foreground mt-1 text-sm">
-        Crossub can arrange them for you, or you can arrange them yourself.
-      </p>
+      {count > 0 ? (
+        <p className="mt-2 text-sm">
+          You have {count} upcoming inspection{count === 1 ? '' : 's'} that {count === 1 ? "hasn't" : "haven't"} been arranged yet.
+        </p>
+      ) : null}
+      <p className="text-muted-foreground mt-1 text-sm">{crosHelpCopy(showArrange, showFull, these)}</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Link href={arrangeViaHref} className="rounded-lg bg-[#00bd85] px-3 py-2 text-sm font-semibold text-white">
-          Arrange via Crossub
-        </Link>
-        <Link
-          href={ROUTES.INSPECTIONS}
-          className="rounded-lg border border-[#ccece3] px-3 py-2 text-sm font-semibold text-[#067a56]"
-        >
-          Arrange it yourself
-        </Link>
+        {showArrange ? (
+          <Link
+            href={lead ? arrangeHref(lead) : ROUTES.INSPECTIONS}
+            className="rounded-lg bg-[#00bd85] px-3 py-2 text-sm font-semibold text-white"
+          >
+            Arrange inspections
+          </Link>
+        ) : null}
+        {showFull ? (
+          <Link
+            href={ROUTES.FULL_SERVICE}
+            className={cn(
+              'rounded-lg px-3 py-2 text-sm font-semibold',
+              showArrange ? 'border border-[#ccece3] text-[#067a56]' : 'bg-[#00bd85] text-white',
+            )}
+          >
+            Explore Full Service
+          </Link>
+        ) : null}
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground text-xs">Either choice is optional. You can leave this for later.</p>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={onSnooze} className="text-muted-foreground inline-flex items-center gap-1 text-xs font-semibold">
-            <Clock3 className="size-3.5" />
-            Remind me in {SERVICE_RECOMMENDATION_SNOOZE_DAYS} days
-          </button>
-          <button type="button" onClick={onDismiss} className="text-muted-foreground hover:text-foreground" aria-label="Not interested">
-            <X className="size-3.5" />
-          </button>
-        </div>
-      </div>
-      {includeWays ? <WaysCrosHelps /> : null}
     </section>
   );
+}
+
+function crosHelpCopy(arrange: boolean, full: boolean, these: 'this' | 'these'): string {
+  if (arrange && full) {
+    return `I can help you arrange ${these} through Crossub's Inspection Only service, or you can explore Full Service if you'd prefer ongoing management support.`;
+  }
+  if (arrange) {
+    return `I can help you arrange ${these} through Crossub's Inspection Only service.`;
+  }
+  return "You can explore Full Service if you'd prefer ongoing management support.";
 }
 
 function WaysCrosHelps() {
@@ -306,7 +359,7 @@ function WaysCrosHelps() {
           <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
             Use the free inspection app. The report is sent only to CROSSUB and cannot be sent anywhere else, so the app can only be used inside CROSSUB.
           </p>
-          <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
+          <p className="text-muted-foreground mt-1 text-xs">
             * The {CROS_ASSISTANT_NAME} inspection is exclusive to the CROSSUB system.
           </p>
         </li>

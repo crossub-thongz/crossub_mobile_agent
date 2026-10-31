@@ -19,7 +19,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { inspectionDetail, propertyDetail, propertyLeasingWorkflow, ROUTES } from '@/constants/routes';
+import {
+  INSPECTION_CROSSUB_QUERY,
+  inspectionCrossubInspector,
+  inspectionDetail,
+  propertyDetail,
+  propertyLeasingWorkflow,
+  ROUTES,
+} from '@/constants/routes';
 import { LEASING_CREATE_RELET_DECISION } from '@/constants/leasing-relet-decision';
 import {
   AGENCY_BOOKING_COPY,
@@ -220,6 +227,7 @@ export function CreateInspectionWizard({
 } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const continueToCrossubPayment = searchParams.get(INSPECTION_CROSSUB_QUERY) != null;
   const preselectedPropertyId =
     preselectedPropertyIdProp ?? searchParams.get('property');
   const typeParam = (initialTypeProp ?? searchParams.get('type')) as InspectionCreateType | null;
@@ -564,7 +572,11 @@ export function CreateInspectionWizard({
     registerInspection(inspection);
     onCreated?.({ inspectionId: inspection.id, inspection });
     if (navigateOnSuccess) {
-      router.push(inspectionDetail(inspection.id));
+      router.push(
+        continueToCrossubPayment
+          ? inspectionCrossubInspector(inspection.id)
+          : inspectionDetail(inspection.id),
+      );
     }
     void refresh();
   };
@@ -1011,10 +1023,18 @@ export function CreateInspectionWizard({
               finalizeInspectionCreate(mapInspectionRecordToView(record));
             } catch {
               void refresh();
-              if (navigateOnSuccess) router.push(`${ROUTES.TASKS}?filter=Inspection`);
+              if (navigateOnSuccess) {
+                router.push(
+                  continueToCrossubPayment
+                    ? inspectionCrossubInspector(created.id)
+                    : `${ROUTES.TASKS}?filter=Inspection`,
+                );
+              }
             }
           };
-          if (needsNewInPersonCase) {
+          // Book inspection from a recommendation pays on the inspector step after the
+          // case exists. Charging the routine order here as well would take a second fee.
+          if (needsNewInPersonCase && !continueToCrossubPayment) {
             await withInspectionOrderPayment(
               'routine_inspection',
               property.id,
@@ -1035,7 +1055,13 @@ export function CreateInspectionWizard({
           finalizeInspectionCreate(mapInspectionRecordToView(record));
         } catch {
           void refresh();
-          if (navigateOnSuccess) router.push(`${ROUTES.TASKS}?filter=Inspection`);
+          if (navigateOnSuccess) {
+            router.push(
+              continueToCrossubPayment
+                ? inspectionCrossubInspector(created.id)
+                : `${ROUTES.TASKS}?filter=Inspection`,
+            );
+          }
         }
         return;
       }

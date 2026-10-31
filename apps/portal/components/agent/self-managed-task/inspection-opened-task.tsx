@@ -194,7 +194,11 @@ export function InspectionOpenedTask({
         </div>
       </header>
       <div className="px-6 pt-4 lg:px-8">
-        <ServiceRecommendation surface="task" inspectionId={inspection.id} />
+        <ServiceRecommendation
+          surface="task"
+          inspectionId={inspection.id}
+          propertyId={inspection.scheduledAt ? undefined : propertyId}
+        />
         <CrossubInspectorStep inspectionId={inspection.id} onChanged={() => void refresh()} />
       </div>
 

@@ -10,6 +10,7 @@ import {
   PaymentStep,
 } from '@/components/agent/maintenance-self-managed/invoice-completion-steps';
 import { CrossubArrangeStep } from '@/components/agent/maintenance-self-managed/crossub-arrange-step';
+import { QuoteAssistanceDialog } from '@/components/agent/maintenance-self-managed/quote-assistance-dialog';
 import { EscalationStep } from '@/components/agent/maintenance-self-managed/escalation-step';
 import { InviteTradiesStep } from '@/components/agent/maintenance-self-managed/invite-tradies-step';
 import { InvitedTradiesStep } from '@/components/agent/maintenance-self-managed/invited-tradies-step';
@@ -181,6 +182,9 @@ export function SelfManagedMaintenancePanel({
       {showJobDetails ? <JobDetailsStep detail={detail} busy={busy} run={run} /> : null}
       {showTriage ? (
         <IssueTriageStep requestId={requestId} issues={steps.issues} busy={busy} run={run} />
+      ) : null}
+      {showQuotes ? (
+        <QuoteAssistanceDialog requestId={requestId} busy={busy} run={run} />
       ) : null}
       {showQuotes && detail.crossubMaintenance ? (
         <CrossubArrangeStep
