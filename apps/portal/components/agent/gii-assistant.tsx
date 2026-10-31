@@ -1570,12 +1570,11 @@ export function GiiAssistant({
                           // Red means "the mic is open" and nothing else. Holding it through
                           // transcription reads as still recording, so the wait looks like
                           // the app ignoring you rather than working.
-                          listening && 'bg-rose-500 bg-gradient-to-br from-rose-500 via-red-500 to-rose-600',
-                          wrappingUp && 'bg-slate-400 bg-gradient-to-br from-slate-400 to-slate-500',
-                          // The v2 look drops gradients, so each state has a solid colour under it; without
-                          // one the white mic sat on nothing and looked switched off.
-                          !voiceActive &&
-                            'bg-primary bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
+                          listening && 'bg-rose-500',
+                          wrappingUp && 'bg-slate-400',
+                          // Solid colours: the v2 look strips gradient classes, which left the white mic
+                          // on nothing (looking switched off), and `cn` drops a colour paired with one.
+                          !voiceActive && 'bg-primary',
                         )}
                         aria-label={
                           wrappingUp
@@ -2059,9 +2058,9 @@ export function GiiAssistant({
                     'transition-all duration-300 ease-out active:scale-95',
                     // Red is "the mic is open", never "please wait" — see the compact button.
                     listening &&
-                      'bg-rose-500 bg-gradient-to-br from-rose-500 via-red-500 to-rose-600 animate-voice-pulse-ring scale-110',
-                    wrappingUp && 'bg-slate-400 bg-gradient-to-br from-slate-400 to-slate-500 scale-105',
-                    !voiceActive && 'bg-primary bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
+                      'bg-rose-500 animate-voice-pulse-ring scale-110',
+                    wrappingUp && 'bg-slate-400 scale-105',
+                    !voiceActive && 'bg-primary',
                   )}
                   aria-label={
                     wrappingUp
