@@ -73,7 +73,7 @@ export function ServiceRecommendation({
 
   if (!ready || !data?.kind) return null;
 
-  const inspections = [...data.inspections].sort((a, b) => a.dueOn.localeCompare(b.dueOn));
+  const inspections = [...(data.inspections ?? [])].sort((a, b) => a.dueOn.localeCompare(b.dueOn));
   const lead = inspectionId
     ? inspections.find((offer) => offer.subjectId === inspectionId) ??
       (propertyId ? inspections.find((offer) => offer.propertyId === propertyId) : undefined)
@@ -120,7 +120,7 @@ async function settleOffers(
 }
 
 function hasButton(buttons: RecommendationButton[], button: RecommendationButton): boolean {
-  return buttons.includes(button);
+  return (buttons ?? []).includes(button);
 }
 
 function AssistanceCard({

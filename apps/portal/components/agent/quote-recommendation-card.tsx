@@ -44,9 +44,8 @@ export function QuoteRecommendation({
   const { maintenanceAll: maintenance } = useAgentData();
   const { picture, ready } = useRecommendationPicture(requestId);
   const [busy, setBusy] = useState(false);
-  const open = requestId
-    ? picture.quotes.filter((row) => row.id === requestId)
-    : picture.quotes;
+  const quotes = Array.isArray(picture?.quotes) ? picture.quotes : [];
+  const open = requestId ? quotes.filter((row) => row.id === requestId) : quotes;
   const lead = open[0];
 
   if (!ready || !lead) return null;

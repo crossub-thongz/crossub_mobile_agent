@@ -25,6 +25,13 @@ export type RecommendationPicture = {
 
 const EMPTY: RecommendationPicture = { recommendations: null, quotes: [] };
 
+function asPicture(value: RecommendationPicture | null | undefined): RecommendationPicture {
+  return {
+    recommendations: value?.recommendations ?? null,
+    quotes: Array.isArray(value?.quotes) ? value.quotes : [],
+  };
+}
+
 let snapshot: RecommendationPicture | null = null;
 let snapshotKey = '';
 let chain: Promise<void> = Promise.resolve();
@@ -71,7 +78,7 @@ function loadPicture(key: string, jobIds: string[]): Promise<void> {
       );
       await clearServiceOfferFocus().catch(() => undefined);
     }
-    snapshot = { recommendations, quotes };
+    snapshot = asPicture({ recommendations, quotes });
     snapshotKey = key;
   });
   chain = run.then(
@@ -94,15 +101,15 @@ export function useRecommendationPicture(pinJobId?: string): {
   const { maintenanceAll } = useAgentData();
   const selfManagedIds = useSelfManagedPropertyIds();
   const jobIds = useMemo(() => {
-    const open = (maintenanceAll ?? []).filter(
-      (job) => selfManagedIds.has(job.propertyId) && !closedJob(job),
-    );
+    const rows = Array.isArray(maintenanceAll) ? maintenanceAll : [];
+    const allowed = selfManagedIds instanceof Set ? selfManagedIds : new Set<string>();
+    const open = rows.filter((job) => allowed.has(job.propertyId) && !closedJob(job));
     const ids = open.map((job) => job.id);
     if (pinJobId && !ids.includes(pinJobId)) ids.unshift(pinJobId);
     return ids.slice(0, 8);
   }, [maintenanceAll, pinJobId, selfManagedIds]);
   const key = jobIds.join(',');
-  const cached = snapshot && snapshotKey === key ? snapshot : null;
+  const cached = snapshot && snapshotKey === key ? asPicture(snapshot) : null;
   const [picture, setPicture] = useState<RecommendationPicture>(cached ?? EMPTY);
   const [ready, setReady] = useState(cached != null);
   const [revision, setRevision] = useState(0);
@@ -117,7 +124,7 @@ export function useRecommendationPicture(pinJobId?: string): {
     void loadPicture(key, jobIds)
       .then(() => {
         if (!cancelled && snapshot) {
-          setPicture(snapshot);
+          setPicture(asPicture(snapshot));
           setReady(true);
         }
       })

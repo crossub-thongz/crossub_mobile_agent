@@ -38,7 +38,7 @@ export function useSelfManagedAccess(): SelfManagedAccess {
 export function useSelfManagedPropertyIds(): Set<string> {
   const { agencies, properties, archivedProperties } = useAgentData();
   return useMemo(
-    () => selfManagedPropertyIds(agencies, [...properties, ...archivedProperties]),
+    () => selfManagedPropertyIds(agencies ?? [], [...(properties ?? []), ...(archivedProperties ?? [])]),
     [agencies, archivedProperties, properties],
   );
 }

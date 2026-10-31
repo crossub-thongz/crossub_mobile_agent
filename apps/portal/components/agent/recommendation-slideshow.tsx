@@ -78,12 +78,12 @@ export function HomeRecommendations({ cros = false }: { cros?: boolean }) {
   const kind = picture.recommendations?.kind;
   const slides: ReactNode[] = [];
   if (
-    (kind === SERVICE_OFFER_KIND.INSPECTION && picture.recommendations?.inspections.length) ||
+    (kind === SERVICE_OFFER_KIND.INSPECTION && (picture.recommendations?.inspections ?? []).length > 0) ||
     (kind === SERVICE_OFFER_KIND.FULL_SERVICE && picture.recommendations?.home)
   ) {
     slides.push(<ServiceRecommendation key="service" surface={cros ? 'cros' : 'home'} />);
   }
-  if (picture.quotes.length > 0) {
+  if ((picture.quotes ?? []).length > 0) {
     slides.push(<QuoteRecommendation key="quote" />);
   }
   return <RecommendationSlideshow slides={slides} />;
