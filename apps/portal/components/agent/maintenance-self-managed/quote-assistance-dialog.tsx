@@ -18,17 +18,15 @@ import { requestCrossubMaintenanceQuote } from '@/lib/crossub-api/maintenance-cl
 import {
   dismissQuoteOffer,
   fetchQuoteOffer,
-  focusServiceOffer,
   notifyServiceOffersChanged,
   QUOTE_CHOICE,
-  SERVICE_OFFER_KIND,
   snoozeQuoteOffer,
   type QuoteOffer,
 } from '@/lib/crossub-api/service-offer-client';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
 /**
- * Crossub Assistance, shown when the agent reaches quoting and the server allows the modal.
+ * Crossub Assistance, opened again from the quote step after the suggestion card is dismissed.
  * Asking for the quote does not create a charge. Snooze and dismiss are stored on the job.
  */
 export function QuoteAssistanceDialog({
@@ -47,12 +45,6 @@ export function QuoteAssistanceDialog({
     fetchQuoteOffer(requestId)
       .then((next) => {
         setOffer(next);
-        if (next.showModal && !next.deferForUrgent) {
-          setOpen(true);
-          void focusServiceOffer(SERVICE_OFFER_KIND.QUOTE)
-            .then(() => notifyServiceOffersChanged())
-            .catch(() => undefined);
-        }
       })
       .catch(() => setOffer(null));
   }, [requestId]);

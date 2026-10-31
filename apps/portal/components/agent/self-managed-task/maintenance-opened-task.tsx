@@ -11,6 +11,7 @@ import {
   TaskMetaChip,
   TaskStatusPill,
 } from '@/components/agent/self-managed-task/admin-task-chrome';
+import { QuoteRecommendation } from '@/components/agent/quote-recommendation-card';
 import { Button } from '@/components/ui/button';
 import { ROUTES, propertyDetail } from '@/constants/routes';
 import { formatCurrency } from '@/lib/utils';
@@ -32,6 +33,8 @@ export function MaintenanceOpenedTask({
   estimatedCost,
   propertyId,
   onCloseJob,
+  requestId,
+  onQuoteAccepted,
   workflow,
   activity,
   body,
@@ -48,6 +51,8 @@ export function MaintenanceOpenedTask({
   estimatedCost: number | null;
   propertyId: string;
   onCloseJob?: () => void;
+  requestId?: string;
+  onQuoteAccepted?: () => void;
   workflow?: ReactNode;
   activity?: ReactNode;
   /** Stage board and timeline, in place of the default two columns. */
@@ -102,6 +107,12 @@ export function MaintenanceOpenedTask({
           </p>
         </div>
       </header>
+
+      {requestId ? (
+        <div className="mt-4">
+          <QuoteRecommendation requestId={requestId} onAccepted={onQuoteAccepted} />
+        </div>
+      ) : null}
 
       {body ? <div className="mt-4 min-h-0 flex-1">{body}</div> : (
         <div className="mt-4 grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">

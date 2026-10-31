@@ -1,6 +1,7 @@
 'use client';
 
 import { MaintenanceModule } from '@/components/agent/module-workspace/maintenance-module';
+import { QuoteRecommendation } from '@/components/agent/quote-recommendation-card';
 import { TasksFilterRedirect } from '@/components/agent/module-workspace/tasks-filter-redirect';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { MAINTENANCE_WORKSPACE_COPY } from '@/constants/module-workspace';
@@ -18,7 +19,12 @@ export default function MaintenancePage() {
 
   return (
     <AgentShell title={MAINTENANCE_WORKSPACE_COPY.title} wide fillMain hideNeedAction>
-      <MaintenanceModule />
+      <div className="min-h-0 flex-1 overflow-y-auto pb-8">
+        <div className="lg:px-8 lg:pt-4">
+          <QuoteRecommendation />
+        </div>
+        <MaintenanceModule />
+      </div>
     </AgentShell>
   );
 }

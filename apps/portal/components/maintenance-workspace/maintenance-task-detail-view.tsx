@@ -363,6 +363,8 @@ export function MaintenanceTaskDetailView({
           priorityLabel={item.priority === 'urgent' || item.priority === 'high' ? 'Urgent' : null}
           estimatedCost={quoteAmount ?? null}
           propertyId={propertyId}
+          requestId={item.id}
+          onQuoteAccepted={onCaseUpdated}
           onCloseJob={canCloseJob ? () => setCloseJobOpen(true) : undefined}
           body={
             <MaintenanceStageWorkspace
