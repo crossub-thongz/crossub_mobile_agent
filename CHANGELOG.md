@@ -10,6 +10,7 @@
 - CROS opens at the top of Discover, Insights and History; it no longer jumps past the greeting and briefing as the briefing refreshes
 - The microphone button shows in green (red while listening); the v2 look had removed its background, so it looked switched off
 - A notification's heading is its own title, with the address underneath; times such as 12:08 are no longer cut in half
+- A notification whose message opens with the address and a time ("… at 09:00") shows its message, not "00"
 - Tapping the morning briefing opens CROS in place from any page, from the list, the bell or the pop up alert
 - A second Ask CROS (from a notification or a highlight) sends its question; only the first one did until the page reloaded
 

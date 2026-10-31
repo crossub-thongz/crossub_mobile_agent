@@ -36,13 +36,6 @@ function normalizeAddressKey(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-function addressesMatch(a: string, b: string): boolean {
-  const left = normalizeAddressKey(a);
-  const right = normalizeAddressKey(b);
-  if (!left || !right) return false;
-  return left === right || left.includes(right) || right.includes(left);
-}
-
 /** Shortest lead-in that counts as the message repeating its title, so a stray word never does. */
 const TITLE_LEAD_MIN_CHARS = 12;
 
@@ -72,7 +65,9 @@ export function agentNotificationDisplay(notification: AgentNotification): {
   const lead = rawBody ? splitBodyPrefix(rawBody) : null;
   const leadRepeats =
     lead != null &&
-    ((address !== '' && addressesMatch(lead.prefix, address)) ||
+    // The lead-in must be the address itself: "<address> — Wednesday at 09:00" holds the address
+    // too, and cutting at its colon left "00".
+    ((address !== '' && normalizeAddressKey(lead.prefix) === normalizeAddressKey(address)) ||
       (lead.prefix.length >= TITLE_LEAD_MIN_CHARS && titleKey.includes(normalizeAddressKey(lead.prefix))));
   const body = (leadRepeats && lead ? lead.detail : rawBody) || notification.actionRequired?.trim() || '';
   const titleNamesAddress = address !== '' && titleKey.includes(normalizeAddressKey(address));
