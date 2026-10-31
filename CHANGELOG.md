@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-31
+
+### Added
+- Notifications CROS raised itself (morning briefing, follow ups) show the CROS face, "From CROS" and an Ask CROS button that opens CROS already asking about that card (contract 0.68.0)
+- The word CROS in a notification is highlighted; tapping it opens CROS
+
+### Fixed
+- A notification's heading is its own title, with the address underneath; times such as 12:08 are no longer cut in half
+- Tapping the morning briefing opens CROS in place from any page, from the list, the bell or the pop up alert
+- A second Ask CROS (from a notification or a highlight) sends its question; only the first one did until the page reloaded
+
+### Changed
+- The bell says "Nothing new" when nothing is unread, instead of "You're all caught up"
+
+### Removed
+- The "LIVE · CROSSUB_WEB" tag on the Notifications page and its cards
+
 ## 2026-10-30
 
 ### Added

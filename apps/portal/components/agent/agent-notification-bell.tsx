@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Bell, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { AskCrosButton, CrosNameText, FromCrosMark } from '@/components/agent/cros-notification-parts';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAgentNotificationDialog } from '@/components/providers/agent-notification-dialog-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { NOTIFICATION_BELL_NONE_UNREAD } from '@/constants/cros-notification';
 import { ROUTES } from '@/constants/routes';
 import { agentNotificationDisplay } from '@/lib/notification-activity';
 import { markNotificationsAlerted } from '@/lib/notification-alert-state';
@@ -106,7 +108,7 @@ export function AgentNotificationBell({
             {unreadCount > 0 ? (
               <p className="text-muted-foreground text-xs">{unreadCount} unread</p>
             ) : (
-              <p className="text-muted-foreground text-xs">You&apos;re all caught up</p>
+              <p className="text-muted-foreground text-xs">{NOTIFICATION_BELL_NONE_UNREAD}</p>
             )}
           </div>
           {unreadCount > 0 ? (
@@ -130,15 +132,21 @@ export function AgentNotificationBell({
               {panelItems.map((notification) => {
                 const display = agentNotificationDisplay(notification);
                 return (
-                  <li key={notification.id}>
+                  <li
+                    key={notification.id}
+                    className={cn(
+                      'agent-notification-popover__item hover:bg-muted/40 relative transition-colors',
+                      !notification.read && 'agent-notification-popover__item--unread',
+                    )}
+                  >
+                    {/* The row opens it; the Cros name and Ask button sit above and take their own taps. */}
                     <button
                       type="button"
                       onClick={() => handleOpenNotification(notification)}
-                      className={cn(
-                        'agent-notification-popover__item hover:bg-muted/40 flex w-full items-start gap-3 px-4 py-3 text-left transition-colors',
-                        !notification.read && 'agent-notification-popover__item--unread',
-                      )}
-                    >
+                      aria-label={display.title}
+                      className="absolute inset-0"
+                    />
+                    <div className="pointer-events-none relative flex w-full items-start gap-3 px-4 py-3 text-left">
                       <span
                         className={cn(
                           'mt-1.5 size-2 shrink-0 rounded-full',
@@ -148,6 +156,7 @@ export function AgentNotificationBell({
                       />
                       <span className="min-w-0 flex-1">
                         <span className="mb-1 flex flex-wrap items-center gap-1.5">
+                          {notification.fromCros ? <FromCrosMark /> : null}
                           {notification.type === 'approval' ? (
                             <StatusBadge label="Approval" variant="approval" />
                           ) : null}
@@ -158,15 +167,30 @@ export function AgentNotificationBell({
                         <span className="block text-sm font-semibold leading-snug">
                           {display.title}
                         </span>
+                        {display.address ? (
+                          <span className="text-muted-foreground mt-0.5 block truncate text-[11px]">
+                            {display.address}
+                          </span>
+                        ) : null}
                         <span className="text-muted-foreground mt-0.5 line-clamp-2 block text-xs leading-relaxed">
-                          {display.body}
+                          <CrosNameText text={display.body} onOpen={() => setOpen(false)} />
                         </span>
                         <span className="text-muted-foreground mt-1 block text-[11px]">
                           {formatRelative(notification.at)}
                         </span>
+                        {notification.fromCros ? (
+                          <AskCrosButton
+                            notification={notification}
+                            onAsk={() => {
+                              markNotificationRead(notification.id);
+                              setOpen(false);
+                            }}
+                            className="mt-1.5"
+                          />
+                        ) : null}
                       </span>
                       <ChevronRight className="text-muted-foreground mt-1 size-4 shrink-0 opacity-50" />
-                    </button>
+                    </div>
                   </li>
                 );
               })}

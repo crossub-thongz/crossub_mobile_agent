@@ -43,41 +43,41 @@ function addressesMatch(a: string, b: string): boolean {
   return left === right || left.includes(right) || right.includes(left);
 }
 
-/** Property address as title; message body without a duplicated address prefix. */
+/** Shortest lead-in that counts as the message repeating its title, so a stray word never does. */
+const TITLE_LEAD_MIN_CHARS = 12;
+
+/**
+ * A card's heading, the property it is about (null when the heading already names it) and its
+ * message. The heading is the notification's own title: taking it from the message up to its
+ * first colon cut times in half ("12:08") and hid what the card was for. A message that opens by
+ * repeating its address or its title, then a colon, loses that lead-in.
+ */
 export function agentNotificationDisplay(notification: AgentNotification): {
   title: string;
+  address: string | null;
   body: string;
 } {
+  const address = notification.propertyAddress?.trim() ?? '';
   if (isTerminationNoticeNotification(notification)) {
-    const address = notification.propertyAddress?.trim() ?? '';
     return {
       title: address || 'Termination',
+      address: null,
       body: terminationNoticeReasonTitle(notification),
     };
   }
 
   const rawBody = notification.body?.trim() ?? '';
-  const address = notification.propertyAddress?.trim() ?? '';
-  const bodyParts = rawBody ? splitBodyPrefix(rawBody) : null;
+  const title = notification.title?.trim() || address || 'Notification';
+  const titleKey = normalizeAddressKey(title);
+  const lead = rawBody ? splitBodyPrefix(rawBody) : null;
+  const leadRepeats =
+    lead != null &&
+    ((address !== '' && addressesMatch(lead.prefix, address)) ||
+      (lead.prefix.length >= TITLE_LEAD_MIN_CHARS && titleKey.includes(normalizeAddressKey(lead.prefix))));
+  const body = (leadRepeats && lead ? lead.detail : rawBody) || notification.actionRequired?.trim() || '';
+  const titleNamesAddress = address !== '' && titleKey.includes(normalizeAddressKey(address));
 
-  let title = address || notification.title?.trim() || 'Notification';
-  let body = rawBody;
-
-  if (address && bodyParts && addressesMatch(bodyParts.prefix, address)) {
-    body = bodyParts.detail;
-  } else if (!address && bodyParts) {
-    title = bodyParts.prefix;
-    body = bodyParts.detail;
-  }
-
-  if (!body) {
-    body =
-      notification.actionRequired?.trim() ||
-      notification.title?.trim() ||
-      rawBody;
-  }
-
-  return { title, body };
+  return { title, address: address && !titleNamesAddress ? address : null, body };
 }
 
 function firstClause(text: string): string {

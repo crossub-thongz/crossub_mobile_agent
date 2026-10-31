@@ -745,6 +745,8 @@ export interface AgentNotification {
   source?: 'api';
   overdueHours?: number;
   escalationNote?: string;
+  /** Cros raised it itself (the morning briefing, a follow up set with Cros). */
+  fromCros: boolean;
 }
 
 export interface TenantSelectionCase {

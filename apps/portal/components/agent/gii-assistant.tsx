@@ -1058,6 +1058,12 @@ export function GiiAssistant({
     scope?.initialPrompt,
   ]);
 
+  // A shell launch's prompt is cleared once sent, so the next launch (another Ask on a
+  // notification or a highlight) must be allowed to send its own.
+  useEffect(() => {
+    if (!giiLaunch?.initialPrompt && !scope?.initialPrompt) initialPromptHandledRef.current = false;
+  }, [giiLaunch?.initialPrompt, scope?.initialPrompt]);
+
   useEffect(() => {
     if (!open) {
       initialPromptHandledRef.current = false;

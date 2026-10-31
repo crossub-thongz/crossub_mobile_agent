@@ -12,11 +12,16 @@ import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialo
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import { notificationHrefToJobRow } from '@/lib/notification-navigation';
+import { useShellDockStore } from '@/lib/shell-dock-store';
 import { useAgentStore } from '@/lib/store';
 import type { AgentNotification } from '@/lib/types';
+import { isCrosOpenHref } from '@/utils/cros-link';
 
 type AgentNotificationDialogContextValue = {
-  /** Open the portfolio case popup for this notification when the href maps to a case row. */
+  /**
+   * Open what a notification points at in place: Cros for a Cros link, else the portfolio case
+   * popup when the href maps to a case row. False when the caller should navigate instead.
+   */
   openNotification: (notification: Pick<AgentNotification, 'href'>) => boolean;
   openNotificationHref: (href: string) => boolean;
 };
@@ -28,6 +33,7 @@ export function AgentNotificationDialogProvider({ children }: { children: ReactN
   const agentData = useAgentData();
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
   const { selectedJob, openJob, closeJob } = usePortfolioCaseDialog();
+  const openGii = useShellDockStore((state) => state.openGii);
 
   const portfolioData = useMemo(
     () => ({
@@ -48,12 +54,18 @@ export function AgentNotificationDialogProvider({ children }: { children: ReactN
 
   const openNotificationHref = useCallback(
     (href: string) => {
+      // The ?cros=open param is read only when a page first loads, so a tap inside the app
+      // opens Cros here rather than navigating to a page that would ignore it.
+      if (isCrosOpenHref(href)) {
+        openGii();
+        return true;
+      }
       const job = notificationHrefToJobRow(href, portfolioData);
       if (!job) return false;
       openJob(job);
       return true;
     },
-    [openJob, portfolioData],
+    [openGii, openJob, portfolioData],
   );
 
   const openNotification = useCallback(

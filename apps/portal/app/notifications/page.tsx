@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { DataSourceBadge } from '@/components/agent/data-source-badge';
+import { AskCrosButton, CrosNameText, FromCrosMark } from '@/components/agent/cros-notification-parts';
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { StatusBadge } from '@/components/agent/status-badge';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAgentNotificationDialog } from '@/components/providers/agent-notification-dialog-provider';
 import { agentNotificationDisplay } from '@/lib/notification-activity';
-import { formatDateTime } from '@/lib/utils';
+import { cn, formatDateTime } from '@/lib/utils';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -25,8 +25,7 @@ const FILTERS = [
 export default function NotificationsPage() {
   const [filter, setFilter] = useState('all');
   const router = useRouter();
-  const { notifications, markNotificationRead, markAllNotificationsRead, apiConnected } =
-    useAgentData();
+  const { notifications, markNotificationRead, markAllNotificationsRead } = useAgentData();
   const { openNotification } = useAgentNotificationDialog();
 
   const handleOpen = (notification: (typeof notifications)[number]) => {
@@ -48,8 +47,7 @@ export default function NotificationsPage() {
   return (
     <AgentShell title="Notifications">
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <DataSourceBadge source={apiConnected ? 'api' : 'offline'} />
+        <div className="flex items-center justify-end gap-2">
           {unreadCount > 0 && (
             <Button
               variant="ghost"
@@ -76,17 +74,25 @@ export default function NotificationsPage() {
             {list.map((n) => {
               const display = agentNotificationDisplay(n);
               return (
-              <button
+              <div
                 key={n.id}
-                type="button"
-                onClick={() => handleOpen(n)}
-                className="block w-full rounded-xl border bg-card p-4 text-left active:bg-secondary/50"
+                className={cn(
+                  'relative rounded-xl border bg-card p-4',
+                  n.fromCros && 'border-primary/30',
+                )}
               >
-                <div className="flex items-start justify-between gap-2">
+                {/* The whole card opens it; the Cros name and Ask button sit above and take their own taps. */}
+                <button
+                  type="button"
+                  onClick={() => handleOpen(n)}
+                  aria-label={display.title}
+                  className="absolute inset-0 rounded-xl active:bg-secondary/50"
+                />
+                <div className="pointer-events-none relative flex items-start justify-between gap-2">
                   <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       {!n.read && <span className="bg-primary size-2 rounded-full" />}
-                      <DataSourceBadge source={n.source} />
+                      {n.fromCros && <FromCrosMark />}
                       {n.type === 'approval' && (
                         <StatusBadge label="Approval" variant="approval" />
                       )}
@@ -95,17 +101,29 @@ export default function NotificationsPage() {
                       )}
                     </div>
                     <p className="text-sm font-semibold leading-snug">{display.title}</p>
-                    <p className="text-muted-foreground text-sm leading-relaxed">{display.body}</p>
+                    {display.address && (
+                      <p className="text-muted-foreground text-xs">{display.address}</p>
+                    )}
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      <CrosNameText text={display.body} />
+                    </p>
                     {n.actionRequired && (
                       <p className="text-primary text-xs font-medium">{n.actionRequired}</p>
                     )}
                     <p className="text-muted-foreground text-[12px]">
                       {formatDateTime(n.at)}
                     </p>
+                    {n.fromCros && (
+                      <AskCrosButton
+                        notification={n}
+                        onAsk={() => markNotificationRead(n.id)}
+                        className="mt-1"
+                      />
+                    )}
                   </div>
                   <ChevronRight className="text-muted-foreground size-4 shrink-0" />
                 </div>
-              </button>
+              </div>
             );
             })}
           </div>

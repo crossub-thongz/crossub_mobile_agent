@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, CheckCircle2, FileText, X } from 'lucide-react';
 
+import { AskCrosButton, CrosNameText, FromCrosMark } from '@/components/agent/cros-notification-parts';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAgentNotificationDialog } from '@/components/providers/agent-notification-dialog-provider';
@@ -173,10 +174,17 @@ export function AgentNotificationLiveAlert() {
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-primary text-[11px] font-semibold tracking-wider uppercase">
-                  New notification
-                </p>
+                {current.fromCros ? (
+                  <FromCrosMark />
+                ) : (
+                  <p className="text-primary text-[11px] font-semibold tracking-wider uppercase">
+                    New notification
+                  </p>
+                )}
                 <p className="mt-0.5 text-sm font-semibold leading-snug">{display.title}</p>
+                {display.address ? (
+                  <p className="text-muted-foreground mt-0.5 truncate text-xs">{display.address}</p>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -188,7 +196,7 @@ export function AgentNotificationLiveAlert() {
               </button>
             </div>
             <p className="text-muted-foreground mt-1 line-clamp-3 text-sm leading-relaxed">
-              {display.body}
+              <CrosNameText text={display.body} onOpen={dismissCurrent} />
             </p>
             {current.actionRequired ? (
               isAgentPaymentNotification(current) ? (
@@ -212,6 +220,13 @@ export function AgentNotificationLiveAlert() {
               <Button size="sm" className="h-8 text-xs" onClick={openCurrent}>
                 Open
               </Button>
+              {current.fromCros ? (
+                <AskCrosButton
+                  notification={current}
+                  onAsk={dismissCurrent}
+                  className="h-8"
+                />
+              ) : null}
               <Button
                 size="sm"
                 variant="outline"

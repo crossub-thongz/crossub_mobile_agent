@@ -1016,6 +1016,7 @@ export function mapAgentNotifications(
     href: n.href,
     actionRequired: n.actionRequired ?? undefined,
     source: 'api',
+    fromCros: n.fromCros,
   }));
 }
 
