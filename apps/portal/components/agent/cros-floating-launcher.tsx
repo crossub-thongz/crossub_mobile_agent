@@ -3,6 +3,7 @@
 import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useCrosToday } from '@/components/providers/cros-today-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { ROUTES } from '@/constants/routes';
@@ -27,7 +28,8 @@ export function CrosFloatingLauncher({
   crosRailOnDesktop?: boolean;
 }) {
   const isV2 = useIsAgentUiV2();
-  const { properties, needActionItems } = useAgentData();
+  const { properties } = useAgentData();
+  const { total: attentionCount } = useCrosToday();
   const activePanel = useShellDockStore((s) => s.activePanel);
   const giiExpanded = useShellDockStore((s) => s.giiExpanded);
   const openGii = useShellDockStore((s) => s.openGii);
@@ -38,7 +40,6 @@ export function CrosFloatingLauncher({
   const isDashboard = pathname === ROUTES.DASHBOARD;
   const panelOpen = activePanel === 'gii';
   const messageThread = isActiveChatPath(pathname);
-  const attentionCount = needActionItems.length;
 
   const showFab = !panelOpen && !messageThread && !crosRailOnDesktop;
 

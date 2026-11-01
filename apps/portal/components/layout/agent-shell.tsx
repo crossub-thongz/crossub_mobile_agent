@@ -29,6 +29,7 @@ import { ShellBackButton } from '@/components/layout/shell-back-button';
 import { PortalNavigationTracker } from '@/components/layout/portal-navigation-tracker';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useCrosToday } from '@/components/providers/cros-today-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 import { useCrosOpenParam } from '@/hooks/use-cros-open-param';
@@ -100,9 +101,9 @@ export function AgentShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(56);
-  const { hasFullManagementAccess, unreadNotificationCount, needActionItems, platformBillingDisabled } = useAgentData();
+  const { hasFullManagementAccess, unreadNotificationCount, platformBillingDisabled } = useAgentData();
   const selfManagedAccess = useSelfManagedAccess();
-  const propertyNeedActionCount = needActionItems.length;
+  const { total: needsYouCount } = useCrosToday();
   const propertiesPageActive = useShellAsideStore((s) => s.propertiesPageActive);
   const propertyPreviewId = useShellAsideStore((s) => s.propertyPreviewId);
   const setHeaderCrosLauncher = useShellAsideStore((s) => s.setHeaderCrosLauncher);
@@ -517,7 +518,7 @@ export function AgentShell({
           <div className="flex h-16 items-stretch justify-around px-1 ui-v2:h-14 ui-v2:px-1.5 ui-v2:py-1">
             {primaryNav.map(({ href, label, icon: Icon }) => {
               const active = isActive(pathname, href);
-              const needActionBadge = href === ROUTES.TASKS ? propertyNeedActionCount : 0;
+              const needActionBadge = href === ROUTES.TASKS ? needsYouCount : 0;
               return (
                 <Link
                   key={href}

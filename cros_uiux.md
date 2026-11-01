@@ -44,10 +44,13 @@ Backend paths are in `crossub_web/apps/api/src`; app paths are in `apps/portal`.
 
 ## 2. Next
 
-- [ ] **One number everywhere.** At the same moment: Cros button badge 3, Insights 5, briefing 10, Tasks 3, Needs Your Attention 3 pending. The Discover cards also disagree with the dashboard (rent reviews 1 open vs 0; lease renewals nothing waiting vs 1; maintenance nothing waiting while the briefing lists 2 repairs). The briefing becomes the one source and every badge shows its count.
-- [ ] **Two tabs: Today and Chat.** Discover and Insights repeat the same alerts and events. Today holds the briefing; History moves behind a small icon.
-- [ ] **Chat is never blank.** An empty chat shows three suggested questions.
-- [ ] **A compact "What can I help with?"** The cards are large but hold about three words each; a short list lets the whole briefing fit on one screen.
+- [x] **One number everywhere.** At the same moment: Cros button badge 3, Insights 5, briefing 10, Tasks 3, Needs Your Attention 3 pending. The Discover cards also disagree with the dashboard (rent reviews 1 open vs 0; lease renewals nothing waiting vs 1; maintenance nothing waiting while the briefing lists 2 repairs). The briefing becomes the one source and every badge shows its count.
+  - Decided 1 Nov 2026: everywhere, including the Tasks badge. The Cros button, the Today tab, the dashboard and the Tasks badge read one list (`components/providers/cros-today-provider.tsx`): the server briefing plus the Tasks rows it does not list.
+  - Backend: a later read of the briefing lists what is waiting now (`agent-briefing.service.ts`), so a row dealt with drops off; the stored morning copy still drives the bell card and phone alert.
+  - Dashboard "Needs Your Attention" splits the count into Rent, Repairs, Leases and Other, which add up; Tasks shows the rest under "Also waiting on you".
+- [x] **Two tabs: Today and Chat.** Discover and Insights repeat the same alerts and events. Today holds the briefing; History moves behind a small icon.
+- [x] **Chat is never blank.** An empty chat shows three suggested questions.
+- [x] **A compact "What can I help with?"** The cards are large but hold about three words each; a short list lets the whole briefing fit on one screen. The topics carry no counts.
 - [ ] **Phone check.** This walk through was desktop only; repeat it at phone width.
 
 ## 3. Needs a decision
@@ -64,3 +67,4 @@ Backend paths are in `crossub_web/apps/api/src`; app paths are in `apps/portal`.
 | 31 Oct 2026 | Walk through on staging; tracker started |
 | 31 Oct 2026 | 1.1 Notifications done (crossub_web 7a6cd1411, contract 0.68.0; agent app 59a4b6c, be4f89a). Cards CROSSUB sent before the change keep their old wording and links |
 | 31 Oct 2026 | 1.2 and 1.3 done (crossub_web 1929f5e5e; agent app panel fixes). "What needs me today?" sends the card's own rows; the panel stopped jumping down on the briefing refresh; the mic had no background under the v2 look (gradients are flattened there). The header now reads Talk; mute stays a separate icon |
+| 1 Nov 2026 | Section 2 built: one live count (crossub_web 49ce69479, contract 0.69.0), Today and Chat tabs, chat starters, compact help list, Tasks "Also waiting on you" |

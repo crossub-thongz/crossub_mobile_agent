@@ -11,6 +11,7 @@ import { BillingBlockedGate } from '@/components/auth/billing-blocked-gate';
 import { SalesAgreementGate } from '@/components/auth/sales-agreement-gate';
 import { PortalServiceLevelGate } from '@/components/auth/portal-service-level-gate';
 import { AgentDataProvider } from '@/components/providers/agent-data-provider';
+import { CrosTodayProvider } from '@/components/providers/cros-today-provider';
 import { AgentNotificationLiveAlert } from '@/components/agent/agent-notification-live-alert';
 import { AgentNotificationDialogProvider } from '@/components/providers/agent-notification-dialog-provider';
 import { ProviderErrorBoundary } from '@/components/providers/provider-error-boundary';
@@ -106,6 +107,7 @@ export default function RootLayout({
                   <BillingBlockedGate>
                     <SalesAgreementGate>
                     <AgentDataProvider>
+                      <CrosTodayProvider>
                       <PortalServiceLevelGate>
                       <AgentNotificationDialogProvider>
                         <AgentPageGuideProvider>
@@ -133,6 +135,7 @@ export default function RootLayout({
                         </AgentPageGuideProvider>
                       </AgentNotificationDialogProvider>
                     </PortalServiceLevelGate>
+                      </CrosTodayProvider>
                   </AgentDataProvider>
                     </SalesAgreementGate>
                   </BillingBlockedGate>

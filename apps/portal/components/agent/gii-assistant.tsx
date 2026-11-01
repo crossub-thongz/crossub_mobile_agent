@@ -38,7 +38,6 @@ import {
 import {
   CrosPortfolioBody,
   CrosPortfolioTabs,
-  useCrosPortfolioModel,
   type CrosPortfolioView,
 } from '@/components/agent/cros-portfolio-views';
 import { GiiBriefingCard } from '@/components/agent/gii-briefing-card';
@@ -86,11 +85,13 @@ import { MESSAGE_GII_PROMPTS } from '@/constants/gii-message-prompts';
 import { buildGiiBriefing, type GiiBriefing } from '@/lib/gii-briefing';
 import {
   briefingContextForCros,
-  briefingExtraTasks,
+  briefingItemQuestion,
   briefingTaskDetailForCros,
   serverBriefingGreeting,
 } from '@/lib/gii-server-briefing';
 import type { TaskListV2Row } from '@/lib/task-list-v2';
+import { useCrosToday } from '@/components/providers/cros-today-provider';
+import { CROS_CHAT_EMPTY_LEAD, CROS_CHAT_STARTERS, CROS_TODAY_LIST_TITLE } from '@/constants/cros-panel';
 import {
   primeGiiVoiceStatus,
   resolveSpeechLanguage,
@@ -105,11 +106,9 @@ import { useAgentStore } from '@/lib/store';
 import type { PropertyNeedAction } from '@/lib/types';
 import { needActionToJobRow } from '@/lib/portfolio-case-dialog';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
-import { usePortfolioTaskRows } from '@/hooks/use-portfolio-task-rows';
 import {
   confirmGiiProposal,
   deleteGiiConversation,
-  getGiiBriefing,
   getGiiConversation,
   listGiiConversations,
   markGiiBriefingSeen,
@@ -122,7 +121,6 @@ import {
   type GiiConversationSummary,
   type GiiJobCaseLink,
   type GiiProposal,
-  type GiiServerBriefing,
   type GiiServerBriefingItem,
 } from '@/lib/crossub-api/gii-client';
 import {
@@ -263,6 +261,12 @@ function replyLanguageDirective(recentUserText: string): string {
   }
   return 'Reply in the same language as the agent\'s messages in this conversation.';
 }
+
+const CHAT_STARTER_CLASS =
+  'rounded-full border border-[#d7eee6] bg-white px-3 py-1.5 text-left text-sm font-semibold text-slate-700 hover:border-[#00bd85]';
+
+/** No extra task rows: a stable empty list, so memos keyed on it do not rerun. */
+const NO_TASK_ROWS: TaskListV2Row[] = [];
 
 export function GiiAssistant({
   open,
@@ -448,15 +452,15 @@ export function GiiAssistant({
     return formatPropertyFullAddress(scopedProperty);
   }, [effectiveLaunch.propertyAddress, scopedProperty]);
 
-  /** Portfolio CROS — Discover, chat, insights, and this session's history. */
+  /** Portfolio CROS — Today, chat, and past chats. */
   const isPortfolioCros = (isPanel || isModal) && isV2 && !scopedProperty && !messageScoped;
   const isFrostedV2Panel = isPanel && isV2 && !isPortfolioCros;
-  const [crosView, setCrosView] = useState<CrosPortfolioView>('discover');
+  const [crosView, setCrosView] = useState<CrosPortfolioView>('today');
   const teamChat = useGiiHandoff(open);
   const heldThreadId = teamChat.held?.threadId ?? null;
   /** The Cros line the team chat follows (the handoff's answer), so later turns sit below it. */
   const [handoffAnchorId, setHandoffAnchorId] = useState<string | null>(null);
-  // A chat a person holds is where the agent is: open it rather than the Discover view.
+  // A chat a person holds is where the agent is: open it rather than the Today view.
   useEffect(() => {
     if (heldThreadId && portfolioCrosRef.current) setCrosView('chat');
   }, [heldThreadId]);
@@ -467,7 +471,6 @@ export function GiiAssistant({
   const crosSavedKeyRef = useRef<string | null>(null);
   const portfolioCrosRef = useRef(false);
   portfolioCrosRef.current = isPortfolioCros;
-  const portfolioModel = useCrosPortfolioModel();
 
   // On a property, Gii opens with that property's IN-PROGRESS JOBS — the same "Jobs in
   // progress" set the Overview tab shows (one shared selector, so the two never disagree),
@@ -522,22 +525,15 @@ export function GiiAssistant({
 
   // Jarvis 2.2: on the portfolio, Cros opens with the briefing the server built this morning.
   // The briefing built here from the loaded list stays as the fallback when it cannot be read.
+  // The list is read once for the whole app, so this card, the Cros button and the dashboard show
+  // the same count; opening Cros reads it again.
   const briefingScope = !scopedProperty && !messageScoped;
-  const [serverBriefing, setServerBriefing] = useState<GiiServerBriefing | null>(null);
+  const crosToday = useCrosToday();
+  const refreshCrosToday = crosToday.refresh;
+  const serverBriefing = briefingScope ? crosToday.briefing : null;
   useEffect(() => {
-    if (!briefingScope) return;
-    let live = true;
-    getGiiBriefing()
-      .then((briefing) => {
-        if (live) setServerBriefing(briefing);
-      })
-      .catch(() => {
-        if (live) setServerBriefing(null);
-      });
-    return () => {
-      live = false;
-    };
-  }, [briefingScope]);
+    if (open && briefingScope) refreshCrosToday();
+  }, [briefingScope, open, refreshCrosToday]);
   const seenBriefingRef = useRef<string | null>(null);
   useEffect(() => {
     if (!serverBriefing || seenBriefingRef.current === serverBriefing.briefingDate) return;
@@ -548,11 +544,7 @@ export function GiiAssistant({
   }, [serverBriefing]);
   // The Tasks page's "Needs My Action" rows the server does not cover (leasing approvals, vacate
   // notices, a job's next step), so Cros never says nothing is waiting while Tasks lists work.
-  const taskRows = usePortfolioTaskRows();
-  const briefingTasks = useMemo(
-    () => (serverBriefing ? briefingExtraTasks(serverBriefing, taskRows) : []),
-    [serverBriefing, taskRows],
-  );
+  const briefingTasks = serverBriefing ? crosToday.extraTasks : NO_TASK_ROWS;
 
   const greetingText = useMemo(() => {
     if (messageScoped && scopedAddress) {
@@ -789,7 +781,7 @@ export function GiiAssistant({
   }, [isEmbedded, lines, scrollChatToBottom]);
 
   // Live briefing refreshes (5s poll) — page-scroll surfaces only; never yank scroll position.
-  // Not on Cros's Discover, Insights or History: they read from the top, and following the
+  // Not on Cros's Today or past chats: they read from the top, and following the
   // poll dropped the agent past the greeting and the briefing.
   const portfolioListView = isPortfolioCros && crosView !== 'chat';
   useEffect(() => {
@@ -1156,7 +1148,7 @@ export function GiiAssistant({
     crosSavedKeyRef.current = null;
     setLines([]);
     lastTurnScreenPropertyIdRef.current = null;
-    setCrosView('discover');
+    setCrosView('chat');
   };
 
   /** "What needs me today?" with the briefing card's own rows, so the answer matches the card. */
@@ -1178,8 +1170,7 @@ export function GiiAssistant({
       contextRef.current = { propertyId: item.propertyId, propertyLabel: address };
       propertyContextRef.current = itemProperty ? buildGiiPropertyContext({ property: itemProperty, address }) : null;
     }
-    const where = item.propertyAddress ? ` at ${item.propertyAddress}` : '';
-    void runQuery(`Give me an update on ${item.title}${where} (${item.detail}).`);
+    void runQuery(briefingItemQuestion(item));
   };
 
   /** Ask Cros about a task from the Tasks page, scoped to its property. */
@@ -1762,7 +1753,7 @@ export function GiiAssistant({
         <CrosPortfolioTabs
           view={crosView}
           onView={setCrosView}
-          insightCount={portfolioModel.insights.length}
+          todayCount={crosToday.total}
         />
       ) : null}
         <>
@@ -1808,7 +1799,7 @@ export function GiiAssistant({
                     tasks={briefingTasks}
                     onAskTask={askAboutTask}
                     onOpenTask={(row) => router.push(row.href)}
-                    title="Your morning briefing"
+                    title={CROS_TODAY_LIST_TITLE}
                     onNavigate={onClose}
                     onAsk={askAboutBriefingItem}
                     onOpen={(link) => void openJobCaseLink(link)}
@@ -1881,6 +1872,27 @@ export function GiiAssistant({
                 ? `Ask ${CROS_ASSISTANT_NAME} to create a job or check this property.`
                 : multilingualHint()}
             </p>
+          </div>
+        ) : null}
+
+        {isPortfolioCros && crosView === 'chat' && lines.length === 0 && !sending && !data.loading ? (
+          <div className="space-y-3">
+            <GiiChatGreeting text={CROS_CHAT_EMPTY_LEAD} />
+            <div className="flex flex-col items-start gap-2">
+              <button type="button" onClick={askWhatNeedsMeToday} className={CHAT_STARTER_CLASS}>
+                {CROS_TODAY_QUESTION.LABEL} <span className="text-[#00bd85]">↗</span>
+              </button>
+              {CROS_CHAT_STARTERS.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => void runQuery(item.prompt)}
+                  className={CHAT_STARTER_CLASS}
+                >
+                  {item.label} <span className="text-[#00bd85]">↗</span>
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
 

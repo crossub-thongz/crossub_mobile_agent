@@ -1,21 +1,12 @@
 'use client';
 
 import { useMemo, type ReactNode } from 'react';
-import {
-  ArrowUpRight,
-  ClipboardList,
-  Compass,
-  Home,
-  MessageSquare,
-  Sparkles,
-  Trash2,
-  Wrench,
-} from 'lucide-react';
+import { ArrowUpRight, ClipboardList, Compass, Home, MessageSquare, Trash2, Wrench } from 'lucide-react';
 
 import { CrosPageRecommendation } from '@/components/agent/recommendation-slideshow';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
-import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import { CROS_HELP_TOPIC, CROS_PANEL_TAB, CROS_TODAY_PROMPT } from '@/constants/cros-panel';
 import { CROS_TODAY_QUESTION } from '@/constants/gii-briefing';
 import { GII_CONVERSATION_COPY } from '@/constants/gii-conversation';
 import {
@@ -25,87 +16,39 @@ import {
   vacatingDetail,
 } from '@/constants/routes';
 import type { GiiConversationSummary } from '@/lib/crossub-api/gii-client';
-import { buildDashboardBoard, type DashboardEvent } from '@/lib/dashboard-board';
+import { buildDashboardBoard } from '@/lib/dashboard-board';
 import { formatPropertyDateTime } from '@/lib/format-datetime';
-import type { PropertyNeedAction } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-export type CrosPortfolioView = 'discover' | 'chat' | 'insights' | 'history';
+/** Today: what needs the agent and what Cros can help with. Chat: the conversation. History: past chats. */
+export type CrosPortfolioView = 'today' | 'chat' | 'history';
 
-type InsightRow = {
-  id: string;
-  section: 'attention' | 'upcoming';
-  title: string;
-  address: string;
-  detail: string;
-  prompt: string;
-};
-
-type HelpTile = {
+type HelpTopic = {
   id: string;
   title: string;
-  detail: string;
   prompt: string;
   icon: typeof Home;
 };
 
-function plural(count: number, singular: string, pluralLabel = `${singular}s`): string {
-  return `${count} ${count === 1 ? singular : pluralLabel}`;
-}
-
-function countPrompt(count: number, noun: string, tail: string): string {
-  const verb = count === 1 ? 'needs' : 'need';
-  return `Help me with ${plural(count, noun)} that ${verb} ${tail}.`;
-}
-
-function eventKind(title: string): string {
-  const value = title.toLowerCase();
-  if (value.includes('rent')) return 'rent';
-  if (value.includes('lease')) return 'lease';
-  if (value.includes('maintenance') || value.includes('quote')) return 'maintenance';
-  if (value.includes('inspection')) return 'inspection';
-  if (value.includes('vacat')) return 'vacating';
-  return value;
-}
-
-function attentionKind(item: PropertyNeedAction): string {
-  const label = `${item.category} ${item.label}`.toLowerCase();
-  if (label.includes('rent')) return 'rent';
-  if (label.includes('lease') || label.includes('renew')) return 'lease';
-  if (item.category === 'Maintenance' || label.includes('maintenance') || label.includes('repair')) {
-    return 'maintenance';
-  }
-  if (item.category === 'Inspection' || label.includes('inspection')) return 'inspection';
-  if (label.includes('vacat')) return 'vacating';
-  return item.category.toLowerCase();
-}
-
-function promptFor(title: string, address: string, detail: string): string {
-  const where = address ? ` at ${address}` : '';
-  const extra = detail ? ` ${detail}.` : '';
-  return `Help me with ${title}${where}.${extra}`.replace(/\s+/g, ' ').trim();
-}
-
 export function CrosPortfolioTabs({
   view,
   onView,
-  insightCount,
+  todayCount,
 }: {
   view: CrosPortfolioView;
   onView: (view: CrosPortfolioView) => void;
-  insightCount: number;
+  /** What needs the agent; the same number as the Cros button. */
+  todayCount: number;
 }) {
   const tabs: { id: CrosPortfolioView; label: string; icon: typeof Compass; count?: number }[] = [
-    { id: 'discover', label: 'Discover', icon: Compass },
-    { id: 'chat', label: 'Chat', icon: MessageSquare },
-    { id: 'insights', label: 'Insights', icon: Sparkles, count: insightCount },
-    { id: 'history', label: 'History', icon: Home },
+    { id: 'today', label: CROS_PANEL_TAB.TODAY, icon: Compass, count: todayCount },
+    { id: 'chat', label: CROS_PANEL_TAB.CHAT, icon: MessageSquare },
   ];
 
   return (
-    <div className="flex shrink-0 flex-wrap gap-1 border-b border-[#ccece3] px-3 py-2">
+    <div className="flex shrink-0 items-center gap-1 border-b border-[#ccece3] px-3 py-2">
       {tabs.map((tab) => {
-        const Icon = tab.id === 'history' ? HistoryIcon : tab.icon;
+        const Icon = tab.icon;
         const active = view === tab.id;
         return (
           <button
@@ -127,6 +70,18 @@ export function CrosPortfolioTabs({
           </button>
         );
       })}
+      <button
+        type="button"
+        onClick={() => onView('history')}
+        aria-label={CROS_PANEL_TAB.HISTORY}
+        title={CROS_PANEL_TAB.HISTORY}
+        className={cn(
+          'ml-auto flex size-9 items-center justify-center rounded-full',
+          view === 'history' ? 'bg-[#e7f8f2] text-[#067a56]' : 'text-slate-500 hover:bg-white/70',
+        )}
+      >
+        <HistoryIcon className="size-4" />
+      </button>
     </div>
   );
 }
@@ -140,16 +95,13 @@ function HistoryIcon({ className }: { className?: string }) {
   );
 }
 
+/** The Today tab's suggested questions and help topics. No counts: the briefing carries those. */
 export function useCrosPortfolioModel() {
   const { user } = useAuth();
   const data = useAgentData();
   const fullService = data.hasFullManagementAccess;
 
   return useMemo(() => {
-    const attention = data.needActionItems.filter((item) => {
-      if (fullService) return true;
-      return item.category === 'Inspection' || item.category === 'Tribunal';
-    });
     const board = buildDashboardBoard({
       properties: data.properties,
       rentReviews: data.rentReviews,
@@ -157,7 +109,7 @@ export function useCrosPortfolioModel() {
       maintenance: data.maintenanceAll,
       vacating: data.vacating,
       accounting: data.accounting,
-      needActionItems: attention,
+      needActionItems: data.needActionItems,
       rentReviewHref: (id) => rentReviewDetail(id),
       inspectionHref: (id) => inspectionDetail(id),
       vacatingHref: (id) => vacatingDetail(id),
@@ -165,184 +117,28 @@ export function useCrosPortfolioModel() {
       fullService,
     });
     const events = [...board.lanes.decision, ...board.lanes.arranged, ...board.lanes.upcoming];
-    const covered = new Set(attention.map((item) => `${item.propertyId}:${attentionKind(item)}`));
-    const upcoming = events.filter((event) => {
-      const propertyId = propertyIdFromEvent(event, data.properties);
-      if (!propertyId) return true;
-      return !covered.has(`${propertyId}:${eventKind(event.title)}`);
-    });
 
-    const insights: InsightRow[] = [
-      ...attention.map((item) => ({
-        id: `attention-${item.id}`,
-        section: 'attention' as const,
-        title: item.label,
-        address: item.propertyAddress,
-        detail: item.category,
-        prompt: promptFor(item.label, item.propertyAddress, item.category),
-      })),
-      ...upcoming.map((event) => ({
-        id: `event-${event.id}`,
-        section: 'upcoming' as const,
-        title: event.title,
-        address: event.address,
-        detail: event.detail,
-        prompt: promptFor(event.title, event.address, event.detail),
-      })),
+    const prompts: { id: string; label: string; prompt: string }[] = [
+      { id: CROS_TODAY_QUESTION.ID, label: CROS_TODAY_QUESTION.LABEL, prompt: CROS_TODAY_QUESTION.TEXT },
     ];
+    if (fullService && board.attention.rentReviews.overdue > 0) prompts.push(CROS_TODAY_PROMPT.OVERDUE_RENT);
+    if (events.some((event) => event.sort <= 7)) prompts.push(CROS_TODAY_PROMPT.WEEK);
 
-    const weekCount = events.filter((event) => event.sort <= 7).length;
-    const prompts: { id: string; label: string; prompt: string }[] = [];
-    prompts.push({ id: CROS_TODAY_QUESTION.ID, label: CROS_TODAY_QUESTION.LABEL, prompt: CROS_TODAY_QUESTION.TEXT });
-    if (fullService && board.attention.rentReviews.overdue > 0) {
-      const overdue = board.attention.rentReviews.overdue;
-      prompts.push({
-        id: 'overdue-rent',
-        label: 'Show overdue rent reviews',
-        prompt: `Show my ${plural(overdue, 'overdue rent review')}.`,
-      });
-    }
-    if (weekCount > 0) {
-      prompts.push({
-        id: 'week',
-        label: 'Summarise this week',
-        prompt: `Summarise the ${plural(weekCount, 'portfolio event')} due within the next 7 days.`,
-      });
-    }
-
-    const tiles: HelpTile[] = [];
-    if (fullService) {
-      const rentWaiting = board.attention.rentReviews.count;
-      const rentOverdue = board.attention.rentReviews.overdue;
-      tiles.push({
-        id: 'rent',
-        title: 'Rent reviews',
-        icon: ClipboardList,
-        detail:
-          rentOverdue > 0
-            ? `${rentOverdue} overdue`
-            : rentWaiting > 0
-              ? `${rentWaiting} open`
-              : 'Nothing waiting',
-        prompt:
-          rentOverdue > 0
-            ? `Show my ${plural(rentOverdue, 'overdue rent review')}.`
-            : rentWaiting > 0
-              ? `Help me with the ${plural(rentWaiting, 'open rent review')}.`
-              : 'Are there any rent reviews coming up in my portfolio?',
-      });
-      const leaseWaiting = board.attention.leaseRenewals.dueSoon;
-      const leaseComing = board.attention.leaseRenewals.count;
-      tiles.push({
-        id: 'lease',
-        title: 'Lease renewals',
-        icon: Home,
-        detail:
-          leaseWaiting > 0
-            ? `${leaseWaiting} due soon`
-            : leaseComing > 0
-              ? `${leaseComing} coming up`
-              : 'Nothing waiting',
-        prompt:
-          leaseWaiting > 0
-            ? `Help me with the ${plural(leaseWaiting, 'lease renewal')} due soon.`
-            : leaseComing > 0
-              ? `Show the ${plural(leaseComing, 'lease renewal')} coming up.`
-              : 'Are there any lease renewals coming up in my portfolio?',
-      });
-      const maintenanceWaiting = attention.filter((item) => item.category === 'Maintenance').length;
-      const maintenanceOverdue = board.activity.maintenance.overdue;
-      tiles.push({
-        id: 'maintenance',
-        title: 'Maintenance',
-        icon: Wrench,
-        detail:
-          maintenanceWaiting > 0
-            ? `${maintenanceWaiting} waiting`
-            : maintenanceOverdue > 0
-              ? `${maintenanceOverdue} overdue`
-              : 'Nothing waiting',
-        prompt:
-          maintenanceWaiting > 0
-            ? countPrompt(maintenanceWaiting, 'maintenance job', 'attention')
-            : maintenanceOverdue > 0
-              ? `Show the ${plural(maintenanceOverdue, 'overdue maintenance job')}.`
-              : 'Are there any maintenance jobs coming up in my portfolio?',
-      });
-    }
-    tiles.push(
-      helpTile(
-        'inspections',
-        'Inspections',
-        board.activity.inspections.pendingFeedback,
-        'inspection',
-        ClipboardList,
-      ),
-    );
-
-    const highlights = [
-      ...board.lanes.decision.map((event) => ({
-        id: event.id,
-        title: event.title,
-        body: [event.address, event.detail].filter(Boolean).join(' · '),
-        action: 'Review with CROS',
-        prompt: promptFor(event.title, event.address, event.detail),
-      })),
-      ...attention.map((item) => ({
-        id: item.id,
-        title: item.label,
-        body: [item.propertyAddress, item.category].filter(Boolean).join(' · '),
-        action: 'Review with CROS',
-        prompt: promptFor(item.label, item.propertyAddress, item.category),
-      })),
-    ].filter((item, index, all) => all.findIndex((other) => other.prompt === item.prompt) === index)
-      .slice(0, 3);
+    const topics: HelpTopic[] = fullService
+      ? [
+          { ...CROS_HELP_TOPIC.RENT, icon: ClipboardList },
+          { ...CROS_HELP_TOPIC.LEASES, icon: Home },
+          { ...CROS_HELP_TOPIC.REPAIRS, icon: Wrench },
+          { ...CROS_HELP_TOPIC.INSPECTIONS, icon: ClipboardList },
+        ]
+      : [{ ...CROS_HELP_TOPIC.INSPECTIONS, icon: ClipboardList }];
 
     return {
       firstName: user?.firstName?.trim() || '',
-      loading: data.loading,
       prompts: prompts.slice(0, 3),
-      tiles,
-      highlights,
-      insights,
-      attentionCount: attention.length,
-      upcomingCount: upcoming.length,
+      topics,
     };
   }, [data, fullService, user?.firstName]);
-}
-
-function propertyIdFromEvent(
-  event: DashboardEvent,
-  properties: { id: string; address: string; suburb?: string }[],
-): string | null {
-    const match = properties.find((property) => {
-      const address = [property.address, property.suburb].filter(Boolean).join(', ');
-      return (
-        address === event.address ||
-        property.address === event.address ||
-        event.address.includes(property.address)
-      );
-    });
-  return match?.id ?? null;
-}
-
-function helpTile(
-  id: string,
-  title: string,
-  count: number,
-  noun: string,
-  icon: typeof Home,
-): HelpTile {
-  const waiting = count > 0;
-  return {
-    id,
-    title,
-    icon,
-    detail: waiting ? `${count} waiting` : 'Nothing waiting',
-    prompt: waiting
-      ? countPrompt(count, noun, 'attention')
-      : `Are there any ${noun}s coming up in my portfolio?`,
-  };
 }
 
 export function CrosPortfolioBody({
@@ -358,7 +154,7 @@ export function CrosPortfolioBody({
 }: {
   view: Exclude<CrosPortfolioView, 'chat'>;
   wide?: boolean;
-  /** Today's server briefing (Jarvis 2.2), shown first on Discover when it loaded. */
+  /** Today's server briefing (Jarvis 2.2), shown under the questions when it loaded. */
   briefing?: ReactNode;
   onAsk: (prompt: string) => void;
   /** "What needs me today?": asks with the briefing's rows, when the panel has them. */
@@ -370,19 +166,13 @@ export function CrosPortfolioBody({
 }) {
   const model = useCrosPortfolioModel();
 
-  if (view === 'discover') {
+  if (view === 'today') {
     return (
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div>
-          <p className="text-xs font-semibold tracking-wide text-[#00bd85] uppercase">
-            AI-powered workspace
-          </p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-900">
+          <h2 className="text-2xl font-bold text-slate-900">
             {model.firstName ? `Good to see you, ${model.firstName}` : 'Good to see you'}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            I already know the context of your portfolio. What would you like to get done today?
-          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {model.prompts.map((item) => (
               <button
@@ -405,66 +195,35 @@ export function CrosPortfolioBody({
 
         <section>
           <h3 className="text-sm font-bold text-slate-900">What can I help with?</h3>
-          <div className={cn('mt-2 grid gap-2', wide ? 'sm:grid-cols-2 xl:grid-cols-4' : 'grid-cols-1')}>
-            {model.tiles.map((tile) => {
-              const Icon = tile.icon;
+          <ul
+            className={cn(
+              'mt-2 divide-y divide-[#e3f3ed] overflow-hidden rounded-2xl border border-[#d7eee6] bg-white',
+              wide && 'sm:grid sm:grid-cols-2 sm:divide-y-0',
+            )}
+          >
+            {model.topics.map((topic) => {
+              const Icon = topic.icon;
               return (
-                <button
-                  key={tile.id}
-                  type="button"
-                  onClick={() => onAsk(tile.prompt)}
-                  className="rounded-2xl border border-[#d7eee6] bg-white p-3 text-left hover:border-[#00bd85]"
-                >
-                  <span className="flex size-8 items-center justify-center rounded-lg bg-[#e7f8f2] text-[#067a56]">
-                    <Icon className="size-4" />
-                  </span>
-                  <p className="mt-2 text-sm font-bold text-slate-900">
-                    {tile.title} <ArrowUpRight className="inline size-3.5 text-[#00bd85]" />
-                  </p>
-                  <p className="text-xs text-slate-500">{tile.detail}</p>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        <section>
-          <h3 className="text-sm font-bold text-slate-900">Intelligent highlights</h3>
-          {model.loading ? (
-            <p className="mt-2 text-sm text-slate-500">Loading your portfolio…</p>
-          ) : model.highlights.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">Nothing in the portfolio needs attention right now.</p>
-          ) : (
-            <div className="mt-2 space-y-2">
-              {model.highlights.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-[#d7eee6] bg-white p-3">
-                  <p className="text-sm font-bold text-slate-900">{item.title}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">{item.body}</p>
+                <li key={topic.id}>
                   <button
                     type="button"
-                    onClick={() => onAsk(item.prompt)}
-                    className="mt-2 text-sm font-semibold text-[#067a56]"
+                    onClick={() => onAsk(topic.prompt)}
+                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left hover:bg-[#f3fbf8]"
                   >
-                    {item.action} →
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[#e7f8f2] text-[#067a56]">
+                      <Icon className="size-3.5" />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
+                      {topic.title}
+                    </span>
+                    <ArrowUpRight className="size-3.5 shrink-0 text-[#00bd85]" />
                   </button>
-                </div>
-              ))}
-            </div>
-          )}
+                </li>
+              );
+            })}
+          </ul>
         </section>
       </div>
-    );
-  }
-
-  if (view === 'insights') {
-    return (
-      <InsightsList
-        loading={model.loading}
-        insights={model.insights}
-        attentionCount={model.attentionCount}
-        upcomingCount={model.upcomingCount}
-        onAsk={onAsk}
-      />
     );
   }
 
@@ -506,73 +265,5 @@ export function CrosPortfolioBody({
         ))
       )}
     </div>
-  );
-}
-
-function InsightsList({
-  loading,
-  insights,
-  attentionCount,
-  upcomingCount,
-  onAsk,
-}: {
-  loading: boolean;
-  insights: InsightRow[];
-  attentionCount: number;
-  upcomingCount: number;
-  onAsk: (prompt: string) => void;
-}) {
-  if (loading) return <p className="text-sm text-slate-500">Loading your portfolio…</p>;
-  if (insights.length === 0) {
-    return <p className="text-sm text-slate-500">No upcoming events or items need your attention.</p>;
-  }
-  const attention = insights.filter((row) => row.section === 'attention');
-  const upcoming = insights.filter((row) => row.section === 'upcoming');
-  return (
-    <div className="space-y-4">
-      <InsightSection title="Needs your attention" count={attentionCount} rows={attention} onAsk={onAsk} />
-      <InsightSection title="Upcoming events" count={upcomingCount} rows={upcoming} onAsk={onAsk} />
-    </div>
-  );
-}
-
-function InsightSection({
-  title,
-  count,
-  rows,
-  onAsk,
-}: {
-  title: string;
-  count: number;
-  rows: InsightRow[];
-  onAsk: (prompt: string) => void;
-}) {
-  return (
-    <section>
-      <h3 className="text-sm font-bold text-slate-900">
-        {title} <span className="text-slate-400">{count}</span>
-      </h3>
-      {rows.length === 0 ? (
-        <p className="mt-1 text-xs text-slate-500">None right now.</p>
-      ) : (
-        <div className="mt-2 space-y-2">
-          {rows.map((row) => (
-            <div key={row.id} className="rounded-2xl border border-[#d7eee6] bg-white p-3">
-              <p className="text-sm font-bold text-slate-900">{row.title}</p>
-              <p className="mt-0.5 text-xs text-slate-500">
-                {[row.address, row.detail].filter(Boolean).join(' · ')}
-              </p>
-              <button
-                type="button"
-                onClick={() => onAsk(row.prompt)}
-                className="mt-2 text-sm font-semibold text-[#067a56]"
-              >
-                Ask {CROS_ASSISTANT_NAME} →
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
   );
 }

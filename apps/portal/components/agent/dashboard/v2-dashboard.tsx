@@ -25,7 +25,9 @@ import { HomeRecommendations } from '@/components/agent/recommendation-slideshow
 import { CrosAssistantLogo } from '@/components/brand/cros-assistant-logo';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useCrosToday } from '@/components/providers/cros-today-provider';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import { NEEDS_YOU_GROUPS, NEEDS_YOU_GROUP_COPY } from '@/constants/gii-briefing';
 import {
   inspectionDetail,
   maintenanceDetail,
@@ -42,11 +44,6 @@ import {
   type DashboardHorizon,
 } from '@/lib/dashboard-board';
 import { formatDashboardMoney, greetingForNow } from '@/lib/dashboard-home';
-import {
-  buildPortfolioTaskList,
-  filterTaskListV2RowsForAgencies,
-  taskDueMeta,
-} from '@/lib/task-list-v2';
 import { useAgentStore } from '@/lib/store';
 import { useShellDockStore } from '@/lib/shell-dock-store';
 import { cn } from '@/lib/utils';
@@ -64,7 +61,6 @@ export function V2Dashboard() {
   const { user } = useAuth();
   const {
     properties,
-    agencies,
     needActionItems,
     loading,
     hasFullManagementAccess,
@@ -77,7 +73,6 @@ export function V2Dashboard() {
     leasingRecords,
     leasingCycles,
     tribunalCases,
-    getPropertyActions,
   } = useAgentData();
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
   const openGii = useShellDockStore((s) => s.openGii);
@@ -150,42 +145,7 @@ export function V2Dashboard() {
     [hasFullManagementAccess, horizon, properties, visiblePortfolio],
   );
 
-  const actionCounts = useMemo(() => {
-    const rows = filterTaskListV2RowsForAgencies(
-      buildPortfolioTaskList({
-        properties,
-        leasingRecords: visiblePortfolio.leasingRecords,
-        maintenanceAll: visiblePortfolio.maintenance,
-        inspections: visiblePortfolio.inspections,
-        rentReviews: visiblePortfolio.rentReviews,
-        rentReviewDecisions: visiblePortfolio.rentReviewDecisions,
-        leasingCycles: visiblePortfolio.leasingCycles,
-        tenantSelections: visiblePortfolio.tenantSelections,
-        vacating: visiblePortfolio.vacating,
-        tribunalCases: visiblePortfolio.tribunalCases,
-        accounting: visiblePortfolio.accounting,
-        getPropertyActions: (propertyId) => {
-          const actions = getPropertyActions(propertyId);
-          if (hasFullManagementAccess) return actions;
-          return actions.filter(
-            (item) => item.category === 'Inspection' || item.category === 'Tribunal',
-          );
-        },
-      }),
-      agencies,
-    ).filter((row) => row.bucket === 'need_action');
-    const rentReviewsNeedingAction = rows.filter((row) => row.category === 'rent_review');
-    const leaseRenewals = rows.filter((row) => row.category === 'leasing');
-    const other = rows.filter((row) => row.category !== 'rent_review' && row.category !== 'leasing');
-    const overdue = (group: typeof rows) => group.filter((row) => taskDueMeta(row).tone === 'overdue').length;
-    const dueSoon = (group: typeof rows) => group.filter((row) => taskDueMeta(row).tone === 'soon').length;
-    return {
-      total: rows.length,
-      rentReviews: { count: rentReviewsNeedingAction.length, overdue: overdue(rentReviewsNeedingAction) },
-      leaseRenewals: { count: leaseRenewals.length, dueSoon: dueSoon(leaseRenewals) },
-      other: { count: other.length, urgent: other.filter((row) => row.task.needAction?.priority === 'urgent').length },
-    };
-  }, [agencies, getPropertyActions, hasFullManagementAccess, properties, visiblePortfolio]);
+  const needsYou = useCrosToday();
 
   const occupied = properties.filter(
     (property) =>
@@ -282,69 +242,29 @@ export function V2Dashboard() {
               <Bell className="text-muted-foreground size-4" />
               Needs Your Attention
             </p>
-            {actionCounts.total > 0 ? (
+            {needsYou.total > 0 ? (
               <span className="rounded-full bg-rose-500 px-2.5 py-0.5 text-[12px] font-semibold text-white">
-                {actionCounts.total} pending
+                {needsYou.total} pending
               </span>
             ) : (
               <span className="text-muted-foreground text-xs font-medium">All clear</span>
             )}
           </div>
-          <div
-            className={cn(
-              'grid gap-3',
-              hasFullManagementAccess ? 'sm:grid-cols-3' : 'sm:grid-cols-1',
-            )}
-          >
-            {hasFullManagementAccess ? (
-              <>
-            <AttentionStat
-              href={`${ROUTES.TASKS}?status=need_action&filter=Accounting`}
-              icon={FileText}
-              iconClass="bg-rose-500/12 text-rose-600"
-              count={actionCounts.rentReviews.count}
-              label="Rent Reviews"
-              hint={
-                actionCounts.rentReviews.overdue > 0
-                  ? `${actionCounts.rentReviews.overdue} overdue`
-                  : 'None overdue'
-              }
-              hintClass={
-                actionCounts.rentReviews.overdue > 0 ? 'text-rose-600' : 'text-muted-foreground'
-              }
-            />
-            <AttentionStat
-              href={`${ROUTES.TASKS}?status=need_action&filter=Leasing`}
-              icon={Home}
-              iconClass="bg-violet-500/12 text-violet-700"
-              count={actionCounts.leaseRenewals.count}
-              label="Lease Renewals"
-              hint={
-                actionCounts.leaseRenewals.dueSoon > 0
-                  ? `${actionCounts.leaseRenewals.dueSoon} due soon`
-                  : 'None due soon'
-              }
-              hintClass={
-                actionCounts.leaseRenewals.dueSoon > 0 ? 'text-amber-700' : 'text-muted-foreground'
-              }
-            />
-              </>
-            ) : null}
-            <AttentionStat
-              href={`${ROUTES.TASKS}?status=need_action`}
-              icon={Users}
-              iconClass="bg-sky-500/12 text-sky-700"
-              count={actionCounts.other.count}
-              label="Other Decisions"
-              hint={
-                actionCounts.other.urgent > 0
-                  ? `${actionCounts.other.urgent} urgent`
-                  : 'None urgent'
-              }
-              hintClass={
-                actionCounts.other.urgent > 0 ? 'text-rose-600' : 'text-muted-foreground'
-              }
-            />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {NEEDS_YOU_GROUPS.map((group) => {
+              const copy = NEEDS_YOU_GROUP_COPY[group];
+              return (
+                <AttentionStat
+                  key={group}
+                  onOpen={() => openGii()}
+                  icon={copy.icon}
+                  iconClass={copy.tone}
+                  count={needsYou.byGroup[group]}
+                  label={copy.label}
+                  hint={copy.hint}
+                />
+              );
+            })}
           </div>
         </article>
       </div>
@@ -610,25 +530,28 @@ function selfManageSummary(summary: { needAction: number; toSchedule: number; aw
   return `${parts[0]}, ${parts[1]}, and ${parts[2]}.`;
 }
 
+/** One part of "Needs Your Attention"; tapping it opens Cros on the list. */
 function AttentionStat({
-  href,
+  onOpen,
   icon: Icon,
   iconClass,
   count,
   label,
   hint,
-  hintClass,
 }: {
-  href: string;
+  onOpen: () => void;
   icon: LucideIcon;
   iconClass: string;
   count: number;
   label: string;
   hint: string;
-  hintClass: string;
 }) {
   return (
-    <Link href={href} className="hover:bg-muted/40 rounded-2xl border bg-background/50 p-3 transition">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="hover:bg-muted/40 rounded-2xl border bg-background/50 p-3 text-left transition"
+    >
       <div className="flex items-start justify-between gap-2">
         <span className={cn('flex size-9 items-center justify-center rounded-xl', iconClass)}>
           <Icon className="size-4" />
@@ -636,8 +559,8 @@ function AttentionStat({
         <span className="text-2xl font-semibold tabular-nums leading-none">{count}</span>
       </div>
       <p className="mt-3 text-sm font-medium">{label}</p>
-      <p className={cn('mt-0.5 text-xs font-medium', hintClass)}>{hint}</p>
-    </Link>
+      <p className="text-muted-foreground mt-0.5 text-xs font-medium">{hint}</p>
+    </button>
   );
 }
 

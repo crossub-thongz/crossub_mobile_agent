@@ -1,10 +1,14 @@
 import {
   BRIEFING_TASK_NOUN,
+  NEEDS_YOU_GROUPS,
+  NEEDS_YOU_GROUP_OF_CATEGORY,
+  NEEDS_YOU_GROUP_OF_TASK,
+  type NeedsYouGroup,
   CROS_TODAY_QUESTION,
   SERVER_BRIEFING_CHANGES_NAMED,
   SERVER_BRIEFING_UNAVAILABLE_LABEL,
 } from '@/constants/gii-briefing';
-import type { GiiServerBriefing } from '@/lib/crossub-api/gii-client';
+import type { GiiServerBriefing, GiiServerBriefingItem } from '@/lib/crossub-api/gii-client';
 import { greetingLead } from '@/lib/gii-briefing';
 import {
   filterTaskListV2Rows,
@@ -22,8 +26,46 @@ import {
  */
 export function briefingExtraTasks(briefing: GiiServerBriefing, rows: TaskListV2Row[]): TaskListV2Row[] {
   const listed = new Set(briefing.items.flatMap((item) => (item.link ? [item.link.id] : [])));
-  const needAction = filterTaskListV2Rows(rows, 'need_action', 'all', '');
-  return sortTasksByDueDate(needAction.filter((row) => !listed.has(row.task.jobRow?.id ?? row.id)));
+  return sortTasksByDueDate(needActionTaskRows(rows).filter((row) => !listed.has(taskRowRecordId(row))));
+}
+
+/**
+ * The briefing rows the Tasks page's "Needs My Action" does not list: money owed, unanswered
+ * messages, leases ending, and jobs Tasks files elsewhere. With them, Tasks adds up to the count.
+ */
+export function briefingNotOnTasks(briefing: GiiServerBriefing, rows: TaskListV2Row[]): GiiServerBriefingItem[] {
+  const onTasks = new Set(needActionTaskRows(rows).map(taskRowRecordId));
+  return briefing.items.filter((item) => !item.link || !onTasks.has(item.link.id));
+}
+
+/** What Cros is asked when the agent taps Ask on a briefing row. */
+export function briefingItemQuestion(item: GiiServerBriefingItem): string {
+  const where = item.propertyAddress ? ` at ${item.propertyAddress}` : '';
+  return `Give me an update on ${item.title}${where} (${item.detail}).`;
+}
+
+/**
+ * The one count split by part: the briefing's own counts (which include rows past its list cap)
+ * plus the tasks it does not list. Without a briefing, the tasks alone.
+ */
+export function needsYouByGroup(
+  briefing: GiiServerBriefing | null,
+  tasks: TaskListV2Row[],
+): Record<NeedsYouGroup, number> {
+  const out = Object.fromEntries(NEEDS_YOU_GROUPS.map((group) => [group, 0])) as Record<NeedsYouGroup, number>;
+  for (const entry of briefing?.counts ?? []) out[NEEDS_YOU_GROUP_OF_CATEGORY[entry.category]] += entry.count;
+  for (const row of tasks) out[NEEDS_YOU_GROUP_OF_TASK[row.category]] += 1;
+  return out;
+}
+
+/** The Tasks page's "Needs My Action" rows. */
+export function needActionTaskRows(rows: TaskListV2Row[]): TaskListV2Row[] {
+  return filterTaskListV2Rows(rows, 'need_action', 'all', '');
+}
+
+/** The record a task row is about, as a briefing row links it. */
+function taskRowRecordId(row: TaskListV2Row): string {
+  return row.task.jobRow?.id ?? row.id;
 }
 
 /**

@@ -26,6 +26,7 @@ import { EmptyState } from '@/components/agent/empty-state';
 import { NewTaskActionsMenu } from '@/components/agent/tasks/new-task-actions-menu';
 import { TaskListBoardTable } from '@/components/agent/tasks/task-list-board-table';
 import { TaskMoreFiltersDrawer } from '@/components/agent/tasks/task-more-filters-drawer';
+import { TasksAlsoWaiting } from '@/components/agent/tasks/tasks-also-waiting';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { TASK_LIST_COPY } from '@/constants/agent-copy-variant';
 import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
@@ -282,6 +283,8 @@ export function V2TasksPage() {
           );
         })}
       </div>
+
+      {propertyFilter ? null : <TasksAlsoWaiting />}
 
       <section className="v2-dashboard__card grid grid-cols-1 items-center gap-3 p-3 sm:p-4 lg:grid-cols-[7.75rem_minmax(0,1fr)_28rem] lg:gap-x-4 lg:gap-y-3">
         <FilterLabel index="1" label="Work Status" />

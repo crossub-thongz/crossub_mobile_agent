@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-01
+
+### Added
+- An empty CROS chat offers "What needs me today?" and two other starting questions instead of opening blank
+- The Tasks page lists what is waiting on the agent but is not a task (money owed, unanswered messages, leases ending) under "Also waiting on you", each with Ask CROS
+
+### Changed
+- One count of what needs the agent everywhere: the CROS button, CROS's Today tab, the dashboard's "Needs Your Attention" and the Tasks badge all show the CROS list's total, read live and again when the app comes back to the front
+- The dashboard's "Needs Your Attention" is split into Rent, Repairs, Leases and Other, which add up to its total; tapping one opens CROS on the list
+- The CROS panel has two tabs, Today and Chat; past chats sit behind a clock icon, and Insights and "Intelligent highlights" are gone (they repeated the list)
+- "What can I help with?" is a short list of topics without counts; its questions no longer carry numbers that could disagree with the list
+- CROS's list is headed "Needs you now"; New chat opens the chat
+
 ## 2026-10-31
 
 ### Added

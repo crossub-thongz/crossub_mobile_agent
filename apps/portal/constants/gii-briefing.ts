@@ -26,6 +26,9 @@ export const GREETING_AFTERNOON_UNTIL_HOUR = 18;
 /** How many rows the briefing lists before "View all". Matches the dashboard preview. */
 export const BRIEFING_MAX_ROWS = 6;
 
+/** How often the app reads Cros's list again while it stays open. */
+export const CROS_TODAY_REFRESH_MS = 5 * 60_000;
+
 /** Groups named in the one-line summary before it collapses to "+N more". */
 export const BRIEFING_MAX_SUMMARY_GROUPS = 3;
 
@@ -106,6 +109,47 @@ export const SERVER_BRIEFING_ICON: Record<GiiServerBriefingCategory, LucideIcon>
   [SERVER_BRIEFING_CATEGORY.LEASE_EXPIRING]: CalendarClock,
 };
 
+/**
+ * The parts the dashboard splits "Needs Your Attention" into. Every briefing category and every
+ * task category falls in exactly one, so the parts always add up to the one count.
+ */
+export const NEEDS_YOU_GROUP = {
+  RENT: 'rent',
+  REPAIRS: 'repairs',
+  LEASES: 'leases',
+  OTHER: 'other',
+} as const;
+export type NeedsYouGroup = (typeof NEEDS_YOU_GROUP)[keyof typeof NEEDS_YOU_GROUP];
+export const NEEDS_YOU_GROUPS = Object.values(NEEDS_YOU_GROUP) as readonly NeedsYouGroup[];
+
+export const NEEDS_YOU_GROUP_OF_CATEGORY: Record<GiiServerBriefingCategory, NeedsYouGroup> = {
+  [SERVER_BRIEFING_CATEGORY.ARREARS]: NEEDS_YOU_GROUP.RENT,
+  [SERVER_BRIEFING_CATEGORY.RENT_REVIEW]: NEEDS_YOU_GROUP.RENT,
+  [SERVER_BRIEFING_CATEGORY.URGENT_REPAIR]: NEEDS_YOU_GROUP.REPAIRS,
+  [SERVER_BRIEFING_CATEGORY.QUOTE_WAITING]: NEEDS_YOU_GROUP.REPAIRS,
+  [SERVER_BRIEFING_CATEGORY.REPAIR_NEXT_STEP]: NEEDS_YOU_GROUP.REPAIRS,
+  [SERVER_BRIEFING_CATEGORY.APPLICATION_APPROVAL]: NEEDS_YOU_GROUP.LEASES,
+  [SERVER_BRIEFING_CATEGORY.END_LEASING]: NEEDS_YOU_GROUP.LEASES,
+  [SERVER_BRIEFING_CATEGORY.LEASE_EXPIRING]: NEEDS_YOU_GROUP.LEASES,
+  [SERVER_BRIEFING_CATEGORY.INSPECTION]: NEEDS_YOU_GROUP.OTHER,
+  [SERVER_BRIEFING_CATEGORY.UNANSWERED_MESSAGE]: NEEDS_YOU_GROUP.OTHER,
+};
+
+export const NEEDS_YOU_GROUP_OF_TASK: Record<TaskListV2Row['category'], NeedsYouGroup> = {
+  rent_review: NEEDS_YOU_GROUP.RENT,
+  maintenance: NEEDS_YOU_GROUP.REPAIRS,
+  leasing: NEEDS_YOU_GROUP.LEASES,
+  inspection: NEEDS_YOU_GROUP.OTHER,
+  tribunal: NEEDS_YOU_GROUP.OTHER,
+};
+
+export const NEEDS_YOU_GROUP_COPY: Record<NeedsYouGroup, { label: string; hint: string; icon: LucideIcon; tone: string }> = {
+  [NEEDS_YOU_GROUP.RENT]: { label: 'Rent', hint: 'Money owed, rent reviews', icon: Wallet, tone: 'bg-rose-500/12 text-rose-600' },
+  [NEEDS_YOU_GROUP.REPAIRS]: { label: 'Repairs', hint: 'Quotes, next steps', icon: Wrench, tone: 'bg-amber-500/12 text-amber-700' },
+  [NEEDS_YOU_GROUP.LEASES]: { label: 'Leases', hint: 'Applicants, ends of lease', icon: Building2, tone: 'bg-violet-500/12 text-violet-700' },
+  [NEEDS_YOU_GROUP.OTHER]: { label: 'Other', hint: 'Inspections, messages', icon: MessageSquare, tone: 'bg-sky-500/12 text-sky-700' },
+};
+
 /** Categories drawn in the destructive tone: the risk the briefing leads with. */
 export const SERVER_BRIEFING_URGENT: readonly GiiServerBriefingCategory[] = [
   SERVER_BRIEFING_CATEGORY.URGENT_REPAIR,
@@ -152,7 +196,7 @@ export const BRIEFING_TASK_NOUN = {
 } as const;
 
 /**
- * The first suggested question on Cros's Discover. It sends the briefing's rows with it, unseen,
+ * The first suggested question on Cros's Today tab. It sends the briefing's rows with it, unseen,
  * so Cros goes through the same list the card shows instead of guessing from a count.
  */
 export const CROS_TODAY_QUESTION = {
