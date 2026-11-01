@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, type ReactNode } from 'react';
-import { ArrowUpRight, ClipboardList, Compass, Headphones, Home, MessageSquare, Trash2, Wrench } from 'lucide-react';
+import { ArrowUpRight, ClipboardList, Home, Trash2, UsersRound, Wrench } from 'lucide-react';
 
 import { CrosPageRecommendation } from '@/components/agent/recommendation-slideshow';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -50,15 +50,15 @@ export function CrosPortfolioTabs({
   const teamLabel = teamChatHolder
     ? GII_HANDOFF_COPY.BACK_TO_TEAM(teamChatHolder.name)
     : GII_HANDOFF_COPY.TALK_TO_TEAM;
-  const tabs: { id: CrosPortfolioView; label: string; icon: typeof Compass; count?: number }[] = [
-    { id: 'today', label: CROS_PANEL_TAB.TODAY, icon: Compass, count: todayCount },
-    { id: 'chat', label: CROS_PANEL_TAB.CHAT, icon: MessageSquare },
+  // No tab icons: with the team button and past chats, the bar has to fit a 360px phone.
+  const tabs: { id: CrosPortfolioView; label: string; count?: number }[] = [
+    { id: 'today', label: CROS_PANEL_TAB.TODAY, count: todayCount },
+    { id: 'chat', label: CROS_PANEL_TAB.CHAT },
   ];
 
   return (
-    <div className="flex shrink-0 items-center gap-1 border-b border-[#ccece3] px-3 py-2">
+    <div className="flex shrink-0 items-center gap-1 border-b border-[#ccece3] px-2 py-2">
       {tabs.map((tab) => {
-        const Icon = tab.icon;
         const active = view === tab.id;
         return (
           <button
@@ -66,11 +66,10 @@ export function CrosPortfolioTabs({
             type="button"
             onClick={() => onView(tab.id)}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold',
+              'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold',
               active ? 'bg-[#e7f8f2] text-[#067a56]' : 'text-slate-500 hover:bg-white/70',
             )}
           >
-            <Icon className="size-3.5" />
             {tab.label}
             {tab.count ? (
               <span className="rounded-full bg-[#00bd85] px-1.5 text-[11px] leading-4 font-bold text-white">
@@ -85,9 +84,9 @@ export function CrosPortfolioTabs({
         onClick={onTeam}
         aria-label={teamLabel}
         title={teamLabel}
-        className="relative ml-auto inline-flex items-center gap-1.5 rounded-full border border-[#d7eee6] bg-white px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap text-[#067a56] hover:border-[#00bd85]"
+        className="relative ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#d7eee6] bg-white px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap text-[#067a56] hover:border-[#00bd85]"
       >
-        <Headphones className="size-3.5" />
+        <UsersRound className="size-3.5" />
         {GII_HANDOFF_COPY.TEAM_BUTTON}
         {teamChatHolder ? (
           <span aria-hidden className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full border-2 border-white bg-[#00bd85]" />
