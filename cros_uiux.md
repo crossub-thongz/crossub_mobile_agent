@@ -51,7 +51,10 @@ Backend paths are in `crossub_web/apps/api/src`; app paths are in `apps/portal`.
 - [x] **Two tabs: Today and Chat.** Discover and Insights repeat the same alerts and events. Today holds the briefing; History moves behind a small icon.
 - [x] **Chat is never blank.** An empty chat shows three suggested questions.
 - [x] **A compact "What can I help with?"** The cards are large but hold about three words each; a short list lets the whole briefing fit on one screen. The topics carry no counts.
-- [ ] **Phone check.** This walk through was desktop only; repeat it at phone width.
+- [x] **Phone check.** This walk through was desktop only; repeat it at phone width.
+  - Done 1 Nov 2026 at 390px (staging, Daniel): dashboard, Cros Today, Chat, past chats and the team button, Notifications, the bell, Conversations, Tasks, Properties, a property, More.
+  - Fixed: Tasks and Properties were wide tables behind a sideways swipe (now a card per row); the dashboard watchlist ran past the screen edge; Cros's typing box took a quarter of the panel and its 14px text made iOS zoom in; the past chats icon was cut off and the team button shared the Talk icon.
+  - Left as found: the Tasks heading says 17 (it counts completed tasks) beside the badge's 9; "Get a Quote with Crossub" is not written CROSSUB; an older urgent card still reads "Raised to you: MR-00199 — AI review"; the header moves between pages (logo on the dashboard, none on Tasks or More).
 
 ## 3. Needs a decision
 
@@ -77,3 +80,4 @@ Backend paths are in `crossub_web/apps/api/src`; app paths are in `apps/portal`.
 | 1 Nov 2026 | 3: the assistant is Cros everywhere; CROSSUB for the team and automatic entries (crossub_web a155db7b0) |
 | 1 Nov 2026 | 3: one inbox, Conversations, for an all Self-Manage agent (crossub_web 53672243d, contract 0.70.0) |
 | 1 Nov 2026 | 3: CROSSUB team button in Cros, after Daniel could not find the team chat |
+| 1 Nov 2026 | 2: phone check at 390px; Tasks and Properties cards, watchlist width, Cros composer |

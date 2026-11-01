@@ -356,7 +356,7 @@ export function V2Dashboard() {
         </div>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="v2-dashboard__card p-4 sm:p-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="inline-flex items-center gap-2 text-sm font-semibold">

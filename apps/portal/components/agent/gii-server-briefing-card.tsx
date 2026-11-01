@@ -84,6 +84,7 @@ export function GiiServerBriefingCard({
   onOpen,
   onAskTask,
   onOpenTask,
+  fullWidth = false,
 }: {
   briefing: GiiServerBriefing;
   tasks: TaskListV2Row[];
@@ -93,6 +94,8 @@ export function GiiServerBriefingCard({
   onOpen: (link: GiiJobCaseLink) => void;
   onAskTask: (row: TaskListV2Row) => void;
   onOpenTask: (row: TaskListV2Row) => void;
+  /** On Cros's Today tab it is a list like the others, not a chat reply. */
+  fullWidth?: boolean;
 }) {
   const total = briefing.total + tasks.length;
   if (total === 0) return null;
@@ -101,7 +104,7 @@ export function GiiServerBriefingCard({
   const now = new Date();
 
   return (
-    <div className="mr-auto w-[92%] overflow-hidden rounded-2xl border bg-card">
+    <div className={cn('overflow-hidden rounded-2xl border bg-card', fullWidth ? 'w-full' : 'mr-auto w-[92%]')}>
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
         <span className="flex items-center gap-1.5 text-[12px] font-semibold">
           <ListTodo className="size-3.5 shrink-0 text-primary" />

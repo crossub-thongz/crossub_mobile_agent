@@ -3,9 +3,14 @@
 ## 2026-11-01
 
 ### Added
+- On a phone, Tasks and Properties list each row as a card (task, property, status, due date or rent, lease end, Review/View) instead of a table that scrolled sideways
 - Cros has a "CROSSUB team" button next to its tabs: it asks Cros to hand the chat to a person, or goes back to the chat a person holds (marked with a dot); an empty chat offers "Talk to the CROSSUB team" too
 - An empty CROS chat offers "What needs me today?" and two other starting questions instead of opening blank
 - The Tasks page lists what is waiting on the agent but is not a task (money owed, unanswered messages, leases ending) under "Also waiting on you", each with Ask CROS
+
+### Fixed
+- Dashboard Portfolio Watchlist no longer runs past the screen edge on a phone
+- On a phone, Cros's typing box is two lines with 16px text (iOS no longer zooms in when it is tapped) and the keyboard hint is hidden; Cros's "Needs you now" list is full width on Today
 
 ### Changed
 - One inbox for an agent whose agencies are all Self-Manage: the header message icon, the phone Message button and its "All conversations", "Property conversations" and "New message" open Conversations and show its unread count (threads with an unread reply); Messages links forward there, and a Cros team chat link opens Cros (contract 0.70.0)

@@ -1,22 +1,26 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import { MoreHorizontal } from 'lucide-react';
+import { useMemo, useState } from "react";
+import { MoreHorizontal } from "lucide-react";
 
-import { HoverInfoList } from '@/components/agent/hover-info-list';
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { HoverInfoList } from "@/components/agent/hover-info-list";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   buildPropertyListV2LeaseExpiry,
   buildPropertyListV2RowStatus,
   formatPropertyListV2Rent,
   propertyListV2TenancyLabel,
   type PropertyListV2StatusTone,
-} from '@/lib/property-list-v2';
-import { isPropertyRegistryDraft } from '@/lib/property-registry-persist';
-import { usePropertyTenantContacts } from '@/lib/use-property-tenant-contacts';
-import type { LeasingRecord, Property, PropertyAccounting } from '@/lib/types';
-import { cn, formatCurrency } from '@/lib/utils';
+} from "@/lib/property-list-v2";
+import { isPropertyRegistryDraft } from "@/lib/property-registry-persist";
+import { usePropertyTenantContacts } from "@/lib/use-property-tenant-contacts";
+import type { LeasingRecord, Property, PropertyAccounting } from "@/lib/types";
+import { cn, formatCurrency } from "@/lib/utils";
 
 function StatusBadge({
   label,
@@ -31,18 +35,24 @@ function StatusBadge({
     <div className="min-w-0">
       <span
         className={cn(
-          'inline-flex rounded-full px-2 py-0.5 text-[12px] font-semibold',
-          tone === 'good' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
-          tone === 'warn' && 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
-          tone === 'new' && 'bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-200',
-          tone === 'draft' && 'bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200',
-          tone === 'muted' && 'bg-muted text-muted-foreground',
+          "inline-flex rounded-full px-2 py-0.5 text-[12px] font-semibold",
+          tone === "good" &&
+            "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+          tone === "warn" &&
+            "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
+          tone === "new" &&
+            "bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-200",
+          tone === "draft" &&
+            "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
+          tone === "muted" && "bg-muted text-muted-foreground",
         )}
       >
         {label}
       </span>
       {sublabel ? (
-        <p className="text-muted-foreground mt-1 truncate text-[12px]">{sublabel}</p>
+        <p className="text-muted-foreground mt-1 truncate text-[12px]">
+          {sublabel}
+        </p>
       ) : null}
     </div>
   );
@@ -156,7 +166,7 @@ function PropertyRowActions({
                 }}
                 className="hover:bg-muted/60 w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors disabled:opacity-50"
               >
-                {restoring ? 'Restoring…' : 'Restore'}
+                {restoring ? "Restoring…" : "Restore"}
               </button>
             ) : null}
           </>
@@ -189,7 +199,9 @@ export function PropertyListV2Table({
   onRestore?: (property: Property) => void;
   restoringId?: string | null;
 }) {
-  const tenantContactsByProperty = usePropertyTenantContacts(properties.map((property) => property.id));
+  const tenantContactsByProperty = usePropertyTenantContacts(
+    properties.map((property) => property.id),
+  );
 
   const rowMeta = useMemo(() => {
     const meta = new Map<
@@ -205,9 +217,10 @@ export function PropertyListV2Table({
 
     for (const property of properties) {
       const propertyId = property.id;
-      const acct = accounting.find((row) => row.propertyId === propertyId) ?? null;
+      const acct =
+        accounting.find((row) => row.propertyId === propertyId) ?? null;
       const currentLease = leasingRecords.find(
-        (row) => row.propertyId === propertyId && row.status === 'current',
+        (row) => row.propertyId === propertyId && row.status === "current",
       );
       meta.set(propertyId, {
         status: buildPropertyListV2RowStatus(property, acct),
@@ -225,16 +238,96 @@ export function PropertyListV2Table({
     return meta;
   }, [accounting, leasingRecords, properties, tenantContactsByProperty]);
 
+  const rowActions = (property: Property) => {
+    const isDraft = isPropertyRegistryDraft(property);
+    const canOpenProfile = Boolean(onOpenProfile) && !isDraft;
+    return (
+      <PropertyRowActions
+        isDraft={isDraft}
+        onContinue={isDraft ? () => onSelect(property.id) : undefined}
+        onOpenProfile={
+          canOpenProfile ? () => onOpenProfile?.(property.id) : undefined
+        }
+        onDeleteDraft={
+          isDraft && onDeleteDraft ? () => onDeleteDraft(property) : undefined
+        }
+        onArchive={
+          !isDraft && onArchive ? () => onArchive(property) : undefined
+        }
+        onRestore={
+          !isDraft && onRestore ? () => onRestore(property) : undefined
+        }
+        restoring={restoringId === property.id}
+      />
+    );
+  };
+
   return (
-    <div className="min-w-0 overflow-x-auto">
+    <>
+      {/* A phone gets a card per property: the table's columns sat behind a sideways swipe. */}
+      <ul className="divide-y md:hidden">
+        {properties.map((property) => {
+          const meta = rowMeta.get(property.id);
+          if (!meta) return null;
+          const isDraft = isPropertyRegistryDraft(property);
+          return (
+            <li key={property.id} className="flex items-start gap-2 px-3 py-3">
+              <button
+                type="button"
+                onClick={() => onSelect(property.id)}
+                className="min-w-0 flex-1 text-left"
+                title={isDraft ? "Continue registration" : "Open property"}
+              >
+                <p className="truncate text-sm font-semibold">
+                  {property.address}
+                </p>
+                <p className="text-muted-foreground truncate text-xs">
+                  {[property.suburb, property.postcode]
+                    .filter(Boolean)
+                    .join(" ")}
+                  {meta.tenancy.primary ? ` · ${meta.tenancy.primary}` : ""}
+                </p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                  <span className="font-medium tabular-nums">
+                    {formatPropertyListV2Rent(property)}
+                  </span>
+                  <span
+                    className={cn(
+                      "tabular-nums",
+                      meta.leaseExpiry.tone === "warning"
+                        ? "text-amber-700"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {meta.leaseExpiry.label}
+                  </span>
+                  {isDraft ? (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+                      Draft
+                    </span>
+                  ) : (
+                    <PropertyStatusCell
+                      meta={meta}
+                      emphasizeArrears={emphasizeArrears}
+                      compact
+                    />
+                  )}
+                </div>
+              </button>
+              {rowActions(property)}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="hidden min-w-0 overflow-x-auto md:block">
         <table className="w-full min-w-[48rem] table-fixed border-collapse text-left text-sm">
           <colgroup>
-            <col style={{ width: '24%' }} />
-            <col style={{ width: '20%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '20%' }} />
-            <col style={{ width: '16%' }} />
-            <col style={{ width: '2.75rem' }} />
+            <col style={{ width: "24%" }} />
+            <col style={{ width: "20%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "20%" }} />
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "2.75rem" }} />
           </colgroup>
           <thead>
             <tr className="border-b bg-muted/30 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -245,7 +338,7 @@ export function PropertyListV2Table({
               <th className="px-3 py-3">Rent</th>
               <th className="px-3 py-3">Lease expiry</th>
               <th className="px-3 py-3" data-tour="properties-status">
-                {emphasizeArrears ? 'Arrears' : 'Status'}
+                {emphasizeArrears ? "Arrears" : "Status"}
               </th>
               <th className="px-1 py-3">
                 <span className="sr-only">Actions</span>
@@ -257,22 +350,26 @@ export function PropertyListV2Table({
               const meta = rowMeta.get(property.id);
               if (!meta) return null;
               const isDraft = isPropertyRegistryDraft(property);
-              const canOpenProfile = Boolean(onOpenProfile) && !isDraft;
 
               return (
-                <tr key={property.id} className="transition-colors hover:bg-muted/20">
+                <tr
+                  key={property.id}
+                  className="transition-colors hover:bg-muted/20"
+                >
                   <td className="px-3 py-3 align-top">
                     <button
                       type="button"
                       onClick={() => onSelect(property.id)}
                       className="block w-full cursor-pointer truncate text-left font-medium hover:underline"
-                      title={isDraft ? 'Continue registration' : 'Open property'}
+                      title={
+                        isDraft ? "Continue registration" : "Open property"
+                      }
                     >
                       {property.address}
                     </button>
                     <p className="text-muted-foreground truncate text-xs">
                       {property.suburb}
-                      {property.postcode ? ` ${property.postcode}` : ''}
+                      {property.postcode ? ` ${property.postcode}` : ""}
                     </p>
                     {isDraft ? (
                       <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
@@ -283,7 +380,9 @@ export function PropertyListV2Table({
                   <td className="px-3 py-3 align-top">
                     <div className="flex min-w-0 items-start gap-1">
                       <div className="min-w-0">
-                        <p className="truncate font-medium">{meta.tenancy.primary}</p>
+                        <p className="truncate font-medium">
+                          {meta.tenancy.primary}
+                        </p>
                         {meta.tenancy.secondary ? (
                           <p className="text-muted-foreground truncate text-xs">
                             {meta.tenancy.secondary}
@@ -293,7 +392,9 @@ export function PropertyListV2Table({
                       <HoverInfoList
                         ariaLabel="Other tenants"
                         heading="Other tenants"
-                        items={meta.tenancy.others.map((name) => ({ title: name }))}
+                        items={meta.tenancy.others.map((name) => ({
+                          title: name,
+                        }))}
                         className="mt-0.5"
                       />
                     </div>
@@ -304,8 +405,8 @@ export function PropertyListV2Table({
                   <td className="px-3 py-3 align-top">
                     <p
                       className={cn(
-                        'font-medium tabular-nums',
-                        meta.leaseExpiry.tone === 'warning' && 'text-amber-700',
+                        "font-medium tabular-nums",
+                        meta.leaseExpiry.tone === "warning" && "text-amber-700",
                       )}
                     >
                       {meta.leaseExpiry.label}
@@ -313,10 +414,10 @@ export function PropertyListV2Table({
                     {meta.leaseExpiry.sublabel ? (
                       <p
                         className={cn(
-                          'text-xs tabular-nums',
-                          meta.leaseExpiry.tone === 'warning'
-                            ? 'text-amber-700'
-                            : 'text-muted-foreground',
+                          "text-xs tabular-nums",
+                          meta.leaseExpiry.tone === "warning"
+                            ? "text-amber-700"
+                            : "text-muted-foreground",
                         )}
                       >
                         {meta.leaseExpiry.sublabel}
@@ -324,20 +425,10 @@ export function PropertyListV2Table({
                     ) : null}
                   </td>
                   <td className="px-3 py-3 align-top">
-                    {emphasizeArrears && (meta.arrearsAmount > 0 || meta.daysInArrears > 0) ? (
-                      <div>
-                        <p className="font-semibold text-rose-700 tabular-nums">
-                          {meta.arrearsAmount > 0 ? formatCurrency(meta.arrearsAmount) : 'Arrears'}
-                        </p>
-                        {meta.daysInArrears > 0 ? (
-                          <p className="text-muted-foreground text-xs">
-                            {meta.daysInArrears} day{meta.daysInArrears === 1 ? '' : 's'} overdue
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <StatusBadge {...meta.status} />
-                    )}
+                    <PropertyStatusCell
+                      meta={meta}
+                      emphasizeArrears={emphasizeArrears}
+                    />
                   </td>
                   <td
                     className="px-1 py-3 align-top"
@@ -345,31 +436,7 @@ export function PropertyListV2Table({
                     onDoubleClick={(event) => event.stopPropagation()}
                   >
                     <div className="flex justify-end">
-                      <PropertyRowActions
-                        isDraft={isDraft}
-                        onContinue={
-                          isDraft ? () => onSelect(property.id) : undefined
-                        }
-                        onOpenProfile={
-                          canOpenProfile ? () => onOpenProfile?.(property.id) : undefined
-                        }
-                        onDeleteDraft={
-                          isDraft && onDeleteDraft
-                            ? () => onDeleteDraft(property)
-                            : undefined
-                        }
-                        onArchive={
-                          !isDraft && onArchive
-                            ? () => onArchive(property)
-                            : undefined
-                        }
-                        onRestore={
-                          !isDraft && onRestore
-                            ? () => onRestore(property)
-                            : undefined
-                        }
-                        restoring={restoringId === property.id}
-                      />
+                      {rowActions(property)}
                     </div>
                   </td>
                 </tr>
@@ -377,6 +444,56 @@ export function PropertyListV2Table({
             })}
           </tbody>
         </table>
+      </div>
+    </>
+  );
+}
+
+function PropertyStatusCell({
+  meta,
+  emphasizeArrears,
+  compact = false,
+}: {
+  meta: {
+    arrearsAmount: number;
+    daysInArrears: number;
+    status: Parameters<typeof StatusBadge>[0];
+  };
+  emphasizeArrears: boolean;
+  /** One line, for the phone card. */
+  compact?: boolean;
+}) {
+  if (
+    !emphasizeArrears ||
+    (meta.arrearsAmount <= 0 && meta.daysInArrears <= 0)
+  ) {
+    return <StatusBadge {...meta.status} />;
+  }
+  const overdue =
+    meta.daysInArrears > 0
+      ? `${meta.daysInArrears} day${meta.daysInArrears === 1 ? "" : "s"} overdue`
+      : null;
+  const amount =
+    meta.arrearsAmount > 0 ? formatCurrency(meta.arrearsAmount) : "Arrears";
+  if (compact) {
+    return (
+      <span className="font-semibold text-rose-700 tabular-nums">
+        {amount}
+        {overdue ? (
+          <span className="text-muted-foreground font-normal">
+            {" "}
+            · {overdue}
+          </span>
+        ) : null}
+      </span>
+    );
+  }
+  return (
+    <div>
+      <p className="font-semibold text-rose-700 tabular-nums">{amount}</p>
+      {overdue ? (
+        <p className="text-muted-foreground text-xs">{overdue}</p>
+      ) : null}
     </div>
   );
 }

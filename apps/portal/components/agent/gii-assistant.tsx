@@ -1812,6 +1812,7 @@ export function GiiAssistant({
                     onAskTask={askAboutTask}
                     onOpenTask={(row) => router.push(row.href)}
                     title={CROS_TODAY_LIST_TITLE}
+                    fullWidth
                     onNavigate={onClose}
                     onAsk={askAboutBriefingItem}
                     onOpen={(link) => void openJobCaseLink(link)}
@@ -2050,11 +2051,15 @@ export function GiiAssistant({
                     ? `Ask ${CROS_ASSISTANT_NAME} to create a job or check this property…`
                     : `Ask ${CROS_ASSISTANT_NAME} anything…`
               }
-              rows={isEmbedded ? 3 : 4}
+              rows={isEmbedded ? 3 : 2}
               className={cn(
-                'min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 px-4 py-3 text-sm leading-relaxed shadow-none',
+                // 16px on a phone: iOS Safari zooms the page into a smaller field and stays zoomed.
+                'min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 px-4 py-3 text-base leading-relaxed shadow-none sm:text-sm',
                 isFrostedV2Panel ? 'v2-frosted-surface' : 'bg-secondary/40',
-                isEmbedded ? 'min-h-16 max-h-[160px]' : 'min-h-24 max-h-[220px]',
+                isEmbedded
+                  ? 'min-h-16 max-h-[160px]'
+                  : // A phone keeps the panel for Cros's list: two lines there, the old height from sm up.
+                    'max-h-[160px] sm:min-h-24 sm:max-h-[220px]',
               )}
               autoFocus={isPanel}
               disabled={sending || voiceActive}
@@ -2104,7 +2109,7 @@ export function GiiAssistant({
             </div>
           </div>
         </div>
-        <p className="text-muted-foreground mt-1.5 text-[11px]">
+        <p className="text-muted-foreground mt-1.5 hidden text-[11px] sm:block">
           Enter to send · Shift+Enter for a new line · Attach PDFs or images
         </p>
       </div>
