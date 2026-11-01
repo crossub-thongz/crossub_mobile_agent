@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { messageDetail, ROUTES } from '@/constants/routes';
+import { useOneInboxRedirect } from '@/hooks/use-one-inbox-redirect';
 import type { MessageCategory } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -59,6 +60,9 @@ export default function NewMessagePage() {
 
   const selected = properties.find((p) => p.id === propertyId);
   const step = !propertyId ? 1 : !category ? 2 : 3;
+  // One inbox: a new message starts in Conversations (New conversation).
+  const forwarding = useOneInboxRedirect(ROUTES.CONVERSATIONS);
+  if (forwarding) return null;
 
   if (selected && searchParams.get('property')) {
     return (

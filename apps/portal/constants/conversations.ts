@@ -302,3 +302,10 @@ export const CONVERSATIONS_COPY = {
   composeSend: 'Send',
   composeCancel: 'Cancel',
 } as const;
+
+/** The agent's one inbox: its name on the message icons, and how often its unread count is read. */
+export const AGENT_INBOX_COPY = {
+  CONVERSATIONS: 'Conversations',
+  MESSAGES: 'Messages',
+} as const;
+export const AGENT_INBOX_REFRESH_MS = 2 * 60_000;

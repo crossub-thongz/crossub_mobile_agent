@@ -27,6 +27,12 @@ export type AgentConversationListState = NonNullable<AgentConversationListQuery[
 
 const idPath = (id: string) => ({ path: { id } });
 
+/** How many open inbox threads are unread: the one number the app's message icons show. */
+export async function fetchAgentConversationUnreadCount(): Promise<number> {
+  const result = await crossub.GET('/agent/conversations/unread-count');
+  return unwrapCrossubResult(result, "Couldn't load unread conversations").count;
+}
+
 export async function fetchAgentConversations(
   query: AgentConversationListQuery,
 ): Promise<AgentConversationList> {

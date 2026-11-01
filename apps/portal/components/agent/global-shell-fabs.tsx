@@ -18,9 +18,10 @@ import { PropertyNewMessageRecipients } from '@/components/agent/property-new-me
 import { TalkToStaffSupportButton } from '@/components/agent/talk-to-staff-button';
 import { QuickCreateWorkflowDialog } from '@/components/agent/quick-create-workflow-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useAgentInbox } from '@/components/providers/agent-inbox-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { messagesForProperty, messagesNew, ROUTES } from '@/constants/routes';
+import { messagesForProperty, messagesNew } from '@/constants/routes';
 import {
   BUILTIN_QUICK_ACTIONS,
   resolveQuickActions,
@@ -108,7 +109,9 @@ export function ShellHeaderQuickActions({
         )
       : 0;
   const globalUnread = messages.reduce((sum, m) => sum + (m.unread > 0 ? m.unread : 0), 0);
-  const messageUnread = propertyId ? scopedUnread : globalUnread;
+  const inbox = useAgentInbox();
+  // One inbox: Conversations counts threads for the whole book, so it shows one number everywhere.
+  const messageUnread = inbox.conversationsOnly ? inbox.unread : propertyId ? scopedUnread : globalUnread;
 
   if (visibleButtons.length === 0) return null;
 
@@ -178,6 +181,7 @@ function MessageActionSheet({
   } | null>(null);
   const router = useRouter();
   const { messages, properties, hasFullManagementAccess } = useAgentData();
+  const inbox = useAgentInbox();
   const { blockIfUnverified } = useEmailVerificationGuard();
   const hiddenBuiltinQuickActionIds = useAgentStore((s) => s.hiddenBuiltinQuickActionIds);
   const customQuickActions = useAgentStore((s) => s.customQuickActions);
@@ -258,13 +262,13 @@ function MessageActionSheet({
                     {propertyId && property ? (
                       <>
                         <Link
-                          href={messagesForProperty(propertyId)}
+                          href={inbox.conversationsOnly ? inbox.href : messagesForProperty(propertyId)}
                           onClick={onClose}
                           className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
                         >
                           <Building2 className="text-primary size-4 shrink-0" />
                           <span className="min-w-0 flex-1 text-left">Property conversations</span>
-                          {propertyUnread > 0 ? (
+                          {!inbox.conversationsOnly && propertyUnread > 0 ? (
                             <span className="bg-destructive shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold text-white">
                               {propertyUnread}
                             </span>
@@ -285,7 +289,7 @@ function MessageActionSheet({
                     ) : (
                       <>
                         <Link
-                          href={messagesNew()}
+                          href={inbox.conversationsOnly ? inbox.href : messagesNew()}
                           onClick={(event) => {
                             if (blockIfUnverified()) {
                               event.preventDefault();
@@ -299,15 +303,15 @@ function MessageActionSheet({
                           New message
                         </Link>
                         <Link
-                          href={ROUTES.MESSAGES}
+                          href={inbox.href}
                           onClick={onClose}
                           className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
                         >
                           <MessageSquare className="text-primary size-4 shrink-0" />
                           All conversations
-                          {messages.some((m) => m.unread > 0) && (
+                          {inbox.unread > 0 && (
                             <span className="bg-destructive ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold text-white">
-                              {messages.reduce((s, m) => s + m.unread, 0)}
+                              {inbox.unread}
                             </span>
                           )}
                         </Link>
@@ -436,6 +440,7 @@ function CommunicationDockSheet({
 }) {
   const [view, setView] = useState<'menu' | 'new-message'>('menu');
   const { messages, properties } = useAgentData();
+  const inbox = useAgentInbox();
   const { blockIfUnverified } = useEmailVerificationGuard();
 
   const property = propertyId ? properties.find((p) => p.id === propertyId) : undefined;
@@ -476,13 +481,13 @@ function CommunicationDockSheet({
             <div className="space-y-2">
               <TalkToStaffSupportButton propertyId={propertyId} onOpened={onClose} />
               <Link
-                href={messagesForProperty(propertyId)}
+                href={inbox.conversationsOnly ? inbox.href : messagesForProperty(propertyId)}
                 onClick={onClose}
                 className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
               >
                 <Building2 className="text-primary size-4 shrink-0" />
                 <span className="min-w-0 flex-1 text-left">Property conversations</span>
-                {propertyUnread > 0 ? (
+                {!inbox.conversationsOnly && propertyUnread > 0 ? (
                   <span className="bg-destructive shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold text-white">
                     {propertyUnread}
                   </span>
@@ -504,7 +509,7 @@ function CommunicationDockSheet({
         ) : (
           <div className="space-y-2">
             <Link
-              href={messagesNew()}
+              href={inbox.conversationsOnly ? inbox.href : messagesNew()}
               onClick={(event) => {
                 if (blockIfUnverified()) {
                   event.preventDefault();
@@ -518,15 +523,15 @@ function CommunicationDockSheet({
               New message
             </Link>
             <Link
-              href={ROUTES.MESSAGES}
+              href={inbox.href}
               onClick={onClose}
               className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
             >
               <MessageSquare className="text-primary size-4" />
               All conversations
-              {messages.some((m) => m.unread > 0) && (
+              {inbox.unread > 0 && (
                 <span className="bg-destructive ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold text-white">
-                  {messages.reduce((s, m) => s + m.unread, 0)}
+                  {inbox.unread}
                 </span>
               )}
             </Link>

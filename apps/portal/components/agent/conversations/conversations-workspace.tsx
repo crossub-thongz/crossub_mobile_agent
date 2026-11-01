@@ -14,6 +14,7 @@ import { ConversationThread } from '@/components/agent/conversations/conversatio
 import { NewConversationDialog } from '@/components/agent/conversations/new-conversation-dialog';
 import { EmptyState } from '@/components/agent/empty-state';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useAgentInbox } from '@/components/providers/agent-inbox-provider';
 import { Button } from '@/components/ui/button';
 import {
   CONVERSATION_MOBILE_VIEW,
@@ -85,6 +86,13 @@ export function ConversationsWorkspace() {
   useEffect(() => {
     if (detail) updateRow(summaryFromDetail(detail));
   }, [detail, updateRow]);
+
+  // ...and in the unread count every message icon shows.
+  const refreshInbox = useAgentInbox().refresh;
+  const openedId = detail?.id ?? null;
+  useEffect(() => {
+    if (openedId) refreshInbox();
+  }, [openedId, refreshInbox]);
 
   const selfManagedProperties = useMemo(
     () => properties.filter((p) => scope.has(p.id)),

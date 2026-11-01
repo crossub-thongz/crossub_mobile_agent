@@ -11,7 +11,8 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
-import { messageDetail, messagesNew } from '@/constants/routes';
+import { messageDetail, messagesNew, ROUTES } from '@/constants/routes';
+import { useOneInboxRedirect } from '@/hooks/use-one-inbox-redirect';
 import {
   groupThreadsByProperty,
   type PropertyMessageGroup,
@@ -131,6 +132,7 @@ export default function MessagesPage() {
   const searchParams = useSearchParams();
   const propertyFilter = searchParams.get('property');
   const { messages, properties } = useAgentData();
+  const forwarding = useOneInboxRedirect(ROUTES.CONVERSATIONS);
   const [search, setSearch] = useState('');
   const [readFilter, setReadFilter] = useState(propertyFilter ? 'all' : 'unread');
 
@@ -169,6 +171,8 @@ export default function MessagesPage() {
   const pageTitle = filteredProperty
     ? `${filteredProperty.address} — Messages`
     : 'Messages';
+
+  if (forwarding) return null;
 
   return (
     <AgentShell title={pageTitle} backHref={propertyFilter ? `/properties/${propertyFilter}` : undefined} backLabel="Property">

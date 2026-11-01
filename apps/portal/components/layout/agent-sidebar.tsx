@@ -15,6 +15,7 @@ import { SUPPORT_PAGE_SECTION } from '@/constants/more-page';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useAgentInbox } from '@/components/providers/agent-inbox-provider';
 import { useCrosToday } from '@/components/providers/cros-today-provider';
 import { filterNavByAccess, agencyBillingNavLabel } from '@/lib/portal-service-level';
 import { filterHiddenBillingNav } from '@/lib/platform-billing-ui';
@@ -380,6 +381,14 @@ export function AgentSidebar({
   const { hasFullManagementAccess, platformBillingDisabled } = useAgentData();
   const selfManagedAccess = useSelfManagedAccess();
   const { total: needsYouCount } = useCrosToday();
+  const inbox = useAgentInbox();
+  /** Tasks shows what needs the agent; Conversations, when it is the one inbox, its unread count. */
+  const navBadge = (href: string): number | undefined =>
+    href === ROUTES.TASKS
+      ? needsYouCount
+      : href === ROUTES.CONVERSATIONS && inbox.conversationsOnly
+        ? inbox.unread
+        : undefined;
   const billingLabel = agencyBillingNavLabel(hasFullManagementAccess);
   const menuNav = filterHiddenBillingNav(
     filterNavByAccess(menuNavForUi(isV2), hasFullManagementAccess, selfManagedAccess).map((item) =>
@@ -444,7 +453,7 @@ export function AgentSidebar({
                     v2
                     active={isActive(pathname, item.href)}
                     compact={railCollapsed}
-                    badge={item.href === ROUTES.TASKS ? needsYouCount : undefined}
+                    badge={navBadge(item.href)}
                     trailingChevron={'trailingChevron' in item && item.trailingChevron}
                   />
                 </li>
@@ -524,7 +533,7 @@ export function AgentSidebar({
                   <NavLink
                     {...item}
                     active={isActive(pathname, item.href)}
-                    badge={item.href === ROUTES.TASKS ? needsYouCount : undefined}
+                    badge={navBadge(item.href)}
                   />
                 </li>
               ))}
@@ -538,7 +547,7 @@ export function AgentSidebar({
                   {...item}
                   active={isActive(pathname, item.href)}
                   compact
-                  badge={item.href === ROUTES.TASKS ? needsYouCount : undefined}
+                  badge={navBadge(item.href)}
                 />
               </li>
             ))}

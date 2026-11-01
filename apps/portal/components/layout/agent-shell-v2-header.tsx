@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { MessageSquare, Search } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
 import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
@@ -12,6 +12,7 @@ import { CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useAgentInbox } from '@/components/providers/agent-inbox-provider';
 import { useShellAsideStore } from '@/lib/shell-aside-store';
 import { useShellDockStore } from '@/lib/shell-dock-store';
 import { ROUTES } from '@/constants/routes';
@@ -53,10 +54,7 @@ export function AgentShellV2Header({
   const activePanel = useShellDockStore((s) => s.activePanel);
   const giiExpanded = useShellDockStore((s) => s.giiExpanded);
 
-  const messageUnread = useMemo(
-    () => messages.reduce((sum, thread) => sum + (thread.unread > 0 ? thread.unread : 0), 0),
-    [messages],
-  );
+  const inbox = useAgentInbox();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -108,12 +106,12 @@ export function AgentShellV2Header({
         <div className="bg-border/60 mx-1 hidden h-8 w-px lg:block" aria-hidden />
 
         <Link
-          href={ROUTES.MESSAGES}
+          href={inbox.href}
           className="text-muted-foreground hover:bg-card/70 relative flex size-10 items-center justify-center rounded-xl transition-colors"
-          aria-label={messageUnread > 0 ? `Messages, ${messageUnread} unread` : 'Messages'}
+          aria-label={inbox.unread > 0 ? `${inbox.label}, ${inbox.unread} unread` : inbox.label}
         >
           <MessageSquare className="size-5" />
-          {messageUnread > 0 ? (
+          {inbox.unread > 0 ? (
             <span className="absolute top-2 right-2 size-2 rounded-full bg-rose-500 ring-2 ring-background" />
           ) : null}
         </Link>

@@ -4,7 +4,10 @@ import { MessageThreadWorkspace } from '@/components/agent/message-thread-worksp
 import { AgentShell } from '@/components/layout/agent-shell';
 import { ContactDetails } from '@/components/agent/contact-details';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { ROUTES } from '@/constants/routes';
+import { conversationThread, ROUTES } from '@/constants/routes';
+import { useOneInboxRedirect } from '@/hooks/use-one-inbox-redirect';
+import { isCrosTeamChatThread } from '@/lib/staff-support-thread';
+import { CROS_OPEN_HREF } from '@/utils/cros-link';
 import {
   buildThreadMentionCandidates,
   extractMentions,
@@ -21,6 +24,10 @@ export default function MessageDetailPage() {
   const highlightParty = partyParam === 'tenant' ? 'tenant' : undefined;
   const { messages, sendMessage, markThreadRead } = useAgentData();
   const thread = messages.find((m) => m.id === threadId);
+  // One inbox: the thread opens in Conversations, and a Cros team chat opens in Cros.
+  const forwarding = useOneInboxRedirect(
+    thread && isCrosTeamChatThread(thread) ? CROS_OPEN_HREF : conversationThread(threadId),
+  );
   const [reply, setReply] = useState('');
   const [contactsOpen, setContactsOpen] = useState(false);
   const markedReadRef = useRef<string | null>(null);
@@ -36,13 +43,14 @@ export default function MessageDetailPage() {
   );
 
   useEffect(() => {
-    if (!thread || markedReadRef.current === thread.id) return;
+    if (forwarding || !thread || markedReadRef.current === thread.id) return;
     if (thread.unread > 0) {
       markedReadRef.current = thread.id;
       markThreadRead(thread.id);
     }
-  }, [thread, markThreadRead]);
+  }, [forwarding, thread, markThreadRead]);
 
+  if (forwarding) return null;
   if (!thread) notFound();
 
   const partyLabel =

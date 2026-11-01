@@ -57,7 +57,11 @@ Backend paths are in `crossub_web/apps/api/src`; app paths are in `apps/portal`.
 
 - [x] **One name for the assistant.** The app uses "CROS", "Cros", "CROS Assistant", "the AI" and CROSSUB. The dashboard says inspections are "already arranged by CROS" (`components/agent/dashboard/v2-dashboard.tsx`), and its "CROS Activity" card shows jobs, not anything Cros did. Proposal: **Cros** with its face for the assistant only; "CROSSUB team" for people.
   - Decided 1 Nov 2026: **Cros** is the name. `CROS_ASSISTANT_NAME` is now 'Cros'; team and system wording reads CROSSUB; the assistant's prompt names itself Cros.
-- [ ] **One inbox.** The header message icon opens Messages, the sidebar has Conversations, and Cros has its own team chat.
+- [x] **One inbox.** The header message icon opens Messages, the sidebar has Conversations, and Cros has its own team chat.
+  - Decided 1 Nov 2026: Conversations is the one inbox for an agent whose agencies are all Self-Manage (Messages held the same threads with its own unread count: 23 against 0); the CROSSUB team is reached in Cros. A mixed or Full Management book keeps Messages, where the serviced agency's threads live.
+  - Backend: Conversations leaves out the Cros team chats; `GET /agent/conversations/unread-count` gives the icons one number (contract 0.70.0).
+  - App: `components/providers/agent-inbox-provider.tsx`; Messages pages forward with `hooks/use-one-inbox-redirect.ts`.
+  - Not changed yet: a property's own Messages tab and its unread count (`components/agent/property-message-tab.tsx`, `app/properties/[id]/page.tsx`) still read Messages; next step is to show that property's Conversations threads there.
 
 ---
 
@@ -70,3 +74,4 @@ Backend paths are in `crossub_web/apps/api/src`; app paths are in `apps/portal`.
 | 31 Oct 2026 | 1.2 and 1.3 done (crossub_web 1929f5e5e; agent app panel fixes). "What needs me today?" sends the card's own rows; the panel stopped jumping down on the briefing refresh; the mic had no background under the v2 look (gradients are flattened there). The header now reads Talk; mute stays a separate icon |
 | 1 Nov 2026 | Section 2 built: one live count (crossub_web 49ce69479, contract 0.69.0), Today and Chat tabs, chat starters, compact help list, Tasks "Also waiting on you" |
 | 1 Nov 2026 | 3: the assistant is Cros everywhere; CROSSUB for the team and automatic entries (crossub_web a155db7b0) |
+| 1 Nov 2026 | 3: one inbox, Conversations, for an all Self-Manage agent (crossub_web 53672243d, contract 0.70.0) |

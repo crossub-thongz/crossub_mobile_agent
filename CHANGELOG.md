@@ -7,6 +7,8 @@
 - The Tasks page lists what is waiting on the agent but is not a task (money owed, unanswered messages, leases ending) under "Also waiting on you", each with Ask CROS
 
 ### Changed
+- One inbox for an agent whose agencies are all Self-Manage: the header message icon, the phone Message button and its "All conversations", "Property conversations" and "New message" open Conversations and show its unread count (threads with an unread reply); Messages links forward there, and a Cros team chat link opens Cros (contract 0.70.0)
+- For that agent, "Communicate with Account Manager" becomes "Talk to the CROSSUB team" and opens Cros asking for a person; Conversations in the menu shows the unread count
 - The assistant is written Cros everywhere (panel, chat, notifications, recommendations, guides); all-caps labels that held its name are now in normal case
 - Work the CROSSUB team runs reads "CROSSUB handling" / "CROSSUB Is Handling", automatic entries in activity logs are by "CROSSUB", the task filter is "CROSSUB team", and the dashboard says "already arranged by the CROSSUB team"
 - The dashboard's "CROS Activity" card is now "Job Activity"

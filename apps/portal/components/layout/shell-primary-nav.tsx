@@ -6,6 +6,7 @@ import { CrosAssistantLogo } from '@/components/brand/cros-assistant-logo';
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useAgentInbox } from '@/components/providers/agent-inbox-provider';
 import { unreadMessagesForProperty } from '@/lib/communications-log';
 import { propertyIdFromPath } from '@/lib/property-path';
 import { useShellDockStore } from '@/lib/shell-dock-store';
@@ -39,7 +40,9 @@ export function ShellPrimaryNav({
         )
       : 0;
   const globalUnread = messages.reduce((sum, m) => sum + (m.unread > 0 ? m.unread : 0), 0);
-  const messageUnread = propertyId ? scopedUnread : globalUnread;
+  const inbox = useAgentInbox();
+  // One inbox: Conversations counts threads for the whole book, so it shows one number everywhere.
+  const messageUnread = inbox.conversationsOnly ? inbox.unread : propertyId ? scopedUnread : globalUnread;
 
   const hideMessage = isActiveChatPath(pathname) || !hasFullManagementAccess;
   const giiActive = activePanel === 'gii';

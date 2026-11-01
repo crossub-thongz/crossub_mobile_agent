@@ -19,6 +19,13 @@ export function staffSupportSubject(propertyAddress: string): string {
   return `${STAFF_SUPPORT_SUBJECT_PREFIX}${propertyAddress}`;
 }
 
+/** A Cros chat a CROSSUB person holds (Jarvis 2.3); it lives in Cros, not in an inbox. */
+export const CROS_TEAM_CHAT_SUBJECT_PREFIX = `${STAFF_SUPPORT_SUBJECT_PREFIX}Cros chat`;
+
+export function isCrosTeamChatThread(thread: Pick<MessageThread, 'subject'>): boolean {
+  return thread.subject.startsWith(CROS_TEAM_CHAT_SUBJECT_PREFIX);
+}
+
 export function isStaffSupportThread(thread: Pick<MessageThread, 'subject'>): boolean {
   return thread.subject.startsWith(STAFF_SUPPORT_SUBJECT_PREFIX);
 }

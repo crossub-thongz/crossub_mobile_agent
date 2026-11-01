@@ -6,13 +6,15 @@ import { useRouter } from 'next/navigation';
 import { Building2, MessageSquare, X } from 'lucide-react';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { messageDetail, messagesNew, ROUTES } from '@/constants/routes';
+import { useAgentInbox } from '@/components/providers/agent-inbox-provider';
+import { messageDetail, messagesNew } from '@/constants/routes';
 import { cn } from '@/lib/utils';
 
 export function CommunicationHubFab({ propertyId }: { propertyId?: string }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { messages, ensureMessageThread } = useAgentData();
+  const inbox = useAgentInbox();
   const thread = propertyId ? messages.find((m) => m.propertyId === propertyId) : null;
   const unread = thread?.unread ?? 0;
 
@@ -75,7 +77,7 @@ export function CommunicationHubFab({ propertyId }: { propertyId?: string }) {
                 New message (any property)
               </Link>
               <Link
-                href={ROUTES.MESSAGES}
+                href={inbox.href}
                 onClick={() => setOpen(false)}
                 className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
               >

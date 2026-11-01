@@ -18,4 +18,7 @@ export const GII_HANDOFF_COPY = {
   PLACEHOLDER: (name: string | null) => `Message ${name ?? `the ${GII_HANDOFF_TEAM}`}…`,
   SEND_FAILED: 'Your message could not be sent to the CROSSUB team. Please try again.',
   CLOSED_ON_SEND: 'The CROSSUB team has already handed this chat back to Cros.',
+  /** The Talk to the team button, for an agent whose one inbox is Conversations. */
+  TALK_TO_TEAM: `Talk to the ${GII_HANDOFF_TEAM}`,
+  ASK_FOR_TEAM: `I'd like to talk to someone in the ${GII_HANDOFF_TEAM} about this property.`,
 } as const;
