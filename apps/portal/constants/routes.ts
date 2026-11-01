@@ -12,6 +12,8 @@ export const ROUTES = {
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
   CHANGE_PASSWORD: '/change-password',
+  MFA_SETUP: '/mfa/setup',
+  MFA_VERIFY: '/mfa/verify',
   PROPERTIES: '/properties',
   AGENCIES: '/agencies',
   INSPECTIONS: '/inspections',
@@ -82,7 +84,11 @@ export function isPortalWelcomeDeferredRoute(pathname: string): boolean {
     pathname === ROUTES.CHANGE_PASSWORD ||
     pathname.startsWith(`${ROUTES.CHANGE_PASSWORD}/`) ||
     pathname === ROUTES.SYSTEM_ACCESS_AGREEMENT ||
-    pathname.startsWith(`${ROUTES.SYSTEM_ACCESS_AGREEMENT}/`)
+    pathname.startsWith(`${ROUTES.SYSTEM_ACCESS_AGREEMENT}/`) ||
+    pathname === ROUTES.MFA_SETUP ||
+    pathname.startsWith(`${ROUTES.MFA_SETUP}/`) ||
+    pathname === ROUTES.MFA_VERIFY ||
+    pathname.startsWith(`${ROUTES.MFA_VERIFY}/`)
   );
 }
 

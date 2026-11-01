@@ -11,6 +11,10 @@ export interface AuthUser {
   systemAccessAccepted?: boolean;
   systemAccessAcceptedAt?: string | null;
   systemAccessAgreementVersion?: string | null;
+  /** True when this login must finish authenticator setup before the dashboard. */
+  mfaEnrollmentRequired?: boolean;
+  /** True when this login must enter a verification code before the dashboard. */
+  mfaChallengeRequired?: boolean;
   /** True when the account must set a new password before using the app. */
   mustChangePassword?: boolean;
   /** Sales invite registration — set a new password without the generated temp password. */
