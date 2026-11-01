@@ -149,7 +149,7 @@ function AssistanceCard({
         </span>
         <span className="text-muted-foreground text-xs">{offer.address}</span>
       </div>
-      <h2 className="mt-3 text-lg font-semibold tracking-tight">Would you like Crossub to help?</h2>
+      <h2 className="mt-3 text-lg font-semibold tracking-tight">Would you like CROSSUB to help?</h2>
       <p className="text-muted-foreground mt-1 text-sm">
         {dueLabel(days)} Choose how you&apos;d like to manage this property.
       </p>
@@ -179,7 +179,7 @@ function FullServiceOffer({ buttons }: { buttons: RecommendationButton[] }) {
   if (!hasButton(buttons, RECOMMENDATION_BUTTON.EXPLORE_FULL_SERVICE)) return null;
   return (
     <section className="rounded-2xl border border-[#d7eee6] bg-white p-4 shadow-[0_9px_26px_rgba(26,89,70,0.04)]">
-      <h2 className="text-lg font-semibold tracking-tight">Would you like Crossub to help?</h2>
+      <h2 className="text-lg font-semibold tracking-tight">Would you like CROSSUB to help?</h2>
       <p className="text-muted-foreground mt-1 text-sm">
         Several inspections are still unarranged. Full Service can take on inspections, tenant
         communication and daily work for the properties you choose.
@@ -204,7 +204,7 @@ function InspectionOnlyChoice({ href, primary }: { href: string; primary: boolea
         Inspection Only
       </p>
       <p className="text-muted-foreground mt-1 text-xs">One-off assistance</p>
-      <p className="mt-2 text-sm">Let Crossub complete this inspection while you retain full management.</p>
+      <p className="mt-2 text-sm">Let CROSSUB complete this inspection while you retain full management.</p>
       <Link
         href={href}
         className={cn(
@@ -226,7 +226,7 @@ function FullServiceChoice({ primary }: { primary: boolean }) {
         Full Service
       </p>
       <p className="text-muted-foreground mt-1 text-xs">Ongoing management</p>
-      <p className="mt-2 text-sm">Let Crossub handle inspections, tenant communication and daily operations.</p>
+      <p className="mt-2 text-sm">Let CROSSUB handle inspections, tenant communication and daily operations.</p>
       <p className="text-muted-foreground mt-2 text-[11px]">
         Price, scope and start date are confirmed on the next page. This does not change the property&apos;s management.
       </p>
@@ -318,10 +318,10 @@ function CrosSuggestion({
 
 function crosHelpCopy(arrange: boolean, full: boolean, these: 'this' | 'these'): string {
   if (arrange && full) {
-    return `I can help you arrange ${these} through Crossub's Inspection Only service, or you can explore Full Service if you'd prefer ongoing management support.`;
+    return `I can help you arrange ${these} through CROSSUB's Inspection Only service, or you can explore Full Service if you'd prefer ongoing management support.`;
   }
   if (arrange) {
-    return `I can help you arrange ${these} through Crossub's Inspection Only service.`;
+    return `I can help you arrange ${these} through CROSSUB's Inspection Only service.`;
   }
   return "You can explore Full Service if you'd prefer ongoing management support.";
 }

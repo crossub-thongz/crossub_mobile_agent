@@ -94,7 +94,7 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentModel }) 
         </dl>
       </div>
 
-      <SectionTitle>Crossub Management Fee</SectionTitle>
+      <SectionTitle>CROSSUB Management Fee</SectionTitle>
       <table className="w-full border-collapse text-xs">
         <thead>
           <tr className="border-b text-left">

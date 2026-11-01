@@ -189,7 +189,7 @@ export const PERSON_PROFILE_COPY = {
   leftTenancy: 'Left',
   noDates: 'No dates',
   noFolio: 'No folio yet',
-  trustNotManaged: 'Trust not managed by Crossub',
+  trustNotManaged: 'Trust not managed by CROSSUB',
   folioLabel: 'Folio',
   sections: {
     tenancies: 'Tenancies',

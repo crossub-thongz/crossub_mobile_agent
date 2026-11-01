@@ -29,7 +29,7 @@ export function parseAccountingSection(
 export const ACCOUNTING_SECTION_DESCRIPTION: Record<AccountingSectionId, string> = {
   rent_reconciliation:
     'Rent received and outstanding balances across your portfolio. Open a property to review ledger entries.',
-  invoices: 'Create and manage Crossub management fee tax invoices.',
+  invoices: 'Create and manage CROSSUB management fee tax invoices.',
   arrears:
     'Properties with outstanding rent or invoice arrears and collection activity.',
   statements:

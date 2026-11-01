@@ -199,7 +199,7 @@ export function CrossubServiceSummaryCard({
           </p>
         </div>
         <div>
-          <p className="text-muted-foreground text-xs">Estimated Crossub fee</p>
+          <p className="text-muted-foreground text-xs">Estimated CROSSUB fee</p>
           <p className="text-sm font-semibold tabular-nums">
             {formatCurrency(monthlyIncGst)} / month
           </p>

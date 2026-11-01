@@ -37,7 +37,7 @@ export function workspaceAvailabilityNote(region: RegistrationCountry, state: st
   if (region === 'AU' && state === 'NSW') {
     return 'Free software is included. Optional Inspection Only and Full Service are currently available in NSW.';
   }
-  return 'Free software and Cros AI are available. Crossub professional services are coming soon to this region.';
+  return 'Free software and Cros AI are available. CROSSUB professional services are coming soon to this region.';
 }
 
 export function RegisterWorkspaceStep({

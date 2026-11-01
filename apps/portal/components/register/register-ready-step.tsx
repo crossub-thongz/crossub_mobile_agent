@@ -20,7 +20,7 @@ export function RegisterReadyStep({
         <p className="mt-5 w-fit rounded-full bg-[#E7FBF4] px-3 py-1 text-[11px] font-semibold tracking-[0.08em] text-[#00bd85]">
           FREE WORKSPACE READY
         </p>
-        <h2 className="mt-4 text-2xl font-semibold tracking-tight">Welcome to Crossub!</h2>
+        <h2 className="mt-4 text-2xl font-semibold tracking-tight">Welcome to CROSSUB!</h2>
         <p className="mt-2 text-sm leading-6 text-[#52647C]">
           Your registration preview is complete. Here&apos;s what your new workspace could look like.
         </p>

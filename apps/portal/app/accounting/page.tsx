@@ -283,7 +283,7 @@ export default function AccountingPage() {
             ) : invoices.length === 0 ? (
               <EmptyState
                 title="No invoices yet"
-                description="Create a Crossub management fee tax invoice for your agency."
+                description="Create a CROSSUB management fee tax invoice for your agency."
               />
             ) : (
               <InvoiceListTable

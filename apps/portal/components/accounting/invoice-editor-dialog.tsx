@@ -431,7 +431,7 @@ export function InvoiceEditorDialog({
                 {mode === 'edit' ? 'Edit tax invoice' : 'Create tax invoice'}
               </DialogTitle>
               <DialogDescription className="mt-1">
-                {agency?.name ?? 'Agency'} · Crossub management fee invoice
+                {agency?.name ?? 'Agency'} · CROSSUB management fee invoice
               </DialogDescription>
             </div>
             {periodDays > 0 ? (

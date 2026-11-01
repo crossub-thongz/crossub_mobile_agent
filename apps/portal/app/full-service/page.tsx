@@ -131,7 +131,7 @@ export default function FullServicePage() {
     <AgentShell title="Full Service" wide>
       <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
         <section className="rounded-2xl border bg-white p-4">
-          <h2 className="text-lg font-semibold">Choose the properties to hand to Crossub</h2>
+          <h2 className="text-lg font-semibold">Choose the properties to hand to CROSSUB</h2>
           <p className="text-muted-foreground mt-1 text-sm">
             Submitting records the application. The effective date does not change the agency plan or any property&apos;s service level.
           </p>

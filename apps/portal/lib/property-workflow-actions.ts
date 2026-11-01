@@ -206,7 +206,7 @@ export function tabActionsFor(
         {
           id: 'open_invoice_management',
           label: 'Invoice management',
-          description: 'Create or manage Crossub management fee tax invoices',
+          description: 'Create or manage CROSSUB management fee tax invoices',
         },
         RENT_CHASING_ACTION,
       ];

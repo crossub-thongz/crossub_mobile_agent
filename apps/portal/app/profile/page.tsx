@@ -363,7 +363,7 @@ export default function ProfilePage() {
           <section className="rounded-xl border bg-card p-4">
             <h2 className="text-sm font-semibold">Invoice billing details</h2>
             <p className="text-muted-foreground mt-1 text-xs">
-              {businessNumberLabel}, licence, and bank details used on Crossub tax invoices.
+              {businessNumberLabel}, licence, and bank details used on CROSSUB tax invoices.
             </p>
             {hasInvoiceBillingDetails(savedBilling) && !billingEditing ? (
               <>
