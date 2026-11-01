@@ -15,19 +15,20 @@ import {
 } from '@/lib/crossub-api/service-offer-client';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import { SELF_MANAGED_MAINTENANCE_COPY } from '@/constants/self-managed-maintenance';
 
 const COPY = {
   badge: 'Suggestion',
   title: 'Need help getting a quote?',
-  body: 'Crossub can arrange a tradie to inspect the issue and quote, or you can arrange the quote yourself.',
+  body: 'CROSSUB can arrange a tradie to inspect the issue and quote, or you can arrange the quote yourself.',
   several: (count: number) =>
     `You have ${count} maintenance ${count === 1 ? 'job' : 'jobs'} that still need a quote.`,
-  crossub: 'Get a Quote with Crossub',
+  crossub: SELF_MANAGED_MAINTENANCE_COPY.crossubAsk,
   own: "I'll arrange my own quote",
   preferred: 'Use My Preferred Tradie',
   later: 'Remind me in 7 days',
   laterNote: 'You can always request assistance later.',
-  requested: 'Crossub will arrange the quote. Any fee is shown before you confirm.',
+  requested: 'CROSSUB will arrange the quote. Any fee is shown before you confirm.',
 };
 
 /**

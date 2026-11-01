@@ -9,6 +9,8 @@
 - The Tasks page lists what is waiting on the agent but is not a task (money owed, unanswered messages, leases ending) under "Also waiting on you", each with Ask CROS
 
 ### Fixed
+- The Tasks heading no longer shows its own count (17, including completed tasks) beside the menu badge
+- The quote offer reads "Get a Quote with CROSSUB" and writes CROSSUB in capitals throughout
 - A completed task shows its due date instead of "Overdue" on Tasks
 - Dashboard Portfolio Watchlist no longer runs past the screen edge on a phone
 - On a phone, Cros's typing box is two lines with 16px text (iOS no longer zooms in when it is tapped) and the keyboard hint is hidden; Cros's "Needs you now" list is full width on Today

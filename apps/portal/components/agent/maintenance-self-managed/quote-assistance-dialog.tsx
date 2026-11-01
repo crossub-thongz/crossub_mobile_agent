@@ -106,12 +106,12 @@ export function QuoteAssistanceDialog({
             <div className="flex items-center gap-2">
               <Wrench className="text-muted-foreground size-4" />
               <span className="rounded-full bg-[#e7f8f2] px-2.5 py-0.5 text-xs font-semibold text-[#067a56]">
-                {offer.offerName || 'Crossub Assistance'}
+                {offer.offerName || 'CROSSUB Assistance'}
               </span>
             </div>
             <DialogTitle>Need help getting a quote?</DialogTitle>
             <DialogDescription>
-              Crossub can help you arrange a qualified tradie to inspect the issue and provide a quote, saving you time and effort.
+              CROSSUB can help you arrange a qualified tradie to inspect the issue and provide a quote, saving you time and effort.
             </DialogDescription>
           </DialogHeader>
           <ul className="space-y-2 text-sm">
@@ -121,7 +121,7 @@ export function QuoteAssistanceDialog({
             </li>
             <li className="flex items-start gap-2">
               <Check className="mt-0.5 size-4 shrink-0 text-[#067a56]" />
-              Receive and review the quote in Crossub
+              Receive and review the quote in CROSSUB
             </li>
             <li className="flex items-start gap-2">
               <Check className="mt-0.5 size-4 shrink-0 text-[#067a56]" />
@@ -134,7 +134,7 @@ export function QuoteAssistanceDialog({
           <div className="flex flex-col gap-2">
             {showCrossub ? (
               <Button disabled={busy} onClick={useCrossub}>
-                Get a Quote with Crossub
+                {COPY.crossubAsk}
               </Button>
             ) : null}
             {showPreferred ? (

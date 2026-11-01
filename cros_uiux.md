@@ -54,7 +54,7 @@ Backend paths are in `crossub_web/apps/api/src`; app paths are in `apps/portal`.
 - [x] **Phone check.** This walk through was desktop only; repeat it at phone width.
   - Done 1 Nov 2026 at 390px (staging, Daniel): dashboard, Cros Today, Chat, past chats and the team button, Notifications, the bell, Conversations, Tasks, Properties, a property, More.
   - Fixed: Tasks and Properties were wide tables behind a sideways swipe (now a card per row); the dashboard watchlist ran past the screen edge; Cros's typing box took a quarter of the panel and its 14px text made iOS zoom in; the past chats icon was cut off and the team button shared the Talk icon.
-  - Left as found: the Tasks heading says 17 (it counts completed tasks) beside the badge's 9; "Get a Quote with Crossub" is not written CROSSUB; an older urgent card still reads "Raised to you: MR-00199 — AI review"; the header moves between pages (logo on the dashboard, none on Tasks or More).
+  - Fixed after: the Tasks heading count is gone, and the quote offer writes CROSSUB (the server still names the offer "Crossub Assistance"). Left as found: an older urgent card still reads "Raised to you: MR-00199 — AI review"; the header moves between pages (logo on the dashboard, none on Tasks or More).
 
 ## 3. Needs a decision
 

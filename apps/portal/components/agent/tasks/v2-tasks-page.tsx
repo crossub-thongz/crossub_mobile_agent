@@ -227,12 +227,8 @@ export function V2TasksPage() {
     <div className="task-list-v2 v2-dashboard normal-case space-y-4 px-4 py-4 lg:px-6 lg:py-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
-            <span className="bg-primary/15 text-primary rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums">
-              {bucketCounts.all}
-            </span>
-          </div>
+          {/* No count here: the Tasks badge in the menu is the one number for what needs the agent. */}
+          <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             {TASK_LIST_COPY[copyVariant].pageSubtitle}
           </p>
