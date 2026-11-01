@@ -1,7 +1,7 @@
 'use client';
 
 import { Loader2, MessagesSquare, Plus } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ConversationContextPane } from '@/components/agent/conversations/conversation-context-pane';
@@ -23,7 +23,7 @@ import {
   CONVERSATIONS_COPY,
   type ConversationMobileView,
 } from '@/constants/conversations';
-import { CONVERSATION_THREAD_PARAM } from '@/constants/routes';
+import { CONVERSATION_THREAD_PARAM, ROUTES } from '@/constants/routes';
 import { useAgencyTeamMembers } from '@/hooks/use-agency-team-members';
 import {
   useAgentConversationDetail,
@@ -37,6 +37,8 @@ import type {
   AgentConversationDetail,
   AgentConversationListState,
 } from '@/lib/crossub-api/agent-conversation-client';
+import { useShellDockStore } from '@/lib/shell-dock-store';
+import { isCrosTeamChatThread } from '@/lib/staff-support-thread';
 import { formatPropertyFullAddress } from '@/lib/utils';
 
 /**
@@ -86,6 +88,17 @@ export function ConversationsWorkspace() {
   useEffect(() => {
     if (detail) updateRow(summaryFromDetail(detail));
   }, [detail, updateRow]);
+
+  // A link to a Cros team chat (an old Messages link) opens Cros, where the team chat lives.
+  const router = useRouter();
+  const openGii = useShellDockStore((s) => s.openGii);
+  useEffect(() => {
+    if (!detail || detail.id !== linkedThreadId || !isCrosTeamChatThread(detail)) return;
+    setSelectedId(null);
+    setMobileView(CONVERSATION_MOBILE_VIEW.LIST);
+    router.replace(ROUTES.CONVERSATIONS);
+    openGii();
+  }, [detail, linkedThreadId, openGii, router]);
 
   // ...and in the unread count every message icon shows.
   const refreshInbox = useAgentInbox().refresh;
