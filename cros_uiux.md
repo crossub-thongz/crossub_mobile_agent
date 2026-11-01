@@ -61,6 +61,7 @@ Backend paths are in `crossub_web/apps/api/src`; app paths are in `apps/portal`.
   - Decided 1 Nov 2026: Conversations is the one inbox for an agent whose agencies are all Self-Manage (Messages held the same threads with its own unread count: 23 against 0); the CROSSUB team is reached in Cros. A mixed or Full Management book keeps Messages, where the serviced agency's threads live.
   - Backend: Conversations leaves out the Cros team chats; `GET /agent/conversations/unread-count` gives the icons one number (contract 0.70.0).
   - App: `components/providers/agent-inbox-provider.tsx`; Messages pages forward with `hooks/use-one-inbox-redirect.ts`.
+  - Finding the team chat (1 Nov 2026, Daniel asked where it was): a **CROSSUB team** button sits next to Cros's tabs on Today and Chat; it asks Cros for a person, or returns to the chat a person holds (a dot marks it). An empty chat offers it as a starter.
   - Not changed yet: a property's own Messages tab and its unread count (`components/agent/property-message-tab.tsx`, `app/properties/[id]/page.tsx`) still read Messages; next step is to show that property's Conversations threads there.
 
 ---
@@ -75,3 +76,4 @@ Backend paths are in `crossub_web/apps/api/src`; app paths are in `apps/portal`.
 | 1 Nov 2026 | Section 2 built: one live count (crossub_web 49ce69479, contract 0.69.0), Today and Chat tabs, chat starters, compact help list, Tasks "Also waiting on you" |
 | 1 Nov 2026 | 3: the assistant is Cros everywhere; CROSSUB for the team and automatic entries (crossub_web a155db7b0) |
 | 1 Nov 2026 | 3: one inbox, Conversations, for an all Self-Manage agent (crossub_web 53672243d, contract 0.70.0) |
+| 1 Nov 2026 | 3: CROSSUB team button in Cros, after Daniel could not find the team chat |

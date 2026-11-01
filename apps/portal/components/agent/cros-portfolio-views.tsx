@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, type ReactNode } from 'react';
-import { ArrowUpRight, ClipboardList, Compass, Home, MessageSquare, Trash2, Wrench } from 'lucide-react';
+import { ArrowUpRight, ClipboardList, Compass, Headphones, Home, MessageSquare, Trash2, Wrench } from 'lucide-react';
 
 import { CrosPageRecommendation } from '@/components/agent/recommendation-slideshow';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -9,6 +9,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { CROS_HELP_TOPIC, CROS_PANEL_TAB, CROS_TODAY_PROMPT } from '@/constants/cros-panel';
 import { CROS_TODAY_QUESTION } from '@/constants/gii-briefing';
 import { GII_CONVERSATION_COPY } from '@/constants/gii-conversation';
+import { GII_HANDOFF_COPY } from '@/constants/gii-handoff';
 import {
   inspectionDetail,
   maintenanceDetail,
@@ -34,12 +35,21 @@ export function CrosPortfolioTabs({
   view,
   onView,
   todayCount,
+  teamChatHolder,
+  onTeam,
 }: {
   view: CrosPortfolioView;
   onView: (view: CrosPortfolioView) => void;
   /** What needs the agent; the same number as the Cros button. */
   todayCount: number;
+  /** Set while a CROSSUB person holds the chat: their name, or null when nobody is named yet. */
+  teamChatHolder: { name: string | null } | null;
+  /** Back to the chat a person holds, or ask Cros to hand this one to the team. */
+  onTeam: () => void;
 }) {
+  const teamLabel = teamChatHolder
+    ? GII_HANDOFF_COPY.BACK_TO_TEAM(teamChatHolder.name)
+    : GII_HANDOFF_COPY.TALK_TO_TEAM;
   const tabs: { id: CrosPortfolioView; label: string; icon: typeof Compass; count?: number }[] = [
     { id: 'today', label: CROS_PANEL_TAB.TODAY, icon: Compass, count: todayCount },
     { id: 'chat', label: CROS_PANEL_TAB.CHAT, icon: MessageSquare },
@@ -72,11 +82,24 @@ export function CrosPortfolioTabs({
       })}
       <button
         type="button"
+        onClick={onTeam}
+        aria-label={teamLabel}
+        title={teamLabel}
+        className="relative ml-auto inline-flex items-center gap-1.5 rounded-full border border-[#d7eee6] bg-white px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap text-[#067a56] hover:border-[#00bd85]"
+      >
+        <Headphones className="size-3.5" />
+        {GII_HANDOFF_COPY.TEAM_BUTTON}
+        {teamChatHolder ? (
+          <span aria-hidden className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full border-2 border-white bg-[#00bd85]" />
+        ) : null}
+      </button>
+      <button
+        type="button"
         onClick={() => onView('history')}
         aria-label={CROS_PANEL_TAB.HISTORY}
         title={CROS_PANEL_TAB.HISTORY}
         className={cn(
-          'ml-auto flex size-9 items-center justify-center rounded-full',
+          'flex size-9 shrink-0 items-center justify-center rounded-full',
           view === 'history' ? 'bg-[#e7f8f2] text-[#067a56]' : 'text-slate-500 hover:bg-white/70',
         )}
       >

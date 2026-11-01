@@ -1151,6 +1151,16 @@ export function GiiAssistant({
     setCrosView('chat');
   };
 
+  /** Talk to the CROSSUB team: back to the chat a person holds, or ask Cros to hand this one over. */
+  const talkToTeam = () => {
+    if (teamChat.held) {
+      setCrosView('chat');
+      window.requestAnimationFrame(() => scrollChatToBottom('smooth'));
+      return;
+    }
+    void runQuery(GII_HANDOFF_COPY.ASK_FOR_TEAM_ANY);
+  };
+
   /** "What needs me today?" with the briefing card's own rows, so the answer matches the card. */
   const askWhatNeedsMeToday = () => {
     briefingContextRef.current = serverBriefing
@@ -1754,6 +1764,8 @@ export function GiiAssistant({
           view={crosView}
           onView={setCrosView}
           todayCount={crosToday.total}
+          teamChatHolder={teamChat.held ? { name: teamChat.held.staffName } : null}
+          onTeam={talkToTeam}
         />
       ) : null}
         <>
@@ -1892,6 +1904,9 @@ export function GiiAssistant({
                   {item.label} <span className="text-[#00bd85]">↗</span>
                 </button>
               ))}
+              <button type="button" onClick={talkToTeam} className={CHAT_STARTER_CLASS}>
+                {GII_HANDOFF_COPY.TALK_TO_TEAM} <span className="text-[#00bd85]">↗</span>
+              </button>
             </div>
           </div>
         ) : null}

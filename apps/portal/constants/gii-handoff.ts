@@ -21,4 +21,8 @@ export const GII_HANDOFF_COPY = {
   /** The Talk to the team button, for an agent whose one inbox is Conversations. */
   TALK_TO_TEAM: `Talk to the ${GII_HANDOFF_TEAM}`,
   ASK_FOR_TEAM: `I'd like to talk to someone in the ${GII_HANDOFF_TEAM} about this property.`,
+  /** Cros's tab bar button and chat starter: no property, the chat as a whole. */
+  TEAM_BUTTON: GII_HANDOFF_TEAM,
+  ASK_FOR_TEAM_ANY: `I'd like to talk to someone in the ${GII_HANDOFF_TEAM}.`,
+  BACK_TO_TEAM: (name: string | null) => `Back to your chat with ${name ?? `the ${GII_HANDOFF_TEAM}`}`,
 } as const;

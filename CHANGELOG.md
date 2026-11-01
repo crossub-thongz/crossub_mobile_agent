@@ -3,6 +3,7 @@
 ## 2026-11-01
 
 ### Added
+- Cros has a "CROSSUB team" button next to its tabs: it asks Cros to hand the chat to a person, or goes back to the chat a person holds (marked with a dot); an empty chat offers "Talk to the CROSSUB team" too
 - An empty CROS chat offers "What needs me today?" and two other starting questions instead of opening blank
 - The Tasks page lists what is waiting on the agent but is not a task (money owed, unanswered messages, leases ending) under "Also waiting on you", each with Ask CROS
 
