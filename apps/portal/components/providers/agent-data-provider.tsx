@@ -59,6 +59,8 @@ import {
   pendingAgentDocumentUploadToLocalDoc,
 } from '@/lib/agent-pending-document-flush';
 import {
+  needsMfaChallenge,
+  needsMfaEnrollment,
   needsPasswordChange,
   needsSystemAccessAgreement,
 } from '@/lib/system-access-agreement';
@@ -555,7 +557,9 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     status === 'authed' &&
     !!user &&
     !needsSystemAccessAgreement(user) &&
-    !needsPasswordChange(user);
+    !needsPasswordChange(user) &&
+    !needsMfaEnrollment(user) &&
+    !needsMfaChallenge(user);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -589,6 +593,8 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     user?.systemAccessAccepted,
     user?.systemAccessAgreementRequired,
     user?.mustChangePassword,
+    user?.mfaEnrollmentRequired,
+    user?.mfaChallengeRequired,
     postAuthReady,
   ]);
 

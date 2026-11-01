@@ -6,6 +6,7 @@ import { Suspense } from 'react';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { SystemAccessAgreementGate } from '@/components/auth/system-access-agreement-gate';
 import { MustChangePasswordGate } from '@/components/auth/must-change-password-gate';
+import { MfaGate } from '@/components/auth/mfa-gate';
 import { EmailVerificationGate } from '@/components/auth/email-verification-gate';
 import { BillingBlockedGate } from '@/components/auth/billing-blocked-gate';
 import { SalesAgreementGate } from '@/components/auth/sales-agreement-gate';
@@ -104,6 +105,7 @@ export default function RootLayout({
             <ProviderErrorBoundary>
               <SystemAccessAgreementGate>
                 <MustChangePasswordGate>
+                  <MfaGate>
                   <EmailVerificationGate>
                   <BillingBlockedGate>
                     <SalesAgreementGate>
@@ -143,6 +145,7 @@ export default function RootLayout({
                     </SalesAgreementGate>
                   </BillingBlockedGate>
                   </EmailVerificationGate>
+                  </MfaGate>
                 </MustChangePasswordGate>
               </SystemAccessAgreementGate>
             </ProviderErrorBoundary>

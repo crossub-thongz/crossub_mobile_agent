@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Eye, EyeOff, Loader2, Lock } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,6 +22,7 @@ import {
   needsPasswordChange,
   needsPasswordChangeWithoutCurrent,
   needsSystemAccessAgreement,
+  postAuthDestination,
 } from '@/lib/system-access-agreement';
 
 type FormValues = {
@@ -54,15 +55,13 @@ function buildSchema(skipCurrentPassword: boolean) {
 
 export default function ChangePasswordPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const { user, status, refresh } = useAuth();
+  const { user, status, refresh, adoptUser } = useAuth();
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const forced = Boolean(user && needsPasswordChange(user));
   const skipCurrentPassword = Boolean(user && needsPasswordChangeWithoutCurrent(user));
-  const fromSettings = searchParams.get('from') === 'settings';
   const schema = useMemo(() => buildSchema(skipCurrentPassword), [skipCurrentPassword]);
 
   useEffect(() => {
@@ -103,16 +102,21 @@ export default function ChangePasswordPage() {
         newPassword: values.newPassword,
       });
       await api.post('/auth/refresh');
+      const me = await api.get<{ user: AuthUser }>('/auth/me');
+      adoptUser(me.user);
       await refresh();
-      toast.success(forced ? 'Password updated. Welcome to the Agent portal.' : 'Password updated');
+      toast.success(forced ? 'Password updated.' : 'Password updated');
       reset();
-      if (forced) {
-        router.replace(ROUTES.DASHBOARD);
-      } else if (fromSettings) {
-        router.replace(ROUTES.SETTINGS);
-      } else {
-        router.replace(ROUTES.SETTINGS);
-      }
+      router.replace(
+        forced
+          ? postAuthDestination(
+              me.user,
+              ROUTES.DASHBOARD,
+              ROUTES.SYSTEM_ACCESS_AGREEMENT,
+              ROUTES.CHANGE_PASSWORD,
+            )
+          : ROUTES.SETTINGS,
+      );
     } catch (err) {
       if (err instanceof ApiError) {
         toast.error(err.message || 'Unable to change password.');

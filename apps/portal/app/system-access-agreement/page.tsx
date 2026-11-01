@@ -90,7 +90,9 @@ export default function SystemAccessAgreementPage() {
       toast.success(
         next === ROUTES.CHANGE_PASSWORD
           ? 'Agreement accepted — please set a new password.'
-          : 'Agreement accepted. Welcome to the CROSSUB Agent portal.',
+          : next === ROUTES.DASHBOARD
+            ? 'Agreement accepted. Welcome to the CROSSUB Agent portal.'
+            : 'Agreement accepted.',
       );
       router.replace(next);
     } catch (err) {
