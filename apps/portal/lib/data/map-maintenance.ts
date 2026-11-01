@@ -176,7 +176,7 @@ export function mapApiMaintenanceRequest(
   return {
     id: req.id,
     trackingNumber: maintenanceReferenceLabel(req.orderNumber, req.id),
-    propertyId: req.id,
+    propertyId: req.propertyId || req.id,
     propertyAddress: req.address,
     title: req.issueType,
     description: req.description,

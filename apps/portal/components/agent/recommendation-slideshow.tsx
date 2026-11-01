@@ -86,13 +86,6 @@ export function HomeRecommendations({ cros = false }: { cros?: boolean }) {
   return <RecommendationSlideshow slides={slides} />;
 }
 
-function taskId(pathname: string, section: string): string | undefined {
-  const prefix = `${section}/`;
-  if (!pathname.startsWith(prefix)) return undefined;
-  const id = pathname.slice(prefix.length).split('/')[0];
-  return id || undefined;
-}
-
 /** CROS shows the same suggestion as the page the agent is on. */
 export function CrosPageRecommendation() {
   const pathname = usePathname();
@@ -100,8 +93,7 @@ export function CrosPageRecommendation() {
   if (pathname === ROUTES.INSPECTIONS || pathname.startsWith(`${ROUTES.INSPECTIONS}/`)) {
     return <ServiceRecommendation surface="cros" />;
   }
-  if (pathname === ROUTES.MAINTENANCE || pathname.startsWith(`${ROUTES.MAINTENANCE}/`)) {
-    return <QuoteRecommendation requestId={taskId(pathname, ROUTES.MAINTENANCE)} />;
-  }
+  if (pathname === ROUTES.MAINTENANCE) return <QuoteRecommendation />;
+  // A job page shows this offer itself, and only once Assessment is done and Quotes is current.
   return null;
 }

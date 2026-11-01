@@ -1,6 +1,6 @@
 import type { components } from '@crossub-thongz/api-contract';
 
-import { api } from '@/lib/api';
+import { api, apiV1 } from '@/lib/api';
 import type { MaintenanceCloseReason } from '@/constants/maintenance-close';
 import type {
   ApiMaintenanceState,
@@ -168,10 +168,9 @@ export async function closeMaintenanceCaseWithReason(
 export async function fetchAgentMaintenanceDetail(
   requestId: string,
 ): Promise<AgentMaintenanceDetail> {
-  const result = await crossub.GET('/agent/maintenance/{requestId}', {
-    params: { path: { requestId } },
-  });
-  return unwrapAgentMaintenance(result, 'Failed to load the maintenance job');
+  return apiV1.get<AgentMaintenanceDetail>(
+    `/agent/maintenance/${encodeURIComponent(requestId)}`,
+  );
 }
 
 // ---------------------------------------------------------------------------------------------

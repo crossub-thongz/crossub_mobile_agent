@@ -768,11 +768,12 @@ export async function fetchProperty(propertyId: string): Promise<AgentProperty> 
  * The whole operational portfolio in one snapshot (`GET /api/v1/agent/portfolio`) —
  * inspections, maintenance, rent reviews, vacating, tenant selections, leasing,
  * accounting and tribunal, scoped to the assigned agencies and keyed by real property ids.
+ * Goes through `agentFetch`, same as the property book. The typed contract client
+ * on this deployment does not perform the request, so maintenance never arrived
+ * and the Self-Manage list stayed empty.
  */
 export async function fetchPortfolio(): Promise<AgentPortfolio> {
-  const { data, error } = await crossub.GET('/agent/portfolio');
-  if (error || !data) throw new Error('Failed to load portfolio');
-  return data;
+  return agentFetch<AgentPortfolio>('/agent/portfolio');
 }
 
 export type AgentPortalWelcomeStatus = {
