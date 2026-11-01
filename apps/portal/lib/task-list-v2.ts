@@ -713,6 +713,10 @@ export function taskDueMeta(row: TaskListV2Row, now = new Date()): TaskDueMeta {
   const formatted = raw && raw !== '—' ? raw : formatDate(new Date(dueMs).toISOString());
   const [datePart, timePart] = formatted.split(',').map((part) => part.trim());
 
+  // A finished task is not overdue, whenever its date was.
+  if (row.statusTone === 'completed') {
+    return { sort: dueMs, primary: `Due ${datePart}`, secondary: '', tone: 'muted' };
+  }
   if (days < 0) {
     const overdue = Math.abs(days);
     return {
