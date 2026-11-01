@@ -1,11 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { MessageSquare, Search } from 'lucide-react';
-import { useEffect } from 'react';
+import { MessageSquare } from 'lucide-react';
 
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
+import { AgentGlobalSearch } from '@/components/layout/agent-global-search';
 import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
@@ -44,9 +43,8 @@ export function AgentShellV2Header({
   /** Desktop header CROS when the Ask CROS rail is not on screen. */
   showCrosLauncher?: boolean;
 } = {}) {
-  const router = useRouter();
   const { user } = useAuth();
-  const { messages, unreadNotificationCount: liveUnread } = useAgentData();
+  const { unreadNotificationCount: liveUnread } = useAgentData();
   const headerCrosLauncher = useShellAsideStore((state) => state.headerCrosLauncher);
   const unreadCount = unreadNotificationCount ?? liveUnread;
   const showLauncher = showCrosLauncher ?? headerCrosLauncher;
@@ -56,17 +54,6 @@ export function AgentShellV2Header({
 
   const inbox = useAgentInbox();
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        router.push(ROUTES.SEARCH);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [router]);
-
   if (!user) return null;
 
   const name = displayName(user);
@@ -75,18 +62,7 @@ export function AgentShellV2Header({
 
   return (
     <header className="agent-shell-v2-header border-border/50 hidden w-full shrink-0 items-center gap-4 border-b px-6 py-3 lg:flex">
-      <Link
-        href={ROUTES.SEARCH}
-        className="v2-frosted-surface hover:border-border flex w-full max-w-sm min-w-0 items-center gap-2.5 rounded-xl border px-3 py-2 transition-colors"
-      >
-        <Search className="text-muted-foreground size-4 shrink-0" aria-hidden />
-        <span className="text-muted-foreground min-w-0 flex-1 truncate text-sm">
-          Search properties, tasks, tenants…
-        </span>
-        <kbd className="text-muted-foreground hidden shrink-0 rounded-md border border-border/70 bg-background/80 px-1.5 py-0.5 text-[11px] font-medium sm:inline">
-          ⌘ K
-        </kbd>
-      </Link>
+      <AgentGlobalSearch />
 
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {showLauncher ? (

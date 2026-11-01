@@ -1,110 +1,38 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Search } from 'lucide-react';
 
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
 import { ROUTES } from '@/constants/routes';
-import {
-  inspectionDetail,
-  maintenanceDetail,
-  propertyHref,
-  rentReviewDetail,
-  tenantSelectionDetail,
-  vacatingDetail,
-} from '@/constants/routes';
-
-type Result = { label: string; sub: string; href: string; kind: string };
+import { searchAgentRecords } from '@/lib/agent-global-search';
 
 export default function SearchPage() {
-  const [q, setQ] = useState('');
+  const params = useSearchParams();
+  const initialQuery = params.get('q') ?? '';
+  const [q, setQ] = useState(initialQuery);
   const data = useAgentData();
 
-  const results = useMemo(() => {
-    if (!q.trim()) return [] as Result[];
-    const query = q.toLowerCase();
-    const out: Result[] = [];
+  useEffect(() => {
+    setQ(params.get('q') ?? '');
+  }, [params]);
 
-    for (const p of data.properties) {
-      if (
-        p.address.toLowerCase().includes(query) ||
-        p.tenantName.toLowerCase().includes(query) ||
-        p.suburb.toLowerCase().includes(query)
-      ) {
-        out.push({
-          kind: 'Property',
-          label: p.address,
-          sub: p.tenantName,
-          href: propertyHref(p),
-        });
-      }
-    }
-    for (const m of data.maintenanceAll) {
-      if (
-        m.title.toLowerCase().includes(query) ||
-        m.trackingNumber.toLowerCase().includes(query) ||
-        m.propertyAddress.toLowerCase().includes(query) ||
-        (m.contractorName?.toLowerCase().includes(query) ?? false)
-      ) {
-        out.push({
-          kind: 'Maintenance',
-          label: m.title,
-          sub: m.trackingNumber,
-          href: maintenanceDetail(m.id),
-        });
-      }
-    }
-    for (const i of data.inspections) {
-      if (
-        i.trackingNumber.toLowerCase().includes(query) ||
-        i.propertyAddress.toLowerCase().includes(query)
-      ) {
-        out.push({
-          kind: 'Inspection',
-          label: i.trackingNumber,
-          sub: i.type,
-          href: inspectionDetail(i.id),
-        });
-      }
-    }
-    for (const r of data.rentReviews) {
-      if (r.propertyAddress.toLowerCase().includes(query)) {
-        out.push({
-          kind: 'Rent review',
-          label: r.propertyAddress,
-          sub: r.status,
-          href: rentReviewDetail(r.id),
-        });
-      }
-    }
-    for (const v of data.vacating) {
-      if (v.propertyAddress.toLowerCase().includes(query)) {
-        out.push({
-          kind: 'Vacating',
-          label: v.propertyAddress,
-          sub: v.reason,
-          href: vacatingDetail(v.id),
-        });
-      }
-    }
-    for (const t of data.tenantSelections) {
-      if (
-        t.applicantName.toLowerCase().includes(query) ||
-        t.propertyAddress.toLowerCase().includes(query)
-      ) {
-        out.push({
-          kind: 'Tenant selection',
-          label: t.applicantName,
-          sub: t.propertyAddress,
-          href: tenantSelectionDetail(t.id),
-        });
-      }
-    }
-    return out;
-  }, [q, data]);
+  const results = useMemo(
+    () =>
+      searchAgentRecords(q, {
+        properties: data.properties ?? [],
+        maintenanceAll: data.maintenanceAll ?? [],
+        inspections: data.inspections ?? [],
+        rentReviews: data.rentReviews ?? [],
+        vacating: data.vacating ?? [],
+        tenantSelections: data.tenantSelections ?? [],
+      }),
+    [q, data.properties, data.maintenanceAll, data.inspections, data.rentReviews, data.vacating, data.tenantSelections],
+  );
 
   return (
     <AgentShell title="Global search" backHref={ROUTES.DASHBOARD}>

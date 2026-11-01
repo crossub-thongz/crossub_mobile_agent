@@ -209,10 +209,7 @@ export function AgentShell({
         <PortalNavigationTracker />
       </Suspense>
       {persistentChrome ? null : (
-        <AgentSidebar
-          compact={pathname === ROUTES.TRUST || pathname.startsWith(`${ROUTES.TRUST}/`)}
-          onLogout={() => void logout()}
-        />
+        <AgentSidebar onLogout={() => void logout()} />
       )}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

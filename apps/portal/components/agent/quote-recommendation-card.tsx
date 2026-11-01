@@ -37,10 +37,13 @@ const COPY = {
 export function QuoteRecommendation({
   requestId,
   onAccepted,
+  compact = false,
 }: {
   /** One job, on its task. Omit to use the first open Self-Manage job the API still offers. */
   requestId?: string;
   onAccepted?: () => void;
+  /** Home uses a short row. Maintenance and CROS keep the full card. */
+  compact?: boolean;
 }) {
   const { maintenanceAll: maintenance } = useAgentData();
   const { picture, ready } = useRecommendationPicture(requestId);
@@ -71,6 +74,58 @@ export function QuoteRecommendation({
       setBusy(false);
     }
   };
+
+  const summary =
+    match.extra > 0
+      ? COPY.several(match.extra + 1)
+      : issue
+        ? `${issue} still needs a quote.`
+        : COPY.body;
+
+  if (compact) {
+    return (
+      <section className="rounded-xl border border-[#cfe8df] bg-white px-3 py-2.5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold tracking-wide text-[#067a56] uppercase">
+              CROS <span className="text-slate-400">·</span> {COPY.badge}
+            </p>
+            <p className="truncate text-sm font-semibold text-slate-900">{COPY.title}</p>
+            <p className="truncate text-xs text-slate-600">{address ? `${address} · ${summary}` : summary}</p>
+          </div>
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground -mr-1 rounded-md p-1"
+            aria-label="Not interested"
+            disabled={busy}
+            onClick={() => void finish(() => dismissQuoteOffer(match.id))}
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            className="flex min-h-8 items-center justify-center rounded-lg bg-[#00bd85] px-2 py-1.5 text-center text-xs leading-tight font-semibold text-white transition-colors hover:bg-[#00a876] disabled:opacity-50"
+            disabled={busy}
+            onClick={() =>
+              void finish(() => requestCrossubMaintenanceQuote(match.id), COPY.requested)
+            }
+          >
+            {COPY.crossub}
+          </button>
+          <button
+            type="button"
+            className="flex min-h-8 items-center justify-center rounded-lg border border-[#ccece3] bg-white px-2 py-1.5 text-center text-xs leading-tight font-semibold text-[#067a56] transition-colors hover:border-[#00bd85] hover:bg-[#f3fbf8] disabled:opacity-50"
+            disabled={busy}
+            onClick={() => void finish(() => dismissQuoteOffer(match.id))}
+          >
+            {ownLabel}
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="mb-4 rounded-2xl border border-[#cfe8df] bg-white p-4">

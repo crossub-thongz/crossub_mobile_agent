@@ -71,23 +71,21 @@ export function PhoneCountryField({
       >
         <button
           type="button"
-          className="flex h-full w-[16.75rem] shrink-0 items-center gap-1.5 border-r border-[#CED9E4] pr-2.5 pl-3 text-sm text-[#171E4B]"
+          className="flex h-full w-[6.75rem] shrink-0 items-center justify-between gap-1 border-r border-[#CED9E4] px-3 text-sm text-[#171E4B]"
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={listId}
+          aria-label={`${selected.name} ${selected.dial}`}
           onClick={() => {
             setOpen((value) => !value);
             setQuery('');
           }}
         >
-          <span className="text-base leading-none" aria-hidden>
-            {flagEmoji(selected.code)}
+          <span className="font-medium whitespace-nowrap">
+            {selected.code} {selected.dial}
           </span>
-          <span className="font-medium whitespace-nowrap">({selected.code})</span>
-          <span className="whitespace-nowrap">{selected.name}</span>
-          <span className="font-medium whitespace-nowrap text-[#52647C]">{selected.dial}</span>
           <ChevronDown
-            className={cn('ml-auto size-4 text-[#52647C] transition-transform', open && 'rotate-180')}
+            className={cn('size-4 shrink-0 text-[#52647C] transition-transform', open && 'rotate-180')}
             aria-hidden
           />
         </button>

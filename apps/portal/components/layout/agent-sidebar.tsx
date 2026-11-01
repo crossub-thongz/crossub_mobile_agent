@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, ChevronDown, LogOut, MoreHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { Building2, ChevronDown, LogOut, MoreHorizontal, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
@@ -47,6 +47,7 @@ function NavLink({
   icon: Icon,
   active,
   compact,
+  pinned = false,
   badge,
   v2 = false,
   trailingChevron = false,
@@ -57,6 +58,8 @@ function NavLink({
   icon: React.ComponentType<{ className?: string }>;
   active: boolean;
   compact?: boolean;
+  /** Icon rail that stays collapsed until the user opens it. */
+  pinned?: boolean;
   badge?: number;
   v2?: boolean;
   trailingChevron?: boolean;
@@ -70,7 +73,9 @@ function NavLink({
         className={cn(
           'agent-sidebar-v2__nav-link relative flex items-center text-[15px] font-medium',
           compact
-            ? 'justify-center px-2 py-3.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-5'
+            ? pinned
+              ? 'justify-center px-2 py-3.5'
+              : 'justify-center px-2 py-3.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-5'
             : 'gap-3 px-5 py-3.5',
           active ? 'agent-sidebar-v2__nav-link--active' : 'agent-sidebar-v2__nav-link--idle',
           nested && 'agent-sidebar-v2__nav-link--nested !py-2',
@@ -90,7 +95,9 @@ function NavLink({
           className={cn(
             'min-w-0 flex-1 truncate',
             compact &&
-              'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100',
+              (pinned
+                ? 'hidden'
+                : 'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100'),
           )}
         >
           {label}
@@ -102,7 +109,7 @@ function NavLink({
           <ChevronDown
             className={cn(
               'agent-sidebar-v2__nav-chevron size-4 shrink-0',
-              compact && 'hidden group-hover/sidebar:block',
+              compact && (pinned ? 'hidden' : 'hidden group-hover/sidebar:block'),
             )}
             aria-hidden
           />
@@ -153,10 +160,12 @@ function NavLink({
 
 function AgentSidebarSupport({
   compact,
+  pinned = false,
   pathname,
   onOpenChange,
 }: {
   compact?: boolean;
+  pinned?: boolean;
   pathname: string;
   onOpenChange?: (open: boolean) => void;
 }) {
@@ -179,7 +188,9 @@ function AgentSidebarSupport({
           className={cn(
             'agent-sidebar-v2__nav-link relative flex w-full items-center rounded-xl text-[14px] font-medium',
             compact
-              ? 'justify-center px-2 py-2.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-3'
+              ? pinned
+                ? 'justify-center px-2 py-2.5'
+                : 'justify-center px-2 py-2.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-3'
               : 'gap-3 px-3 py-2.5',
             open || active
               ? 'agent-sidebar-v2__nav-link--active'
@@ -191,7 +202,9 @@ function AgentSidebarSupport({
             className={cn(
               'min-w-0 flex-1 truncate text-left',
               compact &&
-                'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100',
+                (pinned
+                  ? 'hidden'
+                  : 'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100'),
             )}
           >
             Support
@@ -199,7 +212,7 @@ function AgentSidebarSupport({
           <ChevronDown
             className={cn(
               'text-muted-foreground size-4 shrink-0 opacity-70',
-              compact && 'hidden group-hover/sidebar:block',
+              compact && (pinned ? 'hidden' : 'hidden group-hover/sidebar:block'),
               open && 'rotate-180',
             )}
             aria-hidden
@@ -238,12 +251,14 @@ function AgentSidebarSupport({
 
 function AgentSidebarAgency({
   compact,
+  pinned = false,
   onLogout,
   menuItems,
   pathname,
   onOpenChange,
 }: {
   compact?: boolean;
+  pinned?: boolean;
   onLogout: () => void;
   menuItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[];
   pathname: string;
@@ -270,7 +285,9 @@ function AgentSidebarAgency({
           className={cn(
             'agent-sidebar-v2__agency flex w-full items-center rounded-xl text-left transition-colors hover:bg-[color-mix(in_oklab,var(--card)_50%,transparent)]',
             compact
-              ? 'justify-center p-2 group-hover/sidebar:gap-3 group-hover/sidebar:px-3 group-hover/sidebar:py-2.5'
+              ? pinned
+                ? 'justify-center p-2'
+                : 'justify-center p-2 group-hover/sidebar:gap-3 group-hover/sidebar:px-3 group-hover/sidebar:py-2.5'
               : 'gap-3 px-3 py-2.5',
           )}
         >
@@ -281,7 +298,9 @@ function AgentSidebarAgency({
             className={cn(
               'min-w-0 flex-1',
               compact &&
-                'max-w-0 overflow-hidden opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100',
+                (pinned
+                  ? 'hidden'
+                  : 'max-w-0 overflow-hidden opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100'),
             )}
           >
             <span className="text-foreground block truncate text-sm font-semibold leading-tight">
@@ -296,7 +315,7 @@ function AgentSidebarAgency({
           <ChevronDown
             className={cn(
               'text-muted-foreground size-4 shrink-0',
-              compact && 'hidden group-hover/sidebar:block',
+              compact && (pinned ? 'hidden' : 'hidden group-hover/sidebar:block'),
             )}
           />
         </button>
@@ -373,11 +392,18 @@ export function AgentSidebar({
   compact?: boolean;
   onLogout: () => void;
 }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const isV2 = useIsAgentUiV2();
   const [supportOpen, setSupportOpen] = useState(false);
   const [agencyOpen, setAgencyOpen] = useState(false);
-  const railCollapsed = compact && !supportOpen && !agencyOpen;
+  const [accountingCollapsed, setAccountingCollapsed] = useState(false);
+  const onAccounting = pathname === ROUTES.TRUST || pathname.startsWith(`${ROUTES.TRUST}/`);
+  const pinned = onAccounting && accountingCollapsed;
+  const railCollapsed = pinned || (compact && !supportOpen && !agencyOpen);
+
+  useEffect(() => {
+    if (!onAccounting) setAccountingCollapsed(false);
+  }, [onAccounting]);
   const { hasFullManagementAccess, platformBillingDisabled } = useAgentData();
   const selfManagedAccess = useSelfManagedAccess();
   const { total: needsYouCount } = useCrosToday();
@@ -422,15 +448,18 @@ export function AgentSidebar({
       <aside
         className={cn(
           'agent-sidebar agent-sidebar-v2 group/sidebar z-30 hidden h-full shrink-0 flex-col overflow-hidden transition-[width,box-shadow] duration-[350ms] ease-[cubic-bezier(0.22,1,0.36,1)] lg:flex',
-          railCollapsed
-            ? 'w-[72px] hover:z-40 hover:w-[252px] hover:shadow-[8px_0_24px_-8px_rgba(0,0,0,0.12)]'
-            : 'z-40 w-[252px]',
+          pinned && 'agent-sidebar-v2--pinned',
+          pinned
+            ? 'w-[72px]'
+            : railCollapsed
+              ? 'w-[72px] hover:z-40 hover:w-[252px] hover:shadow-[8px_0_24px_-8px_rgba(0,0,0,0.12)]'
+              : 'z-40 w-[252px]',
         )}
       >
         <div
           className={cn(
             'flex min-w-0 items-center gap-2 px-4 pt-4 pb-3',
-            railCollapsed ? 'justify-center group-hover/sidebar:justify-start' : '',
+            pinned ? 'flex-col px-2' : railCollapsed ? 'justify-center group-hover/sidebar:justify-start' : '',
           )}
         >
           <CrossubLogo
@@ -438,8 +467,24 @@ export function AgentSidebar({
             showWordmark
             href={ROUTES.DASHBOARD}
             className="min-w-0"
-            wordmarkClassName={cn(railCollapsed && 'hidden group-hover/sidebar:inline')}
+            wordmarkClassName={cn(
+              pinned ? 'hidden' : railCollapsed && 'hidden group-hover/sidebar:inline',
+            )}
           />
+          {onAccounting ? (
+            <button
+              type="button"
+              onClick={() => setAccountingCollapsed((closed) => !closed)}
+              aria-label={pinned ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={pinned ? 'Expand sidebar' : 'Collapse sidebar'}
+              className={cn(
+                'text-muted-foreground hover:bg-secondary hover:text-foreground flex size-8 shrink-0 items-center justify-center rounded-lg',
+                !pinned && 'ml-auto',
+              )}
+            >
+              {pinned ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+            </button>
+          ) : null}
         </div>
 
         <nav className="scrollbar-subtle flex-1 overflow-x-hidden overflow-y-auto">
@@ -453,6 +498,7 @@ export function AgentSidebar({
                     v2
                     active={isActive(pathname, item.href)}
                     compact={railCollapsed}
+                    pinned={pinned}
                     badge={navBadge(item.href)}
                     trailingChevron={'trailingChevron' in item && item.trailingChevron}
                   />
@@ -470,6 +516,7 @@ export function AgentSidebar({
                       nested
                       active={isActive(pathname, child.href)}
                       compact={railCollapsed}
+                      pinned={pinned}
                     />
                   </li>,
                 ];
@@ -483,11 +530,17 @@ export function AgentSidebar({
           <div className="border-border/50 mb-3 border-t" />
           {footerNav.length > 0 ? (
             <div className="mb-1">
-              <AgentSidebarSupport compact={railCollapsed} pathname={pathname} onOpenChange={setSupportOpen} />
+              <AgentSidebarSupport
+                compact={railCollapsed}
+                pinned={pinned}
+                pathname={pathname}
+                onOpenChange={setSupportOpen}
+              />
             </div>
           ) : null}
           <AgentSidebarAgency
             compact={railCollapsed}
+            pinned={pinned}
             onLogout={onLogout}
             menuItems={agencyMenuItems}
             pathname={pathname}

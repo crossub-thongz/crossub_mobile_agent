@@ -35,10 +35,7 @@ function RecommendationSlideshow({ slides }: { slides: ReactNode[] }) {
   if (count === 1) return <>{slides[0]}</>;
 
   return (
-    <div
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
+    <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
       <div>{slides[safe]}</div>
       <div className="mt-2 flex items-center justify-center gap-2">
         <button
@@ -71,7 +68,7 @@ function RecommendationSlideshow({ slides }: { slides: ReactNode[] }) {
   );
 }
 
-/** Home shows one card, or both as a slideshow when inspection and quote offers qualify. */
+/** Home shows the inspection suggestion and a short maintenance-quote row when one qualifies. */
 export function HomeRecommendations({ cros = false }: { cros?: boolean }) {
   const { picture, ready } = useRecommendationPicture();
   if (!ready) return null;
@@ -84,7 +81,7 @@ export function HomeRecommendations({ cros = false }: { cros?: boolean }) {
     slides.push(<ServiceRecommendation key="service" surface={cros ? 'cros' : 'home'} />);
   }
   if ((picture.quotes ?? []).length > 0) {
-    slides.push(<QuoteRecommendation key="quote" />);
+    slides.push(<QuoteRecommendation key="quote" compact />);
   }
   return <RecommendationSlideshow slides={slides} />;
 }

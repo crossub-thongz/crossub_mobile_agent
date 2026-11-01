@@ -234,7 +234,7 @@ export default function RegisterPage() {
 
   return (
     <div
-      className="relative flex min-h-[calc(100dvh-var(--env-banner-height,0px))] flex-col pt-6 pb-16 text-[#0D1836]"
+      className="relative flex min-h-[calc(100dvh-var(--env-banner-height,0px))] flex-col py-10 text-[#0D1836]"
       style={{
         backgroundColor: '#F6FCFC',
         backgroundImage: 'url(/login/agent-bg.svg)',
@@ -242,13 +242,13 @@ export default function RegisterPage() {
         backgroundPosition: 'center',
       }}
     >
-      <main className="mx-auto mt-6 grid w-full max-w-6xl items-start gap-10 px-5 sm:px-8 lg:mt-8 lg:grid-cols-2 lg:gap-16 lg:px-10">
-        <section className="max-w-xl">
-          <div className="flex items-center gap-2.5">
-            <Image src="/crossub-logo.png" alt="" width={36} height={36} priority className="size-9" />
-            <span className="text-[16px] font-bold tracking-[0.16em]">CROSSUB</span>
-          </div>
-          <div className="mt-10 flex items-center gap-3">
+      <main className="mx-auto my-auto grid w-full max-w-7xl items-start gap-x-10 gap-y-10 px-5 sm:px-8 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:gap-x-14 lg:px-10">
+        <div className="flex items-center gap-2.5 lg:col-start-1 lg:row-start-1">
+          <Image src="/crossub-logo.png" alt="" width={36} height={36} priority className="size-9" />
+          <span className="text-[16px] font-bold tracking-[0.16em]">CROSSUB</span>
+        </div>
+        <section className="max-w-xl lg:col-start-1 lg:row-start-2">
+          <div className="flex items-center gap-3">
             <span className="h-0.5 w-8 rounded-full" style={{ backgroundColor: AGENT_GREEN }} />
             <p className="text-xs font-semibold tracking-[0.16em]" style={{ color: AGENT_GREEN }}>
               AGENT PORTAL
@@ -279,7 +279,7 @@ export default function RegisterPage() {
           </ul>
         </section>
 
-        <section className="w-full justify-self-end rounded-[22px] bg-white p-6 shadow-[0_18px_48px_rgba(13,24,54,0.10)] sm:p-8">
+        <section className="w-full justify-self-end rounded-[22px] bg-white p-6 shadow-[0_18px_48px_rgba(13,24,54,0.10)] sm:p-8 lg:col-start-2 lg:row-start-2">
           <ol className="mb-6 flex items-center">
             {STEPS.map((label, index) => (
               <li key={label} className="flex min-w-0 flex-1 items-center">
@@ -333,60 +333,6 @@ export default function RegisterPage() {
               </div>
             </Field>
 
-            <Field id="password" label="Password" error={errors.password?.message}>
-              <div className="relative">
-                <Lock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8AA0B5]" />
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder={`At least ${PASSWORD_MIN} characters`}
-                  className={`${inputClass} pr-10 pl-10`}
-                  {...register('password')}
-                />
-                <PasswordToggle shown={showPassword} onToggle={() => setShowPassword((value) => !value)} />
-              </div>
-            </Field>
-
-            <Field id="region" label="Select your region" error={errors.region?.message}>
-              <div className="relative">
-                <select
-                  id="region"
-                  className="h-12 w-full cursor-pointer appearance-none rounded-[9px] border border-[#CED9E4] bg-white pr-10 pl-3 text-sm font-medium text-[#171E4B] outline-none focus:border-[#00bd85]"
-                  value={region}
-                  onChange={(event) => chooseRegion(event.target.value)}
-                >
-                  <option value="">Select your region</option>
-                  {REGIONS.map((item) => (
-                    <option key={item.code} value={item.code}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-[#52647C]" />
-              </div>
-            </Field>
-
-            <Field id="confirmPassword" label="Confirm password" error={errors.confirmPassword?.message}>
-              <div className="relative">
-                <Lock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8AA0B5]" />
-                <input
-                  id="confirmPassword"
-                  type={showConfirm ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="Re-enter your password"
-                  className={`${inputClass} pr-10 pl-10`}
-                  {...register('confirmPassword')}
-                />
-                <PasswordToggle
-                  shown={showConfirm}
-                  label="confirm password"
-                  onToggle={() => setShowConfirm((value) => !value)}
-                />
-              </div>
-            </Field>
-
-            <div className="sm:col-span-2">
             <Field
               id="phone"
               label="Mobile number"
@@ -413,6 +359,60 @@ export default function RegisterPage() {
                 }}
               />
             </Field>
+
+            <Field id="password" label="Password" error={errors.password?.message}>
+              <div className="relative">
+                <Lock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8AA0B5]" />
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder={`At least ${PASSWORD_MIN} characters`}
+                  className={`${inputClass} pr-10 pl-10`}
+                  {...register('password')}
+                />
+                <PasswordToggle shown={showPassword} onToggle={() => setShowPassword((value) => !value)} />
+              </div>
+            </Field>
+
+            <Field id="confirmPassword" label="Confirm password" error={errors.confirmPassword?.message}>
+              <div className="relative">
+                <Lock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8AA0B5]" />
+                <input
+                  id="confirmPassword"
+                  type={showConfirm ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Re-enter your password"
+                  className={`${inputClass} pr-10 pl-10`}
+                  {...register('confirmPassword')}
+                />
+                <PasswordToggle
+                  shown={showConfirm}
+                  label="confirm password"
+                  onToggle={() => setShowConfirm((value) => !value)}
+                />
+              </div>
+            </Field>
+
+            <div className="sm:col-span-2">
+              <Field id="region" label="Select your region" error={errors.region?.message}>
+                <div className="relative">
+                  <select
+                    id="region"
+                    className="h-12 w-full cursor-pointer appearance-none rounded-[9px] border border-[#CED9E4] bg-white pr-10 pl-3 text-sm font-medium text-[#171E4B] outline-none focus:border-[#00bd85]"
+                    value={region}
+                    onChange={(event) => chooseRegion(event.target.value)}
+                  >
+                    <option value="">Select your region</option>
+                    {REGIONS.map((item) => (
+                      <option key={item.code} value={item.code}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-[#52647C]" />
+                </div>
+              </Field>
             </div>
 
             <button

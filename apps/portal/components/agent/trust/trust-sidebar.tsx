@@ -103,10 +103,7 @@ function TrustNavList({
   );
 }
 
-/**
- * The Accounting side menu: the same groups and names as admin Trust Accounting.
- * The portal sidebar shrinks to icons on this page, so this menu stays open with its labels.
- */
+/** The Accounting side menu stays open. The main menu is the one that can collapse. */
 export function TrustAccountingSidebar({
   tab,
   onChange,
