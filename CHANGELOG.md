@@ -7,6 +7,9 @@
 - The Tasks page lists what is waiting on the agent but is not a task (money owed, unanswered messages, leases ending) under "Also waiting on you", each with Ask CROS
 
 ### Changed
+- The assistant is written Cros everywhere (panel, chat, notifications, recommendations, guides); all-caps labels that held its name are now in normal case
+- Work the CROSSUB team runs reads "CROSSUB handling" / "CROSSUB Is Handling", automatic entries in activity logs are by "CROSSUB", the task filter is "CROSSUB team", and the dashboard says "already arranged by the CROSSUB team"
+- The dashboard's "CROS Activity" card is now "Job Activity"
 - One count of what needs the agent everywhere: the CROS button, CROS's Today tab, the dashboard's "Needs Your Attention" and the Tasks badge all show the CROS list's total, read live and again when the app comes back to the front
 - The dashboard's "Needs Your Attention" is split into Rent, Repairs, Leases and Other, which add up to its total; tapping one opens CROS on the list
 - The CROS panel has two tabs, Today and Chat; past chats sit behind a clock icon, and Insights and "Intelligent highlights" are gone (they repeated the list)

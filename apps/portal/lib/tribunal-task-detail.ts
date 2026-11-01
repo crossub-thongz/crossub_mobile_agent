@@ -307,7 +307,7 @@ export function buildTribunalActivityEntries(
       id: 'created',
       at: tribunalCase.createdAt,
       title: 'Tribunal case created',
-      actor: 'CROS System',
+      actor: 'CROSSUB',
     });
   }
   if (detail?.lodgementDate) {

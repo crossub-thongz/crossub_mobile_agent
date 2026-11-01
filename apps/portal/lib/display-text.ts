@@ -1,5 +1,4 @@
 const PRESERVED_TOKENS = new Set([
-  'CROS',
   'GST',
   'YTD',
   'NSW',
@@ -22,7 +21,7 @@ function capitalizeWord(word: string): string {
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
-/** Title-case user-facing labels while preserving acronyms (CROS, GST, YTD, …). */
+/** Title-case user-facing labels while preserving acronyms (GST, YTD, …). */
 export function formatTitleCase(text: string): string {
   const trimmed = text.trim();
   if (!trimmed) return trimmed;

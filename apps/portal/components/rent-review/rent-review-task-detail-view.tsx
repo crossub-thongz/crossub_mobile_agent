@@ -43,6 +43,7 @@ import {
 } from '@/lib/utils';
 
 import './rent-review-task-detail.css';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 
 const TABS: { id: RentReviewTaskTab; label: string }[] = [
   { id: 'workflow', label: 'Workflow' },
@@ -515,7 +516,7 @@ export function RentReviewTaskDetailView({
                 <section className="rounded-2xl border bg-muted/20 p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-sm font-semibold">CROS recommendation</h3>
+                      <h3 className="text-sm font-semibold">{CROS_ASSISTANT_NAME} recommendation</h3>
                       <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
                         {detail.ai.rationale}
                       </p>

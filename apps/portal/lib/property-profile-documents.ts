@@ -107,7 +107,7 @@ export function resolvePropertyProfileUploadedBy(input: {
     input.category === 'invoice' ||
     input.category === 'rent_review'
   ) {
-    return 'CROS System';
+    return 'CROSSUB';
   }
   return 'Agent';
 }

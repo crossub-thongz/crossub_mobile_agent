@@ -25,6 +25,7 @@ import {
   type TaskListV2Row,
 } from '@/lib/task-list-v2';
 import { cn, formatCurrency, formatDate, formatPropertyFullAddress } from '@/lib/utils';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 
 import '@/components/agent/property-profile/property-profile-v2.css';
 import '@/components/agent/tasks/task-list-v2.css';
@@ -154,7 +155,7 @@ export function TaskListPreviewPanel({
                 <div className="flex items-start gap-2">
                   <Sparkles className="text-primary mt-0.5 size-4 shrink-0" />
                   <div>
-                    <p className="text-xs font-semibold">CROS recommendation</p>
+                    <p className="text-xs font-semibold">{CROS_ASSISTANT_NAME} recommendation</p>
                     <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
                       {maintenance.recommendation}
                     </p>

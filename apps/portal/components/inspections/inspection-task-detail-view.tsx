@@ -47,6 +47,7 @@ import {
 import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
 import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 
 const TABS: { id: InspectionTaskTab; label: string }[] = [
   { id: 'workflow', label: 'Workflow' },
@@ -391,7 +392,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
           >
             <div className="flex items-center gap-2">
               <Sparkles className={cn('size-4', banner.needsAction ? 'text-rose-600' : 'text-sky-600')} />
-              <p className="text-sm font-semibold">CROS recommendation</p>
+              <p className="text-sm font-semibold">{CROS_ASSISTANT_NAME} recommendation</p>
             </div>
             <p className="mt-3 text-sm leading-relaxed text-sky-950/80 dark:text-sky-100/80">
               {banner.crosSummary}

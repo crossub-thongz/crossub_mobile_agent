@@ -254,11 +254,11 @@ const WORKFLOW_TOUR_ROLE_COPY: Record<
   }
 > = {
   [AGENT_COPY_VARIANT.SERVICED]: {
-    badgeTitle: 'Need your action vs CROS handling',
+    badgeTitle: 'Need your action vs CROSSUB handling',
     badgeDescription:
       'The case badge tells you at a glance whether you must decide something now or CROSSUB is carrying the work.',
     badgeActionNote:
-      'Rose Need your action — open the job and act in the Workflow panel. Green CROS handling — monitor only until the badge changes.',
+      'Rose Need your action — open the job and act in the Workflow panel. Green CROSSUB handling — monitor only until the badge changes.',
     statusDescription:
       'The status banner explains the live blocker, what CROSSUB recommends, and the next step in plain language.',
     entryStepDescriptions: {},

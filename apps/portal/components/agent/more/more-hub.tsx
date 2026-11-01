@@ -291,9 +291,9 @@ export function MoreHub() {
 
       <footer className="text-muted-foreground mt-10 px-1 text-center text-xs leading-relaxed">
         <p>
-          CROS is committed to providing secure and reliable property management services.
+          CROSSUB is committed to providing secure and reliable property management services.
         </p>
-        <p className="mt-1">© {new Date().getFullYear()} CROS Property Management. All rights reserved.</p>
+        <p className="mt-1">© {new Date().getFullYear()} CROSSUB. All rights reserved.</p>
       </footer>
     </div>
   );

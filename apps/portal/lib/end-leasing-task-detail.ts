@@ -315,7 +315,7 @@ export function buildEndLeasingActivityEntries(caseData: TerminationCaseDetail):
       id: entry.id,
       at: entry.timestamp,
       title: entry.label,
-      actor: entry.actor ?? 'CROS System',
+      actor: entry.actor ?? 'CROSSUB',
     }));
 }
 

@@ -415,7 +415,7 @@ export function V2Dashboard() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="inline-flex items-center gap-2 text-sm font-semibold">
               <ClipboardList className="text-primary size-4" />
-              {CROS_ASSISTANT_NAME} Activity
+              Job Activity
             </h2>
             <Link href={ROUTES.TASKS} className="text-primary text-xs font-semibold hover:underline">
               View all activity
@@ -511,7 +511,7 @@ function fullServiceSummary(summary: {
     summary.awaiting > 0
       ? `${countPhrase(summary.awaiting, 'is', 'are')} waiting on a tenant`
       : null,
-    `${countPhrase(summary.arranged, 'is', 'are')} already arranged by ${CROS_ASSISTANT_NAME}`,
+    `${countPhrase(summary.arranged, 'is', 'are')} already arranged by the CROSSUB team`,
     `${countPhrase(summary.awareness, 'is', 'are')} for awareness`,
   ].filter(Boolean);
   return `${parts.join(', ')}.`;

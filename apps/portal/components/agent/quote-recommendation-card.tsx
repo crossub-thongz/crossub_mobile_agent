@@ -14,6 +14,7 @@ import {
   snoozeQuoteOffer,
 } from '@/lib/crossub-api/service-offer-client';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 
 const COPY = {
   badge: 'Suggestion',
@@ -74,8 +75,8 @@ export function QuoteRecommendation({
   return (
     <section className="mb-4 rounded-2xl border border-[#cfe8df] bg-white p-4">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-bold tracking-wide text-[#067a56] uppercase">
-          CROS <span className="text-slate-400">·</span> {COPY.badge}
+        <p className="text-xs font-bold text-[#067a56]">
+          {CROS_ASSISTANT_NAME} <span className="text-slate-400">·</span> {COPY.badge}
         </p>
         <button
           type="button"

@@ -243,7 +243,7 @@ function statusPresentation(
   }
   return {
     label: 'In Progress',
-    sublabel: task.jobRow?.status ?? 'Being handled by CROS',
+    sublabel: task.jobRow?.status ?? 'Being handled by CROSSUB',
     tone: 'handling',
   };
 }
@@ -819,7 +819,7 @@ export function taskMatchesMoreFilters(
 
 const ASSIGNEE_CHIP: Record<Exclude<TaskAssigneeFilter, 'all'>, string> = {
   me: 'Me',
-  cros: 'CROS Team',
+  cros: 'CROSSUB team',
   unassigned: 'Unassigned',
 };
 const SERVICE_CHIP: Record<Exclude<TaskServiceFilter, 'all'>, string> = {

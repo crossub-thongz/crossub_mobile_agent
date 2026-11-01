@@ -58,7 +58,7 @@ export function AgentPageGuideDialog({
           <div className="flex items-start gap-3">
             <CrosAssistantLogoBadge size="lg" className="mt-0.5 shrink-0" />
             <DialogHeader className="min-w-0 flex-1 gap-1 text-left">
-              <p className="text-primary text-[11px] font-semibold uppercase tracking-[0.2em]">
+              <p className="text-primary text-xs font-semibold">
                 {CROS_ASSISTANT_NAME} · {guide.eyebrow}
               </p>
               <DialogTitle className="text-xl">{guide.pageName}</DialogTitle>

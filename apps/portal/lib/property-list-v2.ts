@@ -349,7 +349,7 @@ export function buildPropertyListV2RowTasks(input: {
       maintenanceCount,
       leasingCount,
       inspectionCount,
-      summary: 'CROS handling',
+      summary: 'CROSSUB handling',
       subsummary: 'No action required',
     };
   }

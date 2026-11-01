@@ -45,6 +45,7 @@ import {
 } from '@/lib/utils';
 
 import './tribunal-task-detail.css';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 
 const TABS: { id: TribunalTaskTab; label: string }[] = [
   { id: 'workflow', label: 'Workflow' },
@@ -371,7 +372,7 @@ export function TribunalTaskDetailView({
 
               {banner.crosSummary.length > 0 ? (
                 <section className="rounded-2xl border border-sky-500/15 v2-frosted-surface p-5">
-                  <h3 className="text-sm font-semibold">CROS recommendation</h3>
+                  <h3 className="text-sm font-semibold">{CROS_ASSISTANT_NAME} recommendation</h3>
                   <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
                     {banner.crosSummary[0]}
                   </p>

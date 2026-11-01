@@ -27,7 +27,7 @@ export const TASK_LIST_COPY: Record<
     needActionSublabel: string;
     /** False when no property can be CROSSUB-handled, so the CROS handling card is dropped. */
     showCrosHandlingBucket: boolean;
-    /** Status on work that would be "CROS handling" on a serviced tier but is the agent's own. */
+    /** Status on work that would be "CROSSUB handling" on a serviced tier but is the agent's own. */
     ownWorkStatusLabel: string;
     ownWorkStatusFallback: string;
   }
@@ -51,7 +51,7 @@ export const TASK_LIST_COPY: Record<
 };
 
 /**
- * Task detail header badge and status card. Serviced tiers show "CROS handling" while the agent
+ * Task detail header badge and status card. Serviced tiers show "CROSSUB handling" while the agent
  * has nothing to decide; on Self-Manage the job is the agent's own, with CROS assisting.
  */
 export const TASK_DETAIL_COPY: Record<
@@ -67,7 +67,7 @@ export const TASK_DETAIL_COPY: Record<
 > = {
   serviced: {
     needsActionBadge: 'Need your action',
-    inProgressBadge: 'CROS handling',
+    inProgressBadge: 'CROSSUB handling',
     maintenanceRecommendationFallback:
       'CROSSUB is handling this job and will notify you if a decision is needed.',
     inspectionRecommendationFallback:
@@ -89,7 +89,7 @@ export const TASK_DETAIL_COPY: Record<
 /** The property's in-flight jobs card (profile overview and list preview). */
 export const PROPERTY_JOBS_COPY: Record<AgentCopyVariant, { heading: string; empty: string }> = {
   serviced: {
-    heading: 'CROS Is Handling',
+    heading: 'CROSSUB Is Handling',
     empty: 'No active CROSSUB jobs for this property.',
   },
   self_managed: {

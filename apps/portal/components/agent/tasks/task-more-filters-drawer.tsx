@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 const ASSIGNEE_OPTIONS: { value: TaskAssigneeFilter; label: string }[] = [
   { value: 'all', label: 'All assignees' },
   { value: 'me', label: 'Me' },
-  { value: 'cros', label: 'CROS Team' },
+  { value: 'cros', label: 'CROSSUB team' },
   { value: 'unassigned', label: 'Unassigned' },
 ];
 

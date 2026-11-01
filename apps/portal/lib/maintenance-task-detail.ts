@@ -356,7 +356,7 @@ export function buildMaintenanceActivityEntries(workspaceCase: MaintenanceWorksp
       id: entry.id,
       at: entry.timestamp,
       title: formatMaintenanceAuditMessage(entry.message),
-      actor: entry.actor || 'CROS System',
+      actor: entry.actor || 'CROSSUB',
     }))
     .filter((entry) => entry.title.length > 0);
 }
@@ -413,7 +413,7 @@ function uploadedByLabel(role: ApiMaintenanceAttachment['uploadedByRole']): stri
     case 'strata':
       return 'Strata';
     default:
-      return 'CROS System';
+      return 'CROSSUB';
   }
 }
 

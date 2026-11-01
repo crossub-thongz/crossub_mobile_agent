@@ -140,7 +140,7 @@ function buildPageTours(variant: AgentCopyVariant): Record<AgentTutorialModuleId
       roleStep,
       { id: 'tasks-nav', target: 'nav-tasks', ...copy('tasks', 'Open Tasks') },
       { id: 'tasks-need', target: 'tasks-bucket-need_action', ...copy('tasks', 'Need my action') },
-      { id: 'tasks-cros', target: 'tasks-bucket-cros_handling', ...copy('tasks', 'CROS handling') },
+      { id: 'tasks-cros', target: 'tasks-bucket-cros_handling', ...copy('tasks', 'CROSSUB handling') },
       { id: 'tasks-waiting', target: 'tasks-bucket-waiting', ...copy('tasks', 'Waiting') },
       { id: 'tasks-done', target: 'tasks-bucket-completed', ...copy('tasks', 'Completed') },
       { id: 'tasks-types', target: 'tasks-type-tabs', ...copy('tasks', 'Type tabs') },

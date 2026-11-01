@@ -47,7 +47,7 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
       {
         title: 'Preview, then open',
         description:
-          'On desktop, click a row once to load the preview panel on the right (overview, jobs CROS is handling, upcoming items). Click the selected row again, double-click, or use Open profile to enter the full property hub.',
+          'On desktop, click a row once to load the preview panel on the right (overview, jobs CROSSUB is handling, upcoming items). Click the selected row again, double-click, or use Open profile to enter the full property hub.',
       },
       {
         title: 'Use the row menu',
@@ -109,7 +109,7 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
       {
         title: 'Preview panel',
         description:
-          'Desktop only. After you select a row, the right-hand panel shows current tenancy, rent, lease, jobs CROS is handling, and shortcuts into the property. It does not replace the full profile.',
+          'Desktop only. After you select a row, the right-hand panel shows current tenancy, rent, lease, jobs CROSSUB is handling, and shortcuts into the property. It does not replace the full profile.',
       },
       {
         title: 'Open profile',
@@ -144,7 +144,7 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
     ],
     tips: [
       'Click once to preview, again (or Open profile) to work the property.',
-      'Needs attention is the fastest way to see which addresses are blocking CROS.',
+      'Needs attention is the fastest way to see which addresses are blocking CROSSUB.',
       'Archive is reversible. Delete draft is not. End management keeps the property on the live list.',
       'Replay this walkthrough anytime from How to use on this page, or from Support → How to use.',
     ],
@@ -155,7 +155,7 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
     href: ROUTES.TASKS,
     eyebrow: 'All portfolio work',
     overview:
-      'Tasks is the job board for your portfolio. Every live maintenance, inspection, leasing, rent review, and tribunal case appears here, grouped by whether you must act, CROS is handling it, you are waiting on someone else, or it recently finished.',
+      'Tasks is the job board for your portfolio. Every live maintenance, inspection, leasing, rent review, and tribunal case appears here, grouped by whether you must act, CROSSUB is handling it, you are waiting on someone else, or it recently finished.',
     steps: [
       {
         title: 'Open Tasks',
@@ -165,7 +165,7 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
       {
         title: 'Pick a status card',
         description:
-          'Need my action, CROS handling, Waiting, and Completed (last 30 days) filter the table. Tap the same card again to return to all statuses.',
+          'Need my action, CROSSUB handling, Waiting, and Completed (last 30 days) filter the table. Tap the same card again to return to all statuses.',
       },
       {
         title: 'Narrow by type',
@@ -190,14 +190,14 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
           'Items that cannot proceed until you decide. Typical examples: maintenance quote approval, tenant application, rent review recommendation, inspection report follow-up, overdue onboarding. Work these first.',
       },
       {
-        title: 'CROS handling',
+        title: 'CROSSUB handling',
         description:
           'CROSSUB is carrying the job (arranging contractors, running an open, collecting documents). You do not need to act unless the status moves back to Need my action.',
       },
       {
         title: 'Waiting',
         description:
-          'The next step sits with a tenant, owner, contractor, or another party. Check back when they respond; CROS will move it when something needs you.',
+          'The next step sits with a tenant, owner, contractor, or another party. Check back when they respond; CROSSUB will move it when something needs you.',
       },
       {
         title: 'Completed',
@@ -227,7 +227,7 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
       {
         title: 'Open / Review',
         description:
-          'Opens the case workspace for that job — messages, documents, quotes, schedules, and the decision CROS is waiting on. Back returns you to Tasks.',
+          'Opens the case workspace for that job — messages, documents, quotes, schedules, and the decision CROSSUB is waiting on. Back returns you to Tasks.',
       },
       {
         title: 'New task — Leasing',
@@ -242,7 +242,7 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
       {
         title: 'New task — Maintenance',
         description:
-          'Creates a repair request. CROS can then quote, assign a contractor, and bring the job back to you only if approval or extra instruction is required.',
+          'Creates a repair request. CROSSUB can then quote, assign a contractor, and bring the job back to you only if approval or extra instruction is required.',
       },
       {
         title: 'New task — Inspection',
@@ -261,9 +261,9 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
       },
     ],
     tips: [
-      'Clear Need my action daily — those rows are the only ones blocking CROS.',
-      'If a job is CROS handling, you do not need to chase the contractor from Tasks.',
-      'Create work with New task rather than asking CROS in chat when you already know the job type.',
+      'Clear Need my action daily — those rows are the only ones blocking CROSSUB.',
+      'If a job is CROSSUB handling, you do not need to chase the contractor from Tasks.',
+      'Create work with New task rather than asking Cros in chat when you already know the job type.',
       'Inspection-only agencies will not see leasing, rent review, or rent-chasing actions.',
     ],
   },
@@ -370,7 +370,7 @@ function withTutorialOverride(
 }
 
 /**
- * Self-Manage: the agency runs the work, so nothing is "CROS handling" and CROS assists the
+ * Self-Manage: the agency runs the work, so nothing is "CROSSUB handling" and Cros assists the
  * agent instead of carrying jobs. Only the items that mention CROSSUB doing the work change.
  */
 const SELF_MANAGED_TUTORIAL_OVERRIDES: Record<AgentTutorialModuleId, AgentTutorialOverride> = {
@@ -400,7 +400,7 @@ const SELF_MANAGED_TUTORIAL_OVERRIDES: Record<AgentTutorialModuleId, AgentTutori
     },
     functions: {
       'Need my action': `Your work. Decisions such as quote approval, tenant applications and rent review recommendations, plus every job you are running yourself. Open a row and ask ${CROS_ASSISTANT_NAME} to draft the next step.`,
-      'CROS handling': null,
+      'CROSSUB handling': null,
       Waiting:
         'The next step sits with a tenant, owner, contractor, or another party. The job moves back to Need my action when they respond.',
       'Task table':

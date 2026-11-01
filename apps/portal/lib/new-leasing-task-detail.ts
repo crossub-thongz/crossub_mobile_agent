@@ -272,7 +272,7 @@ export function buildNewLeasingActivityEntries(detail: LeasingPropertyDetail): {
       id: entry.id,
       at: entry.at,
       title: entry.label,
-      actor: entry.actor?.trim() || 'CROS System',
+      actor: entry.actor?.trim() || 'CROSSUB',
     }));
 }
 

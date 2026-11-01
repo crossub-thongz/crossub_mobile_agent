@@ -112,7 +112,7 @@ export function WelcomeOnboarding() {
     >
       <div className="relative w-full max-w-2xl rounded-xl border bg-card p-5 shadow-xl">
         <div>
-          <p className="text-primary text-xs font-semibold uppercase tracking-wide">
+          <p className="text-primary text-xs font-semibold">
             {CROS_ASSISTANT_NAME} · Welcome
           </p>
           <h2 id="agent-welcome-title" className="mt-1 text-lg font-semibold">

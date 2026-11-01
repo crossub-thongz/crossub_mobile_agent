@@ -238,7 +238,7 @@ export function buildRentReviewActivityEntries(detail: RentReviewWorkflowDetail)
       id: entry.id,
       at: entry.at,
       title: entry.message,
-      actor: entry.actor || 'CROS System',
+      actor: entry.actor || 'CROSSUB',
     }));
 }
 
@@ -360,7 +360,7 @@ export function buildRentReviewDocumentGroups(
     const researchHref = detail.propertyId
       ? `/api/v1/agent/properties/${detail.propertyId}/workflows/rent-review/${detail.id}/research-report.html`
       : undefined;
-    pushTab(groups, 'Market review', 'CROS System', [
+    pushTab(groups, 'Market review', 'CROSSUB', [
       {
         id: `research:${detail.id}`,
         fileName: 'CROSSUB Rent Review Report',
@@ -371,7 +371,7 @@ export function buildRentReviewDocumentGroups(
   }
 
   if (noticeReady) {
-    pushTab(groups, 'Notice', 'CROS System', [
+    pushTab(groups, 'Notice', 'CROSSUB', [
       {
         id: `notice:${detail.id}`,
         fileName: `NSW notice of rent increase (${detail.id.slice(0, 8)})`,
@@ -389,7 +389,7 @@ export function buildRentReviewDocumentGroups(
       },
     ]);
   } else if (leaseDraft) {
-    pushTab(groups, 'Lease agreement', 'CROS System', [
+    pushTab(groups, 'Lease agreement', 'CROSSUB', [
       {
         id: `lease-draft:${detail.id}`,
         fileName: `Lease agreement draft (${detail.id.slice(0, 8)})`,

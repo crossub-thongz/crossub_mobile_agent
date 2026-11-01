@@ -101,9 +101,9 @@ function formatActorLabel(
     return entry.actor?.trim() || 'Agent';
   }
   if (entry.actorRole === 'crossub' || entry.actorRole === 'system') {
-    return 'CROS System';
+    return 'CROSSUB';
   }
-  return entry.actor?.trim() || 'CROS System';
+  return entry.actor?.trim() || 'CROSSUB';
 }
 
 function pushTimelineActivities(
@@ -276,7 +276,7 @@ function pushBillingChargeActivities(
         title: 'Platform fee refunded',
         subtitle: reason ? `${subtitle} · ${reason}` : subtitle,
         caseRef,
-        actorLabel: 'CROS System',
+        actorLabel: 'CROSSUB',
         category: 'financial',
         href,
       });
@@ -321,7 +321,7 @@ function pushInspectionRefundFallbackActivities(
       title: 'Platform fee refunded',
       subtitle: `${typeLabel} · Inspector not confirmed within 48 hours`,
       caseRef: inspection.trackingNumber,
-      actorLabel: 'CROS System',
+      actorLabel: 'CROSSUB',
       category: 'financial',
       href: inspectionHref(inspection.id),
     });
@@ -450,7 +450,7 @@ export function buildPropertyProfileActivities(input: {
         ]
           .filter(Boolean)
           .join(' · '),
-        actorLabel: 'CROS System',
+        actorLabel: 'CROSSUB',
         category: 'inspection',
         href: input.inspectionHref(inspection.id),
       });
@@ -478,7 +478,7 @@ export function buildPropertyProfileActivities(input: {
         subtitle: rentAmount
           ? `Rent increased to ${formatCurrency(rentAmount)}/week`
           : undefined,
-        actorLabel: 'CROS System',
+        actorLabel: 'CROSSUB',
         category: 'leasing',
         href: input.rentReviewHref(review.id),
       });
@@ -518,7 +518,7 @@ export function buildPropertyProfileActivities(input: {
         dayKey: dayKey(tribunal.createdAt),
         title: 'Tribunal case opened',
         subtitle: tribunal.matter,
-        actorLabel: 'CROS System',
+        actorLabel: 'CROSSUB',
         category: 'leasing',
         href: input.tribunalHref(tribunal.id),
       });
@@ -567,7 +567,7 @@ export function buildPropertyProfileActivities(input: {
       dayKey: dayKey(at),
       title: notification.title?.trim() || display.title,
       subtitle: display.body || notification.actionRequired || undefined,
-      actorLabel: 'CROS System',
+      actorLabel: 'CROSSUB',
       category: notificationCategory(notification.href, notification.taskType),
       href: notification.href,
     });

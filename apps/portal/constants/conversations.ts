@@ -1,4 +1,5 @@
 /** Self-Manage Conversations page (Phase 2 agency inbox): filters, values and copy. */
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import type {
   AgentConversationJobInput,
   AgentConversationListState,
@@ -258,7 +259,7 @@ export const CONVERSATIONS_COPY = {
   checkAddress: (address: string) => `Check the address "${address}"`,
   send: 'Send',
   sendOptions: 'Send options',
-  crosLabel: 'CROS',
+  crosLabel: CROS_ASSISTANT_NAME,
   crosDraftButton: 'Draft reply',
   sendAndResolve: 'Send and resolve',
   sentNotResolved: "Sent, but couldn't resolve the conversation.",

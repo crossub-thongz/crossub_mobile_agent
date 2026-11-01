@@ -51,7 +51,7 @@ export type PortfolioHealthBreakdown = PortfolioHealth & {
 
 export const PORTFOLIO_HEALTH_BUCKET_LABEL: Record<PortfolioHealthBucketKey, string> = {
   healthy: 'Healthy',
-  crosHandling: 'CROS Handling',
+  crosHandling: 'CROSSUB Handling',
   needAction: 'Need Your Action',
   issues: 'Issues',
 };

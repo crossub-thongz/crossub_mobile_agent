@@ -259,7 +259,7 @@ export const AGENT_WORKFLOW_TRAINING: Record<AgentWorkflowTrainingId, AgentWorkf
         {
           title: 'Tasks → Leasing filter',
           description:
-            'Shows all open leasing jobs across the portfolio. Use with status cards (Need my action, CROS handling, Waiting) to prioritise.',
+            'Shows all open leasing jobs across the portfolio. Use with status cards (Need my action, CROSSUB handling, Waiting) to prioritise.',
         },
         {
           title: 'Tenant selection',
@@ -487,7 +487,7 @@ function withTrainingOverride(
 }
 
 /**
- * Self-Manage: the agency runs the work and CROS assists, so there is no "CROS handling" and no
+ * Self-Manage: the agency runs the work and Cros assists, so there is no "CROSSUB handling" and no
  * Account Manager. Only the items that say CROSSUB does the work change.
  */
 const SELF_MANAGED_WORKFLOW_TRAINING_OVERRIDES: Record<

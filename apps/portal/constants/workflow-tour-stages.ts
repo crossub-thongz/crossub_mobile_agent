@@ -23,7 +23,7 @@ export type WorkflowTourStage = {
 };
 
 const CROS_WAIT =
-  'No action needed while CROS is handling — the job will move to Need my action on Tasks when your decision is required.';
+  'No action needed while CROSSUB is handling — the job will move to Need my action on Tasks when your decision is required.';
 
 const MAINTENANCE_STAGE_COPY: Record<string, Pick<WorkflowTourStage, 'description' | 'agentAction'>> = {
   [MAINTENANCE_AGENT_STEP.JOB_CREATED]: {
@@ -254,7 +254,7 @@ export const WORKFLOW_TOUR_STAGES: Record<AgentWorkflowTourId, WorkflowTourStage
   ],
 };
 
-/** Self-Manage: nothing is "CROS handling" — the agent waits on their own next step. */
+/** Self-Manage: nothing is "CROSSUB handling" — the agent waits on their own next step. */
 const SELF_MANAGED_WAIT = `Nothing to decide right now — the job moves to Need my action on Tasks when your next step is due. Ask ${CROS_ASSISTANT_NAME} to draft any follow-up.`;
 
 type WorkflowTourStageOverride = Partial<Pick<WorkflowTourStage, 'description' | 'agentAction'>>;
