@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Building2, Clock, DollarSign, XCircle } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 
 import {
   AdminSideCard,
@@ -14,6 +14,7 @@ import {
 import { QuoteRecommendation } from '@/components/agent/quote-recommendation-card';
 import { Button } from '@/components/ui/button';
 import { ROUTES, propertyDetail } from '@/constants/routes';
+import { notifyServiceOffersChanged } from '@/lib/crossub-api/service-offer-client';
 import { formatCurrency } from '@/lib/utils';
 
 /**
@@ -34,6 +35,7 @@ export function MaintenanceOpenedTask({
   propertyId,
   onCloseJob,
   requestId,
+  showQuoteOffer = false,
   onQuoteAccepted,
   workflow,
   activity,
@@ -52,12 +54,19 @@ export function MaintenanceOpenedTask({
   propertyId: string;
   onCloseJob?: () => void;
   requestId?: string;
+  /** Assessment is done and the job has just reached Quotes. */
+  showQuoteOffer?: boolean;
   onQuoteAccepted?: () => void;
   workflow?: ReactNode;
   activity?: ReactNode;
   /** Stage board and timeline, in place of the default two columns. */
   body?: ReactNode;
 }) {
+  useEffect(() => {
+    if (!showQuoteOffer || !requestId) return;
+    notifyServiceOffersChanged();
+  }, [requestId, showQuoteOffer]);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col px-6 py-4 lg:px-8">
       <TaskBreadcrumb href={ROUTES.MAINTENANCE} label="Maintenance" segments={[reference]} />
@@ -108,7 +117,7 @@ export function MaintenanceOpenedTask({
         </div>
       </header>
 
-      {requestId ? (
+      {showQuoteOffer && requestId ? (
         <div className="mt-4">
           <QuoteRecommendation requestId={requestId} onAccepted={onQuoteAccepted} />
         </div>

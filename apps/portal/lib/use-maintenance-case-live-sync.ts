@@ -36,7 +36,15 @@ export function useMaintenanceCaseLiveSync(
   const [attachments, setAttachments] = useState<ApiMaintenanceAttachment[]>([]);
   const [contractors, setContractors] = useState<Array<{ id: string; name: string }>>([]);
   const [agentDetail, setAgentDetail] = useState<MaintenanceCaseSnapshot['agentDetail']>(null);
+  const [settledId, setSettledId] = useState<string | null>(null);
   const slaTickInFlightRef = useRef(false);
+  const itemIdRef = useRef(item?.id);
+  const requestSeqRef = useRef(0);
+  const appliedSeqRef = useRef(0);
+  const inFlightRef = useRef(0);
+  const settledForRef = useRef<string | null>(null);
+  const loadedForRef = useRef<string | null>(null);
+  itemIdRef.current = item?.id;
 
   const fallbackCase = item
     ? buildWorkspaceCaseFromRequest(item, property, user)
@@ -44,10 +52,15 @@ export function useMaintenanceCaseLiveSync(
 
   const sync = useCallback(async () => {
     if (!apiConnected || !item) return;
+    const caseId = item.id;
+    const seq = ++requestSeqRef.current;
+    inFlightRef.current += 1;
     setSyncing(true);
     try {
-      const snapshot = await fetchMaintenanceCase(item.id, item.propertyId);
-      if (!snapshot) return;
+      const snapshot = await fetchMaintenanceCase(caseId, item.propertyId);
+      if (itemIdRef.current !== caseId || !snapshot || seq < appliedSeqRef.current) return;
+      appliedSeqRef.current = seq;
+      settledForRef.current = caseId;
       setLiveMapped(snapshot.mapped);
       setRemindersSent(snapshot.remindersSent);
       setNextReminderDueAt(snapshot.nextReminderDueAt);
@@ -58,10 +71,17 @@ export function useMaintenanceCaseLiveSync(
       setContractors(snapshot.contractors ?? []);
       setAgentDetail(snapshot.agentDetail);
       setWorkspaceCase(buildWorkspaceCaseFromApi(snapshot.mapped, property, user));
+      setSettledId(caseId);
     } catch {
-      // keep last good snapshot
+      // A failed attempt must not discard a snapshot that is still in flight.
     } finally {
-      setSyncing(false);
+      inFlightRef.current = Math.max(0, inFlightRef.current - 1);
+      if (itemIdRef.current !== caseId) return;
+      setSyncing(inFlightRef.current > 0);
+      if (inFlightRef.current === 0 && settledForRef.current !== caseId) {
+        settledForRef.current = caseId;
+        setSettledId(caseId);
+      }
     }
   }, [apiConnected, item, property, user]);
 
@@ -80,6 +100,8 @@ export function useMaintenanceCaseLiveSync(
 
   useEffect(() => {
     if (!item) {
+      loadedForRef.current = null;
+      settledForRef.current = null;
       setWorkspaceCase(null);
       setLiveMapped(null);
       setAttachments([]);
@@ -88,7 +110,21 @@ export function useMaintenanceCaseLiveSync(
       setWorkflowRequest(null);
       setQuotations([]);
       setAgentDetail(null);
+      setSettledId(null);
       return;
+    }
+    if (loadedForRef.current !== item.id) {
+      loadedForRef.current = item.id;
+      settledForRef.current = null;
+      setWorkspaceCase(null);
+      setLiveMapped(null);
+      setAttachments([]);
+      setContractors([]);
+      setMaintenanceReminders([]);
+      setWorkflowRequest(null);
+      setQuotations([]);
+      setAgentDetail(null);
+      setSettledId(null);
     }
     if (!apiConnected) {
       setWorkspaceCase(buildWorkspaceCaseFromRequest(item, property, user));
@@ -99,6 +135,8 @@ export function useMaintenanceCaseLiveSync(
       setWorkflowRequest(null);
       setQuotations([]);
       setAgentDetail(null);
+      settledForRef.current = item.id;
+      setSettledId(item.id);
       return;
     }
     void sync();
@@ -115,8 +153,10 @@ export function useMaintenanceCaseLiveSync(
     return () => window.clearInterval(id);
   }, [apiConnected, item, runSlaTick]);
 
+  const waitingForLive = apiConnected && item != null && settledId !== item.id;
+
   return {
-    workspaceCase: workspaceCase ?? fallbackCase,
+    workspaceCase: waitingForLive ? null : (workspaceCase ?? fallbackCase),
     liveMapped,
     remindersSent,
     nextReminderDueAt,

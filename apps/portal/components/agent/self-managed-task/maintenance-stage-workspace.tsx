@@ -93,7 +93,7 @@ function contractorFlow(responsibility?: string | null): boolean {
   return responsibility !== 'tenant' && responsibility !== 'strata';
 }
 
-function resolveStage(status: string, flow: boolean): Stage {
+function resolveStage(status: string, flow: boolean, quotesReady: boolean): Stage {
   const value = status.toLowerCase();
   if (value === 'completed' || value === 'closed' || value === 'deleted' || value === 'cancelled') {
     return STAGE.DONE;
@@ -108,7 +108,11 @@ function resolveStage(status: string, flow: boolean): Stage {
     return STAGE.PROGRESS;
   }
   if (value === 'pending_approval' || value === 'approved') {
-    return flow ? STAGE.APPROVAL : STAGE.REVIEW;
+    if (!flow) return STAGE.REVIEW;
+    // A portfolio row can say approval before any supplier has responded.
+    // Quotes stays current until there is a quote to decide.
+    if (!quotesReady) return STAGE.QUOTE;
+    return STAGE.APPROVAL;
   }
   if (value === 'pending_quotation' || value === 'quoting') {
     return flow ? STAGE.QUOTE : STAGE.REVIEW;
@@ -165,6 +169,16 @@ function EmptyBoard({ title, body }: { title: string; body: string }) {
   );
 }
 
+export function maintenanceWorkspaceStage(
+  workspace: Pick<MaintenanceWorkspaceCase, 'status' | 'responsibility' | 'quotations'>,
+): Stage {
+  const flow = contractorFlow(workspace.responsibility);
+  const quotesReady = workspace.quotations.some(
+    (quote) => quote.status === 'submitted' || quote.status === 'approved',
+  );
+  return resolveStage(workspace.status, flow, quotesReady);
+}
+
 function supplierName(workspace: MaintenanceWorkspaceCase, contractorId: string, fallback?: string | null) {
   return (
     workspace.invitedContractors?.find((row) => row.id === contractorId)?.name ||
@@ -198,7 +212,7 @@ export function MaintenanceStageWorkspace({
   const agencyId = properties.find((property) => property.id === propertyId)?.agencyId ?? null;
   const flow = contractorFlow(workspace.responsibility);
   const order = flow ? FULL_ORDER : DIRECT_ORDER;
-  const current = resolveStage(workspace.status, flow);
+  const current = maintenanceWorkspaceStage(workspace);
   const [selected, setSelected] = useState<Stage>(current);
 
   useEffect(() => {

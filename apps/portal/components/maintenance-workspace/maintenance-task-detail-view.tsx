@@ -13,7 +13,10 @@ import {
 } from 'lucide-react';
 
 import { MaintenanceOpenedTask } from '@/components/agent/self-managed-task/maintenance-opened-task';
-import { MaintenanceStageWorkspace } from '@/components/agent/self-managed-task/maintenance-stage-workspace';
+import {
+  MaintenanceStageWorkspace,
+  maintenanceWorkspaceStage,
+} from '@/components/agent/self-managed-task/maintenance-stage-workspace';
 import { WorkspaceChatPanel } from '@/components/maintenance-workspace/workspace-chat-panel';
 import { SelfManagedMaintenanceCard } from '@/components/agent/maintenance-self-managed/self-managed-maintenance-card';
 import { MaintenanceAgentWorkflowPanel } from '@/components/maintenance/maintenance-agent-workflow-panel';
@@ -365,6 +368,7 @@ export function MaintenanceTaskDetailView({
           estimatedCost={quoteAmount ?? null}
           propertyId={propertyId}
           requestId={item.id}
+          showQuoteOffer={maintenanceWorkspaceStage(workspaceCase) === 'quote'}
           onQuoteAccepted={onCaseUpdated}
           onCloseJob={canCloseJob ? () => setCloseJobOpen(true) : undefined}
           body={
