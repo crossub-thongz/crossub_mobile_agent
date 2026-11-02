@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { BackToSignInButton } from '@/components/auth/back-to-sign-in-button';
 import { useAuth } from '@/components/providers/auth-provider';
 import { ROUTES } from '@/constants/routes';
 import { ApiError, api } from '@/lib/api';
@@ -41,7 +42,8 @@ export default function MfaVerifyPage() {
 
   return (
     <main className="mx-auto flex min-h-[calc(100dvh-var(--env-banner-height,0px))] w-full max-w-lg flex-col justify-center px-5 py-12">
-      <p className="text-xs font-semibold tracking-[0.16em]" style={{ color: AGENT_GREEN }}>
+      <BackToSignInButton />
+      <p className="mt-6 text-xs font-semibold tracking-[0.16em]" style={{ color: AGENT_GREEN }}>
         AGENT PORTAL
       </p>
       <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[#0D1836]">
