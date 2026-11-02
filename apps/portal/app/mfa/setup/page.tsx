@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import { AuthenticatorQr } from '@/components/auth/authenticator-qr';
 import { useAuth } from '@/components/providers/auth-provider';
 import { ROUTES } from '@/constants/routes';
 import { ApiError, api } from '@/lib/api';
@@ -122,11 +123,12 @@ export default function MfaSetupPage() {
         <section className="mt-8 rounded-[22px] bg-white p-6 shadow-[0_18px_48px_rgba(13,24,54,0.10)]">
           {setup ? (
             <>
-              <p className="text-xs font-medium tracking-wide text-[#52647C]">SETUP KEY</p>
+              {setup.otpauthUrl ? <AuthenticatorQr value={setup.otpauthUrl} /> : null}
+              <p className="mt-4 text-xs font-medium tracking-wide text-[#52647C]">SETUP KEY</p>
               <p className="mt-2 break-all font-mono text-sm text-[#0D1836]">{setup.secret}</p>
               <p className="mt-3 text-xs leading-5 text-[#52647C]">
-                In your app choose “enter a setup key”. Account CROSSUB, key above. Time-based,
-                6 digits.
+                Scan the code, or in your app choose “enter a setup key”. Account CROSSUB, key
+                above. Time-based, 6 digits.
               </p>
             </>
           ) : (
