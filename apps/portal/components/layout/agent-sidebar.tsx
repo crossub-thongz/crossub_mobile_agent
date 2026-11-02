@@ -11,7 +11,7 @@ import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { menuNavForUi, sidebarFooterNavForUi, TASK_SECTION_HREFS } from '@/constants/nav';
-import { SUPPORT_PAGE_SECTION } from '@/constants/more-page';
+import { SUPPORT_PAGE_SECTION, supportSectionItems } from '@/constants/more-page';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -170,11 +170,12 @@ function AgentSidebarSupport({
   onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const selfManaged = useSelfManagedAccess().selfManaged;
   const setMenuOpen = (next: boolean) => {
     setOpen(next);
     onOpenChange?.(next);
   };
-  const items = SUPPORT_PAGE_SECTION.items.filter((item) => Boolean(item.href));
+  const items = supportSectionItems(selfManaged);
   const active = items.some((item) => item.href && isActive(pathname, item.href));
   const Icon = SUPPORT_PAGE_SECTION.icon;
 

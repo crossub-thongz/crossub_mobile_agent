@@ -103,8 +103,8 @@ const END_LEASING_STAGE_COPY: Record<string, Pick<WorkflowTourStage, 'descriptio
   },
   [END_LEASING_AGENT_STEP.COMPLETE]: {
     description:
-      'Once the comparison is confirmed, you complete the vacate. Any bond refund is handled in Accounting.',
-    agentAction: 'Select Complete vacating in the Workflow panel to close the case.',
+      'Compare is done. Completing closes the vacate on the property. Bond is not a step on this page.',
+    agentAction: 'Select Complete vacating when the comparison is confirmed.',
   },
 };
 
@@ -263,33 +263,146 @@ type WorkflowTourStageOverride = Partial<Pick<WorkflowTourStage, 'description' |
 const SELF_MANAGED_STAGE_OVERRIDES: Partial<
   Record<AgentWorkflowTourId, Record<string, WorkflowTourStageOverride>>
 > = {
-  maintenance: {
-    [MAINTENANCE_AGENT_STEP.JOB_CREATED]: {
-      description:
-        'Tenant or agent reports the issue, with intake photos, issue type, and property context.',
-    },
-    [MAINTENANCE_AGENT_STEP.GET_QUOTE]: {
-      description:
-        "You invite the agency's preferred contractors and enter their quotes. Quotes appear on the Quotes tab and in the workflow panel.",
-    },
-    [MAINTENANCE_AGENT_STEP.SCHEDULE]: {
-      description:
-        'After quote approval, you coordinate visit times with the contractor and tenant for access.',
-    },
-  },
-  new_leasing: {
-    scheduling: { agentAction: 'Set viewing times or update scheduling notes.' },
-    reference_check: {
-      description: 'You run reference and background checks on the preferred applicant.',
-    },
-  },
   tribunal: {
     submitted: { description: 'Application is filed with the tribunal. Track correspondence on the job.' },
   },
 };
 
-/** Self-Manage tours whose steps differ: vacating ends after Compare (its own four-step rail). */
+const SELF_MANAGED_MAINTENANCE_STAGES: WorkflowTourStage[] = [
+  {
+    id: 'created',
+    title: 'Reported',
+    description: 'The repair is logged with the issue, property, and any photos from intake.',
+    agentAction: 'Open Reported and confirm the issue type and photos before assessment.',
+  },
+  {
+    id: 'review',
+    title: 'Assessment',
+    description: 'You decide who is responsible: tenant, landlord, or strata. That choice sets whether a quote is needed.',
+    agentAction: 'Set responsibility on Assessment. Tenant or strata jobs skip quoting and go on to the work.',
+  },
+  {
+    id: 'quote',
+    title: 'Quotes',
+    description:
+      'On a landlord job you can ask Crossub to get the quote, or invite your own tradie. Either choice is yours.',
+    agentAction: 'Use Get a Quote with Crossub, or arrange the quote yourself and enter it here.',
+  },
+  {
+    id: 'approval',
+    title: 'Approval',
+    description: 'Quotes sit side by side so you can accept one before anyone is booked.',
+    agentAction: 'Approve a quote, or decline it and ask for another.',
+  },
+  {
+    id: 'progress',
+    title: 'Work',
+    description: 'The visit is underway. Completion photos come back on this step.',
+    agentAction: 'Book access with the tradie, then review the completion photos when the work is done.',
+  },
+  {
+    id: 'done',
+    title: 'Completed',
+    description: 'The job is closed on the property, with the quote and photos kept on the case.',
+    agentAction: 'Close the job once the work and any invoice are in order.',
+  },
+];
+
+const SELF_MANAGED_INSPECTION_STAGES: WorkflowTourStage[] = [
+  {
+    id: 'CREATED',
+    title: 'Created',
+    description: 'The inspection exists, but it does not have a confirmed appointment yet.',
+    agentAction: 'Set a date, or leave it and come back when access is known.',
+  },
+  {
+    id: 'SCHEDULED',
+    title: 'Scheduled',
+    description: 'A date is on the job. It stays a proposed date until the appointment is confirmed.',
+    agentAction: 'Confirm the date and time on Visit plan.',
+  },
+  {
+    id: 'ASSIGNED',
+    title: 'Assigned',
+    description: 'Someone is named to attend: one of your inspectors, or a Crossub inspector you book for this job.',
+    agentAction: 'Assign your own inspector, or arrange the visit through Crossub.',
+  },
+  {
+    id: 'IN_PROGRESS',
+    title: 'Inspection',
+    description: 'The visit is happening. Photos and notes are captured against the property.',
+    agentAction: 'Nothing to approve until the report is submitted.',
+  },
+  {
+    id: 'REPORT_READY',
+    title: 'Report',
+    description: 'The report is in. A principal signs it off, and can send it back if it needs another pass.',
+    agentAction: 'Open the Report tab, sign the report off, or send it back with a reason.',
+  },
+  {
+    id: 'DELIVERED',
+    title: 'Delivered',
+    description: 'The signed report can go to the owner. Ingoing and outgoing copies also go to the tenant.',
+    agentAction: 'Send the owner copy from the report step when you are ready.',
+  },
+  {
+    id: 'CLOSED',
+    title: 'Completed',
+    description: 'The inspection is finished and stays on the property history.',
+    agentAction: 'No further action. The report remains on the property.',
+  },
+];
+
+const SELF_MANAGED_LEASING_STAGES: WorkflowTourStage[] = [
+  {
+    id: 'awaiting_confirmation',
+    title: 'Confirmation',
+    description: 'Nothing is advertised until you confirm this letting should go ahead.',
+    agentAction: 'Choose Proceed, and who runs the open inspections, or Do not re-let.',
+  },
+  {
+    id: 'preparation',
+    title: 'Preparation',
+    description: 'The letting is confirmed. Open inspections have not started.',
+    agentAction: 'Check the property details, then move on to scheduling the open.',
+  },
+  {
+    id: 'active_leasing',
+    title: 'Active leasing',
+    description: 'The open inspection is the live step. You schedule it and collect the report.',
+    agentAction: 'Use Open inspection scheduler to set the viewing, then wait for the report.',
+  },
+  {
+    id: 'offer_pending',
+    title: 'Offer',
+    description: 'Applications are in. You review them and record the tenancy you accept.',
+    agentAction: 'Open Applications, approve one applicant, or record the tenancy yourself.',
+  },
+  {
+    id: 'onboarding',
+    title: 'Onboarding',
+    description: 'Lease setup: agreement, bond link, and the move-in checklist.',
+    agentAction: 'Work through Lease setup until the agreement and bond are done.',
+  },
+  {
+    id: 'key_handover',
+    title: 'Key handover',
+    description: 'The tenant collects the keys. That is the last step before the letting closes.',
+    agentAction: 'Arrange key collection on Tenant key collection.',
+  },
+  {
+    id: 'completed',
+    title: 'Completed',
+    description: 'The letting is closed and the tenancy is on the property.',
+    agentAction: 'No further action on this case.',
+  },
+];
+
+/** Self-Manage tours follow the stages on the current job pages, not the older serviced rails. */
 const SELF_MANAGED_STAGE_LISTS: Partial<Record<AgentWorkflowTourId, WorkflowTourStage[]>> = {
+  maintenance: SELF_MANAGED_MAINTENANCE_STAGES,
+  inspections: SELF_MANAGED_INSPECTION_STAGES,
+  new_leasing: SELF_MANAGED_LEASING_STAGES,
   end_leasing: endLeasingTourStages(END_LEASING_SELF_MANAGED_STEP_ORDER),
 };
 

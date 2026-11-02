@@ -4,16 +4,18 @@ import { PlayCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import {
-  AGENT_WORKFLOW_TOUR_LABELS,
   AGENT_WORKFLOW_TOUR_ORDER,
+  workflowTourCard,
   workflowTourEntryHref,
   type AgentWorkflowTourId,
 } from '@/constants/agent-workflow-tour';
+import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 import { setPendingWorkflowTour } from '@/lib/agent-workflow-tour';
 import { cn } from '@/lib/utils';
 
 export function AgentWorkflowTourHub({ className }: { className?: string }) {
   const router = useRouter();
+  const variant = useAgentCopyVariant();
 
   const startTour = (id: AgentWorkflowTourId) => {
     setPendingWorkflowTour(id);
@@ -24,12 +26,12 @@ export function AgentWorkflowTourHub({ className }: { className?: string }) {
     <div className={cn('space-y-4', className)}>
       <p className="text-sm font-medium">Workflow demo tours</p>
       <p className="text-muted-foreground text-sm leading-relaxed">
-        Interactive walkthroughs on live Tasks and job pages. Each tour shows every workflow stage and
-        highlights where you take action — Need my action on Tasks, the case badge, and the Workflow panel.
+        Interactive walkthroughs on the live job pages. Each tour follows the stages on that job and
+        highlights where you take the next step.
       </p>
       <ul className="grid gap-3 sm:grid-cols-2">
         {AGENT_WORKFLOW_TOUR_ORDER.map((id) => {
-          const meta = AGENT_WORKFLOW_TOUR_LABELS[id];
+          const meta = workflowTourCard(id, variant);
           return (
             <li key={id}>
               <button

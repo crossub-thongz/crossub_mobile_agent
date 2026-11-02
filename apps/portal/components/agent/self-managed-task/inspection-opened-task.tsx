@@ -172,7 +172,9 @@ export function InspectionOpenedTask({
             <h1 className="mt-2 truncate text-2xl font-semibold tracking-tight lg:text-[28px]">{address}</h1>
             <TaskLocality locality={locality} />
             <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
-              <TaskStatusPill label={statusLabel} tone={statusTone} />
+              <span data-tour="workflow-case-badge">
+                <TaskStatusPill label={statusLabel} tone={statusTone} />
+              </span>
               <span className="text-muted-foreground">
                 Case ID <TaskMetaChip>{reference}</TaskMetaChip>
               </span>
@@ -326,7 +328,7 @@ function InspectionOverview({
     <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
       <div className="grid min-w-0 gap-4">
         <div className="grid min-w-0 gap-4 md:grid-cols-3">
-          <section className="rounded-xl border bg-card p-5">
+          <section className="rounded-xl border bg-card p-5" data-tour="workflow-status">
             <h2 className="flex items-center gap-2 text-base font-semibold">
               <CalendarClock className="text-muted-foreground size-4" />
               Visit Plan
@@ -430,7 +432,7 @@ function InspectionOverview({
             </Button>
           </div>
           <div className="mt-5 overflow-x-auto pb-1">
-            <ol className="flex min-w-[640px] items-start">
+            <ol className="flex min-w-[640px] items-start" data-tour="workflow-rail">
               {WORKFLOW_STEPS.map((step, index) => {
                 const activeIndex = WORKFLOW_STEPS.findIndex((row) => row.id === stage);
                 const closed = stage === 'CLOSED';
@@ -439,7 +441,7 @@ function InspectionOverview({
                 const date = stepDate(inspection, step.id);
                 const last = index === WORKFLOW_STEPS.length - 1;
                 return (
-                  <li key={step.id} className="relative flex min-w-0 flex-1 flex-col items-center">
+                  <li key={step.id} data-tour={`workflow-step-${step.id}`} className="relative flex min-w-0 flex-1 flex-col items-center">
                     {!last ? (
                       <span
                         aria-hidden

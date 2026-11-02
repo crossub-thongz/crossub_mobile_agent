@@ -55,6 +55,19 @@ export type MorePageSection = {
   items: MorePageItem[];
 };
 
+/** Hidden on Self-Manage. Full Service and Inspection Only still see them. */
+export const SELF_MANAGED_HIDDEN_SUPPORT_IDS = ['intro-video', 'contact-am'] as const;
+
+export function supportSectionItems(selfManaged: boolean): MorePageItem[] {
+  return SUPPORT_PAGE_SECTION.items.filter((item) => {
+    if (!item.href) return false;
+    if (selfManaged && (SELF_MANAGED_HIDDEN_SUPPORT_IDS as readonly string[]).includes(item.id)) {
+      return false;
+    }
+    return true;
+  });
+}
+
 export const SUPPORT_PAGE_SECTION: MorePageSection = {
   id: 'support',
   title: 'Support',

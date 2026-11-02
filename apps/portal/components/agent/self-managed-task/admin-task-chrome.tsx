@@ -97,6 +97,7 @@ export function AdminTabStrip<Tab extends string>({
               role="tab"
               type="button"
               aria-selected={selected}
+              data-tour={`workflow-tab-${tab.id}`}
               onClick={() => onChange(tab.id)}
               className={cn(
                 '-mb-px shrink-0 border-b-2 px-0.5 py-3 text-[15px] font-medium transition-colors',

@@ -91,7 +91,7 @@ export function VacatingOpenedTask({
 
         <div className="min-w-0 space-y-4 xl:col-start-1">
           <VacatingStageRail stageId={stageId} completed={completed} />
-          <section className="rounded-xl border border-violet-500/25 bg-violet-500/[0.04] p-4">
+          <section className="rounded-xl border border-violet-500/25 bg-violet-500/[0.04] p-4" data-tour="workflow-status">
             <div className="flex flex-wrap items-start gap-4">
               <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-700 dark:text-violet-200">
                 <FileText className="size-5" />
@@ -139,7 +139,7 @@ function VacatingStageRail({ stageId, completed }: { stageId: string; completed:
     stageId as (typeof END_LEASING_SELF_MANAGED_STEP_ORDER)[number],
   );
   return (
-    <section className="bg-card rounded-xl border px-3 py-4 shadow-sm">
+    <section className="bg-card rounded-xl border px-3 py-4 shadow-sm" data-tour="workflow-rail">
       <ol className="flex w-full" aria-label="Vacating progress">
         {RAIL.map((step, i) => {
           const done = completed || (index >= 0 && i < index);
@@ -147,7 +147,7 @@ function VacatingStageRail({ stageId, completed }: { stageId: string; completed:
           const nextDone = completed || (index >= 0 && i + 1 < index);
           const nextCurrent = !completed && index >= 0 && i + 1 === index;
           return (
-            <li key={step.id} className="relative flex min-w-0 flex-1 flex-col items-center">
+            <li key={step.id} data-tour={`workflow-step-${step.id}`} className="relative flex min-w-0 flex-1 flex-col items-center">
               {i < RAIL.length - 1 ? (
                 <span
                   aria-hidden

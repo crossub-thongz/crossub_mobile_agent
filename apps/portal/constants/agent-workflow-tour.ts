@@ -93,10 +93,10 @@ export function workflowTourCreateMenuTarget(id: AgentWorkflowTourId): string {
 }
 
 const CREATE_MENU_LABEL: Record<AgentWorkflowTourId, string> = {
-  maintenance: 'Add new repair job',
-  inspections: 'Open inspection (or Ingoing / Outgoing / Routine)',
+  maintenance: 'Lodge Maintenance',
+  inspections: 'Open',
   new_leasing: 'New Leasing / Re-Letting',
-  end_leasing: 'Vacating / End leasing',
+  end_leasing: 'Vacating',
   tribunal: 'Add tribunal',
 };
 
@@ -269,10 +269,20 @@ const WORKFLOW_TOUR_ROLE_COPY: Record<
     badgeActionNote: `Rose Need your action — open the job and act in the Workflow panel. Green In progress — the job is moving; ask ${CROS_ASSISTANT_NAME} to draft your next message.`,
     statusDescription: `The status banner explains the live blocker, what ${CROS_ASSISTANT_NAME} recommends, and the next step in plain language.`,
     entryStepDescriptions: {
+      'maint-entry-category':
+        'Maintenance jobs run Reported → Assessment → Quotes → Approval → Work → Completed. Landlord jobs can be quoted by Crossub or by a tradie you choose.',
+      'insp-entry-category':
+        'An inspection runs Created → Scheduled → Assigned → Inspection → Report → Delivered → Completed.',
       'insp-entry-bucket':
-        'Inspections awaiting your sign-off show under Need my action before the report goes to the tenant and owner.',
+        'Reports waiting for a principal to sign off show under Need my action. You can assign your own inspector or book a Crossub inspector for that job.',
+      'lease-entry-category':
+        'A letting runs Confirmation → Preparation → Active leasing → Offer → Onboarding → Key handover → Completed.',
       'lease-entry-bucket':
-        'Applicant approvals and onboarding steps surface here when the next step is yours.',
+        'Confirmation, applications, and lease setup show under Need my action when the next step is yours.',
+      'vacate-entry-category':
+        'Vacating is four steps: Vacate, Outgoing, Compare, then Complete. Bond is not a step on this page.',
+      'vacate-entry-bucket':
+        'The live step shows under Need my action. Complete vacating closes the case after the comparison.',
       'trib-entry-bucket':
         'Evidence requests and hearing prep show under Need my action until the file can move on.',
     },
@@ -296,7 +306,70 @@ function detailRailStageSteps(id: AgentWorkflowTourId, variant: AgentCopyVariant
   }));
 }
 
-function detailTabSteps(id: AgentWorkflowTourId): AgentTourStep[] {
+const SELF_MANAGED_DETAIL_TABS: Record<AgentWorkflowTourId, AgentTourStep[]> = {
+  maintenance: [
+    {
+      id: 'maint-tab-board',
+      target: 'workflow-action-panel',
+      title: 'Stage board',
+      description:
+        'The open stage is the work for that step. Quotes is where you choose Crossub or your own tradie.',
+    },
+  ],
+  inspections: [
+    {
+      id: 'insp-tab-overview',
+      target: 'workflow-tab-overview',
+      title: 'Overview',
+      description: 'Visit plan, the inspector, and the tenant and owner contacts for this job.',
+    },
+    {
+      id: 'insp-tab-report',
+      target: 'workflow-tab-report',
+      title: 'Report',
+      description: 'Sign the report off here, send it back, or send the owner a copy once it is signed.',
+    },
+    {
+      id: 'insp-tab-activity',
+      target: 'workflow-tab-activity',
+      title: 'Activity',
+      description: 'The timeline of scheduling, assignment, and sign-off on this inspection.',
+    },
+  ],
+  new_leasing: [
+    {
+      id: 'lease-card-open',
+      target: 'leasing-stage-open_inspection',
+      title: 'Open inspection scheduler',
+      description: 'Set the viewing once the letting is confirmed. The report comes back on this card.',
+    },
+    {
+      id: 'lease-card-apps',
+      target: 'leasing-stage-applications',
+      title: 'Applications',
+      description: 'Review applicants and approve one, or record the tenancy you let yourself.',
+    },
+    {
+      id: 'lease-card-setup',
+      target: 'leasing-stage-onboarding',
+      title: 'Lease setup',
+      description: 'Agreement, bond link, and the move-in checklist.',
+    },
+    {
+      id: 'lease-card-keys',
+      target: 'leasing-stage-key_handover',
+      title: 'Tenant key collection',
+      description: 'Arrange the key handover. That closes the letting.',
+    },
+  ],
+  end_leasing: [],
+  tribunal: [],
+};
+
+function detailTabSteps(id: AgentWorkflowTourId, variant: AgentCopyVariant): AgentTourStep[] {
+  if (variant === AGENT_COPY_VARIANT.SELF_MANAGED && id !== 'tribunal') {
+    return SELF_MANAGED_DETAIL_TABS[id];
+  }
   const tabs: Record<AgentWorkflowTourId, AgentTourStep[]> = {
     maintenance: [
       {
@@ -413,13 +486,72 @@ function detailTabSteps(id: AgentWorkflowTourId): AgentTourStep[] {
 function buildDetailSteps(id: AgentWorkflowTourId, variant: AgentCopyVariant): AgentTourStep[] {
   const { pageName, overview } = moduleCopy(id, variant);
   const roleCopy = WORKFLOW_TOUR_ROLE_COPY[variant];
+  const selfManaged = variant === AGENT_COPY_VARIANT.SELF_MANAGED && id !== 'tribunal';
+  const placeSteps: AgentTourStep[] = selfManaged
+    ? [
+        {
+          id: `${id}-detail-rail`,
+          target: 'workflow-rail',
+          title: 'Progress',
+          description:
+            'These are the stages on this job, in order. The current one is where the case sits now.',
+          actionNote: 'Select a stage to open it. Later stages stay ahead until this one is done.',
+        },
+        {
+          id: `${id}-detail-status`,
+          target: 'workflow-status',
+          title: id === 'inspections' ? 'Visit plan' : 'Next action',
+          description:
+            id === 'inspections'
+              ? 'Date, time, and whether the appointment is confirmed. Assign an inspector from here or book one through Crossub.'
+              : roleCopy.statusDescription,
+          actionNote: 'This is the live decision. The progress above is the rest of the case.',
+        },
+      ]
+    : [
+        {
+          id: `${id}-detail-status`,
+          target: 'workflow-status',
+          title: 'Current status',
+          description: roleCopy.statusDescription,
+          actionNote:
+            'Read the status title and subtitle first — they tell you exactly what decision or confirmation is waiting on you.',
+        },
+        {
+          id: `${id}-detail-rail`,
+          target: 'workflow-rail',
+          title: 'Workflow rail',
+          description:
+            'The rail maps every stage from start to finish. Tap a completed or active step to see what happened or what is pending.',
+          actionNote:
+            'Focus on the Live step. That is where the case sits now — earlier steps are history, later steps unlock after you act.',
+        },
+        {
+          id: `${id}-detail-workflow-tab`,
+          target: 'workflow-tab-workflow',
+          title: 'Workflow tab',
+          description:
+            'Always open this tab when the badge says Need your action. It holds approve buttons, forms, and evidence for the current stage.',
+          actionNote: 'If you only remember one place to act, it is here — not Messages or Activity.',
+        },
+        {
+          id: `${id}-detail-action-panel`,
+          target: 'workflow-action-panel',
+          title: 'Where you take action',
+          description:
+            'The highlighted panel shows the live step name and the controls for your decision — approve, decline, assign, upload, or confirm.',
+          actionNote:
+            'Buttons and forms in this panel are what unblock the job. Complete them, then check Tasks — the row should leave Need my action.',
+        },
+      ];
   return [
     {
       id: `${id}-detail-intro`,
       title: `${pageName} workflow`,
       description: overview,
-      actionNote:
-        'You created the case — now walk each stage on the rail. Rose Need your action badges show where you must decide.',
+      actionNote: selfManaged
+        ? 'You created the case. The next steps follow the stages on this page.'
+        : 'You created the case — now walk each stage on the rail. Rose Need your action badges show where you must decide.',
     },
     AGENT_TOUR_ROLE_STEP[variant],
     {
@@ -429,50 +561,20 @@ function buildDetailSteps(id: AgentWorkflowTourId, variant: AgentCopyVariant): A
       description: roleCopy.badgeDescription,
       actionNote: roleCopy.badgeActionNote,
     },
-    {
-      id: `${id}-detail-status`,
-      target: 'workflow-status',
-      title: 'Current status',
-      description: roleCopy.statusDescription,
-      actionNote:
-        'Read the status title and subtitle first — they tell you exactly what decision or confirmation is waiting on you.',
-    },
-    {
-      id: `${id}-detail-rail`,
-      target: 'workflow-rail',
-      title: 'Workflow rail',
-      description:
-        'The rail maps every stage from start to finish. Tap a completed or active step to see what happened or what is pending.',
-      actionNote:
-        'Focus on the Live step (amber label). That is where the case sits now — earlier steps are history, later steps unlock after you act.',
-    },
-    {
-      id: `${id}-detail-workflow-tab`,
-      target: 'workflow-tab-workflow',
-      title: 'Workflow tab',
-      description:
-        'Always open this tab when the badge says Need your action. It holds approve buttons, forms, and evidence for the current stage.',
-      actionNote:
-        'If you only remember one place to act, it is here — not Messages or Activity.',
-    },
-    {
-      id: `${id}-detail-action-panel`,
-      target: 'workflow-action-panel',
-      title: 'Where you take action',
-      description:
-        'The highlighted panel shows the live step name and the controls for your decision — approve, decline, assign, upload, or confirm.',
-      actionNote:
-        'Buttons and forms in this panel are what unblock the job. Complete them, then check Tasks — the row should leave Need my action.',
-    },
+    ...placeSteps,
     ...detailRailStageSteps(id, variant),
-    {
-      id: `${id}-detail-tabs`,
-      target: 'workflow-tabs',
-      title: 'Job tabs',
-      description:
-        'Use tabs to move between workflow actions, reference details, documents, and history without leaving the job.',
-    },
-    ...detailTabSteps(id),
+    ...(selfManaged
+      ? []
+      : [
+          {
+            id: `${id}-detail-tabs`,
+            target: 'workflow-tabs',
+            title: 'Job tabs',
+            description:
+              'Use tabs to move between workflow actions, reference details, documents, and history without leaving the job.',
+          } satisfies AgentTourStep,
+        ]),
+    ...detailTabSteps(id, variant),
     {
       id: `${id}-detail-finish`,
       title: 'You are set',
@@ -528,6 +630,23 @@ export function resolveWorkflowTourContext(
   }
 
   return null;
+}
+
+const SELF_MANAGED_TOUR_DESCRIPTIONS: Record<AgentWorkflowTourId, string> = {
+  maintenance: 'Lodge a job → Reported, Assessment, Quotes, Approval, Work, Completed',
+  inspections: 'Book an inspection → Created through Completed. Your inspector, or Crossub',
+  new_leasing: 'Start a let → Confirmation through key handover',
+  end_leasing: 'Open a vacate → Vacate, Outgoing, Compare, Complete',
+  tribunal: 'Evidence → submission → hearing → orders',
+};
+
+export function workflowTourCard(
+  id: AgentWorkflowTourId,
+  variant: AgentCopyVariant,
+): { title: string; description: string } {
+  const base = AGENT_WORKFLOW_TOUR_LABELS[id];
+  if (variant !== AGENT_COPY_VARIANT.SELF_MANAGED) return base;
+  return { title: base.title, description: SELF_MANAGED_TOUR_DESCRIPTIONS[id] };
 }
 
 export const AGENT_WORKFLOW_TOUR_LABELS: Record<

@@ -495,7 +495,7 @@ const SELF_MANAGED_WORKFLOW_TRAINING_OVERRIDES: Record<
   AgentWorkflowTrainingOverride
 > = {
   maintenance: {
-    overview: `Maintenance covers the full repair lifecycle: tenant or agent intake, responsibility (tenant, landlord, or strata), quoting, your approval, scheduling, completion evidence, and invoicing. Most work is created from Tasks or a property hub; once you assign responsibility you invite contractors and run the job, with ${CROS_ASSISTANT_NAME} drafting messages and summarising quotes.`,
+    overview: `A repair runs Reported, Assessment, Quotes, Approval, Work, then Completed. On a landlord job you can ask Crossub to get the quote, or invite your own tradie. ${CROS_ASSISTANT_NAME} can draft the messages.`,
     steps: {
       'Review intake':
         'Read the issue description and intake photos or videos. Confirm the issue type, property, and tenant contact. This is the record you and contractors rely on.',
@@ -515,14 +515,22 @@ const SELF_MANAGED_WORKFLOW_TRAINING_OVERRIDES: Record<
       `Ask ${CROS_ASSISTANT_NAME} to draft a chaser when a contractor goes quiet.`,
     ],
   },
-  inspections: {},
+  inspections: {
+    overview:
+      'An inspection runs Created, Scheduled, Assigned, Inspection, Report, Delivered, then Completed. You assign one of your inspectors, or book a Crossub inspector for that job. A principal signs the report off before it goes to the owner.',
+  },
   new_leasing: {
+    overview:
+      'A letting runs Confirmation, Preparation, Active leasing, Offer, Onboarding, Key handover, then Completed. You confirm the re-let, schedule the open, review applications, finish lease setup, and hand over the keys.',
     functions: {
       'Tasks → Leasing filter':
-        'Shows all open leasing jobs across the portfolio. Use with status cards (Need my action, Waiting) to prioritise.',
+        'Shows open lettings across the portfolio. Use Need my action when confirmation, an application, or lease setup is waiting on you.',
     },
   },
-  end_leasing: {},
+  end_leasing: {
+    overview:
+      'Vacating is four steps: Vacate, Outgoing, Compare, then Complete. Bond is not a step on this page. Start it from New task → Vacating.',
+  },
   tribunal: {
     tips: [
       'Document every rent reminder before filing — tribunals expect a paper trail.',

@@ -94,6 +94,7 @@ export function LeasingOpenedTask({
           <LeasingStageRail status={cycle.mainStatus} />
 
           <section
+            data-tour="workflow-status"
             className={cn(
               'rounded-xl border p-4',
               ended ? 'bg-card' : 'border-violet-500/25 bg-violet-500/[0.04]',
@@ -166,7 +167,7 @@ function LeasingStageRail({ status }: { status?: string | null }) {
   const index = RAIL.findIndex((step) => step.id === status);
   const completedAll = status === LEASING_MAIN_STATUS.COMPLETED;
   return (
-    <section className="bg-card rounded-xl border px-3 py-4 shadow-sm">
+    <section className="bg-card rounded-xl border px-3 py-4 shadow-sm" data-tour="workflow-rail">
       <ol className="flex w-full" aria-label="Leasing progress">
         {RAIL.map((step, i) => {
           const done = index >= 0 && (completedAll || i < index);
@@ -174,7 +175,7 @@ function LeasingStageRail({ status }: { status?: string | null }) {
           const nextDone = index >= 0 && (completedAll || i + 1 < index);
           const nextCurrent = index >= 0 && !completedAll && i + 1 === index;
           return (
-            <li key={step.id} className="relative flex min-w-0 flex-1 flex-col items-center">
+            <li key={step.id} data-tour={`workflow-step-${step.id}`} className="relative flex min-w-0 flex-1 flex-col items-center">
               {i < RAIL.length - 1 ? (
                 <span
                   aria-hidden

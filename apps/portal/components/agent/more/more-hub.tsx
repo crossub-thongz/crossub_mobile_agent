@@ -10,6 +10,7 @@ import {
   MORE_PAGE_SECTION_TONE,
   MORE_MENU_ITEM_DESCRIPTION,
   SUPPORT_PAGE_SECTION,
+  supportSectionItems,
   type MorePageItem,
   type MorePageSection,
 } from '@/constants/more-page';
@@ -237,7 +238,7 @@ export function MoreHub() {
     menuSection,
     {
       ...SUPPORT_PAGE_SECTION,
-      items: filterNavByAccess(SUPPORT_PAGE_SECTION.items, hasFullManagementAccess),
+      items: supportSectionItems(selfManagedAccess.selfManaged),
     },
     ...MORE_PAGE_SECTIONS.map((section) => ({
       ...section,

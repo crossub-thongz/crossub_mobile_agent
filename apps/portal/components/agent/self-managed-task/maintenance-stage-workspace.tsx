@@ -243,7 +243,7 @@ export function MaintenanceStageWorkspace({
 
   return (
     <div className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="min-w-0 space-y-4">
+      <div className="min-w-0 space-y-4" data-tour="workflow-action-panel">
         {selected === STAGE.APPROVAL && !approved ? (
           <EmptyBoard
             title="No quote to approve yet"
@@ -280,7 +280,7 @@ export function MaintenanceStageWorkspace({
       <div className="min-w-0 space-y-4">
         <section className={CARD}>
           <h2 className="text-sm font-semibold">Timeline</h2>
-          <ol className="mt-3">
+          <ol className="mt-3" data-tour="workflow-rail">
             {order.map((stage, index) => {
               const state = stageState(stage, current, order);
               const last = index === order.length - 1;
@@ -298,6 +298,7 @@ export function MaintenanceStageWorkspace({
                     onClick={() => setSelected(stage)}
                     aria-pressed={active}
                     aria-label={LABEL[stage]}
+                    data-tour={`workflow-step-${stage}`}
                     className={cn(
                       'absolute -inset-x-1.5 -top-1.5 bottom-1.5 z-20 rounded-lg border transition-colors',
                       active

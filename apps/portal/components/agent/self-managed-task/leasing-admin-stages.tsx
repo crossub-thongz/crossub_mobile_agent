@@ -201,7 +201,10 @@ function StageCard({
   const items = id === CARD.SETUP ? setupItems(detail) : [];
   const doneCount = items.filter((item) => item.done).length;
   return (
-    <section className={cn('bg-card overflow-hidden rounded-xl border', highlight ? 'border-violet-500/30' : 'border-border')}>
+    <section
+      data-tour={`leasing-stage-${id}`}
+      className={cn('bg-card overflow-hidden rounded-xl border', highlight ? 'border-violet-500/30' : 'border-border')}
+    >
       <div className={cn('flex items-center gap-3 px-4 py-3', highlight && 'bg-violet-500/[0.06]')}>
         <button type="button" onClick={onToggle} aria-expanded={expanded} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           {state === 'done' ? (
