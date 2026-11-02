@@ -45,6 +45,7 @@ export default function PropertiesPage() {
     archiveProperty,
     restoreProperty,
     deleteDraftProperty,
+    refresh,
     refreshArchivedProperties,
     messages,
     getPropertyActions,
@@ -60,10 +61,10 @@ export default function PropertiesPage() {
   const isArchivedView = filter === 'archived';
 
   useEffect(() => {
-    if (apiConnected) {
-      void refreshArchivedProperties();
-    }
-  }, [apiConnected, refreshArchivedProperties]);
+    if (!apiConnected) return;
+    void refresh();
+    void refreshArchivedProperties();
+  }, [apiConnected, refresh, refreshArchivedProperties]);
 
   const list = useMemo(() => {
     let items = isArchivedView ? [...archivedProperties] : [...properties];

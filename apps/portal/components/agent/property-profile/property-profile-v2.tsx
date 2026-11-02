@@ -40,7 +40,7 @@ import {
 } from '@/lib/property-profile-tasks';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import { filterTenancyRentReviews, isPropertyVacant } from '@/lib/property-leasing';
-import { isPropertyInspectionOnly } from '@/lib/portal-service-level';
+import { isPropertyInspectionOnly, isPropertySelfManaged } from '@/lib/portal-service-level';
 import {
   formatProfileLeaseStatus,
   resolveBondOverviewDisplay,
@@ -511,9 +511,13 @@ export function PropertyProfileV2({
   const { agencies, hasFullManagementAccess, portalAccessReady } = useAgentData();
   const activeCycle = leasingCycles[0];
   // Self-Manage is the API's per-property answer (a live management override counts), the same
-  // rule the tenancy writes enforce. Until it answers, or if it fails, today's Overview shows.
+  // rule the tenancy writes enforce. The agency we already have is used until that answer
+  // arrives, so the previous overview does not paint for the round trip.
   const tenancyOverview = usePropertyTenancyOverview(propertyId);
-  const isSelfManaged = tenancyOverview.selfManaged;
+  const isSelfManaged = tenancyOverview.settled
+    ? tenancyOverview.selfManaged
+    : portalAccessReady && isPropertySelfManaged(agencies, property.agencyId);
+  const overviewReady = tenancyOverview.settled || (portalAccessReady && !isSelfManaged);
   const refreshTenancies = () => {
     tenancyOverview.reload();
     onRefresh?.();
@@ -752,6 +756,9 @@ export function PropertyProfileV2({
               onChanged={refreshTenancies}
             />
           ) : null}
+          {isSelfManaged && !tenancyOverview.record ? (
+            <TenancyOverviewGate record={null}>{() => null}</TenancyOverviewGate>
+          ) : null}
           <OverviewGrid
             property={property}
             propertyId={propertyId}
@@ -769,10 +776,10 @@ export function PropertyProfileV2({
             tribunalCases={tribunalCases}
             onViewTasks={() => onSectionChange('tasks')}
             onNeedActionClick={onNeedActionNavigate}
-            showTenancyCard={!isSelfManaged}
+            showTenancyCard={overviewReady && !isSelfManaged}
           />
 
-          {isSelfManaged ? null : (
+          {overviewReady && !isSelfManaged ? (
             <PropertyProfileDetails
               property={property}
               propertyId={propertyId}
@@ -786,7 +793,7 @@ export function PropertyProfileV2({
               onViewBondLodgement={onViewBondLodgement}
               onRefresh={onRefresh}
             />
-          )}
+          ) : null}
         </div>
       ) : null}
 

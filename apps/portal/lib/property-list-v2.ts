@@ -4,7 +4,6 @@ import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workfl
 import { isPropertyVacant } from '@/lib/property-leasing';
 import { isPropertyRegistryDraft } from '@/lib/property-registry-persist';
 import { propertyCreatedAtIso } from '@/lib/record-created-at';
-import { resolveLeaseDates } from '@/lib/property-overview';
 import type {
   Inspection,
   LeasingCycle,
@@ -22,6 +21,16 @@ import type { RentReviewDecision } from '@/lib/rent-review';
 import { householdTenantsFromOverview, readRegistryDraftParties } from '@/lib/property-parties';
 import type { AgentPropertyContact } from '@/lib/crossub-api/agent-client';
 import { daysSinceDate, daysUntilDate, formatCurrency, formatDate } from '@/lib/utils';
+
+/** The property record wins. A leasing row fills in only what the record does not have. */
+function listLeaseDates(
+  property: Property,
+  currentLease?: LeasingRecord,
+): { start?: string; end?: string } {
+  const start = property.leaseStart?.trim() || currentLease?.leaseStart?.trim() || undefined;
+  const end = property.leaseEnd?.trim() || currentLease?.leaseEnd?.trim() || undefined;
+  return { start, end };
+}
 
 const NEW_PROPERTY_DAYS = 14;
 
@@ -214,10 +223,10 @@ export function buildPropertyListV2LeaseExpiry(
     return { kind: 'empty', label: '—', tone: 'muted', daysLeft: null };
   }
 
-  const { start, end } = resolveLeaseDates(property, currentLease);
-  const leaseEnd = end ?? property.leaseEnd;
+  const { start, end } = listLeaseDates(property, currentLease);
+  const leaseEnd = end;
   const days = leaseEnd ? daysUntilDate(leaseEnd) : null;
-  const since = start ?? property.leaseStart;
+  const since = start;
   const periodicSince = days != null && days < 0 && leaseEnd ? leaseEnd : since;
 
   if (property.leaseStatus === 'vacating') {
@@ -391,12 +400,13 @@ export function propertyListV2TenancyLabel(
     .filter((tenant) => tenant !== primaryTenant)
     .map((tenant) => tenant.name.trim())
     .filter(Boolean);
+  const recordedTenant = property.tenantName?.trim();
   const tenant =
+    (recordedTenant && recordedTenant !== '—' ? recordedTenant : '') ||
     primaryTenant?.name.trim() ||
-    property.tenantName?.trim() ||
     currentLease?.approvedTenant?.trim();
-  const { start } = resolveLeaseDates(property, currentLease);
-  const leaseStart = start ?? property.leaseStart ?? currentLease?.leaseStart;
+  const { start } = listLeaseDates(property, currentLease);
+  const leaseStart = start;
   return {
     primary: tenant || (property.leaseStatus === 'vacant' ? 'Vacant' : '—'),
     secondary: leaseStart ? `Since ${formatDate(leaseStart)}` : undefined,

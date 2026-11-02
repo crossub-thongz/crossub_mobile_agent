@@ -26,5 +26,12 @@ export function useAgentUi(): AgentUiVariant {
 }
 
 export function useIsAgentUiV2(): boolean {
-  return useAgentUi() === AGENT_UI.V2;
+  if (useAgentUi() === AGENT_UI.V2) return true;
+  // The server sets `data-ui` on <html> before the first paint. The context
+  // default is v1, so a client render that has not picked up the provider yet
+  // would otherwise draw the previous page for a moment.
+  if (typeof document !== 'undefined' && document.documentElement.dataset.ui === AGENT_UI.V2) {
+    return true;
+  }
+  return false;
 }

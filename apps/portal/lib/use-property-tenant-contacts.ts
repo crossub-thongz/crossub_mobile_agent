@@ -7,14 +7,14 @@ import {
   listPropertyContacts,
   type AgentPropertyContact,
 } from '@/lib/crossub-api/agent-client';
+import {
+  notifyTenantContactsListeners,
+  tenantContactsCache,
+  tenantContactsInflight,
+  tenantContactsListeners,
+} from '@/lib/property-tenant-contacts-cache';
 
-const tenantContactsCache = new Map<string, AgentPropertyContact[]>();
-const tenantContactsInflight = new Set<string>();
-const tenantContactsListeners = new Set<() => void>();
-
-function notifyTenantContactsListeners() {
-  for (const listener of tenantContactsListeners) listener();
-}
+export { invalidatePropertyTenantContacts } from '@/lib/property-tenant-contacts-cache';
 
 /** TENANT contacts for the given properties, cached for the session. */
 export function usePropertyTenantContacts(

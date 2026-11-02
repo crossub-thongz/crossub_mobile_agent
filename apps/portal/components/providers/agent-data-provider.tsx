@@ -40,6 +40,7 @@ import {
   fetchAgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
 import { isAgentPaymentNotification } from '@/lib/agent-payment-notification';
+import { invalidatePropertyTenantContacts } from '@/lib/property-tenant-contacts-cache';
 import { sanitizeCreatePropertyBody } from '@/lib/sanitize-create-property-body';
 import {
   buildRegistryApiBody,
@@ -443,6 +444,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
       if (mappedProps) {
         setApiProperties(mappedProps);
+        invalidatePropertyTenantContacts();
       }
       if (portRes.status === 'fulfilled') {
         setPortfolio(portRes.value);
