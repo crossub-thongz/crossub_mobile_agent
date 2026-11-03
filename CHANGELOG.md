@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-03
+
+### Added
+- Settings shows each Self-Manage agency's owner email sender address with a Copy button
+
 ## 2026-11-01
 
 ### Added

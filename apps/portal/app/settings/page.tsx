@@ -6,6 +6,7 @@ import { ChevronRight, Moon, Sun } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { GiiPreferencesSetting } from '@/components/agent/gii-preferences-setting';
+import { OwnerEmailSenderCard } from '@/components/agent/owner-email-sender-card';
 import { PlanSettingsCard } from '@/components/agent/plan-settings-card';
 import { PushAlertsSetting } from '@/components/agent/push-alerts-setting';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -47,6 +48,8 @@ export default function SettingsPage() {
     <AgentShell title="Settings" backHref={ROUTES.PROFILE}>
       <div className="space-y-5">
         <PlanSettingsCard />
+
+        <OwnerEmailSenderCard />
 
         <section className="space-y-2">
           <h2 className="text-sm font-semibold">Appearance</h2>

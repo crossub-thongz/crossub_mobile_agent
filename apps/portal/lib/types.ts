@@ -220,6 +220,8 @@ export interface Agency {
   accountManagerEmail?: string;
   accountManagerPhone?: string;
   accountManagerExtension?: string;
+  /** The agency's address on CROSSUB's inbound domain; Self-Manage owner emails are sent from it. */
+  inboundEmailAddress?: string;
 }
 
 export interface LeasingRecord {
