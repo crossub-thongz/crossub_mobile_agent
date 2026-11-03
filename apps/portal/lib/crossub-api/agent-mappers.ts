@@ -341,6 +341,12 @@ export function mapAgentAgencies(dtos: AgentAgency[]): Agency[] {
         : 'LEVEL_2_FULL_MANAGEMENT',
     membershipTier:
       (a as { membershipTier?: AgencyMembershipTier }).membershipTier ?? 'PRINCIPAL',
+    portalModules: Array.isArray((a as { portalModules?: unknown }).portalModules)
+      ? ((a as { portalModules: unknown[] }).portalModules.filter(
+          (module): module is 'BILLING' | 'ACCOUNTING' =>
+            module === 'BILLING' || module === 'ACCOUNTING',
+        ))
+      : undefined,
     propertyCount: 0,
     region: a.region === 'NZ' ? 'NZ' : a.region === 'AU' ? 'AU' : undefined,
     abn: asString(a.abn),

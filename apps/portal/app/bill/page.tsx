@@ -40,6 +40,7 @@ import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-pay
 import { AgentShell } from '@/components/layout/agent-shell';
 import { AccountLockedBanner } from '@/components/billing/account-locked-banner';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { agenciesCanViewBilling } from '@/lib/portal-service-level';
 import { SELF_MANAGED_BILLING_NOTE } from '@/constants/service-plan';
 import {
   isSelfManagedLevel,
@@ -343,7 +344,7 @@ function PrepaidMonthlyBillingList({
 }
 
 export default function BillPage() {
-  const { primaryAgency } = useAgentData();
+  const { primaryAgency, agencies, portalAccessReady } = useAgentData();
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
   const [invoices, setInvoices] = useState<AgentBillingMonthlyInvoice[]>([]);
@@ -699,6 +700,17 @@ export default function BillPage() {
       setPayingAll(false);
     }
   };
+
+  if (portalAccessReady && !agenciesCanViewBilling(agencies, portalAccessReady)) {
+    return (
+      <AgentShell title="Invoice">
+        <PageIntro
+          title="Billing"
+          description="Your agency principal has not given this login access to billing."
+        />
+      </AgentShell>
+    );
+  }
 
   if (!selfManaged && summary?.platformBillingDisabled) {
     return (

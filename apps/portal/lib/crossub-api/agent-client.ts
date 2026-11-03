@@ -163,7 +163,10 @@ export async function fetchAgency(agencyId: string): Promise<AgentAgency> {
 }
 
 /** Agency team (`/api/v1/agent/agencies/{agencyId}/team`), with Self-Manage agency inspectors. */
-export type AgencyTeamMember = components['schemas']['AgentTeamMemberDto'];
+export type AgentPortalModuleKey = 'BILLING' | 'ACCOUNTING';
+export type AgencyTeamMember = components['schemas']['AgentTeamMemberDto'] & {
+  modules?: AgentPortalModuleKey[];
+};
 export type AgencyTeamResponse = components['schemas']['AgentTeamResponseDto'];
 export type InviteAgencyTeamMemberInput = components['schemas']['InviteAgencyAgentDto'];
 export type InviteAgencyTeamMemberResult = components['schemas']['InviteAgencyAgentResponseDto'];
@@ -221,6 +224,18 @@ export async function inviteAgencyTeamMember(
     body,
   });
   return unwrapCrossubResult(result, "Couldn't send the invite");
+}
+
+/** Principal sets which modules a team member may open (`PATCH .../team/{userId}/modules`). */
+export async function updateAgencyTeamMemberModules(
+  agencyId: string,
+  userId: string,
+  modules: AgentPortalModuleKey[],
+): Promise<AgencyTeamResponse> {
+  return agentFetch<AgencyTeamResponse>(
+    `/agent/agencies/${encodeURIComponent(agencyId)}/team/${encodeURIComponent(userId)}/modules`,
+    { method: 'PATCH', body: JSON.stringify({ modules }) },
+  );
 }
 
 export async function removeAgencyTeamMember(

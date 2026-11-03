@@ -16,7 +16,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AGENCY_INVITE_TIER_HINT, AGENCY_TEAM_INVITE_COPY as INVITE_COPY } from '@/constants/agency-team';
+import {
+  AGENCY_INVITE_TIER_HINT,
+  AGENCY_TEAM_INVITE_COPY as INVITE_COPY,
+  AGENCY_TEAM_MODULE_COPY as MODULE_COPY,
+} from '@/constants/agency-team';
 import {
   AGENCY_INVITE_TIERS,
   AGENCY_MEMBERSHIP_TIER,
@@ -27,8 +31,10 @@ import {
   fetchAgencyTeam,
   inviteAgencyTeamMember,
   removeAgencyTeamMember,
+  updateAgencyTeamMemberModules,
   type AgencyTeamMember,
   type AgencyTeamResponse,
+  type AgentPortalModuleKey,
   type InviteAgencyTeamMemberInput,
 } from '@/lib/crossub-api/agent-client';
 import {
@@ -41,6 +47,60 @@ import { apiErrorMessage } from '@/lib/utils/api-error-message';
 function memberName(member: AgencyTeamMember): string {
   const parts = [member.firstName, member.lastName].filter(Boolean);
   return parts.length > 0 ? parts.join(' ') : member.email;
+}
+
+/** Role default until the API sends an explicit set. */
+function memberModules(member: AgencyTeamMember): AgentPortalModuleKey[] {
+  if (member.modules) return member.modules;
+  if (
+    member.tier === AGENCY_MEMBERSHIP_TIER.PRINCIPAL ||
+    member.tier === AGENCY_MEMBERSHIP_TIER.ACCOUNTANT
+  ) {
+    return ['BILLING', 'ACCOUNTING'];
+  }
+  return ['BILLING'];
+}
+
+function ModuleSwitch({
+  label,
+  hint,
+  on,
+  disabled,
+  onToggle,
+}: {
+  label: string;
+  hint: string;
+  on: boolean;
+  disabled: boolean;
+  onToggle: (next: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-muted-foreground text-[11px]">{hint}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={label}
+        disabled={disabled}
+        onClick={() => onToggle(!on)}
+        className={cn(
+          'relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50',
+          on ? 'bg-primary' : 'bg-secondary',
+        )}
+      >
+        <span
+          className={cn(
+            'absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform',
+            on ? 'left-[22px]' : 'left-0.5',
+          )}
+        />
+      </button>
+    </div>
+  );
 }
 
 export function AgencyTeamPanel({
@@ -75,6 +135,7 @@ export function AgencyTeamPanel({
   );
   const [inviting, setInviting] = useState(false);
   const [inspectorBusyId, setInspectorBusyId] = useState<string | null>(null);
+  const [moduleBusyId, setModuleBusyId] = useState<string | null>(null);
   const [removeInspector, setRemoveInspector] = useState<AgencyTeamMember | null>(null);
   const canManageInspectors = selfManaged && canManage;
 
@@ -92,6 +153,21 @@ export function AgencyTeamPanel({
   useEffect(() => {
     void loadTeam();
   }, [loadTeam]);
+
+  async function onToggleModule(member: AgencyTeamMember, key: AgentPortalModuleKey, on: boolean) {
+    const current = memberModules(member);
+    const next = on
+      ? ([...new Set([...current, key])] as AgentPortalModuleKey[])
+      : current.filter((module) => module !== key);
+    setModuleBusyId(member.userId);
+    try {
+      setTeam(await updateAgencyTeamMemberModules(agencyId, member.userId, next));
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Couldn't update access"));
+    } finally {
+      setModuleBusyId(null);
+    }
+  }
 
   async function onInvite() {
     const email = inviteEmail.trim();
@@ -165,6 +241,9 @@ export function AgencyTeamPanel({
         <p className="text-muted-foreground mb-3 text-xs">
           Tap an agent to sort their properties below.
         </p>
+      ) : null}
+      {canManage ? (
+        <p className="text-muted-foreground mb-3 text-xs">{MODULE_COPY.principalNote}</p>
       ) : null}
       {loading ? (
         <div className="text-muted-foreground flex items-center gap-2 py-4 text-sm">
@@ -247,6 +326,26 @@ export function AgencyTeamPanel({
                         ? INSPECTOR_COPY.removeInspector
                         : INSPECTOR_COPY.makeInspector}
                     </Button>
+                  ) : null}
+                  {canManage && !isPrincipalMember ? (
+                    <div className="mt-3 space-y-2">
+                      <ModuleSwitch
+                        label={MODULE_COPY.billing}
+                        hint={MODULE_COPY.billingHint}
+                        on={memberModules(member).includes('BILLING')}
+                        disabled={moduleBusyId === member.userId}
+                        onToggle={(next) => void onToggleModule(member, 'BILLING', next)}
+                      />
+                      {selfManaged ? (
+                        <ModuleSwitch
+                          label={MODULE_COPY.accounting}
+                          hint={MODULE_COPY.accountingHint}
+                          on={memberModules(member).includes('ACCOUNTING')}
+                          disabled={moduleBusyId === member.userId}
+                          onToggle={(next) => void onToggleModule(member, 'ACCOUNTING', next)}
+                        />
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
                 {canRemove ? (

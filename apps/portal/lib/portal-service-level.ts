@@ -125,12 +125,30 @@ export function isAgencyTrustTier(tier: Agency['membershipTier']): boolean {
   return tier != null && (AGENCY_TRUST_TIERS as readonly string[]).includes(tier);
 }
 
-/** Self-Manage agencies whose trust account the agent runs (principal or accountant). */
+/** Accounting (Self-Manage trust). Missing `portalModules` keeps the principal/accountant default. */
+export function agencyHasAccountingAccess(agency: Agency): boolean {
+  if (!agency.portalModules) return isAgencyTrustTier(agency.membershipTier);
+  return agency.portalModules.includes('ACCOUNTING');
+}
+
+/** Billing (invoices and payment methods). Missing `portalModules` keeps it visible. */
+export function agencyHasBillingAccess(agency: Agency): boolean {
+  if (!agency.portalModules) return true;
+  return agency.portalModules.includes('BILLING');
+}
+
+/** True once agencies have loaded and every one of them has Billing turned off for this login. */
+export function agenciesCanViewBilling(agencies: Agency[], ready: boolean): boolean {
+  if (!ready || agencies.length === 0) return true;
+  return agencies.some(agencyHasBillingAccess);
+}
+
+/** Self-Manage agencies whose trust account this login may open. */
 export function selfManagedTrustAgencies(agencies: Agency[]): Agency[] {
   return agencies.filter(
     (a) =>
       isSelfManagedLevel(resolvePortalServiceLevel(a.portalServiceLevel)) &&
-      isAgencyTrustTier(a.membershipTier),
+      agencyHasAccountingAccess(a),
   );
 }
 

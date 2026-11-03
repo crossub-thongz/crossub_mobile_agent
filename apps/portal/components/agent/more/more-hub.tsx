@@ -22,6 +22,7 @@ import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 import { agencyBillingNavLabel, filterNavByAccess } from '@/lib/portal-service-level';
 import { filterHiddenBillingNav } from '@/lib/platform-billing-ui';
+import { agenciesCanViewBilling } from '@/lib/portal-service-level';
 import { cn } from '@/lib/utils';
 
 import '@/components/agent/more/more-hub.css';
@@ -211,7 +212,10 @@ export function MoreSectionCard({
 export function MoreHub() {
   const isV2 = useIsAgentUiV2();
   const { logout } = useAuth();
-  const { hasFullManagementAccess, primaryAgency, platformBillingDisabled } = useAgentData();
+  const { hasFullManagementAccess, primaryAgency, platformBillingDisabled, agencies, portalAccessReady } =
+    useAgentData();
+  const hideBilling =
+    platformBillingDisabled || !agenciesCanViewBilling(agencies, portalAccessReady);
   const selfManagedAccess = useSelfManagedAccess();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set(['menu']));
   const billingLabel = agencyBillingNavLabel(hasFullManagementAccess);
@@ -230,7 +234,7 @@ export function MoreHub() {
         icon: item.icon,
         portalAccess: item.portalAccess,
       })),
-      platformBillingDisabled,
+      hideBilling,
     ),
   };
 
@@ -244,7 +248,7 @@ export function MoreHub() {
       ...section,
       items: filterHiddenBillingNav(
         filterNavByAccess(section.items, hasFullManagementAccess),
-        platformBillingDisabled,
+        hideBilling,
       ),
     })),
     MORE_ACCOUNT_SECTION,

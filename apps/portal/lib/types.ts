@@ -203,6 +203,11 @@ export interface Agency {
   portalServiceLevel?: AgentPortalServiceLevel;
   /** Principal can manage team; agent sees assigned properties only. */
   membershipTier?: AgencyMembershipTier;
+  /**
+   * Modules this login may open for this agency. Absent on an older API, which keeps
+   * today's defaults: billing for every member, accounting for the principal and accountant.
+   */
+  portalModules?: Array<'BILLING' | 'ACCOUNTING'>;
   /** Properties under this agency in the agent's book — derived from the live `properties`. */
   propertyCount: number;
   /** Country the agency operates in. Absent on older responses, which stay Australia. */
