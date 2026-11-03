@@ -37,6 +37,7 @@ export const TRUST_TRANSACTION_LIMITS = {
 /** The "New transaction" menu: which dialog is showing. */
 export const TRUST_NEW_TRANSACTION = {
   RECEIPT: 'RECEIPT',
+  FOLIO_RECEIPT: 'FOLIO_RECEIPT',
   WITHDRAWAL: 'WITHDRAWAL',
   JOURNAL: 'JOURNAL',
 } as const;
@@ -47,7 +48,16 @@ export const TRUST_NEW_TRANSACTION_OPTIONS: readonly {
   label: string;
   hint: string;
 }[] = [
-  { id: TRUST_NEW_TRANSACTION.RECEIPT, label: 'Receipt', hint: 'Money into the trust account, coded to one ledger' },
+  {
+    id: TRUST_NEW_TRANSACTION.RECEIPT,
+    label: 'Tenant receipt',
+    hint: 'Rent or a deposit from a tenant',
+  },
+  {
+    id: TRUST_NEW_TRANSACTION.FOLIO_RECEIPT,
+    label: 'Folio receipt',
+    hint: 'Money into one owner, supplier or agency ledger',
+  },
   { id: TRUST_NEW_TRANSACTION.WITHDRAWAL, label: 'Withdrawal', hint: 'Money out of one ledger by bank transfer, BPAY or cheque' },
   { id: TRUST_NEW_TRANSACTION.JOURNAL, label: 'Journal', hint: 'Move money between two ledgers; the bank balance does not change' },
 ];
@@ -83,6 +93,7 @@ export const TRUST_WITHDRAWAL_METHOD_LABEL: Record<TrustWithdrawalMethod, string
 
 export const TRUST_NEW_TRANSACTION_COPY = {
   button: 'New transaction',
+  tenantReceipt: 'Tenant receipt',
   ledger: 'Ledger',
   chooseLedger: 'Choose a ledger',
   noLedgers: 'No open ledgers yet. Open one from Ledgers first.',

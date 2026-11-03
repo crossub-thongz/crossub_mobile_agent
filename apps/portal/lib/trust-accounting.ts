@@ -16,7 +16,7 @@ import type {
   TrustTransaction,
 } from '@/lib/crossub-api/agent-trust-client';
 import { formatAgreementDate } from '@/lib/format-datetime';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, randomUuid } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
 const DOLLARS_PATTERN = /^-?\d+(\.\d{1,2})?$/;
@@ -65,7 +65,7 @@ export function formatTrustDate(value: string | null | undefined): string {
 
 /** A fresh idempotency key for a trust posting (one per open dialog). */
 export function newTrustIdempotencyKey(): string {
-  return crypto.randomUUID();
+  return randomUuid();
 }
 
 /** True when the API says this agency's trust workspace is not set up yet (the set-up form shows). */
