@@ -520,20 +520,69 @@ export const TRUST_SUPPLIER_COPY = {
 } as const;
 
 export const TRUST_RECEIPT_COPY = {
-  title: 'Receipt money',
-  description: (tenant: string) => `From ${tenant}. Rent goes to the owner ledger.`,
-  kind: 'What for',
-  amount: 'Amount ($)',
-  date: 'Date received',
+  title: 'New Tenant Receipt',
+  description: 'Rent goes to the owner. A deposit stays on the tenant. Allocate the whole amount.',
+  tenant: 'Tenant',
+  owner: 'Owner',
+  tenantSearch: 'Search tenant, address or payment reference',
+  noTenants: 'No matching tenancy',
+  changeTenant: 'Change',
+  pickTenant: 'Choose a tenant',
+  property: 'Property',
+  details: 'Details',
+  amount: 'Amount',
+  date: 'Date',
   method: 'Method',
-  reference: 'Reference (optional)',
+  allocation: 'Allocation',
+  due: 'Due',
+  allocationDescription: 'Description',
+  amountDue: 'Amount Due',
+  allocationAmount: 'Amount',
+  rentAllocation: 'Rent',
+  depositAllocation: 'Deposit',
+  depositPlaceholder: (place: string) => `Deposit for ${place}`,
+  /** Current rent position, e.g. "Paid to 14/10/2026 + $907.91". */
+  paidToStatus: (date: string, partPayment: string | null) =>
+    partPayment ? `Paid to ${date} + ${partPayment}` : `Paid to ${date}`,
+  overdueDays: (days: number) => `${days} day${days === 1 ? '' : 's'}`,
+  addNote: 'Add note',
+  notePlaceholder: 'Note for this receipt',
+  unpaidInvoices: 'Unpaid invoices',
+  payInFull: 'Pay in full',
   amountInvalid: 'Enter an amount above $0.00',
-  dateRequired: 'Pick the date received',
-  submit: 'Receipt',
+  amountFormat: 'Enter a valid amount, for example 1150.00',
+  allocateAll: 'The rent, deposit and invoices must add up to the amount',
+  dateRequired: 'Pick the date',
   cancel: 'Cancel',
+  submit: (amount: string) => amount,
   done: (receiptNumber: number | null | undefined) =>
     receiptNumber != null ? `Receipt #${receiptNumber} posted` : 'Receipt posted',
+  empty: '—',
 } as const;
+
+/** How the receipt states the rent, e.g. "$1,150.00 weekly". */
+export const TRUST_RECEIPT_RENT_PERIOD_LABEL: Record<TrustRentPeriod, string> = {
+  WEEKLY: 'weekly',
+  FORTNIGHTLY: 'fortnightly',
+  MONTHLY: 'monthly',
+};
+
+/** Method chips on the tenant receipt, in the order the receipt form shows them. */
+export const TRUST_RECEIPT_METHOD_ORDER: readonly TrustPaymentMethod[] = [
+  TRUST_PAYMENT_METHOD.CASH,
+  TRUST_PAYMENT_METHOD.CHEQUE,
+  TRUST_PAYMENT_METHOD.CARD,
+  TRUST_PAYMENT_METHOD.EFT,
+  TRUST_PAYMENT_METHOD.BPAY,
+];
+
+export const TRUST_RECEIPT_METHOD_LABEL: Record<TrustPaymentMethod, string> = {
+  CASH: 'Cash',
+  CHEQUE: 'Cheque',
+  CARD: 'Card',
+  EFT: 'EFT',
+  BPAY: 'BPAY',
+};
 
 export const TRUST_BILLS_COPY = {
   searchPlaceholder: 'Search bill, supplier, owner or property',
@@ -941,6 +990,8 @@ export const TRUST_BANK_STATEMENT_COPY = {
   amountDiffers: 'Amount differs from the rent',
   reconciledTo: (n: number, description: string) => `#${n} ${description}`,
   processOne: 'Accept',
+  receipt: 'Receipt',
+  lineInFuture: 'That line is dated after today, so it cannot be receipted yet',
   link: 'Match',
   unlink: 'Unmatch',
   processAll: (count: number) => `Accept all suggested (${count})`,

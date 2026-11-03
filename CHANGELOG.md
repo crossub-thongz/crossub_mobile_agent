@@ -2,6 +2,9 @@
 
 ## 2026-11-03
 
+### Added
+- Settings shows each Self-Manage agency's owner email sender address with a Copy button
+
 ### Fixed
 - While the CROSSUB team holds a Cros chat, New chat and past chats talk to Cros again instead of sending every message to the team; the CROSSUB team button brings the team's chat back
 

@@ -40,6 +40,7 @@ export function TrustRentTab({
   const [search, setSearch] = useState('');
   const [arrearsOnly, setArrearsOnly] = useState(false);
   const [receiptRow, setReceiptRow] = useState<TrustRentRow | null>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
   const [rentRow, setRentRow] = useState<TrustRentRow | null>(null);
   const query = useDebouncedValue(search.trim());
 
@@ -74,6 +75,12 @@ export function TrustRentTab({
 
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
         <TrustSearchInput value={search} onChange={setSearch} placeholder={COPY.searchPlaceholder} />
+        <Button type="button" size="sm" className="h-9" onClick={() => {
+          setReceiptRow(null);
+          setReceiptOpen(true);
+        }}>
+          {COPY.receipt}
+        </Button>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -167,7 +174,10 @@ export function TrustRentTab({
                         size="sm"
                         variant="outline"
                         className="h-7 text-xs"
-                        onClick={() => setReceiptRow(row)}
+                        onClick={() => {
+                          setReceiptRow(row);
+                          setReceiptOpen(true);
+                        }}
                       >
                         {COPY.receipt}
                       </Button>
@@ -180,13 +190,16 @@ export function TrustRentTab({
         </div>
       )}
 
-      {receiptRow ? (
+      {receiptOpen ? (
         <TrustReceiptDialog
-          key={receiptRow.ledgerId}
+          key={receiptRow?.ledgerId ?? 'search'}
           agencyId={agencyId}
           bankAccountId={bankAccountId}
           row={receiptRow}
-          onClose={() => setReceiptRow(null)}
+          onClose={() => {
+            setReceiptOpen(false);
+            setReceiptRow(null);
+          }}
           onReceipted={reload}
         />
       ) : null}

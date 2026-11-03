@@ -105,7 +105,7 @@ import {
 } from '@/lib/crossub-api/agent-end-leasing-client';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import { agentCopyVariant } from '@/lib/portal-service-level';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDateTime, randomUuid } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { fileToBase64, MAX_UPLOAD_BYTES } from '@/lib/file-upload';
 
@@ -1975,7 +1975,7 @@ function emptyRepairItem(): ReportComparisonRepairItem {
     quote: '',
     handymanId: null,
     handymanName: '',
-    localKey: crypto.randomUUID(),
+    localKey: randomUuid(),
   };
 }
 
@@ -2012,7 +2012,7 @@ function withRepairRowKeys(items: ReportComparisonRepairItem[]): RepairRow[] {
   return items.map((item) =>
     (item as RepairRow).localKey
       ? (item as RepairRow)
-      : { ...item, localKey: crypto.randomUUID() },
+      : { ...item, localKey: randomUuid() },
   );
 }
 

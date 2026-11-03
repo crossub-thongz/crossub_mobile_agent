@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PEOPLE_ADD_SUPPLIER_COPY as COPY } from '@/constants/people';
 import { addPreferredContractor } from '@/lib/crossub-api/agent-client';
+import { openSupplierLedgerForName } from '@/lib/trust-folio-open';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
 /**
@@ -50,7 +51,13 @@ export function PeopleAddSupplierDialog({
         email: email.trim(),
         ...(phone.trim() ? { phone: phone.trim() } : {}),
       });
-      toast.success(COPY.added(supplier.name));
+      let ledgerOpened = false;
+      try {
+        ledgerOpened = (await openSupplierLedgerForName(agencyId, supplier.name)) === 'opened';
+      } catch (ledgerErr) {
+        toast.error(apiErrorMessage(ledgerErr, COPY.ledgerFailed));
+      }
+      toast.success(ledgerOpened ? COPY.addedWithLedger(supplier.name) : COPY.added(supplier.name));
       onAdded();
       onClose();
     } catch (err) {

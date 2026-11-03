@@ -354,6 +354,7 @@ export function mapAgentAgencies(dtos: AgentAgency[]): Agency[] {
     accountManagerEmail: asString(a.accountManagerEmail),
     accountManagerPhone: asString(a.accountManagerPhone),
     accountManagerExtension: asString(a.accountManagerExtension),
+    inboundEmailAddress: asString(a.inboundEmailAddress),
   }));
 }
 

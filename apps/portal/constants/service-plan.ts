@@ -49,3 +49,15 @@ export const SELF_MANAGED_PRICING_COPY = {
  */
 export const SELF_MANAGED_BILLING_NOTE =
   'Self-Manage is free. You pay only for the CROSSUB services you choose, by card before each one starts. A CROSSUB inspection no inspector accepts within 48 hours is refunded.';
+
+/** Settings → Owner email sender card (Self-Manage agencies only). */
+export const OWNER_EMAIL_SENDER_COPY = {
+  title: 'Owner email sender',
+  description:
+    "Emails to owners go out under your agency's name from this address. Owner replies land in Conversations.",
+  copy: 'Copy',
+  copied: 'Address copied',
+  copyFailed: 'Could not copy. Select the address and copy it instead.',
+  notSet: 'Not set up yet. Ask your CROSSUB account manager to set it.',
+  changeNote: 'To change this address, contact your CROSSUB account manager.',
+} as const;
