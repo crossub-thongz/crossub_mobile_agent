@@ -174,6 +174,8 @@ export const PEOPLE_ADD_SUPPLIER_COPY = {
   cancel: 'Cancel',
   submit: 'Add supplier',
   added: (name: string) => `${name} added`,
+  addedWithLedger: (name: string) => `${name} added, and their ledger is open`,
+  ledgerFailed: 'The supplier was added. Their ledger could not be opened.',
 } as const;
 
 export const PERSON_PROFILE_COPY = {
