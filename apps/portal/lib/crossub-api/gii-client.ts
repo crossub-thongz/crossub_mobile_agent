@@ -243,6 +243,15 @@ export async function sendGiiHandoffMessage(threadId: string, body: string): Pro
   return data;
 }
 
+/** End the chat with the CROSSUB team: the thread reads Completed for them and Cros answers again. */
+export async function closeGiiHandoff(threadId: string): Promise<GiiHandoff> {
+  const { data, error } = await crossub.POST('/agent/gii/handoff/{threadId}/close', {
+    params: { path: { threadId } },
+  });
+  if (error || !data) throw new Error('The chat with the CROSSUB team could not be ended');
+  return data;
+}
+
 export async function deleteGiiConversation(id: string): Promise<void> {
   const { error, response } = await crossub.DELETE('/agent/gii/conversations/{id}', {
     params: { path: { id } },

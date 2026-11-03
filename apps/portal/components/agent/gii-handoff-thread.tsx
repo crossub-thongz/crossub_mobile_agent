@@ -1,6 +1,6 @@
 'use client';
 
-import { Headset } from 'lucide-react';
+import { Headset, LogOut } from 'lucide-react';
 
 import { GiiChatLine } from '@/components/agent/gii-chat-line';
 import { GII_HANDOFF_COPY } from '@/constants/gii-handoff';
@@ -14,7 +14,16 @@ import { giiHandoffReplies, giiHandoffStatus } from '@/utils/gii-handoff';
  * oldest first, and at the end, once the team closes it, that the chat is back with Cros. The
  * handoff message itself is already in the chat above, on the Confirm card.
  */
-export function GiiHandoffThread({ handoff }: { handoff: GiiHandoff }) {
+export function GiiHandoffThread({
+  handoff,
+  onClose,
+  closing = false,
+}: {
+  handoff: GiiHandoff;
+  /** The agent ends the chat themselves (Daniel, 3 Nov 2026); absent where they cannot. */
+  onClose?: () => void;
+  closing?: boolean;
+}) {
   const now = new Date();
   const status = (
     <div
@@ -24,7 +33,7 @@ export function GiiHandoffThread({ handoff }: { handoff: GiiHandoff }) {
       )}
     >
       <Headset className={cn('mt-0.5 size-3.5 shrink-0', handoff.closed ? '' : 'text-sky-600')} />
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         {handoff.closed ? null : (
           <span className="block font-semibold">{GII_HANDOFF_COPY.WITH(handoff.staffName)}</span>
         )}
@@ -32,6 +41,18 @@ export function GiiHandoffThread({ handoff }: { handoff: GiiHandoff }) {
           {giiHandoffStatus(handoff, now)}
         </span>
       </span>
+      {!handoff.closed && onClose ? (
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={closing}
+          title={GII_HANDOFF_COPY.END_CHAT_TITLE}
+          className="flex shrink-0 items-center gap-1 rounded-md border border-sky-500/30 bg-background px-2 py-1 text-[11px] font-semibold text-sky-700 hover:bg-sky-500/10 disabled:opacity-50 dark:text-sky-300"
+        >
+          <LogOut className="size-3" />
+          {GII_HANDOFF_COPY.END_CHAT}
+        </button>
+      ) : null}
     </div>
   );
   return (

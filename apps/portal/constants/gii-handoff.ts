@@ -15,6 +15,11 @@ export const GII_HANDOFF_COPY = {
   ANSWERED: 'Answered',
   BACK_FROM: (when: string) => `The team is back ${when} Sydney time`,
   CLOSED: (name: string | null) => `${name ?? `The ${GII_HANDOFF_TEAM}`} handed the chat back to Cros.`,
+  CLOSED_BY_ME: 'You ended the chat with the team. Cros answers again.',
+  /** The button on the team chat card: the agent ends the chat themselves. */
+  END_CHAT: 'End chat',
+  END_CHAT_TITLE: 'End the chat with the CROSSUB team and go back to Cros',
+  END_FAILED: 'The chat with the CROSSUB team could not be ended. Please try again.',
   PLACEHOLDER: (name: string | null) => `Message ${name ?? `the ${GII_HANDOFF_TEAM}`}…`,
   SEND_FAILED: 'Your message could not be sent to the CROSSUB team. Please try again.',
   CLOSED_ON_SEND: 'The CROSSUB team has already handed this chat back to Cros.',

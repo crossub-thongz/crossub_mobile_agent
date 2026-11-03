@@ -3,6 +3,7 @@
 ## 2026-11-03
 
 ### Added
+- Cros team chat card has an End chat button: the agent ends the chat with the CROSSUB team themselves and Cros answers again
 - Settings shows each Self-Manage agency's owner email sender address with a Copy button
 
 ### Fixed

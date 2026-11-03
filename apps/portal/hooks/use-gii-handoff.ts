@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { GII_HANDOFF_POLL_MS } from '@/constants/gii-handoff';
 import {
+  closeGiiHandoff,
   getCurrentGiiHandoff,
   getGiiHandoff,
   sendGiiHandoffMessage,
@@ -19,6 +20,7 @@ import { giiHandoffHeld } from '@/utils/gii-handoff';
 export function useGiiHandoff(open: boolean) {
   const [handoff, setHandoff] = useState<GiiHandoff | null>(null);
   const [sending, setSending] = useState(false);
+  const [closing, setClosing] = useState(false);
   /** The chat while a person holds it; null when none is with the team or it is back with Cros. */
   const held = giiHandoffHeld(handoff) ? handoff : null;
   const isHeld = held !== null;
@@ -75,5 +77,16 @@ export function useGiiHandoff(open: boolean) {
     [threadId],
   );
 
-  return { handoff, held, sending, adopt, send };
+  /** End the chat with the team: it reads Completed for them and Cros answers again. Throws when it was not. */
+  const close = useCallback(async () => {
+    if (!threadId) throw new Error('No chat is with the CROSSUB team');
+    setClosing(true);
+    try {
+      setHandoff(await closeGiiHandoff(threadId));
+    } finally {
+      setClosing(false);
+    }
+  }, [threadId]);
+
+  return { handoff, held, sending, closing, adopt, send, close };
 }
