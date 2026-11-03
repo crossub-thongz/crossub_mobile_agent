@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-03
+
+### Fixed
+- While the CROSSUB team holds a Cros chat, New chat and past chats talk to Cros again instead of sending every message to the team; the CROSSUB team button brings the team's chat back
+
 ## 2026-11-01
 
 ### Added
