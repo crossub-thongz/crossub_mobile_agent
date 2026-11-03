@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
 
 import { SELECT_CLASS } from '@/components/agent/maintenance-self-managed/step-card';
 import { TrustAuditLogPanel } from '@/components/agent/trust/trust-audit-log-panel';
@@ -25,6 +26,7 @@ import { TrustLoadError, TrustLoading } from '@/components/agent/trust/trust-ui'
 import { Label } from '@/components/ui/label';
 import {
   TRUST_BANK_ACCOUNT_STATUS,
+  TRUST_OPEN_LEDGERS_COPY,
   TRUST_PAGE_COPY as COPY,
   TRUST_TAB,
   type TrustTab,
@@ -35,7 +37,10 @@ import {
   type AgentTrustWorkspace,
   type TrustBankAccount,
 } from '@/lib/crossub-api/agent-trust-client';
+import { ApiError } from '@/lib/api';
 import { isTrustNotSetUpError } from '@/lib/trust-accounting';
+import { catchUpTrustFolios, reportOpenedFolios } from '@/lib/trust-folio-open';
+import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import type { Agency } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -164,6 +169,8 @@ export function TrustWorkspace({ agencies }: { agencies: readonly Agency[] }) {
   const [agencyId, setAgencyId] = useState(agencies[0]?.id ?? '');
   const [pickedBankAccountId, setPickedBankAccountId] = useState<string | null>(null);
   const [tab, setTab] = useState<TrustTab>(TRUST_TAB.OVERVIEW);
+  const [folioEpoch, setFolioEpoch] = useState(0);
+  const catchUpKey = useRef<string | null>(null);
 
   const workspace = useTrustResource(agencyId || null, () => fetchTrustWorkspace(agencyId));
   const accounts = workspace.data?.bankAccounts ?? [];
@@ -171,6 +178,29 @@ export function TrustWorkspace({ agencies }: { agencies: readonly Agency[] }) {
     pickedBankAccountId && accounts.some((account: TrustBankAccount) => account.id === pickedBankAccountId)
       ? pickedBankAccountId
       : defaultBankAccountId(accounts);
+
+  const activeAccounts = accounts.filter((account) => account.status === TRUST_BANK_ACCOUNT_STATUS.ACTIVE);
+  const singleActiveId = activeAccounts.length === 1 ? activeAccounts[0].id : null;
+
+  useEffect(() => {
+    if (!agencyId || !singleActiveId || workspace.loading || workspace.error || !workspace.data) return;
+    const key = `${agencyId}:${singleActiveId}`;
+    if (catchUpKey.current === key) return;
+    catchUpKey.current = key;
+    void catchUpTrustFolios(agencyId, singleActiveId)
+      .then((opened) => {
+        const count = reportOpenedFolios(key, opened);
+        if (count > 0) {
+          toast.success(TRUST_OPEN_LEDGERS_COPY.synced(count));
+          setFolioEpoch((epoch) => epoch + 1);
+        }
+      })
+      .catch((err: unknown) => {
+        catchUpKey.current = null;
+        if (err instanceof ApiError && (err.status === 403 || err.status === 404)) return;
+        toast.error(apiErrorMessage(err));
+      });
+  }, [agencyId, singleActiveId, workspace.loading, workspace.error, workspace.data]);
 
   const needsWorkspace = isTrustNotSetUpError(workspace.error);
   const notSetUp = needsWorkspace || (workspace.data != null && accounts.length === 0);
@@ -198,7 +228,7 @@ export function TrustWorkspace({ agencies }: { agencies: readonly Agency[] }) {
   } else {
     body = (
       <TrustTabContent
-        key={`${agencyId}:${bankAccountId}`}
+        key={`${agencyId}:${bankAccountId}:${folioEpoch}`}
         tab={tab}
         agencyId={agencyId}
         bankAccountId={bankAccountId}

@@ -522,11 +522,29 @@ export const TRUST_SUPPLIER_COPY = {
 export const TRUST_RECEIPT_COPY = {
   title: 'Receipt money',
   description: (tenant: string) => `From ${tenant}. Rent goes to the owner ledger.`,
+  searchDescription: 'Find the tenancy, then receipt the money. Rent goes to the owner ledger.',
+  tenant: 'Tenant',
+  tenantSearch: 'Search address, tenant name or payment reference',
+  noTenants: 'No matching tenancy',
+  changeTenant: 'Change',
+  pickTenant: 'Choose the tenancy',
+  property: 'Property',
+  rent: 'Rent',
   kind: 'What for',
   amount: 'Amount ($)',
   date: 'Date received',
   method: 'Method',
   reference: 'Reference (optional)',
+  allocation: 'Allocation',
+  due: 'Due',
+  allocationDescription: 'Description',
+  amountDue: 'Amount due',
+  allocationAmount: 'Amount',
+  rentAllocation: 'Rent',
+  /** Current rent position, e.g. "Paid to 14/10/2026 + $907.91". */
+  paidToStatus: (date: string, partPayment: string | null) =>
+    partPayment ? `Paid to ${date} + ${partPayment}` : `Paid to ${date}`,
+  overdueDays: (days: number) => `${days} day${days === 1 ? '' : 's'}`,
   amountInvalid: 'Enter an amount above $0.00',
   dateRequired: 'Pick the date received',
   submit: 'Receipt',
@@ -534,6 +552,13 @@ export const TRUST_RECEIPT_COPY = {
   done: (receiptNumber: number | null | undefined) =>
     receiptNumber != null ? `Receipt #${receiptNumber} posted` : 'Receipt posted',
 } as const;
+
+/** How a receipt states the rent, e.g. "$1,150.00 /week". */
+export const TRUST_RECEIPT_RENT_PERIOD_LABEL: Record<TrustRentPeriod, string> = {
+  WEEKLY: '/week',
+  FORTNIGHTLY: '/fortnight',
+  MONTHLY: '/month',
+};
 
 export const TRUST_BILLS_COPY = {
   searchPlaceholder: 'Search bill, supplier, owner or property',
@@ -941,6 +966,8 @@ export const TRUST_BANK_STATEMENT_COPY = {
   amountDiffers: 'Amount differs from the rent',
   reconciledTo: (n: number, description: string) => `#${n} ${description}`,
   processOne: 'Accept',
+  receipt: 'Receipt',
+  lineInFuture: 'That line is dated after today, so it cannot be receipted yet',
   link: 'Match',
   unlink: 'Unmatch',
   processAll: (count: number) => `Accept all suggested (${count})`,

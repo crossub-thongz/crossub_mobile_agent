@@ -6,7 +6,7 @@ import { ApiError } from '@/lib/api';
  * message parsing work the same as on the hand-written `api` helpers.
  */
 export function unwrapCrossubResult<T>(
-  result: { data?: T; error?: unknown; response: Response },
+  result: { data?: T; error?: unknown; response?: { status?: number } },
   fallback: string,
 ): T {
   if (result.error !== undefined || result.data === undefined) {

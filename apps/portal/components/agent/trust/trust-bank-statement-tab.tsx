@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { FilterChips } from '@/components/agent/filter-chips';
 import { TrustLinkLineDialog } from '@/components/agent/trust/trust-link-line-dialog';
+import { TrustReceiptDialog } from '@/components/agent/trust/trust-receipt-dialog';
 import {
   TRUST_TABLE_CELL_CLASS,
   TRUST_TABLE_HEAD_CLASS,
@@ -28,6 +29,7 @@ import {
   type ReadTrustBankFileInput,
   type TrustBankFile,
   type TrustBankFileLine,
+  type TrustRentRow,
 } from '@/lib/crossub-api/agent-trust-client';
 import { fileToBase64 } from '@/lib/file-upload';
 import {
@@ -35,6 +37,7 @@ import {
   formatTrustDate,
   newTrustIdempotencyKey,
   trustBankLineInput,
+  trustTodayKey,
 } from '@/lib/trust-accounting';
 import { cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
@@ -46,6 +49,22 @@ function filterOptions(counts: TrustBankFile['counts']) {
     { id: TRUST_BANK_LINE_STATUS.MATCHED, label: `${COPY.matched} (${counts.matched})` },
     { id: TRUST_BANK_LINE_STATUS.PROCESSED, label: `${COPY.reconciled} (${counts.reconciled})` },
   ] as const satisfies readonly { id: TrustBankLineFilter; label: string }[];
+}
+
+/** A credit line's suggested tenant, enough to open the receipt. The dialog loads the paid-to. */
+function rentRowFromLine(line: TrustBankFileLine): TrustRentRow | null {
+  const suggestion = line.suggestion;
+  if (!suggestion?.ledgerId || line.amountCents <= 0) return null;
+  return {
+    ledgerId: suggestion.ledgerId,
+    ledgerCode: suggestion.ledgerCode ?? '',
+    ledgerName: suggestion.ledgerName ?? '',
+    propertyAddress: suggestion.propertyAddress ?? null,
+    propertyReferenceAddress: suggestion.propertyReferenceAddress ?? null,
+    hasRentProfile: suggestion.rentAmountCents != null,
+    rentAmountCents: suggestion.rentAmountCents ?? null,
+    rentPeriod: suggestion.rentPeriod ?? null,
+  };
 }
 
 function suggestionText(line: TrustBankFileLine): string | null {
@@ -80,6 +99,7 @@ export function TrustBankStatementTab({
   const [reading, setReading] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [linking, setLinking] = useState<TrustBankFileLine | null>(null);
+  const [receiptLine, setReceiptLine] = useState<TrustBankFileLine | null>(null);
 
   async function read(input: ReadTrustBankFileInput) {
     setReading(true);
@@ -152,7 +172,17 @@ export function TrustBankStatementTab({
     }
   }
 
+  function openReceipt(line: TrustBankFileLine) {
+    if (line.amountCents <= 0) return;
+    if (line.lineDate > trustTodayKey()) {
+      toast.error(COPY.lineInFuture);
+      return;
+    }
+    setReceiptLine(line);
+  }
+
   const matched = file?.lines.filter((line) => line.status === TRUST_BANK_LINE_STATUS.MATCHED) ?? [];
+  const receiptRow = receiptLine ? rentRowFromLine(receiptLine) : null;
   const shown =
     file?.lines.filter((line) => filter === TRUST_BANK_LINE_FILTER_ALL || line.status === filter) ?? [];
   const busy = reading || busyKey !== null;
@@ -275,40 +305,58 @@ export function TrustBankStatementTab({
                         <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-right whitespace-nowrap')}>
                           {busyKey === line.key ? (
                             <Loader2 className="ml-auto size-4 animate-spin" />
-                          ) : line.status === TRUST_BANK_LINE_STATUS.MATCHED ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs"
-                              disabled={busy}
-                              onClick={() => void processLines([line], line.key)}
-                            >
-                              {COPY.processOne}
-                            </Button>
-                          ) : line.status === TRUST_BANK_LINE_STATUS.UNMATCHED ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs"
-                              disabled={busy}
-                              onClick={() => setLinking(line)}
-                            >
-                              {COPY.link}
-                            </Button>
-                          ) : line.status === TRUST_BANK_LINE_STATUS.PROCESSED && line.savedLineId ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 text-xs"
-                              disabled={busy}
-                              onClick={() => void unlink(line)}
-                            >
-                              {COPY.unlink}
-                            </Button>
-                          ) : null}
+                          ) : (
+                            <div className="flex justify-end gap-1.5">
+                              {line.amountCents > 0 && line.status !== TRUST_BANK_LINE_STATUS.PROCESSED ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs"
+                                  disabled={busy}
+                                  onClick={() => openReceipt(line)}
+                                >
+                                  {COPY.receipt}
+                                </Button>
+                              ) : null}
+                              {line.status === TRUST_BANK_LINE_STATUS.MATCHED ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs"
+                                  disabled={busy}
+                                  onClick={() => void processLines([line], line.key)}
+                                >
+                                  {COPY.processOne}
+                                </Button>
+                              ) : null}
+                              {line.status === TRUST_BANK_LINE_STATUS.UNMATCHED ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs"
+                                  disabled={busy}
+                                  onClick={() => setLinking(line)}
+                                >
+                                  {COPY.link}
+                                </Button>
+                              ) : null}
+                              {line.status === TRUST_BANK_LINE_STATUS.PROCESSED && line.savedLineId ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 text-xs"
+                                  disabled={busy}
+                                  onClick={() => void unlink(line)}
+                                >
+                                  {COPY.unlink}
+                                </Button>
+                              ) : null}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
@@ -328,6 +376,19 @@ export function TrustBankStatementTab({
           line={linking}
           onClose={() => setLinking(null)}
           onLinked={refresh}
+        />
+      ) : null}
+
+      {receiptLine ? (
+        <TrustReceiptDialog
+          key={receiptLine.key}
+          agencyId={agencyId}
+          bankAccountId={bankAccountId}
+          row={receiptRow}
+          lockedAmountCents={receiptLine.amountCents}
+          bankLine={trustBankLineInput(receiptLine)}
+          onClose={() => setReceiptLine(null)}
+          onReceipted={refresh}
         />
       ) : null}
     </div>
