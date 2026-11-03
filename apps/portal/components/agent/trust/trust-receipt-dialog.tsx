@@ -31,6 +31,7 @@ import {
 import { TRUST_PREVIEW_DEBOUNCE_MS, TRUST_RECEIPT_INVOICE_COPY as INVOICE_COPY } from '@/constants/trust-invoices';
 import { TRUST_TRANSACTION_LIMITS } from '@/constants/trust-transactions';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
+import { fetchProperty } from '@/lib/crossub-api/agent-client';
 import {
   fetchTrustLedger,
   fetchTrustLedgers,
@@ -57,6 +58,7 @@ import {
   toReceiptTenancy,
   type ReceiptTenancy,
 } from '@/lib/trust-tenancy-search';
+import { amountFromWeekly } from '@/lib/rent-calculations';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { trustIdempotencyKeyAfterError } from '@/utils/trust-transactions';
 import { cn } from '@/lib/utils';
@@ -84,8 +86,25 @@ function centsOf(input: string): number | null {
 
 function rentDetailsLabel(cents: number | null | undefined, period: string | null | undefined): string {
   if (cents == null || !period) return COPY.empty;
-  const per = TRUST_RECEIPT_RENT_PERIOD_LABEL[period as TrustRentPeriod];
+  const per =
+    TRUST_RECEIPT_RENT_PERIOD_LABEL[period as TrustRentPeriod] ??
+    (period.toUpperCase() === 'YEARLY' ? 'yearly' : null);
   return per ? `${formatCents(cents)} ${per}` : formatCents(cents);
+}
+
+/** The tenancy rent lives on the property (`rentWeekly` plus the agreed cycle), not on the ledger. */
+function tenancyRentFigure(property: {
+  rentWeekly?: number | null;
+  rentPeriod?: string | null;
+  rentPaidUntil?: string | null;
+} | null | undefined): { cents: number; period: string; paidTo: string | null } | null {
+  const weekly = property?.rentWeekly;
+  if (typeof weekly !== 'number' || weekly <= 0) return null;
+  const period = String(property?.rentPeriod ?? 'WEEKLY').toUpperCase();
+  const cycle = period === 'FORTNIGHTLY' ? 'fortnightly' : period === 'MONTHLY' ? 'monthly' : 'weekly';
+  const dollars = period === 'YEARLY' ? Math.round(weekly * 52 * 100) / 100 : amountFromWeekly(weekly, cycle);
+  const paidTo = typeof property?.rentPaidUntil === 'string' ? property.rentPaidUntil.slice(0, 10) : null;
+  return { cents: Math.round(dollars * 100), period, paidTo };
 }
 
 function partyLabel(name: string, code: string): string {
@@ -123,6 +142,7 @@ export function TrustReceiptDialog({
   const amountLocked = lockedAmountCents != null;
   const [selected, setSelected] = useState<ReceiptTenancy | null>(() => toReceiptTenancy(row ?? null));
   const [query, setQuery] = useState('');
+  const [amount, setAmount] = useState(() => (amountLocked ? centsToDollarsInput(lockedAmountCents) : ''));
   const [rentAmount, setRentAmount] = useState(() =>
     amountLocked ? centsToDollarsInput(lockedAmountCents) : '',
   );
@@ -162,13 +182,20 @@ export function TrustReceiptDialog({
   );
 
   const profile = ledger.data?.rentProfile ?? null;
+  const trustRentCents = typeof profile?.rentAmountCents === 'number' ? profile.rentAmountCents : selected?.rentAmountCents ?? null;
+  const trustRentPeriod = profile?.rentPeriod ?? selected?.rentPeriod ?? null;
+  const tenancyRent = useTrustResource(
+    selected && propertyId && trustRentCents == null ? `${propertyId}:tenancy-rent` : null,
+    () => fetchProperty(propertyId!),
+  );
+  const tenancy = trustRentCents == null ? tenancyRentFigure(tenancyRent.data) : null;
   const propertyAddress =
     ledger.data?.propertyAddress ||
     selected?.propertyAddress ||
     ledger.data?.propertyReferenceAddress ||
     selected?.propertyReferenceAddress ||
     '';
-  const paidToDate = profile?.paidToDate ?? selected?.paidToDate ?? null;
+  const paidToDate = profile?.paidToDate ?? selected?.paidToDate ?? tenancy?.paidTo ?? null;
   const partPaymentCents = typeof profile?.partPaymentCents === 'number' ? profile.partPaymentCents : null;
   const effectivePaidTo = profile?.effectivePaidToDate ?? selected?.effectivePaidToDate ?? paidToDate;
   const arrearsDays =
@@ -180,10 +207,7 @@ export function TrustReceiptDialog({
           ? calendarDaysBetween(trustTodayKey(), effectivePaidTo)
           : null;
   const overdueDays = arrearsDays != null && arrearsDays < 0 ? Math.abs(arrearsDays) : null;
-  const rentLabel = rentDetailsLabel(
-    profile?.rentAmountCents ?? selected?.rentAmountCents,
-    profile?.rentPeriod ?? selected?.rentPeriod,
-  );
+  const rentLabel = rentDetailsLabel(trustRentCents ?? tenancy?.cents ?? null, trustRentPeriod ?? tenancy?.period ?? null);
   const hasRentProfile = profile != null || Boolean(selected?.hasRentProfile);
   const ownerLabel =
     owners.data?.items
@@ -215,12 +239,41 @@ export function TrustReceiptDialog({
         : rentCents + depositCents + invoiceTotal
       : null;
   const rentInput = amountLocked && rentCents != null ? centsToDollarsInput(rentCents) : rentAmount;
-  // A QIF line fills Amount with that line. A receipt typed by hand stays blank until an allocation is entered.
-  const amountDisplay = amountLocked
-    ? formatCents(lockedAmountCents)
-    : totalCents != null && totalCents > 0
-      ? formatCents(totalCents)
-      : '';
+
+  function syncAmount(rent: number, deposit: number, invoicesCents: number) {
+    setAmount(centsToDollarsInput(rent + deposit + invoicesCents));
+  }
+
+  function onAmountChange(next: string) {
+    if (amountLocked) return;
+    setAmount(next);
+    if (!next.trim()) {
+      setRentAmount('');
+      return;
+    }
+    const total = centsOf(next);
+    const deposit = centsOf(depositAmount) ?? 0;
+    const invoicesCents = invoiceTotal ?? 0;
+    if (total == null) return;
+    setRentAmount(centsToDollarsInput(Math.max(total - deposit - invoicesCents, 0)));
+  }
+
+  function onRentChange(next: string) {
+    if (amountLocked) return;
+    setRentAmount(next);
+    const rent = centsOf(next);
+    const deposit = centsOf(depositAmount) ?? 0;
+    if (rent == null) return;
+    syncAmount(rent, deposit, invoiceTotal ?? 0);
+  }
+
+  function onDepositChange(next: string) {
+    setDepositAmount(next);
+    const deposit = centsOf(next);
+    if (deposit == null || amountLocked) return;
+    const rent = centsOf(rentAmount) ?? 0;
+    syncAmount(rent, deposit, invoiceTotal ?? 0);
+  }
 
   const firstInvoice = invoiceRows.find((row) => (row.cents ?? 0) > 0) ?? null;
   const preview = useReceiptPreview({
@@ -241,7 +294,14 @@ export function TrustReceiptDialog({
   }
 
   function setInvoiceAmount(invoiceId: string, value: string) {
-    setInvoiceAmounts((current) => ({ ...current, [invoiceId]: value }));
+    const nextAmounts = { ...invoiceAmounts, [invoiceId]: value };
+    setInvoiceAmounts(nextAmounts);
+    if (amountLocked) return;
+    const nextTotal = invoices.reduce((sum, invoice) => sum + (centsOf(nextAmounts[invoice.id] ?? '') ?? 0), 0);
+    const rent = centsOf(rentAmount) ?? 0;
+    const deposit = centsOf(depositAmount) ?? 0;
+    if (centsOf(value) == null && value.trim()) return;
+    syncAmount(rent, deposit, nextTotal);
   }
 
   async function onSubmit() {
@@ -253,15 +313,16 @@ export function TrustReceiptDialog({
       toast.error(COPY.dateRequired);
       return;
     }
-    if (rentCents == null || depositCents == null || !invoicesOk || totalCents == null) {
+    const headerCents = amountLocked ? lockedAmountCents : centsOf(amount);
+    if (rentCents == null || depositCents == null || !invoicesOk || headerCents == null) {
       toast.error(COPY.amountFormat);
       return;
     }
-    if (totalCents <= 0) {
+    if (headerCents <= 0) {
       toast.error(COPY.amountInvalid);
       return;
     }
-    if (amountLocked && rentCents + depositCents + (invoiceTotal ?? 0) !== lockedAmountCents) {
+    if (rentCents + depositCents + (invoiceTotal ?? 0) !== headerCents) {
       toast.error(COPY.allocateAll);
       return;
     }
@@ -406,11 +467,13 @@ export function TrustReceiptDialog({
             <label className="block space-y-1.5">
               <span className="text-muted-foreground text-sm">{COPY.amount}</span>
               <Input
-                readOnly
-                tabIndex={-1}
-                value={amountDisplay}
+                inputMode="decimal"
+                value={amountLocked ? centsToDollarsInput(lockedAmountCents) : amount}
+                disabled={pending || amountLocked}
+                readOnly={amountLocked}
+                onChange={(event) => onAmountChange(event.target.value)}
                 placeholder=""
-                className="bg-muted h-9 text-right tabular-nums"
+                className={cn('h-9 text-right tabular-nums', amountLocked && 'bg-muted')}
               />
             </label>
             <label className="block space-y-1.5">
@@ -481,9 +544,7 @@ export function TrustReceiptDialog({
                     inputMode="decimal"
                     value={rentInput}
                     disabled={pending || amountLocked}
-                    onChange={(event) => {
-                      if (!amountLocked) setRentAmount(event.target.value);
-                    }}
+                    onChange={(event) => onRentChange(event.target.value)}
                     placeholder="$0.00"
                     className="h-9 text-right tabular-nums"
                   />
@@ -510,7 +571,7 @@ export function TrustReceiptDialog({
                     inputMode="decimal"
                     value={depositAmount}
                     disabled={pending}
-                    onChange={(event) => setDepositAmount(event.target.value)}
+                    onChange={(event) => onDepositChange(event.target.value)}
                     placeholder="$0.00"
                     className="h-9 text-right tabular-nums"
                   />
