@@ -145,7 +145,7 @@ import {
 } from '@/utils/gii-page-context';
 import { giiRecordLinkTarget } from '@/utils/gii-record-link';
 import { useShellDockStore, type GiiScope } from '@/lib/shell-dock-store';
-import { cn, formatPropertyFullAddress } from '@/lib/utils';
+import { cn, formatPropertyFullAddress, randomUuid } from '@/lib/utils';
 
 /** Property greeting: "your Account Manager" on serviced tiers, CROS assisting on Self-Manage. */
 function buildPropertyGreeting(
@@ -1102,7 +1102,7 @@ export function GiiAssistant({
     if (!isPortfolioCros || !user?.id) return;
     const input = giiConversationSaveInput(lines);
     if (!input || input.key === crosSavedKeyRef.current) return;
-    if (!crosHistoryIdRef.current) crosHistoryIdRef.current = crypto.randomUUID();
+    if (!crosHistoryIdRef.current) crosHistoryIdRef.current = randomUuid();
     const chatId = crosHistoryIdRef.current;
     crosSavedKeyRef.current = input.key;
     saveGiiConversation(chatId, { title: input.title, messages: input.messages })

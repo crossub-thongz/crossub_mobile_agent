@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * Every transaction on the trust account, newest first; open one to see its entries or reverse it.
- * "New transaction" posts a receipt, a withdrawal or a journal by hand.
+ * "Tenant receipt" posts rent or a deposit. "New transaction" posts a folio receipt, a withdrawal or a journal.
  */
 export function TrustTransactionsTab({
   agencyId,

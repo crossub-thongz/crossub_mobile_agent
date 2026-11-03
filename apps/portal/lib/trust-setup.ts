@@ -29,6 +29,7 @@ import type {
 } from '@/lib/crossub-api/agent-trust-client';
 import type { CreateTrustBankAccountInput } from '@/lib/crossub-api/agent-trust-settings-client';
 import { centsToDollarsInput, parseDollarsToCents } from '@/lib/trust-accounting';
+import { randomUuid } from '@/lib/utils';
 
 /** A form's checked output, or the first message to show. */
 export type TrustFormResult<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -188,7 +189,7 @@ export type TrustPayoutRowDraft = {
 
 export function trustPayoutRowDraft(row: TrustPayoutMethod | null, payeeName: string, sharePercent: string): TrustPayoutRowDraft {
   return {
-    key: row?.id ?? crypto.randomUUID(),
+    key: row?.id ?? randomUuid(),
     id: row?.id ?? null,
     method: row?.method ?? TRUST_PAYOUT_METHOD.EFT,
     payeeName: row?.payeeName ?? payeeName,
