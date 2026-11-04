@@ -14,6 +14,7 @@ import {
 } from '@/components/billing/platform-charge-detail-dialog';
 import {
   Level2MonthlyBillingList,
+  TeamBillingFolders,
   buildLevel2MonthGroups,
   daysUntilAccountLock,
   formatAccountLockCountdown,
@@ -40,7 +41,8 @@ import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-pay
 import { AgentShell } from '@/components/layout/agent-shell';
 import { AccountLockedBanner } from '@/components/billing/account-locked-banner';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { agenciesCanViewBilling } from '@/lib/portal-service-level';
+import { useAuth } from '@/components/providers/auth-provider';
+import { AGENCY_MEMBERSHIP_TIER } from '@/constants/api-enums';
 import { SELF_MANAGED_BILLING_NOTE } from '@/constants/service-plan';
 import {
   isSelfManagedLevel,
@@ -344,7 +346,8 @@ function PrepaidMonthlyBillingList({
 }
 
 export default function BillPage() {
-  const { primaryAgency, agencies, portalAccessReady } = useAgentData();
+  const { primaryAgency } = useAgentData();
+  const { user } = useAuth();
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
   const [invoices, setInvoices] = useState<AgentBillingMonthlyInvoice[]>([]);
@@ -371,13 +374,6 @@ export default function BillPage() {
   const selfManaged =
     summary?.portalServiceLevel === PORTAL_SERVICE_LEVEL.SELF_MANAGED ||
     isSelfManagedLevel(resolvePortalServiceLevel(primaryAgency?.portalServiceLevel));
-
-  const payableInvoices = useMemo(() => invoices.filter(isPayableInvoice), [invoices]);
-
-  const openInvoiceAmount = useMemo(
-    () => payableInvoices.reduce((sum, row) => sum + row.amountDue, 0),
-    [payableInvoices],
-  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -432,9 +428,103 @@ export default function BillPage() {
     })();
   }, [load]);
 
+  const isPrincipalViewer = primaryAgency?.membershipTier === AGENCY_MEMBERSHIP_TIER.PRINCIPAL;
+  const ownsPrincipalLedger = (ownerId?: string | null) =>
+    !isPrincipalViewer || !ownerId || ownerId === user?.id;
+  const ownCharges = useMemo(
+    () => charges.filter((row) => ownsPrincipalLedger(row.ledgerOwnerUserId)),
+    [charges, isPrincipalViewer, user?.id],
+  );
+  const ownInvoices = useMemo(
+    () => invoices.filter((row) => ownsPrincipalLedger(row.ledgerOwnerUserId)),
+    [invoices, isPrincipalViewer, user?.id],
+  );
+  const teamFolders = useMemo(() => {
+    if (!isPrincipalViewer || !user?.id) return [];
+    const byOwner = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        charges: AgentBillingCharge[];
+        invoices: AgentBillingMonthlyInvoice[];
+      }
+    >();
+    const bucket = (ownerId: string, name?: string | null) => {
+      const existing = byOwner.get(ownerId);
+      if (existing) {
+        if (name) existing.name = name;
+        return existing;
+      }
+      const created: {
+        id: string;
+        name: string;
+        charges: AgentBillingCharge[];
+        invoices: AgentBillingMonthlyInvoice[];
+      } = {
+        id: ownerId,
+        name: name?.trim() || 'Team member',
+        charges: [],
+        invoices: [],
+      };
+      byOwner.set(ownerId, created);
+      return created;
+    };
+    for (const invoice of invoices) {
+      if (!invoice.ledgerOwnerUserId || invoice.ledgerOwnerUserId === user.id) continue;
+      bucket(invoice.ledgerOwnerUserId, invoice.ledgerOwnerName).invoices.push(invoice);
+    }
+    for (const charge of charges) {
+      if (!charge.ledgerOwnerUserId || charge.ledgerOwnerUserId === user.id) continue;
+      bucket(charge.ledgerOwnerUserId, charge.ledgerOwnerName).charges.push(charge);
+    }
+    return [...byOwner.values()]
+      .map((folder) => {
+        const invoiceIds = new Set(folder.invoices.map((row) => row.id));
+        const invoiceTotal = folder.invoices.reduce(
+          (sum, row) => sum + (row.retracted ? 0 : row.amountDue),
+          0,
+        );
+        const looseCharges = folder.charges.filter(
+          (row) => !row.monthlyInvoiceId || !invoiceIds.has(row.monthlyInvoiceId),
+        );
+        return {
+          ...folder,
+          amount:
+            invoiceTotal + looseCharges.reduce((sum, row) => sum + row.amount, 0),
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [charges, invoices, isPrincipalViewer, user?.id]);
+
+  const payableInvoices = useMemo(
+    () => ownInvoices.filter(isPayableInvoice),
+    [ownInvoices],
+  );
+  const isAgencyInvoice = (row: { ledgerOwnerUserId?: string | null }) =>
+    !isPrincipalViewer &&
+    Boolean(user?.id) &&
+    Boolean(row.ledgerOwnerUserId) &&
+    row.ledgerOwnerUserId !== user?.id;
+  const personalPayableInvoices = payableInvoices.filter((row) => !isAgencyInvoice(row));
+  const ownPayableInvoice = personalPayableInvoices[0] ?? null;
+  const bannerInvoiceId = isPrincipalViewer
+    ? (summary?.openInvoiceId ?? ownPayableInvoice?.id ?? null)
+    : (ownPayableInvoice?.id ?? null);
+
+  const openInvoiceAmount = useMemo(
+    () => payableInvoices.reduce((sum, row) => sum + row.amountDue, 0),
+    [payableInvoices],
+  );
+  const personalInvoiceAmount = personalPayableInvoices.reduce(
+    (sum, row) => sum + row.amountDue,
+    0,
+  );
+  const bannerInvoiceAmount = isPrincipalViewer ? openInvoiceAmount : personalInvoiceAmount;
+
   const prepaidExtras = useMemo(
     () =>
-      charges
+      ownCharges
         .filter((row) => {
           if (isMonthlyInvoiceServiceType(row.serviceType)) return false;
           if (row.monthlyInvoiceId) return false;
@@ -444,7 +534,7 @@ export default function BillPage() {
           );
         })
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [charges],
+    [ownCharges],
   );
 
   const payableBills = useMemo(() => prepaidExtras.filter(isPayableCharge), [prepaidExtras]);
@@ -454,18 +544,38 @@ export default function BillPage() {
   );
   const outstandingTotal = openInvoiceAmount + billsOutstandingTotal;
   const outstandingCount = payableInvoices.length + payableBills.length;
-  const showPayAll = billingTab === 'all' && outstandingCount >= 2;
+  const visiblePayableInvoices = useMemo(
+    () => invoices.filter(isPayableInvoice),
+    [invoices],
+  );
+  const teamLoosePayableCharges = useMemo(() => {
+    const invoiceIds = new Set(visiblePayableInvoices.map((row) => row.id));
+    return teamFolders.flatMap((folder) =>
+      folder.charges.filter(
+        (row) =>
+          isPayableCharge(row) &&
+          (!row.monthlyInvoiceId || !invoiceIds.has(row.monthlyInvoiceId)),
+      ),
+    );
+  }, [teamFolders, visiblePayableInvoices]);
+  const payAllCount =
+    visiblePayableInvoices.length + payableBills.length + teamLoosePayableCharges.length;
+  const payAllTotal =
+    visiblePayableInvoices.reduce((sum, row) => sum + row.amountDue, 0) +
+    billsOutstandingTotal +
+    teamLoosePayableCharges.reduce((sum, row) => sum + row.amount, 0);
+  const showPayAll = billingTab === 'all' && payAllCount >= 2;
 
   const level2MonthGroups = useMemo(
     () =>
-      buildLevel2MonthGroups(charges, invoices, {
+      buildLevel2MonthGroups(ownCharges, ownInvoices, {
         overdueLockDays: summary?.overdueLockDays ?? 7,
       }),
-    [charges, invoices, summary?.overdueLockDays],
+    [ownCharges, ownInvoices, summary?.overdueLockDays],
   );
 
-  const invoicePaidCount = invoices.filter((row) => row.status === 'paid' && !row.retracted).length;
-  const invoiceTotalCount = invoices.filter((row) => row.retracted || row.status !== 'void').length;
+  const invoicePaidCount = ownInvoices.filter((row) => row.status === 'paid' && !row.retracted).length;
+  const invoiceTotalCount = ownInvoices.filter((row) => row.retracted || row.status !== 'void').length;
   const chargedBills = prepaidExtras.filter(isChargedBill);
   const billsPaidCount = chargedBills.filter((row) => row.status === 'paid').length;
   const billsTotalCount = chargedBills.length;
@@ -473,6 +583,7 @@ export default function BillPage() {
   const allTotalCount = invoiceTotalCount + billsTotalCount;
   const invoiceCount = level2MonthGroups.length;
   const billsCount = prepaidExtras.length;
+  const hasTeamBilling = teamFolders.length > 0;
   const billingTabs = useMemo(
     () =>
       [
@@ -497,19 +608,25 @@ export default function BillPage() {
       ] as const,
     [allPaidCount, allTotalCount, invoicePaidCount, invoiceTotalCount, billsPaidCount, billsTotalCount],
   );
-  const hasBillingRows = invoiceCount > 0 || billsCount > 0;
+  const hasBillingRows = invoiceCount > 0 || billsCount > 0 || hasTeamBilling;
   const tabOutstandingTotal =
     billingTab === 'invoice'
-      ? openInvoiceAmount
+      ? bannerInvoiceAmount
       : billingTab === 'bills'
         ? billsOutstandingTotal
-        : outstandingTotal;
+        : isPrincipalViewer
+          ? outstandingTotal
+          : bannerInvoiceAmount + billsOutstandingTotal;
   const tabOutstandingCount =
     billingTab === 'invoice'
-      ? payableInvoices.length
+      ? isPrincipalViewer
+        ? payableInvoices.length
+        : personalPayableInvoices.length
       : billingTab === 'bills'
         ? payableBills.length
-        : outstandingCount;
+        : isPrincipalViewer
+          ? outstandingCount
+          : personalPayableInvoices.length + payableBills.length;
 
   const openInvoiceLockDays = useMemo(() => {
     if (!usesMonthlyInvoice || summary?.billingBlocked || !summary?.nextInvoiceDueDate) return null;
@@ -620,7 +737,7 @@ export default function BillPage() {
     if (loading || autoPayOpened.current || paymentDialog != null) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('pay') !== '1') return;
-    const invoiceId = summary?.openInvoiceId ?? payableInvoices[0]?.id;
+    const invoiceId = bannerInvoiceId;
     if (!invoiceId && payableBills.length === 0) return;
     autoPayOpened.current = true;
     window.history.replaceState({}, '', '/bill');
@@ -633,7 +750,7 @@ export default function BillPage() {
       return;
     }
     void payAll();
-  }, [loading, summary?.openInvoiceId, payableInvoices, payableBills, paymentDialog]);
+  }, [loading, bannerInvoiceId, payableInvoices, payableBills, paymentDialog]);
 
   const handlePaymentSuccess = async (chargeId?: string | null) => {
     await finalizeBillingChargePayment(chargeId);
@@ -681,7 +798,7 @@ export default function BillPage() {
         result,
         {
           title: 'Pay all outstanding bills',
-          description: `${outstandingCount} bill(s) · ${formatCurrency(result.totalAmountAud)}`,
+          description: `${payAllCount} bill(s) · ${formatCurrency(result.totalAmountAud)}`,
           amountAud: result.totalAmountAud,
           defaultPaymentMethod: summary?.defaultPaymentMethod,
         },
@@ -700,17 +817,6 @@ export default function BillPage() {
       setPayingAll(false);
     }
   };
-
-  if (portalAccessReady && !agenciesCanViewBilling(agencies, portalAccessReady)) {
-    return (
-      <AgentShell title="Invoice">
-        <PageIntro
-          title="Billing"
-          description="Your agency principal has not given this login access to billing."
-        />
-      </AgentShell>
-    );
-  }
 
   if (!selfManaged && summary?.platformBillingDisabled) {
     return (
@@ -849,24 +955,28 @@ export default function BillPage() {
               </p>
             ) : billingTab === 'all' && usesMonthlyInvoice ? (
               <p className="mt-1 text-sm text-amber-900/90 dark:text-amber-100/90">
-                {openInvoiceAmount > 0
-                  ? `${summary.openInvoiceNumber ? `${summary.openInvoiceNumber} ` : 'Invoice '}${formatCurrency(openInvoiceAmount)}`
+                {bannerInvoiceAmount > 0
+                  ? personalPayableInvoices
+                      .map((row) => `${row.invoiceNumber} ${formatCurrency(row.amountDue)}`)
+                      .join(' + ') ||
+                    `${summary.openInvoiceNumber ? `${summary.openInvoiceNumber} ` : 'Invoice '}${formatCurrency(bannerInvoiceAmount)}`
                   : 'No monthly invoice due'}
                 {billsOutstandingTotal > 0
                   ? ` + ${payableBills.length} prepaid bill${payableBills.length === 1 ? '' : 's'} ${formatCurrency(billsOutstandingTotal)}`
-                  : ''}
-                {openInvoiceAmount > 0 && billsOutstandingTotal > 0
-                  ? ` = ${formatCurrency(outstandingTotal)}`
                   : ''}
                 . Invoice is management fee only; inspections are prepaid bills.
               </p>
             ) : usesMonthlyInvoice ? (
               <p className="mt-1 text-sm text-amber-900/90 dark:text-amber-100/90">
-                Please pay
-                {summary.openInvoiceNumber ? ` ${summary.openInvoiceNumber}` : ' your CROSSUB invoice'}
-                {summary.nextInvoiceDueDate && !summary.billingBlocked
-                  ? ` by ${formatWhen(summary.nextInvoiceDueDate)}`
-                  : ''}
+                {personalPayableInvoices.length > 0
+                  ? personalPayableInvoices
+                      .map((row) => `${row.invoiceNumber} ${formatCurrency(row.amountDue)}`)
+                      .join(' + ')
+                  : `Please pay${summary.openInvoiceNumber ? ` ${summary.openInvoiceNumber}` : ' your CROSSUB invoice'}${
+                      summary.nextInvoiceDueDate && !summary.billingBlocked
+                        ? ` by ${formatWhen(summary.nextInvoiceDueDate)}`
+                        : ''
+                    }`}
                 . Review the tax invoice, then pay to keep full access.
               </p>
             ) : summary.openInvoiceNumber ? (
@@ -890,13 +1000,13 @@ export default function BillPage() {
               </p>
             ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
-              {billingTab !== 'bills' && summary.openInvoiceId ? (
+              {billingTab !== 'bills' && bannerInvoiceId ? (
                 <>
                   <Button
                     type="button"
                     variant={usesMonthlyInvoice ? 'outline' : 'default'}
                     className="w-full sm:w-auto"
-                    onClick={() => void openInvoiceById(summary.openInvoiceId!)}
+                    onClick={() => void openInvoiceById(bannerInvoiceId)}
                     disabled={
                       openingInvoiceId != null ||
                       paymentDialog != null ||
@@ -904,7 +1014,7 @@ export default function BillPage() {
                       payingAll
                     }
                   >
-                    {openingInvoiceId === summary.openInvoiceId ? (
+                    {openingInvoiceId === bannerInvoiceId ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
                       <FileText className="size-4" />
@@ -915,14 +1025,14 @@ export default function BillPage() {
                     <Button
                       type="button"
                       className="w-full sm:w-auto"
-                      onClick={() => void payInvoiceById(summary.openInvoiceId!)}
+                      onClick={() => void payInvoiceById(bannerInvoiceId)}
                       disabled={
                         payingInvoiceId != null ||
                         paymentDialog != null ||
                         payingAll
                       }
                     >
-                      {payingInvoiceId === summary.openInvoiceId ? (
+                      {payingInvoiceId === bannerInvoiceId ? (
                         <Loader2 className="size-4 animate-spin" />
                       ) : (
                         <CreditCard className="size-4" />
@@ -931,7 +1041,7 @@ export default function BillPage() {
                     </Button>
                   ) : null}
                 </>
-              ) : billingTab !== 'bills' && payableInvoices[0] && usesMonthlyInvoice ? (
+              ) : billingTab !== 'bills' && isPrincipalViewer && payableInvoices[0] && usesMonthlyInvoice ? (
                 <>
                   <Button
                     type="button"
@@ -972,7 +1082,9 @@ export default function BillPage() {
                   ) : (
                     <CreditCard className="size-4" />
                   )}
-                  Pay all ({outstandingCount} · {formatCurrency(outstandingTotal)})
+                  {isPrincipalViewer
+                    ? `Pay all (${payAllCount} · ${formatCurrency(payAllTotal)})`
+                    : 'Pay all'}
                 </Button>
               ) : null}
             </div>
@@ -1024,11 +1136,13 @@ export default function BillPage() {
                       </h3>
                     ) : null}
                     <Level2MonthlyBillingList
-                      charges={charges}
-                      invoices={invoices}
+                      charges={ownCharges}
+                      invoices={ownInvoices}
                       overdueLockDays={summary?.overdueLockDays ?? 7}
                       billingBlocked={summary?.billingBlocked === true}
                       openingInvoiceId={openingInvoiceId}
+                      viewerUserId={user?.id}
+                      markAgencyInvoices={!isPrincipalViewer}
                       disabled={
                         paymentDialog != null ||
                         chargeDialog != null ||
@@ -1077,6 +1191,27 @@ export default function BillPage() {
                 ) : null}
               </div>
             )}
+            <TeamBillingFolders
+              folders={teamFolders}
+              overdueLockDays={summary?.overdueLockDays ?? 7}
+              billingBlocked={summary?.billingBlocked === true}
+              openingInvoiceId={openingInvoiceId}
+              disabled={
+                paymentDialog != null ||
+                chargeDialog != null ||
+                invoiceDialog != null ||
+                payingAll ||
+                payingKey != null
+              }
+              onViewInvoice={(invoice) => setInvoiceDialog({ invoice })}
+              onOpenInvoiceById={(invoiceId) => void openInvoiceById(invoiceId)}
+              onViewCharge={(row) =>
+                setChargeDialog({
+                  charge: row,
+                  defaultPaymentMethod: summary?.defaultPaymentMethod,
+                })
+              }
+            />
             <AgentPaymentHistoryList
               payments={payments}
               disabled={

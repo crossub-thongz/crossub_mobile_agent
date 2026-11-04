@@ -145,7 +145,7 @@ import {
 } from '@/utils/gii-page-context';
 import { giiRecordLinkTarget } from '@/utils/gii-record-link';
 import { useShellDockStore, type GiiScope } from '@/lib/shell-dock-store';
-import { cn, formatPropertyFullAddress, randomUuid } from '@/lib/utils';
+import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
 /** Property greeting: "your Account Manager" on serviced tiers, CROS assisting on Self-Manage. */
 function buildPropertyGreeting(
@@ -460,26 +460,9 @@ export function GiiAssistant({
   const heldThreadId = teamChat.held?.threadId ?? null;
   /** The Cros line the team chat follows (the handoff's answer), so later turns sit below it. */
   const [handoffAnchorId, setHandoffAnchorId] = useState<string | null>(null);
-  /**
-   * True while the chat on screen is the one a CROSSUB person holds. A new chat, or a past one,
-   * is with Cros even while the team still holds that other chat; the team button goes back to it.
-   */
-  const [teamChatInView, setTeamChatInView] = useState(true);
-  /** The team's chat as it was when the agent left it for another, so the team button can restore it. */
-  const teamChatStashRef = useRef<{
-    lines: ChatLine[];
-    historyId: string | null;
-    savedKey: string | null;
-    anchorId: string | null;
-  } | null>(null);
-  /** The chat a person holds, when it is the one on screen; the composer then writes to them. */
-  const teamChatOnScreen = teamChatInView ? teamChat.held : null;
   // A chat a person holds is where the agent is: open it rather than the Today view.
   useEffect(() => {
-    if (!heldThreadId) return;
-    setTeamChatInView(true);
-    teamChatStashRef.current = null;
-    if (portfolioCrosRef.current) setCrosView('chat');
+    if (heldThreadId && portfolioCrosRef.current) setCrosView('chat');
   }, [heldThreadId]);
   const [crosHistory, setCrosHistory] = useState<GiiConversationSummary[]>([]);
   /** The open chat's server id, minted on its first save. Null until something is asked. */
@@ -982,7 +965,7 @@ export function GiiAssistant({
    */
   const submitQuery = useCallback(
     async (text: string) => {
-      if (!teamChatOnScreen) {
+      if (!teamChat.held) {
         await runQuery(text);
         return;
       }
@@ -996,7 +979,7 @@ export function GiiAssistant({
         toast.error(GII_HANDOFF_COPY.SEND_FAILED);
       }
     },
-    [runQuery, teamChat, teamChatOnScreen],
+    [runQuery, teamChat],
   );
 
   // Fold a long chat's older lines into notes between turns, so they reach Cros as notes
@@ -1119,7 +1102,7 @@ export function GiiAssistant({
     if (!isPortfolioCros || !user?.id) return;
     const input = giiConversationSaveInput(lines);
     if (!input || input.key === crosSavedKeyRef.current) return;
-    if (!crosHistoryIdRef.current) crosHistoryIdRef.current = randomUuid();
+    if (!crosHistoryIdRef.current) crosHistoryIdRef.current = crypto.randomUUID();
     const chatId = crosHistoryIdRef.current;
     crosSavedKeyRef.current = input.key;
     saveGiiConversation(chatId, { title: input.title, messages: input.messages })
@@ -1132,39 +1115,14 @@ export function GiiAssistant({
       });
   }, [isPortfolioCros, lines, user?.id]);
 
-  /** Leaving the team's chat for another: keep it so the team button can bring it back. */
-  /** The agent ends the chat with the team from the card; Cros answers the next message. */
-  const endTeamChat = () => {
-    teamChat.close().catch((err: unknown) => {
-      console.warn('[cros] team chat could not be ended', err);
-      toast.error(GII_HANDOFF_COPY.END_FAILED);
-    });
-  };
-
-  const leaveTeamChat = () => {
-    if (teamChatOnScreen) {
-      teamChatStashRef.current = {
-        lines,
-        historyId: crosHistoryIdRef.current,
-        savedKey: crosSavedKeyRef.current,
-        anchorId: handoffAnchorId,
-      };
-    }
-    setTeamChatInView(false);
-    setHandoffAnchorId(null);
-  };
-
   const openCrosHistory = async (entry: GiiConversationSummary) => {
     try {
       const chat = await getGiiConversation(entry.id);
       const opened = giiConversationLines(chat.id, chat.messages);
-      leaveTeamChat();
       crosHistoryIdRef.current = chat.id;
       crosSavedKeyRef.current = giiConversationSaveInput(opened)?.key ?? null;
       lastTurnScreenPropertyIdRef.current = null;
       setLines(opened);
-      // The past chat the team holds is still theirs; its thread follows at the end.
-      if (teamChat.held && teamChatStashRef.current?.historyId === chat.id) setTeamChatInView(true);
       setCrosView('chat');
     } catch {
       toast.error(GII_CONVERSATION_COPY.OPEN_FAILED);
@@ -1185,7 +1143,6 @@ export function GiiAssistant({
   };
 
   const startCrosChat = () => {
-    leaveTeamChat();
     briefingContextRef.current = null;
     crosHistoryIdRef.current = null;
     crosSavedKeyRef.current = null;
@@ -1197,16 +1154,6 @@ export function GiiAssistant({
   /** Talk to the CROSSUB team: back to the chat a person holds, or ask Cros to hand this one over. */
   const talkToTeam = () => {
     if (teamChat.held) {
-      if (!teamChatInView) {
-        const stash = teamChatStashRef.current;
-        if (stash) {
-          crosHistoryIdRef.current = stash.historyId;
-          crosSavedKeyRef.current = stash.savedKey;
-          setLines(stash.lines);
-          setHandoffAnchorId(stash.anchorId);
-        }
-        setTeamChatInView(true);
-      }
       setCrosView('chat');
       window.requestAnimationFrame(() => scrollChatToBottom('smooth'));
       return;
@@ -1366,7 +1313,7 @@ export function GiiAssistant({
           return;
         }
         // A CROSSUB person holding the chat answers in writing, so hands free ends there.
-        if (handsFreeRef.current && teamChatOnScreen) endHandsFree(false);
+        if (handsFreeRef.current && teamChat.held) endHandsFree(false);
         if (answerCardByVoice(text)) return;
         askedByVoiceRef.current = true;
         void submitQuery(text);
@@ -1457,14 +1404,12 @@ export function GiiAssistant({
                     onCancel={() => cancelProposal(line.id)}
                   />
                 ) : null}
-                {teamChatInView && teamChat.handoff && line.id === teamChatAnchorId ? (
-                  <GiiHandoffThread handoff={teamChat.handoff} onClose={endTeamChat} closing={teamChat.closing} />
+                {teamChat.handoff && line.id === teamChatAnchorId ? (
+                  <GiiHandoffThread handoff={teamChat.handoff} />
                 ) : null}
               </div>
             ))}
-            {teamChatInView && teamChat.handoff && !teamChatAnchorId ? (
-              <GiiHandoffThread handoff={teamChat.handoff} onClose={endTeamChat} closing={teamChat.closing} />
-            ) : null}
+            {teamChat.handoff && !teamChatAnchorId ? <GiiHandoffThread handoff={teamChat.handoff} /> : null}
             <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
           </div>
         )}
@@ -1585,8 +1530,8 @@ export function GiiAssistant({
                       }
                     }}
                     placeholder={
-                      teamChatOnScreen
-                        ? GII_HANDOFF_COPY.PLACEHOLDER(teamChatOnScreen.staffName)
+                      teamChat.held
+                        ? GII_HANDOFF_COPY.PLACEHOLDER(teamChat.held.staffName)
                         : `Ask ${CROS_ASSISTANT_NAME} about this message…`
                     }
                     rows={2}
@@ -1997,13 +1942,13 @@ export function GiiAssistant({
               </p>
             ) : null}
 
-            {teamChatInView && teamChat.handoff && line.id === teamChatAnchorId ? (
-              <GiiHandoffThread handoff={teamChat.handoff} onClose={endTeamChat} closing={teamChat.closing} />
+            {teamChat.handoff && line.id === teamChatAnchorId ? (
+              <GiiHandoffThread handoff={teamChat.handoff} />
             ) : null}
           </div>
         ))}
-        {(!isPortfolioCros || crosView === 'chat') && teamChatInView && teamChat.handoff && !teamChatAnchorId ? (
-          <GiiHandoffThread handoff={teamChat.handoff} onClose={endTeamChat} closing={teamChat.closing} />
+        {(!isPortfolioCros || crosView === 'chat') && teamChat.handoff && !teamChatAnchorId ? (
+          <GiiHandoffThread handoff={teamChat.handoff} />
         ) : null}
         </div>
 
@@ -2100,8 +2045,8 @@ export function GiiAssistant({
                 }
               }}
               placeholder={
-                teamChatOnScreen
-                  ? GII_HANDOFF_COPY.PLACEHOLDER(teamChatOnScreen.staffName)
+                teamChat.held
+                  ? GII_HANDOFF_COPY.PLACEHOLDER(teamChat.held.staffName)
                   : scopedProperty
                     ? `Ask ${CROS_ASSISTANT_NAME} to create a job or check this property…`
                     : `Ask ${CROS_ASSISTANT_NAME} anything…`
@@ -2122,7 +2067,7 @@ export function GiiAssistant({
             <div className="mb-0.5 flex shrink-0 flex-col items-center gap-1.5">
               <GiiAttachButton
                 onPick={addAttachmentFiles}
-                disabled={sending || voiceActive || teamChatOnScreen !== null || pendingAttachments.length >= GII_MAX_ATTACHMENTS}
+                disabled={sending || voiceActive || teamChat.held !== null || pendingAttachments.length >= GII_MAX_ATTACHMENTS}
                 className="size-9"
               />
               {query.trim() || pendingAttachments.length > 0 ? (

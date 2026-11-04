@@ -16,6 +16,8 @@ export type AgentBillingCharge = {
   voidReason?: string | null;
   createdAt: string;
   createdByName?: string | null;
+  ledgerOwnerUserId?: string | null;
+  ledgerOwnerName?: string | null;
   calculationDetail?: string | null;
   calculationSummary?: string | null;
   /** Present when this postpaid charge was rolled into a monthly invoice (Level 2). */
@@ -380,6 +382,9 @@ export type AgentBillingMonthlyInvoice = {
   amountDue: number;
   paidAt?: string | null;
   issuedAt?: string | null;
+  ledgerOwnerUserId?: string | null;
+  ledgerOwnerName?: string | null;
+  ledgerOwnerEmail?: string | null;
   retracted?: boolean;
   retractedAt?: string | null;
   replaced?: boolean;

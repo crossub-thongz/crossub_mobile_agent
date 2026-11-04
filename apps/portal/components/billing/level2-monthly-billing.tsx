@@ -141,13 +141,20 @@ export function buildLevel2MonthGroups(
       })
       .map((row) => [row.id, row]),
   );
+  const monthOf = (invoice: AgentBillingMonthlyInvoice) =>
+    monthKeyFromIso(invoice.periodStart || invoice.periodEnd);
+  const monthUseCount = new Map<string, number>();
+  for (const invoice of invoiceById.values()) {
+    const month = monthOf(invoice);
+    monthUseCount.set(month, (monthUseCount.get(month) ?? 0) + 1);
+  }
+  const groupKeyForInvoice = (invoice: AgentBillingMonthlyInvoice) => {
+    const month = monthOf(invoice);
+    return (monthUseCount.get(month) ?? 0) > 1 ? `${month}:${invoice.id}` : month;
+  };
   const invoiceByMonth = new Map<string, AgentBillingMonthlyInvoice>();
   for (const invoice of invoiceById.values()) {
-    const key = monthKeyFromIso(invoice.periodStart || invoice.periodEnd);
-    const existing = invoiceByMonth.get(key);
-    if (!existing || new Date(invoice.periodEnd).getTime() > new Date(existing.periodEnd).getTime()) {
-      invoiceByMonth.set(key, invoice);
-    }
+    invoiceByMonth.set(groupKeyForInvoice(invoice), invoice);
   }
 
   const chargesByMonth = new Map<string, AgentBillingCharge[]>();
@@ -164,8 +171,7 @@ export function buildLevel2MonthGroups(
 
     let key: string;
     if (charge.monthlyInvoiceId && invoiceById.has(charge.monthlyInvoiceId)) {
-      const invoice = invoiceById.get(charge.monthlyInvoiceId)!;
-      key = monthKeyFromIso(invoice.periodStart || invoice.periodEnd);
+      key = groupKeyForInvoice(invoiceById.get(charge.monthlyInvoiceId)!);
     } else {
       key = monthKeyFromIso(charge.createdAt);
     }
@@ -184,7 +190,8 @@ export function buildLevel2MonthGroups(
     );
     const invoice = invoiceByMonth.get(key) ?? null;
     if (!invoice) continue;
-    const ended = isMonthEnded(key, now);
+    const monthKey = key.slice(0, 7);
+    const ended = isMonthEnded(monthKey, now);
 
     let paymentStatus: Level2MonthGroup['paymentStatus'];
     if (invoice?.retracted) {
@@ -215,7 +222,7 @@ export function buildLevel2MonthGroups(
 
     groups.push({
       key,
-      label: monthLabel(key),
+      label: monthLabel(monthKey),
       charges: monthCharges,
       invoice,
       paymentStatus,
@@ -463,8 +470,14 @@ function invoiceDisplayNumber(invoice: AgentBillingMonthlyInvoice): string {
   return invoice.invoiceNumber;
 }
 
-function invoiceMetaCaption(invoice: AgentBillingMonthlyInvoice): string {
-  const parts = [invoiceDisplayNumber(invoice)];
+function invoiceMetaCaption(
+  invoice: AgentBillingMonthlyInvoice,
+  options?: { agencyOwner?: boolean },
+): string {
+  const owner = options?.agencyOwner
+    ? invoice.ledgerOwnerEmail?.trim() || invoice.ledgerOwnerName?.trim()
+    : null;
+  const parts = [owner, invoiceDisplayNumber(invoice)].filter((part): part is string => Boolean(part));
   if (invoice.retracted) {
     if (invoice.issuedAt) parts.push(`sent ${formatDateTime(invoice.issuedAt)}`);
     if (invoice.retractedAt) parts.push(`retracted ${formatDateTime(invoice.retractedAt)}`);
@@ -483,6 +496,9 @@ type Level2MonthlyBillingListProps = {
   billingBlocked?: boolean;
   openingInvoiceId: string | null;
   disabled?: boolean;
+  /** When set, invoices owned by another login are labelled as the agency invoice. */
+  viewerUserId?: string | null;
+  markAgencyInvoices?: boolean;
   onViewInvoice: (invoice: AgentBillingMonthlyInvoice) => void;
   onOpenInvoiceById: (invoiceId: string) => void;
   onViewCharge: (charge: AgentBillingCharge) => void;
@@ -493,15 +509,24 @@ function Level2MonthGroupCard({
   billingBlocked,
   openingInvoiceId,
   disabled,
+  viewerUserId,
+  markAgencyInvoices = false,
   onViewInvoice,
 }: {
   group: Level2MonthGroup;
   billingBlocked: boolean;
   openingInvoiceId: string | null;
   disabled: boolean;
+  viewerUserId?: string | null;
+  markAgencyInvoices?: boolean;
   onViewInvoice: (invoice: AgentBillingMonthlyInvoice) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const agencyInvoice =
+    markAgencyInvoices &&
+    Boolean(viewerUserId) &&
+    Boolean(group.invoice?.ledgerOwnerUserId) &&
+    group.invoice?.ledgerOwnerUserId !== viewerUserId;
   const showLockCountdown =
     !billingBlocked &&
     group.paymentStatus === 'unpaid' &&
@@ -509,15 +534,20 @@ function Level2MonthGroupCard({
 
   return (
     <section className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        className="flex w-full flex-wrap items-start justify-between gap-3 bg-muted/30 px-5 py-4 text-left transition hover:bg-muted/50"
-      >
-        <div className="min-w-0 flex-1 space-y-1.5">
+      <div className="flex w-full flex-wrap items-start justify-between gap-3 bg-muted/30 px-5 py-4 transition hover:bg-muted/50">
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          className="min-w-0 flex-1 space-y-1.5 text-left"
+        >
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-base font-semibold tracking-tight">{group.label}</h3>
+            <h3 className="text-base font-semibold tracking-tight">
+              {agencyInvoice ? "Agency's Invoice" : group.label}
+            </h3>
+            {agencyInvoice ? (
+              <span className="text-muted-foreground text-xs font-medium">{group.label}</span>
+            ) : null}
             <span
               className={cn(
                 'inline-flex rounded-full border px-2.5 py-0.5 text-[12px] font-semibold',
@@ -553,7 +583,9 @@ function Level2MonthGroupCard({
             ) : null}
           </div>
           {group.invoice ? (
-            <p className="text-muted-foreground text-xs">{invoiceMetaCaption(group.invoice)}</p>
+            <p className="text-muted-foreground text-xs">
+              {invoiceMetaCaption(group.invoice, { agencyOwner: agencyInvoice })}
+            </p>
           ) : (
             <p className="text-muted-foreground text-xs">
               {group.paymentStatus === 'accruing'
@@ -561,7 +593,7 @@ function Level2MonthGroupCard({
                 : 'Invoice will appear here after CROSSUB Accounting approves it'}
             </p>
           )}
-        </div>
+        </button>
         <div className="flex shrink-0 items-center gap-2">
           {group.invoice && !group.invoice.retracted ? (
             <Button
@@ -569,10 +601,7 @@ function Level2MonthGroupCard({
               size="sm"
               variant="outline"
               className="h-8 gap-1.5"
-              onClick={(event) => {
-                event.stopPropagation();
-                onViewInvoice(group.invoice!);
-              }}
+              onClick={() => onViewInvoice(group.invoice!)}
               disabled={disabled || openingInvoiceId === group.invoice.id}
             >
               {openingInvoiceId === group.invoice.id ? (
@@ -583,18 +612,26 @@ function Level2MonthGroupCard({
               View invoice
             </Button>
           ) : null}
-          <p className="text-lg font-semibold tabular-nums tracking-tight">
-            {formatCurrency(group.totalAud)}
-          </p>
-          <ChevronDown
-            className={cn(
-              'text-muted-foreground size-4 shrink-0 transition-transform',
-              open && 'rotate-180',
-            )}
-            aria-hidden
-          />
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-label={`${open ? 'Collapse' : 'Expand'} ${group.label}`}
+            onClick={() => setOpen((value) => !value)}
+            className="flex items-center gap-2"
+          >
+            <span className="text-lg font-semibold tabular-nums tracking-tight">
+              {formatCurrency(group.totalAud)}
+            </span>
+            <ChevronDown
+              className={cn(
+                'text-muted-foreground size-4 shrink-0 transition-transform',
+                open && 'rotate-180',
+              )}
+              aria-hidden
+            />
+          </button>
         </div>
-      </button>
+      </div>
 
       {open ? (
         <div className="border-t">
@@ -652,6 +689,8 @@ export function Level2MonthlyBillingList({
   billingBlocked = false,
   openingInvoiceId,
   disabled = false,
+  viewerUserId,
+  markAgencyInvoices = false,
   onViewInvoice,
   onOpenInvoiceById: _onOpenInvoiceById,
   onViewCharge,
@@ -671,9 +710,125 @@ export function Level2MonthlyBillingList({
           billingBlocked={billingBlocked}
           openingInvoiceId={openingInvoiceId}
           disabled={disabled}
+          viewerUserId={viewerUserId}
+          markAgencyInvoices={markAgencyInvoices}
           onViewInvoice={onViewInvoice}
         />
       ))}
+    </div>
+  );
+}
+
+export type TeamBillingFolder = {
+  id: string;
+  name: string;
+  amount: number;
+  charges: AgentBillingCharge[];
+  invoices: AgentBillingMonthlyInvoice[];
+};
+
+function TeamBillingFolderCard({
+  folder,
+  overdueLockDays,
+  billingBlocked,
+  openingInvoiceId,
+  disabled,
+  onViewInvoice,
+  onOpenInvoiceById,
+  onViewCharge,
+}: {
+  folder: TeamBillingFolder;
+  overdueLockDays: number;
+  billingBlocked: boolean;
+  openingInvoiceId: string | null;
+  disabled: boolean;
+  onViewInvoice: (invoice: AgentBillingMonthlyInvoice) => void;
+  onOpenInvoiceById: (invoiceId: string) => void;
+  onViewCharge: (charge: AgentBillingCharge) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-muted/40"
+      >
+        <span className="min-w-0 truncate text-sm font-semibold">{folder.name}</span>
+        <span className="flex shrink-0 items-center gap-2">
+          <span className="text-lg font-semibold tabular-nums tracking-tight">
+            {formatCurrency(folder.amount)}
+          </span>
+          <ChevronDown
+            className={cn(
+              'text-muted-foreground size-4 transition-transform',
+              open && 'rotate-180',
+            )}
+            aria-hidden
+          />
+        </span>
+      </button>
+      {open ? (
+        <div className="border-t px-5 py-4">
+          <Level2MonthlyBillingList
+            charges={folder.charges}
+            invoices={folder.invoices}
+            overdueLockDays={overdueLockDays}
+            billingBlocked={billingBlocked}
+            openingInvoiceId={openingInvoiceId}
+            disabled={disabled}
+            onViewInvoice={onViewInvoice}
+            onOpenInvoiceById={onOpenInvoiceById}
+            onViewCharge={onViewCharge}
+          />
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+export function TeamBillingFolders({
+  folders,
+  overdueLockDays = 7,
+  billingBlocked = false,
+  openingInvoiceId,
+  disabled = false,
+  onViewInvoice,
+  onOpenInvoiceById,
+  onViewCharge,
+}: {
+  folders: TeamBillingFolder[];
+  overdueLockDays?: number;
+  billingBlocked?: boolean;
+  openingInvoiceId: string | null;
+  disabled?: boolean;
+  onViewInvoice: (invoice: AgentBillingMonthlyInvoice) => void;
+  onOpenInvoiceById: (invoiceId: string) => void;
+  onViewCharge: (charge: AgentBillingCharge) => void;
+}) {
+  if (folders.length === 0) return null;
+  return (
+    <div className="space-y-2">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Team billing
+      </h3>
+      <div className="space-y-3">
+        {folders.map((folder) => (
+          <TeamBillingFolderCard
+            key={folder.id}
+            folder={folder}
+            overdueLockDays={overdueLockDays}
+            billingBlocked={billingBlocked}
+            openingInvoiceId={openingInvoiceId}
+            disabled={disabled}
+            onViewInvoice={onViewInvoice}
+            onOpenInvoiceById={onOpenInvoiceById}
+            onViewCharge={onViewCharge}
+          />
+        ))}
+      </div>
     </div>
   );
 }
