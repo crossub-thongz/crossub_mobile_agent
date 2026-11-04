@@ -71,6 +71,88 @@ function calendarDaysBetween(fromKey: string, toKey: string): number {
   return Math.round((to - from) / 86_400_000);
 }
 
+function addCalendarDays(key: string, days: number): string {
+  const parsed = Date.parse(`${key.slice(0, 10)}T00:00:00Z`);
+  if (!Number.isFinite(parsed)) return key;
+  const next = new Date(parsed + days * 86_400_000);
+  const month = String(next.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(next.getUTCDate()).padStart(2, '0');
+  return `${next.getUTCFullYear()}-${month}-${day}`;
+}
+
+function daysInUtcMonth(year: number, monthIndex: number): number {
+  return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+}
+
+/** Same month-end rule as the rent engine: 31 Jan + 1 month is 28 Feb, then 31 Mar. */
+function addCalendarMonths(key: string, months: number): string {
+  const [year, month, day] = key.slice(0, 10).split('-').map(Number);
+  if (!year || !month || !day) return key;
+  const monthIndex = month - 1;
+  const wasMonthEnd = day === daysInUtcMonth(year, monthIndex);
+  const target = new Date(Date.UTC(year, monthIndex + months, 1));
+  const targetDays = daysInUtcMonth(target.getUTCFullYear(), target.getUTCMonth());
+  target.setUTCDate(wasMonthEnd ? targetDays : Math.min(day, targetDays));
+  const m = String(target.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(target.getUTCDate()).padStart(2, '0');
+  return `${target.getUTCFullYear()}-${m}-${d}`;
+}
+
+/** Paid-to after `count` more whole periods. Weekly is 7 days, fortnightly 14, monthly a calendar month. */
+function addRentPeriods(paidTo: string, period: string, count: number): string {
+  const cycle = period.toUpperCase();
+  if (cycle === 'FORTNIGHTLY') return addCalendarDays(paidTo, 14 * count);
+  if (cycle === 'MONTHLY') return addCalendarMonths(paidTo, count);
+  if (cycle === 'YEARLY') return addCalendarMonths(paidTo, 12 * count);
+  return addCalendarDays(paidTo, 7 * count);
+}
+
+/** Whole periods `paymentCents` plus any held part payment buys. One period costs `rentCents`. */
+function wholePeriodsCovered(rentCents: number, paymentCents: number, partPaymentCents: number): number {
+  if (rentCents <= 0) return 0;
+  const available = Math.max(paymentCents, 0) + Math.max(partPaymentCents, 0);
+  return Math.floor(available / rentCents);
+}
+
+/**
+ * The rent period this receipt is paying, "04/11/2026 – 10/11/2026".
+ * The preview wins when the rent profile can move paid-to; otherwise the next cycle is counted
+ * from the paid-to date, or from the receipt date when paid-to is not set yet.
+ */
+function rentPaymentPeriodLabel(input: {
+  paidTo: string | null;
+  receiptDate: string;
+  period: string | null;
+  rentCents: number | null;
+  paymentCents: number | null;
+  partPaymentCents: number | null;
+  preview: { paidToBefore?: string | null; paidToAfter?: string | null; periodsCovered?: number | null } | null;
+}): string | null {
+  const fromPreview = input.preview?.paidToBefore ? input.preview : null;
+  const anchor =
+    fromPreview?.paidToBefore ??
+    input.paidTo ??
+    (input.receiptDate ? addCalendarDays(input.receiptDate, -1) : null);
+  const cycle = input.period;
+  if (!anchor || (!cycle && !fromPreview)) return null;
+
+  const covered =
+    typeof fromPreview?.periodsCovered === 'number'
+      ? fromPreview.periodsCovered
+      : input.rentCents != null
+        ? wholePeriodsCovered(input.rentCents, input.paymentCents ?? 0, input.partPaymentCents ?? 0)
+        : 0;
+  const start = addCalendarDays(anchor, 1);
+  const end =
+    covered > 0
+      ? (fromPreview?.paidToAfter ?? (cycle ? addRentPeriods(anchor, cycle, covered) : null))
+      : cycle
+        ? addRentPeriods(anchor, cycle, 1)
+        : null;
+  if (!end || end < start) return null;
+  return COPY.rentPeriod(formatPaidToSlash(start), formatPaidToSlash(end));
+}
+
 /** Paid-to as dd/mm/yyyy, the form the rent status line uses. */
 function formatPaidToSlash(iso: string): string {
   const [year, month, day] = iso.slice(0, 10).split('-');
@@ -116,8 +198,8 @@ function partyLabel(name: string, code: string): string {
 
 /**
  * A tenant receipt: pick the tenancy, then allocate the amount across rent, a deposit and any open
- * invoices. Rent shows the current paid-to. A bank-line open locks the amount to that line.
- * Mount it per open.
+ * invoices. Rent's description is the period this payment covers. A bank-line open locks the
+ * amount to that line. Mount it per open.
  */
 export function TrustReceiptDialog({
   agencyId,
@@ -285,6 +367,17 @@ export function TrustReceiptDialog({
     invoiceId: firstInvoice?.invoice.id ?? null,
     invoiceCents: firstInvoice?.cents ?? null,
   });
+  const rentPeriodLabel = selected
+    ? rentPaymentPeriodLabel({
+        paidTo: paidToDate,
+        receiptDate: date,
+        period: trustRentPeriod ?? tenancy?.period ?? null,
+        rentCents: trustRentCents ?? tenancy?.cents ?? null,
+        paymentCents: rentCents,
+        partPaymentCents,
+        preview: preview?.rent ?? null,
+      })
+    : null;
 
   function chooseTenancy(tenancy: ReceiptTenancy) {
     depositEdited.current = false;
@@ -395,120 +488,114 @@ export function TrustReceiptDialog({
           <DialogDescription>{COPY.description}</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
-          <dl className="space-y-3 text-sm">
-            <Fact label={COPY.tenant}>
-              {selected ? (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="truncate font-medium">{partyLabel(selected.ledgerName, selected.ledgerCode)}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 shrink-0 px-2 text-xs"
-                    disabled={pending}
-                    onClick={() => {
-                      depositEdited.current = false;
-                      setSelected(null);
-                      setInvoiceAmounts({});
-                      setDepositDetails('');
-                    }}
-                  >
-                    {COPY.changeTenant}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <Input
-                    value={query}
-                    disabled={pending}
-                    placeholder={COPY.tenantSearch}
-                    onChange={(event) => setQuery(event.target.value)}
-                  />
-                  {debouncedQuery ? (
-                    <div className="max-h-40 overflow-y-auto rounded-lg border">
-                      {tenancies.loading && !tenancies.data ? (
-                        <p className="text-muted-foreground px-3 py-2 text-sm">Loading…</p>
-                      ) : tenancies.error ? (
-                        <p className="text-destructive px-3 py-2 text-sm">{apiErrorMessage(tenancies.error)}</p>
-                      ) : matches.length === 0 ? (
-                        <p className="text-muted-foreground px-3 py-2 text-sm">{COPY.noTenants}</p>
-                      ) : (
-                        <ul>
-                          {matches.map((tenancy) => (
-                            <li key={tenancy.ledgerId} className="border-b last:border-b-0">
-                              <button
-                                type="button"
-                                className="hover:bg-muted w-full px-3 py-2 text-left"
-                                onClick={() => chooseTenancy(tenancy)}
-                              >
-                                <p className="text-sm font-medium">
-                                  {partyLabel(tenancy.ledgerName, tenancy.ledgerCode)}
-                                </p>
-                                <p className="text-muted-foreground truncate text-xs">
-                                  {tenancy.propertyAddress || tenancy.propertyReferenceAddress || COPY.empty}
-                                </p>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </Fact>
-            <Fact label={COPY.owner}>{ownerLabel}</Fact>
-            <Fact label={COPY.property}>{propertyAddress || COPY.empty}</Fact>
-            <Fact label={COPY.details}>{selected ? rentLabel : COPY.empty}</Fact>
-          </dl>
-
-          <div className="space-y-3">
-            <label className="block space-y-1.5">
-              <span className="text-muted-foreground text-sm">{COPY.amount}</span>
-              <Input
-                inputMode="decimal"
-                value={amountLocked ? centsToDollarsInput(lockedAmountCents) : amount}
-                disabled={pending || amountLocked}
-                readOnly={amountLocked}
-                onChange={(event) => onAmountChange(event.target.value)}
-                placeholder=""
-                className={cn('h-9 text-right tabular-nums', amountLocked && 'bg-muted')}
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-muted-foreground text-sm">{COPY.date}</span>
-              <Input
-                type="date"
-                value={date}
-                max={trustTodayKey()}
-                disabled={pending || bankLine != null}
-                onChange={(event) => setDate(event.target.value)}
-                className="h-9"
-              />
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {TRUST_RECEIPT_METHOD_ORDER.map((item) => {
-                const selectedMethod = method === item;
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    disabled={pending}
-                    onClick={() => setMethod(item)}
-                    className={cn(
-                      'h-9 rounded-md border px-3 text-sm font-medium',
-                      selectedMethod
-                        ? 'border-slate-700 bg-slate-700 text-white'
-                        : 'border-border bg-background hover:bg-muted',
+        <div className="grid items-center gap-x-8 gap-y-3 text-sm lg:grid-cols-2">
+          <Fact label={COPY.tenant}>
+            {selected ? (
+              <div className="flex h-9 items-center justify-between gap-2">
+                <span className="truncate font-medium">{partyLabel(selected.ledgerName, selected.ledgerCode)}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 shrink-0 px-2 text-xs"
+                  disabled={pending}
+                  onClick={() => {
+                    depositEdited.current = false;
+                    setSelected(null);
+                    setInvoiceAmounts({});
+                    setDepositDetails('');
+                  }}
+                >
+                  {COPY.changeTenant}
+                </Button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Input
+                  value={query}
+                  disabled={pending}
+                  placeholder={COPY.tenantSearch}
+                  onChange={(event) => setQuery(event.target.value)}
+                  className="h-9"
+                />
+                {debouncedQuery ? (
+                  <div className="bg-popover absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border shadow-md">
+                    {tenancies.loading && !tenancies.data ? (
+                      <p className="text-muted-foreground px-3 py-2 text-sm">Loading…</p>
+                    ) : tenancies.error ? (
+                      <p className="text-destructive px-3 py-2 text-sm">{apiErrorMessage(tenancies.error)}</p>
+                    ) : matches.length === 0 ? (
+                      <p className="text-muted-foreground px-3 py-2 text-sm">{COPY.noTenants}</p>
+                    ) : (
+                      <ul>
+                        {matches.map((tenancy) => (
+                          <li key={tenancy.ledgerId} className="border-b last:border-b-0">
+                            <button
+                              type="button"
+                              className="hover:bg-muted w-full px-3 py-2 text-left"
+                              onClick={() => chooseTenancy(tenancy)}
+                            >
+                              <p className="text-sm font-medium">
+                                {partyLabel(tenancy.ledgerName, tenancy.ledgerCode)}
+                              </p>
+                              <p className="text-muted-foreground truncate text-xs">
+                                {tenancy.propertyAddress || tenancy.propertyReferenceAddress || COPY.empty}
+                              </p>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  >
-                    {TRUST_RECEIPT_METHOD_LABEL[item]}
-                  </button>
-                );
-              })}
-            </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </Fact>
+          <SideField label={COPY.amount}>
+            <Input
+              inputMode="decimal"
+              value={amountLocked ? centsToDollarsInput(lockedAmountCents) : amount}
+              disabled={pending || amountLocked}
+              readOnly={amountLocked}
+              onChange={(event) => onAmountChange(event.target.value)}
+              placeholder=""
+              className={cn('h-9 text-right tabular-nums', amountLocked && 'bg-muted')}
+            />
+          </SideField>
+          <Fact label={COPY.owner}>{ownerLabel}</Fact>
+          <SideField label={COPY.date}>
+            <Input
+              type="date"
+              value={date}
+              max={trustTodayKey()}
+              disabled={pending || bankLine != null}
+              onChange={(event) => setDate(event.target.value)}
+              className="h-9"
+            />
+          </SideField>
+          <Fact label={COPY.property}>{propertyAddress || COPY.empty}</Fact>
+          <div className="flex flex-wrap gap-1.5">
+            {TRUST_RECEIPT_METHOD_ORDER.map((item) => {
+              const selectedMethod = method === item;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => setMethod(item)}
+                  className={cn(
+                    'h-9 rounded-md border px-3 text-sm font-medium',
+                    selectedMethod
+                      ? 'border-slate-700 bg-slate-700 text-white'
+                      : 'border-border bg-background hover:bg-muted',
+                  )}
+                >
+                  {TRUST_RECEIPT_METHOD_LABEL[item]}
+                </button>
+              );
+            })}
           </div>
+          <Fact label={COPY.details}>{selected ? rentLabel : COPY.empty}</Fact>
         </div>
 
         <div className="overflow-x-auto rounded-lg border">
@@ -528,13 +615,8 @@ export function TrustReceiptDialog({
                 <td className={cn('px-3 py-2', overdueDays != null ? 'text-destructive' : 'text-muted-foreground')}>
                   {formatTrustDate(paidToDate)}
                 </td>
-                <td className="text-muted-foreground px-3 py-2">
-                  {paidToDate
-                    ? COPY.paidToStatus(
-                        formatPaidToSlash(paidToDate),
-                        partPaymentCents != null && partPaymentCents > 0 ? formatCents(partPaymentCents) : null,
-                      )
-                    : COPY.empty}
+                <td className="px-3 py-2 tabular-nums">
+                  {rentPeriodLabel ?? <span className="text-muted-foreground">{COPY.empty}</span>}
                 </td>
                 <td className="text-muted-foreground px-3 py-2">
                   {overdueDays != null ? COPY.overdueDays(overdueDays) : null}
@@ -629,10 +711,20 @@ export function TrustReceiptDialog({
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-start gap-3">
-      <dt className="text-muted-foreground pt-2">{label}</dt>
+    <div className="grid min-h-9 grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-3">
+      <dt className="text-muted-foreground">{label}</dt>
       <dd className="min-w-0">{children}</dd>
     </div>
+  );
+}
+
+/** Amount and Date, on the same row as the matching fact on the left. */
+function SideField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="grid h-9 grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-3">
+      <span className="text-muted-foreground">{label}</span>
+      {children}
+    </label>
   );
 }
 
