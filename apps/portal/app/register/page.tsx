@@ -280,9 +280,16 @@ export default function RegisterPage() {
         </section>
 
         <section className="w-full justify-self-end rounded-[22px] bg-white p-6 shadow-[0_18px_48px_rgba(13,24,54,0.10)] sm:p-8 lg:col-start-2 lg:row-start-2">
-          <ol className="mb-6 flex items-center">
+          <ol className="mb-6 flex w-full items-center">
             {STEPS.map((label, index) => (
-              <li key={label} className="flex min-w-0 flex-1 items-center">
+              <li
+                key={label}
+                className={
+                  index < STEPS.length - 1
+                    ? 'flex min-w-0 flex-1 items-center'
+                    : 'flex shrink-0 items-center'
+                }
+              >
                 <span
                   className="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
                   style={{
@@ -293,13 +300,13 @@ export default function RegisterPage() {
                   {index + 1}
                 </span>
                 <span
-                  className="ml-2 truncate text-xs font-medium"
+                  className="ml-2 text-xs font-medium"
                   style={{ color: index < step ? '#0D1836' : '#8AA0B5' }}
                 >
                   {label}
                 </span>
                 {index < STEPS.length - 1 ? (
-                  <span className="mx-2 h-px flex-1 bg-[#E3EAF1]" />
+                  <span className="mx-3 h-px min-w-4 flex-1 bg-[#E3EAF1]" />
                 ) : null}
               </li>
             ))}
@@ -400,10 +407,9 @@ export default function RegisterPage() {
                   <select
                     id="region"
                     className="h-12 w-full cursor-pointer appearance-none rounded-[9px] border border-[#CED9E4] bg-white pr-10 pl-3 text-sm font-medium text-[#171E4B] outline-none focus:border-[#00bd85]"
-                    value={region}
+                    value={region === 'NZ' ? 'NZ' : 'AU'}
                     onChange={(event) => chooseRegion(event.target.value)}
                   >
-                    <option value="">Select your region</option>
                     {REGIONS.map((item) => (
                       <option key={item.code} value={item.code}>
                         {item.label}
