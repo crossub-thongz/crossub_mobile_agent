@@ -540,14 +540,13 @@ export const TRUST_RECEIPT_COPY = {
   allocation: 'Allocation',
   due: 'Due',
   allocationDescription: 'Description',
-  amountDue: 'Amount Due',
+  amountDue: 'Days due',
   allocationAmount: 'Amount',
   rentAllocation: 'Rent',
   depositAllocation: 'Deposit',
   depositPlaceholder: (place: string) => `Deposit for ${place}`,
-  /** Current rent position, e.g. "Paid to 14/10/2026 + $907.91". */
-  paidToStatus: (date: string, partPayment: string | null) =>
-    partPayment ? `Paid to ${date} + ${partPayment}` : `Paid to ${date}`,
+  /** The rent period this payment covers, e.g. "04/11/2026 – 10/11/2026". */
+  rentPeriod: (from: string, to: string) => `${from} – ${to}`,
   overdueDays: (days: number) => `${days} day${days === 1 ? '' : 's'}`,
   addNote: 'Add note',
   notePlaceholder: 'Note for this receipt',
