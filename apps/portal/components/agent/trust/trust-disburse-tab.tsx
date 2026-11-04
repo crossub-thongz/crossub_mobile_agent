@@ -66,9 +66,11 @@ import { apiErrorMessage } from '@/lib/utils/api-error-message';
 export function TrustDisburseTab({
   agencyId,
   bankAccountId,
+  onOpenPendingMail,
 }: {
   agencyId: string;
   bankAccountId: string;
+  onOpenPendingMail?: () => void;
 }) {
   const [tab, setTab] = useState<TrustDisbursementTab>(TRUST_DISBURSEMENT_TAB.DUE_OWNERS);
   const [search, setSearch] = useState('');
@@ -146,7 +148,12 @@ export function TrustDisburseTab({
   return (
     <div className="space-y-4">
       {result ? (
-        <DisbursementResult agencyId={agencyId} result={result} onDismiss={() => setResult(null)} />
+        <DisbursementResult
+          agencyId={agencyId}
+          result={result}
+          onDismiss={() => setResult(null)}
+          onOpenPendingMail={onOpenPendingMail}
+        />
       ) : null}
 
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
@@ -323,13 +330,16 @@ function DisbursementResult({
   agencyId,
   result,
   onDismiss,
+  onOpenPendingMail,
 }: {
   agencyId: string;
   result: AgentTrustDisbursementResult;
   onDismiss: () => void;
+  onOpenPendingMail?: () => void;
 }) {
   const { run } = result;
   const [emails, setEmails] = useState<AgentTrustStatementEmail[]>(result.statementEmails);
+  const issuedCount = run.items.filter((item) => item.statementId).length;
   const itemByStatement = useMemo(
     () => new Map(run.items.filter((i) => i.statementId).map((i) => [i.statementId as string, i])),
     [run.items],
@@ -354,7 +364,16 @@ function DisbursementResult({
       <p className="text-muted-foreground mt-4 mb-2 text-xs font-semibold uppercase tracking-wide">
         {COPY.statementEmails}
       </p>
-      {emails.length === 0 ? (
+      {emails.length === 0 && issuedCount > 0 ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm">{COPY.pendingMail(issuedCount)}</p>
+          {onOpenPendingMail ? (
+            <Button type="button" size="sm" variant="outline" onClick={onOpenPendingMail}>
+              {COPY.openPendingMail}
+            </Button>
+          ) : null}
+        </div>
+      ) : emails.length === 0 ? (
         <p className="text-muted-foreground text-sm">{COPY.noStatements}</p>
       ) : (
         <ul className="divide-y rounded-lg border text-sm">

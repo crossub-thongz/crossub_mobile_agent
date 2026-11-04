@@ -1,7 +1,7 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { FilterChips } from '@/components/agent/filter-chips';
@@ -105,10 +105,16 @@ export function TrustNewInvoiceDialog({
   const [dueDate, setDueDate] = useState(() => shiftTrustDateKey(invoiceDate, TRUST_INVOICE_DUE_DAYS));
   const [period, setPeriod] = useState('');
   const [details, setDetails] = useState('');
+  const [descriptionTouched, setDescriptionTouched] = useState(false);
   const [amount, setAmount] = useState('');
   const [gst, setGst] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (descriptionTouched) return;
+    setDetails(type?.name ?? '');
+  }, [descriptionTouched, type?.name]);
 
   const lookupError = tenants.error ?? owners.error ?? suppliers.error;
   const noTypes = types.length === 0;
@@ -317,7 +323,10 @@ export function TrustNewInvoiceDialog({
               maxLength={TRUST_INVOICE_LIMITS.detailsMax}
               placeholder={COPY.detailsPlaceholder}
               disabled={pending}
-              onChange={(e) => setDetails(e.target.value)}
+              onChange={(e) => {
+                setDescriptionTouched(true);
+                setDetails(e.target.value);
+              }}
             />
           </div>
 

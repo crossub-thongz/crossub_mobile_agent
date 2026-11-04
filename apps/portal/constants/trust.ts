@@ -76,6 +76,7 @@ export const TRUST_TAB = {
   RENT: 'rent',
   BILLS: 'bills',
   DISBURSE: 'disburse',
+  PENDING_MAIL: 'pending-mail',
   BANK_FILES: 'bank-files',
   BANK_STATEMENT: 'bank-statement',
   RECONCILIATION: 'reconciliation',
@@ -110,6 +111,7 @@ export const TRUST_NAV_LABEL: Record<TrustTab, string> = {
   [TRUST_TAB.RENT]: 'Rent Payments',
   [TRUST_TAB.BILLS]: 'Bills & Invoices',
   [TRUST_TAB.DISBURSE]: 'Disbursement',
+  [TRUST_TAB.PENDING_MAIL]: 'Pending mail',
   [TRUST_TAB.BANK_FILES]: 'Bank files',
   [TRUST_TAB.BANK_STATEMENT]: 'Bank statement',
   [TRUST_TAB.LEDGERS]: 'Folios',
@@ -131,6 +133,7 @@ export const TRUST_SCREEN_SUBTITLE: Record<TrustTab, string> = {
   [TRUST_TAB.RENT]: 'Paid-to, arrears and tenancy rent position',
   [TRUST_TAB.BILLS]: 'Owner bills to pay and tenant invoices to collect',
   [TRUST_TAB.DISBURSE]: 'Pay owners, suppliers and the agency from the trust account',
+  [TRUST_TAB.PENDING_MAIL]: 'Rent receipts and owner statements waiting to be emailed',
   [TRUST_TAB.BANK_FILES]: 'ABA files for payments leaving the trust account',
   [TRUST_TAB.BANK_STATEMENT]: 'Import a bank file and match its lines',
   [TRUST_TAB.LEDGERS]: 'Property-linked folios and their parties',
@@ -152,6 +155,7 @@ export const TRUST_NAV_SECTIONS: readonly {
       TRUST_TAB.RENT,
       TRUST_TAB.BILLS,
       TRUST_TAB.DISBURSE,
+      TRUST_TAB.PENDING_MAIL,
       TRUST_TAB.BANK_FILES,
       TRUST_TAB.BANK_STATEMENT,
     ],
@@ -654,7 +658,7 @@ export const TRUST_DISBURSE_PARTY_COPY: Record<
     disburse: (count) => `Disburse ${count} owner${count === 1 ? '' : 's'}`,
     confirmTitle: 'Disburse to owners',
     confirmBody: (count) =>
-      `Posts fees, pays due bills, pays out ${count} owner${count === 1 ? '' : 's'} and emails each owner their statement.`,
+      `Posts fees, pays due bills, pays out ${count} owner${count === 1 ? '' : 's'} and leaves each owner statement in Pending mail.`,
     noneSelected: 'Select at least one owner',
   },
   SUPPLIER: {
@@ -684,6 +688,9 @@ export const TRUST_DISBURSE_COPY = {
     `${paid} paid, ${skipped} skipped, ${payout} paid out.`,
   statementEmails: 'Owner statements',
   noStatements: 'No statements were issued in this run.',
+  pendingMail: (count: number) =>
+    `${count} owner statement${count === 1 ? '' : 's'} ${count === 1 ? 'is' : 'are'} waiting in Pending mail.`,
+  openPendingMail: 'Open Pending mail',
   dismiss: 'Dismiss',
 } as const;
 
