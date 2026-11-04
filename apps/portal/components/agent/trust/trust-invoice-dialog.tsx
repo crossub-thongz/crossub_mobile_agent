@@ -30,6 +30,7 @@ import { useTrustResource } from '@/hooks/use-trust-resource';
 import {
   cancelTrustTenantInvoice,
   downloadTrustTenantInvoiceAttachment,
+  downloadTrustTenantInvoicePdf,
   fetchTrustTenantInvoice,
   type TrustTenantInvoice,
 } from '@/lib/crossub-api/agent-trust-invoices-client';
@@ -147,6 +148,13 @@ function InvoiceBody({ agencyId, invoice }: { agencyId: string; invoice: TrustTe
         {invoice.sourceBillId ? (
           <p className="text-muted-foreground text-xs">{COPY.fromBill(invoice.sourceBillNumber)}</p>
         ) : null}
+
+        <TrustDownloadButton
+          label={TRUST_INVOICES_COPY.downloadPdf}
+          filename={`invoice-${invoice.invoiceNumber}.pdf`}
+          fetchBlob={() => downloadTrustTenantInvoicePdf(agencyId, invoice.id)}
+          failedMessage={TRUST_INVOICES_COPY.pdfFailed}
+        />
 
         {invoice.attachment ? (
           <TrustDownloadButton

@@ -84,6 +84,14 @@ export async function cancelTrustTenantInvoice(
   return unwrapCrossubResult(result, "Couldn't cancel the invoice");
 }
 
+export async function downloadTrustTenantInvoicePdf(agencyId: string, invoiceId: string): Promise<Blob> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/tenant-invoices/{invoiceId}/pdf', {
+    params: { path: { agencyId, invoiceId } },
+    parseAs: 'blob',
+  });
+  return unwrapCrossubResult(result, "Couldn't download the invoice") as Blob;
+}
+
 export async function downloadTrustTenantInvoiceAttachment(agencyId: string, invoiceId: string): Promise<Blob> {
   const result = await crossub.GET('/agent/agencies/{agencyId}/trust/tenant-invoices/{invoiceId}/attachment', {
     params: { path: { agencyId, invoiceId } },

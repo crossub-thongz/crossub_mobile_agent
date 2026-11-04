@@ -167,6 +167,8 @@ export const TRUST_INVOICES_COPY = {
   view: 'View',
   attachment: 'Attachment',
   attachmentFailed: "Couldn't open the attachment",
+  downloadPdf: 'Download PDF',
+  pdfFailed: "Couldn't download the invoice",
   owingOf: (outstanding: string, amount: string) => `${outstanding} of ${amount}`,
 } as const;
 
@@ -189,7 +191,7 @@ export const TRUST_NEW_INVOICE_COPY = {
   dueDate: 'Due date',
   period: 'Invoice period (optional)',
   periodPlaceholder: 'e.g. 01/07/2026 to 30/09/2026',
-  details: 'Details',
+  details: 'Description',
   detailsPlaceholder: 'e.g. Water usage 01/07/2026 to 30/09/2026',
   amount: 'Total incl. GST ($)',
   gst: 'GST included ($)',
@@ -202,7 +204,7 @@ export const TRUST_NEW_INVOICE_COPY = {
   beneficiaryRequired: (from: TrustInvoiceFrom) =>
     from === TRUST_INVOICE_FROM.SUPPLIER ? 'Pick the supplier' : 'Pick the owner ledger',
   typeRequired: 'Pick the invoice type',
-  detailsRequired: 'Enter the invoice details',
+  detailsRequired: 'Enter the invoice description',
   amountInvalid: 'Enter a total above $0.00',
   gstInvalid: 'GST must be $0.00 or more and no more than the total',
   dueRequired: 'Pick the due date',
@@ -229,7 +231,7 @@ export const TRUST_INVOICE_DETAIL_COPY = {
   period: 'Period',
   property: 'Property',
   createdBy: 'Created by',
-  details: 'Details',
+  details: 'Description',
   fromBill: (billNumber: number | null | undefined) =>
     billNumber != null ? `On-charged from bill #${billNumber}` : 'On-charged from a bill',
   payments: 'Payments',

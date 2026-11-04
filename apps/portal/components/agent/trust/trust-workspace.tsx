@@ -11,6 +11,7 @@ import { TrustBillsInvoicesTab } from '@/components/agent/trust/trust-bills-invo
 import { TrustDisburseTab } from '@/components/agent/trust/trust-disburse-tab';
 import { TrustLedgersTab } from '@/components/agent/trust/trust-ledgers-tab';
 import { TrustOverviewTab } from '@/components/agent/trust/trust-overview-tab';
+import { TrustPendingMailTab } from '@/components/agent/trust/trust-pending-mail-tab';
 import { TrustReconciliationTab } from '@/components/agent/trust/trust-reconciliation-tab';
 import { TrustRentTab } from '@/components/agent/trust/trust-rent-tab';
 import { TrustReportsTab } from '@/components/agent/trust/trust-reports-tab';
@@ -84,7 +85,9 @@ function TrustTabContent({
     case TRUST_TAB.BILLS:
       return <TrustBillsInvoicesTab {...props} accountCodes={accountCodes} />;
     case TRUST_TAB.DISBURSE:
-      return <TrustDisburseTab {...props} />;
+      return <TrustDisburseTab {...props} onOpenPendingMail={() => onOpenTab(TRUST_TAB.PENDING_MAIL)} />;
+    case TRUST_TAB.PENDING_MAIL:
+      return <TrustPendingMailTab {...props} />;
     case TRUST_TAB.BANK_FILES:
       return <TrustBankFilesTab {...props} />;
     case TRUST_TAB.BANK_STATEMENT:
