@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { AlertTriangle, CheckCircle2, FileText, X } from 'lucide-react';
 
 import { AskCrosButton, CrosNameText, FromCrosMark } from '@/components/agent/cros-notification-parts';
@@ -11,7 +11,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAgentNotificationDialog } from '@/components/providers/agent-notification-dialog-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Button } from '@/components/ui/button';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, isPublicRoute } from '@/constants/routes';
 import {
   hasAlertedNotification,
   markNotificationAlerted,
@@ -35,6 +35,7 @@ function alertIcon(type: AgentNotification['type']) {
 
 export function AgentNotificationLiveAlert() {
   const router = useRouter();
+  const pathname = usePathname();
   const isV2 = useIsAgentUiV2();
   const { status } = useAuth();
   const { notifications, loading, markNotificationRead, markAllNotificationsRead } = useAgentData();
@@ -138,7 +139,9 @@ export function AgentNotificationLiveAlert() {
     }, 150);
   };
 
-  if (status !== 'authed' || !current) return null;
+  // Public pages (login, register, password reset) load even with a live session cookie.
+  // The alert belongs to the signed-in account, so it stays queued until an app page shows.
+  if (status !== 'authed' || !current || isPublicRoute(pathname)) return null;
 
   const display = agentNotificationDisplay(current);
   const Icon = alertIcon(current.type);

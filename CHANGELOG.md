@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-05
+
+### Fixed
+- Notification popup no longer shows on login, register and other public pages when a session is still signed in
+
 ## 2026-11-03
 
 ### Added
