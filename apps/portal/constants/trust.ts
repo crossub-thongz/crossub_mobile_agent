@@ -545,8 +545,10 @@ export const TRUST_RECEIPT_COPY = {
   rentAllocation: 'Rent',
   depositAllocation: 'Deposit',
   depositPlaceholder: (place: string) => `Deposit for ${place}`,
-  /** The rent period this payment covers, e.g. "04/11/2026 – 10/11/2026". */
+  /** The rent period this payment covers, e.g. "03/11/2026 – 09/11/2026". */
   rentPeriod: (from: string, to: string) => `${from} – ${to}`,
+  /** A payment short of one period, e.g. "Paid to 02/11/2026 + Part payment of $500.00". */
+  rentPartPayment: (date: string, amount: string) => `Paid to ${date} + Part payment of ${amount}`,
   overdueDays: (days: number) => `${days} day${days === 1 ? '' : 's'}`,
   addNote: 'Add note',
   notePlaceholder: 'Note for this receipt',
