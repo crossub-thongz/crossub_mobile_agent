@@ -87,9 +87,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <Script id="openai-ads-pixel" strategy="afterInteractive">
-          {OPENAI_ADS_PIXEL_SCRIPT}
-        </Script>
+        <script id="openai-ads-pixel" dangerouslySetInnerHTML={{ __html: OPENAI_ADS_PIXEL_SCRIPT }} />
         <Script id="crossub-theme-init" strategy="beforeInteractive">
           {`(function(){try{var t=localStorage.getItem('theme');var d=document.documentElement;if(t==='dark')d.classList.add('dark');else d.classList.remove('dark')}catch(e){}})();`}
         </Script>
