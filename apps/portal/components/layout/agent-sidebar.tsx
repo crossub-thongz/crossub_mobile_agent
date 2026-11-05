@@ -2,15 +2,26 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, ChevronDown, LogOut, MoreHorizontal, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Building2, ChevronDown, DoorOpen, FileText, LogOut, MoreHorizontal, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
+import { TrainingReplayButton } from '@/components/agent/module-training';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { menuNavForUi, sidebarFooterNavForUi, TASK_SECTION_HREFS } from '@/constants/nav';
+import {
+  LEASING_VIEW_EVENT,
+  leasingViewHref,
+  notifyLeasingView,
+  replayVideosForHref,
+  TRAINING_VIDEO,
+  trainingAudience,
+  trainingVideoById,
+} from '@/constants/module-training';
+import { LEASING_PAGE_VIEW } from '@/constants/module-workspace';
 import { SUPPORT_PAGE_SECTION, supportSectionItems } from '@/constants/more-page';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -32,9 +43,40 @@ const V2_SIDEBAR_PINNED_HREFS = new Set<string>([
 
 const V2_AGENCY_MENU_HREFS = new Set<string>([ROUTES.SETTINGS, ROUTES.PRICING]);
 
-function isActive(pathname: string, href: string): boolean {
+function isActive(pathname: string, href: string, search = ''): boolean {
+  const split = href.indexOf('?');
+  const path = split === -1 ? href : href.slice(0, split);
+  const query = split === -1 ? '' : href.slice(split);
+  if (query) return pathname === path && search === query;
+  if (path === ROUTES.LEASING && pathname === path && search.startsWith('?view=')) return false;
   if (href === ROUTES.DASHBOARD) return pathname === href;
-  return pathname === href || pathname.startsWith(`${href}/`);
+  return pathname === path || pathname.startsWith(`${path}/`);
+}
+
+function NavReplayButtons({
+  href,
+  compact,
+  pinned = false,
+}: {
+  href: string;
+  compact?: boolean;
+  pinned?: boolean;
+}) {
+  const { agencies } = useAgentData();
+  const videos = replayVideosForHref(href, trainingAudience(agencies));
+  if (videos.length === 0) return null;
+  return (
+    <span
+      className={cn(
+        'mr-2 flex shrink-0 items-center gap-0.5',
+        compact && (pinned ? 'hidden' : 'hidden group-hover/sidebar:flex'),
+      )}
+    >
+      {videos.map((video) => (
+        <TrainingReplayButton key={video.id} video={video} />
+      ))}
+    </span>
+  );
 }
 
 function formatClientSinceMonth(iso: string): string {
@@ -65,96 +107,112 @@ function NavLink({
   trailingChevron?: boolean;
   nested?: boolean;
 }) {
+  const tour =
+    href === ROUTES.PROPERTIES
+      ? 'nav-properties'
+      : href === ROUTES.TASKS
+        ? 'nav-tasks'
+        : href === ROUTES.ARCHIVE
+          ? 'nav-history'
+          : undefined;
+  const onClick = () => {
+    if (href === ROUTES.LEASING) notifyLeasingView(LEASING_PAGE_VIEW.LETTINGS);
+    const view = new URLSearchParams(href.split('?')[1] ?? '').get('view');
+    if (view === LEASING_PAGE_VIEW.TENANCY_REVIEWS || view === LEASING_PAGE_VIEW.VACATING) {
+      notifyLeasingView(view);
+    }
+  };
+
   if (v2) {
     return (
-      <Link
-        href={href}
-        title={label}
+      <div
         className={cn(
           'agent-sidebar-v2__nav-link relative flex items-center text-[15px] font-medium',
-          compact
-            ? pinned
-              ? 'justify-center px-2 py-3.5'
-              : 'justify-center px-2 py-3.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-5'
-            : 'gap-3 px-5 py-3.5',
           active ? 'agent-sidebar-v2__nav-link--active' : 'agent-sidebar-v2__nav-link--idle',
           nested && 'agent-sidebar-v2__nav-link--nested !py-2',
         )}
-        data-tour={
-          href === ROUTES.PROPERTIES
-            ? 'nav-properties'
-            : href === ROUTES.TASKS
-              ? 'nav-tasks'
-              : href === ROUTES.ARCHIVE
-                ? 'nav-history'
-                : undefined
-        }
       >
-        <Icon className="agent-sidebar-v2__nav-icon size-[18px] shrink-0 stroke-[1.75]" />
+        <Link
+          href={href}
+          title={label}
+          onClick={onClick}
+          data-tour={tour}
+          className={cn(
+            'flex min-w-0 flex-1 items-center',
+            compact
+              ? pinned
+                ? 'justify-center px-2 py-3.5'
+                : 'justify-center px-2 py-3.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-5'
+              : 'gap-3 px-5 py-3.5',
+          )}
+        >
+          <Icon className="agent-sidebar-v2__nav-icon size-[18px] shrink-0 stroke-[1.75]" />
+          <span
+            className={cn(
+              'min-w-0 flex-1 truncate',
+              compact &&
+                (pinned
+                  ? 'hidden'
+                  : 'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100'),
+            )}
+          >
+            {label}
+          </span>
+          {badge && badge > 0 ? (
+            <MessageUnreadBadge count={badge} size="sm" className="shrink-0" />
+          ) : null}
+          {trailingChevron ? (
+            <ChevronDown
+              className={cn(
+                'agent-sidebar-v2__nav-chevron size-4 shrink-0',
+                compact && (pinned ? 'hidden' : 'hidden group-hover/sidebar:block'),
+              )}
+              aria-hidden
+            />
+          ) : null}
+        </Link>
+        <NavReplayButtons href={href} compact={compact} pinned={pinned} />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        'relative flex items-center rounded-lg text-sm font-medium transition-[color,background-color,transform,box-shadow] duration-200 ease-out hover:translate-x-0.5',
+        active
+          ? 'rounded-xl bg-primary/10 text-primary shadow-sm shadow-primary/5'
+          : 'text-muted-foreground hover:bg-secondary/80 hover:text-foreground',
+      )}
+    >
+      <Link
+        href={href}
+        title={label}
+        onClick={onClick}
+        data-tour={tour}
+        className={cn(
+          'flex min-w-0 flex-1 items-center',
+          compact
+            ? 'justify-center px-2 py-2.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-3'
+            : 'gap-2.5 px-3 py-2',
+        )}
+      >
+        <Icon className={cn('size-4 shrink-0 transition-transform duration-200 ease-out', !active && 'opacity-70')} />
         <span
           className={cn(
             'min-w-0 flex-1 truncate',
             compact &&
-              (pinned
-                ? 'hidden'
-                : 'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100'),
+              'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100',
           )}
         >
           {label}
         </span>
         {badge && badge > 0 ? (
-          <MessageUnreadBadge count={badge} size="sm" className="shrink-0" />
-        ) : null}
-        {trailingChevron ? (
-          <ChevronDown
-            className={cn(
-              'agent-sidebar-v2__nav-chevron size-4 shrink-0',
-              compact && (pinned ? 'hidden' : 'hidden group-hover/sidebar:block'),
-            )}
-            aria-hidden
-          />
+          <MessageUnreadBadge count={badge} size="sm" className="shrink-0 ring-2 ring-card" />
         ) : null}
       </Link>
-    );
-  }
-
-  return (
-    <Link
-      href={href}
-      title={label}
-      className={cn(
-        'relative flex items-center rounded-lg text-sm font-medium transition-[color,background-color,transform,box-shadow] duration-200 ease-out hover:translate-x-0.5',
-        compact
-          ? 'justify-center px-2 py-2.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-3'
-          : 'gap-2.5 px-3 py-2',
-        active
-          ? 'rounded-xl bg-primary/10 text-primary shadow-sm shadow-primary/5'
-          : 'text-muted-foreground hover:bg-secondary/80 hover:text-foreground',
-      )}
-      data-tour={
-        href === ROUTES.PROPERTIES
-          ? 'nav-properties'
-          : href === ROUTES.TASKS
-            ? 'nav-tasks'
-            : href === ROUTES.ARCHIVE
-              ? 'nav-history'
-              : undefined
-      }
-    >
-      <Icon className={cn('size-4 shrink-0 transition-transform duration-200 ease-out', !active && 'opacity-70')} />
-      <span
-        className={cn(
-          'min-w-0 flex-1 truncate',
-          compact &&
-            'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100',
-        )}
-      >
-        {label}
-      </span>
-      {badge && badge > 0 ? (
-        <MessageUnreadBadge count={badge} size="sm" className="shrink-0 ring-2 ring-card" />
-      ) : null}
-    </Link>
+      <NavReplayButtons href={href} compact={compact} pinned={pinned} />
+    </div>
   );
 }
 
@@ -178,8 +236,18 @@ function AgentSidebarSupport({
   const items = supportSectionItems(selfManaged);
   const active = items.some((item) => item.href && isActive(pathname, item.href));
   const Icon = SUPPORT_PAGE_SECTION.icon;
+  const supportVideos = [TRAINING_VIDEO.CONTACT_US, TRAINING_VIDEO.CROSSUB_TEAM].flatMap((id) => {
+    const video = trainingVideoById(id);
+    return video ? [video] : [];
+  });
 
   return (
+    <div
+      className={cn(
+        'agent-sidebar-v2__nav-link relative flex items-center rounded-xl text-[14px] font-medium',
+        open || active ? 'agent-sidebar-v2__nav-link--active' : 'agent-sidebar-v2__nav-link--idle',
+      )}
+    >
     <Popover open={open} onOpenChange={setMenuOpen}>
       <PopoverTrigger asChild>
         <button
@@ -187,15 +255,12 @@ function AgentSidebarSupport({
           title="Support"
           data-tour="contact-account-manager"
           className={cn(
-            'agent-sidebar-v2__nav-link relative flex w-full items-center rounded-xl text-[14px] font-medium',
+            'flex min-w-0 flex-1 items-center',
             compact
               ? pinned
                 ? 'justify-center px-2 py-2.5'
                 : 'justify-center px-2 py-2.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-3'
               : 'gap-3 px-3 py-2.5',
-            open || active
-              ? 'agent-sidebar-v2__nav-link--active'
-              : 'agent-sidebar-v2__nav-link--idle',
           )}
         >
           <Icon className="agent-sidebar-v2__nav-icon size-[18px] shrink-0 stroke-[1.75]" />
@@ -247,6 +312,17 @@ function AgentSidebarSupport({
         </div>
       </PopoverContent>
     </Popover>
+    <span
+      className={cn(
+        'mr-2 flex shrink-0 items-center gap-0.5',
+        compact && (pinned ? 'hidden' : 'hidden group-hover/sidebar:flex'),
+      )}
+    >
+      {supportVideos.map((video) => (
+        <TrainingReplayButton key={video.id} video={video} />
+      ))}
+    </span>
+    </div>
   );
 }
 
@@ -394,6 +470,7 @@ export function AgentSidebar({
   onLogout: () => void;
 }) {
   const pathname = usePathname() ?? '';
+  const [locationSearch, setLocationSearch] = useState('');
   const isV2 = useIsAgentUiV2();
   const [supportOpen, setSupportOpen] = useState(false);
   const [agencyOpen, setAgencyOpen] = useState(false);
@@ -405,6 +482,23 @@ export function AgentSidebar({
   useEffect(() => {
     if (!onAccounting) setAccountingCollapsed(false);
   }, [onAccounting]);
+
+  useEffect(() => {
+    const read = () => setLocationSearch(window.location.search);
+    read();
+    const onView = (event: Event) => {
+      const view = (event as CustomEvent<string | null>).detail;
+      setLocationSearch(
+        view && view !== LEASING_PAGE_VIEW.LETTINGS ? `?view=${view}` : '',
+      );
+    };
+    window.addEventListener('popstate', read);
+    window.addEventListener(LEASING_VIEW_EVENT, onView);
+    return () => {
+      window.removeEventListener('popstate', read);
+      window.removeEventListener(LEASING_VIEW_EVENT, onView);
+    };
+  }, [pathname]);
   const { hasFullManagementAccess, platformBillingDisabled } = useAgentData();
   const selfManagedAccess = useSelfManagedAccess();
   const { total: needsYouCount } = useCrosToday();
@@ -497,7 +591,7 @@ export function AgentSidebar({
                   <NavLink
                     {...item}
                     v2
-                    active={isActive(pathname, item.href)}
+                    active={isActive(pathname, item.href, locationSearch)}
                     compact={railCollapsed}
                     pinned={pinned}
                     badge={navBadge(item.href)}
@@ -515,14 +609,41 @@ export function AgentSidebar({
                       {...child}
                       v2
                       nested
-                      active={isActive(pathname, child.href)}
+                      active={isActive(pathname, child.href, locationSearch)}
                       compact={railCollapsed}
                       pinned={pinned}
                     />
                   </li>,
                 ];
               });
-              return [row, ...children];
+              const leasingExtras = selfManagedAccess.selfManaged
+                ? [
+                    {
+                      href: leasingViewHref(LEASING_PAGE_VIEW.TENANCY_REVIEWS),
+                      label: 'Tenancy reviews',
+                      icon: FileText,
+                    },
+                    {
+                      href: leasingViewHref(LEASING_PAGE_VIEW.VACATING),
+                      label: 'Vacating',
+                      icon: DoorOpen,
+                    },
+                  ].map((child) => (
+                    <li key={child.href} className="agent-sidebar-v2__nav-item">
+                      <NavLink
+                        href={child.href}
+                        label={child.label}
+                        icon={child.icon}
+                        v2
+                        nested
+                        active={isActive(pathname, child.href, locationSearch)}
+                        compact={railCollapsed}
+                        pinned={pinned}
+                      />
+                    </li>
+                  ))
+                : [];
+              return [row, ...children, ...leasingExtras];
             })}
           </ul>
         </nav>
@@ -586,7 +707,7 @@ export function AgentSidebar({
                 <li key={item.href}>
                   <NavLink
                     {...item}
-                    active={isActive(pathname, item.href)}
+                    active={isActive(pathname, item.href, locationSearch)}
                     badge={navBadge(item.href)}
                   />
                 </li>
@@ -599,7 +720,7 @@ export function AgentSidebar({
               <li key={item.href}>
                 <NavLink
                   {...item}
-                  active={isActive(pathname, item.href)}
+                  active={isActive(pathname, item.href, locationSearch)}
                   compact
                   badge={navBadge(item.href)}
                 />

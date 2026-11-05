@@ -23,6 +23,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { AddToHomeScreenPrompt } from '@/components/agent/add-to-home-screen-prompt';
 import { EnvironmentBanner } from '@/components/agent/environment-banner';
 import { WelcomeOnboarding } from '@/components/agent/welcome-onboarding';
+import { ModuleTrainingHost, ModuleTrainingProvider } from '@/components/agent/module-training';
 import { AddPaymentMethodGate } from '@/components/agent/add-payment-method-gate';
 import { AgentPageGuideHost } from '@/components/agent/agent-page-guide-host';
 import { AgentPageTourHost } from '@/components/agent/agent-page-tour-host';
@@ -117,8 +118,11 @@ export default function RootLayout({
                         <AgentPageGuideProvider>
                           <AgentNotificationLiveAlert />
                           <AddToHomeScreenPrompt />
+                          <ModuleTrainingProvider>
                           <PersistentAgentChrome>{children}</PersistentAgentChrome>
                           <WelcomeOnboarding />
+                          <ModuleTrainingHost />
+                          </ModuleTrainingProvider>
                           {agentUi === AGENT_UI.V2 ? (
                             <Suspense fallback={null}>
                               <AddPaymentMethodGate />
