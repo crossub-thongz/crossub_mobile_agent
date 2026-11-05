@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, ChevronDown, DoorOpen, FileText, LogOut, MoreHorizontal, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Building2, ChevronDown, LogOut, MoreHorizontal, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
-import { TrainingReplayButton } from '@/components/agent/module-training';
+import { TrainingReplayButton, TrainingReplayMenu } from '@/components/agent/module-training';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -14,7 +14,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { menuNavForUi, sidebarFooterNavForUi, TASK_SECTION_HREFS } from '@/constants/nav';
 import {
   LEASING_VIEW_EVENT,
-  leasingViewHref,
   notifyLeasingView,
   replayVideosForHref,
   TRAINING_VIDEO,
@@ -48,7 +47,6 @@ function isActive(pathname: string, href: string, search = ''): boolean {
   const path = split === -1 ? href : href.slice(0, split);
   const query = split === -1 ? '' : href.slice(split);
   if (query) return pathname === path && search === query;
-  if (path === ROUTES.LEASING && pathname === path && search.startsWith('?view=')) return false;
   if (href === ROUTES.DASHBOARD) return pathname === href;
   return pathname === path || pathname.startsWith(`${path}/`);
 }
@@ -65,13 +63,12 @@ function NavReplayButtons({
   const { agencies } = useAgentData();
   const videos = replayVideosForHref(href, trainingAudience(agencies));
   if (videos.length === 0) return null;
+  const hidden = compact ? (pinned ? 'hidden' : 'hidden group-hover/sidebar:flex') : undefined;
+  if (href === ROUTES.LEASING) {
+    return <TrainingReplayMenu videos={videos} className={cn('mr-2', hidden)} />;
+  }
   return (
-    <span
-      className={cn(
-        'mr-2 flex shrink-0 items-center gap-0.5',
-        compact && (pinned ? 'hidden' : 'hidden group-hover/sidebar:flex'),
-      )}
-    >
+    <span className={cn('mr-2 flex shrink-0 items-center gap-0.5', hidden)}>
       {videos.map((video) => (
         <TrainingReplayButton key={video.id} video={video} />
       ))}
@@ -117,10 +114,6 @@ function NavLink({
           : undefined;
   const onClick = () => {
     if (href === ROUTES.LEASING) notifyLeasingView(LEASING_PAGE_VIEW.LETTINGS);
-    const view = new URLSearchParams(href.split('?')[1] ?? '').get('view');
-    if (view === LEASING_PAGE_VIEW.TENANCY_REVIEWS || view === LEASING_PAGE_VIEW.VACATING) {
-      notifyLeasingView(view);
-    }
   };
 
   if (v2) {
@@ -616,34 +609,7 @@ export function AgentSidebar({
                   </li>,
                 ];
               });
-              const leasingExtras = selfManagedAccess.selfManaged
-                ? [
-                    {
-                      href: leasingViewHref(LEASING_PAGE_VIEW.TENANCY_REVIEWS),
-                      label: 'Tenancy reviews',
-                      icon: FileText,
-                    },
-                    {
-                      href: leasingViewHref(LEASING_PAGE_VIEW.VACATING),
-                      label: 'Vacating',
-                      icon: DoorOpen,
-                    },
-                  ].map((child) => (
-                    <li key={child.href} className="agent-sidebar-v2__nav-item">
-                      <NavLink
-                        href={child.href}
-                        label={child.label}
-                        icon={child.icon}
-                        v2
-                        nested
-                        active={isActive(pathname, child.href, locationSearch)}
-                        compact={railCollapsed}
-                        pinned={pinned}
-                      />
-                    </li>
-                  ))
-                : [];
-              return [row, ...children, ...leasingExtras];
+              return [row, ...children];
             })}
           </ul>
         </nav>

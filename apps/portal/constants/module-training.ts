@@ -21,6 +21,8 @@ export type TrainingVideo = {
   id: string;
   title: string;
   src: string;
+  /** Label in a replay menu, when it should match the screen rather than the file name. */
+  menuLabel?: string;
 };
 
 export const TRAINING_VIDEO = {
@@ -42,9 +44,24 @@ export type TrainingVideoId = (typeof TRAINING_VIDEO)[keyof typeof TRAINING_VIDE
 export const TRAINING_VIDEOS: readonly TrainingVideo[] = [
   { id: TRAINING_VIDEO.INTRODUCTION, title: 'Introduction', src: '/training/introduction.mp4' },
   { id: TRAINING_VIDEO.MAINTENANCE, title: 'Maintenance', src: '/training/maintenance.mp4' },
-  { id: TRAINING_VIDEO.NEW_LEASING, title: 'New leasing', src: '/training/new-leasing.mp4' },
-  { id: TRAINING_VIDEO.VACATING, title: 'Vacating', src: '/training/vacating.mp4' },
-  { id: TRAINING_VIDEO.TENANCY_REVIEW, title: 'Tenancy review', src: '/training/tenancy-review.mp4' },
+  {
+    id: TRAINING_VIDEO.NEW_LEASING,
+    title: 'New leasing',
+    menuLabel: 'Lettings',
+    src: '/training/new-leasing.mp4',
+  },
+  {
+    id: TRAINING_VIDEO.VACATING,
+    title: 'Vacating',
+    menuLabel: 'Vacating',
+    src: '/training/vacating.mp4',
+  },
+  {
+    id: TRAINING_VIDEO.TENANCY_REVIEW,
+    title: 'Tenancy review',
+    menuLabel: 'Tenancy reviews',
+    src: '/training/tenancy-review.mp4',
+  },
   { id: TRAINING_VIDEO.INSPECTION, title: 'Inspection', src: '/training/inspection.mp4' },
   { id: TRAINING_VIDEO.ACCOUNTING, title: 'Accounting', src: '/training/accounting.mp4' },
   { id: TRAINING_VIDEO.EMAIL, title: 'Email', src: '/training/email.mp4' },
@@ -89,11 +106,7 @@ export function replayVideosForHref(href: string, audience: TrainingAudience): T
   } else if (href === ROUTES.MAINTENANCE && audience.selfManaged) {
     ids.push(TRAINING_VIDEO.MAINTENANCE);
   } else if (href === ROUTES.LEASING && audience.selfManaged) {
-    ids.push(TRAINING_VIDEO.NEW_LEASING);
-  } else if (href === leasingViewHref(LEASING_PAGE_VIEW.TENANCY_REVIEWS) && audience.selfManaged) {
-    ids.push(TRAINING_VIDEO.TENANCY_REVIEW);
-  } else if (href === leasingViewHref(LEASING_PAGE_VIEW.VACATING) && audience.selfManaged) {
-    ids.push(TRAINING_VIDEO.VACATING);
+    ids.push(TRAINING_VIDEO.NEW_LEASING, TRAINING_VIDEO.TENANCY_REVIEW, TRAINING_VIDEO.VACATING);
   } else if (href === ROUTES.INSPECTIONS && (audience.selfManaged || audience.inspectionOnly)) {
     ids.push(TRAINING_VIDEO.INSPECTION);
   } else if (href === ROUTES.TRUST && audience.trust) {

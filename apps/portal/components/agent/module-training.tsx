@@ -23,6 +23,7 @@ import {
   type TrainingVideo,
 } from '@/constants/module-training';
 import { isPortalWelcomeDeferredRoute, isPublicRoute, ROUTES } from '@/constants/routes';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { PORTAL_WELCOME_DISMISSED_EVENT } from '@/lib/agent-page-guide-events';
 import { fetchPortalWelcomeStatus } from '@/lib/crossub-api/agent-client';
 import { hasSeenTraining, markTrainingSeen } from '@/lib/module-training-seen';
@@ -65,6 +66,59 @@ export function TrainingReplayButton({
     >
       <CircleHelp className="size-3.5" strokeWidth={1.75} />
     </button>
+  );
+}
+
+/** One ? that opens the videos for a module made of several screens, such as Leasing. */
+export function TrainingReplayMenu({
+  videos,
+  className,
+}: {
+  videos: TrainingVideo[];
+  className?: string;
+}) {
+  const { replay } = useModuleTraining();
+  const [open, setOpen] = useState(false);
+  if (videos.length === 0) return null;
+  if (videos.length === 1) return <TrainingReplayButton video={videos[0]!} className={className} />;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          title="Replay a leasing video"
+          aria-label="Replay a leasing video"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={(event) => event.stopPropagation()}
+          className={cn(
+            'text-muted-foreground hover:bg-secondary hover:text-foreground flex size-6 shrink-0 items-center justify-center rounded-full',
+            className,
+          )}
+        >
+          <CircleHelp className="size-3.5" strokeWidth={1.75} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" side="right" className="w-48 p-1">
+        <div role="menu" className="flex flex-col">
+          {videos.map((video) => (
+            <button
+              key={video.id}
+              type="button"
+              role="menuitem"
+              className="hover:bg-muted rounded-md px-3 py-2 text-left text-sm"
+              onClick={() => {
+                setOpen(false);
+                replay(video.id);
+              }}
+            >
+              {video.menuLabel ?? video.title}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -190,7 +244,7 @@ function ModuleTrainingDialog({ video, onClose }: { video: TrainingVideo; onClos
       className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={video.title}
+      aria-label={video.menuLabel ?? video.title}
       onClick={onClose}
     >
       <div
@@ -198,7 +252,7 @@ function ModuleTrainingDialog({ video, onClose }: { video: TrainingVideo; onClos
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between gap-3 text-white">
-          <h2 className="text-base font-semibold">{video.title}</h2>
+          <h2 className="text-base font-semibold">{video.menuLabel ?? video.title}</h2>
           <button
             type="button"
             onClick={onClose}
