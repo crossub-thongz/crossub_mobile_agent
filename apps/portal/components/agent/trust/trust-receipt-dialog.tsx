@@ -107,50 +107,77 @@ function addRentPeriods(paidTo: string, period: string, count: number): string {
   return addCalendarDays(paidTo, 7 * count);
 }
 
-/** Whole periods `paymentCents` plus any held part payment buys. One period costs `rentCents`. */
-function wholePeriodsCovered(rentCents: number, paymentCents: number, partPaymentCents: number): number {
-  if (rentCents <= 0) return 0;
-  const available = Math.max(paymentCents, 0) + Math.max(partPaymentCents, 0);
-  return Math.floor(available / rentCents);
-}
-
 /**
- * The rent period this receipt is paying, "04/11/2026 – 10/11/2026".
- * The preview wins when the rent profile can move paid-to; otherwise the next cycle is counted
- * from the paid-to date, or from the receipt date when paid-to is not set yet.
+ * What this rent allocation buys, counted from the last paid-to. The receipt date is not an input.
+ * A held part payment is added to this payment before the periods are counted. The preview wins
+ * once it has arrived, because a rent change can make one period cost more or less than the rent.
  */
-function rentPaymentPeriodLabel(input: {
+function projectReceiptRent(input: {
   paidTo: string | null;
-  receiptDate: string;
   period: string | null;
   rentCents: number | null;
   paymentCents: number | null;
   partPaymentCents: number | null;
-  preview: { paidToBefore?: string | null; paidToAfter?: string | null; periodsCovered?: number | null } | null;
+}): { paidToBefore: string; paidToAfter: string; periodsCovered: number; partPaymentAfterCents: number } | null {
+  const paidTo = input.paidTo?.slice(0, 10) ?? '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(paidTo) || !input.period) return null;
+  const payment = input.paymentCents ?? 0;
+  const rent = input.rentCents ?? 0;
+  if (!Number.isFinite(payment) || payment <= 0 || !Number.isFinite(rent) || rent <= 0) return null;
+  const available = payment + Math.max(input.partPaymentCents ?? 0, 0);
+  const periodsCovered = Math.floor(available / rent);
+  const paidToAfter = periodsCovered > 0 ? addRentPeriods(paidTo, input.period, periodsCovered) : paidTo;
+  return {
+    paidToBefore: paidTo,
+    paidToAfter,
+    periodsCovered,
+    partPaymentAfterCents: available - periodsCovered * rent,
+  };
+}
+
+/**
+ * One or more whole periods: "03/11/2026 – 09/11/2026".
+ * Short of one period: "Paid to 02/11/2026 + Part payment of $500.00".
+ * Whole periods with money left over join both sentences.
+ */
+function rentPaymentPeriodLabel(input: {
+  paidTo: string | null;
+  period: string | null;
+  rentCents: number | null;
+  paymentCents: number | null;
+  partPaymentCents: number | null;
+  preview: {
+    paidToBefore?: string | null;
+    paidToAfter?: string | null;
+    periodsCovered?: number | null;
+    partPaymentAfterCents?: number | null;
+  } | null;
 }): string | null {
   const fromPreview = input.preview?.paidToBefore ? input.preview : null;
-  const anchor =
-    fromPreview?.paidToBefore ??
-    input.paidTo ??
-    (input.receiptDate ? addCalendarDays(input.receiptDate, -1) : null);
-  const cycle = input.period;
-  if (!anchor || (!cycle && !fromPreview)) return null;
+  const position = fromPreview
+    ? {
+        paidToBefore: fromPreview.paidToBefore ?? '',
+        paidToAfter: fromPreview.paidToAfter ?? fromPreview.paidToBefore ?? '',
+        periodsCovered: fromPreview.periodsCovered ?? 0,
+        partPaymentAfterCents: fromPreview.partPaymentAfterCents ?? 0,
+      }
+    : projectReceiptRent(input);
+  if (!position?.paidToBefore) return null;
 
-  const covered =
-    typeof fromPreview?.periodsCovered === 'number'
-      ? fromPreview.periodsCovered
-      : input.rentCents != null
-        ? wholePeriodsCovered(input.rentCents, input.paymentCents ?? 0, input.partPaymentCents ?? 0)
-        : 0;
-  const start = addCalendarDays(anchor, 1);
-  const end =
-    covered > 0
-      ? (fromPreview?.paidToAfter ?? (cycle ? addRentPeriods(anchor, cycle, covered) : null))
-      : cycle
-        ? addRentPeriods(anchor, cycle, 1)
-        : null;
+  const partCents = position.partPaymentAfterCents;
+  if (position.periodsCovered <= 0) {
+    if (partCents <= 0) return null;
+    return COPY.rentPartPayment(formatPaidToSlash(position.paidToBefore), formatCents(partCents));
+  }
+
+  const start = addCalendarDays(position.paidToBefore, 1);
+  const end = position.paidToAfter;
   if (!end || end < start) return null;
-  return COPY.rentPeriod(formatPaidToSlash(start), formatPaidToSlash(end));
+  const range = COPY.rentPeriod(formatPaidToSlash(start), formatPaidToSlash(end));
+  if (partCents > 0) {
+    return `${range}, ${COPY.rentPartPayment(formatPaidToSlash(end), formatCents(partCents))}`;
+  }
+  return range;
 }
 
 /** Paid-to as dd/mm/yyyy, the form the rent status line uses. */
@@ -370,7 +397,6 @@ export function TrustReceiptDialog({
   const rentPeriodLabel = selected
     ? rentPaymentPeriodLabel({
         paidTo: paidToDate,
-        receiptDate: date,
         period: trustRentPeriod ?? tenancy?.period ?? null,
         rentCents: trustRentCents ?? tenancy?.cents ?? null,
         paymentCents: rentCents,
@@ -574,7 +600,7 @@ export function TrustReceiptDialog({
             />
           </SideField>
           <Fact label={COPY.property}>{propertyAddress || COPY.empty}</Fact>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap justify-end gap-1.5">
             {TRUST_RECEIPT_METHOD_ORDER.map((item) => {
               const selectedMethod = method === item;
               return (
