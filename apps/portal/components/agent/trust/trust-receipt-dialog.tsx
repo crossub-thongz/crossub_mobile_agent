@@ -498,8 +498,23 @@ export function TrustReceiptDialog({
         <div className="grid items-center gap-x-8 gap-y-3 text-sm lg:grid-cols-2">
           <Fact label={COPY.tenant}>
             {selected ? (
-              <div className="flex h-9 items-center">
+              <div className="flex h-9 items-center justify-between gap-2">
                 <span className="truncate font-medium">{partyLabel(selected.ledgerName, selected.ledgerCode)}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 shrink-0 px-2 text-xs"
+                  disabled={pending}
+                  onClick={() => {
+                    depositEdited.current = false;
+                    setSelected(null);
+                    setInvoiceAmounts({});
+                    setDepositDetails('');
+                  }}
+                >
+                  {COPY.changeTenant}
+                </Button>
               </div>
             ) : (
               <div className="relative">
