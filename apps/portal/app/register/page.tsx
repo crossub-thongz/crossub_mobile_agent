@@ -25,6 +25,7 @@ import {
   readRegisterWorkspaceDraft,
   saveRegisterAccountDraft,
 } from '@/lib/register-account-draft';
+import { reportRegistrationCompleted } from '@/lib/openai-ads';
 import { DEFAULT_REGISTER_SERVICE_LEVEL } from '@/lib/portal-service-level';
 import { postAuthDestination } from '@/lib/system-access-agreement';
 import {
@@ -218,6 +219,7 @@ export default function RegisterPage() {
         acceptTerms: true,
       });
       await refresh();
+      reportRegistrationCompleted();
       router.replace(
         postAuthDestination(
           user,

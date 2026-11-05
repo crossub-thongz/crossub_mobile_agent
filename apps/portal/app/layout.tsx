@@ -35,6 +35,7 @@ import { AgentUiProvider } from '@/components/providers/agent-ui-provider';
 import { ThemedToaster } from '@/components/ui/themed-toaster';
 import { AGENT_UI } from '@/constants/agent-ui';
 import { resolveAgentUi } from '@/lib/agent-ui';
+import { OPENAI_ADS_PIXEL_SCRIPT } from '@/lib/openai-ads';
 import './globals.css';
 
 const inter = Inter({
@@ -86,6 +87,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <Script id="openai-ads-pixel" strategy="afterInteractive">
+          {OPENAI_ADS_PIXEL_SCRIPT}
+        </Script>
         <Script id="crossub-theme-init" strategy="beforeInteractive">
           {`(function(){try{var t=localStorage.getItem('theme');var d=document.documentElement;if(t==='dark')d.classList.add('dark');else d.classList.remove('dark')}catch(e){}})();`}
         </Script>
