@@ -341,47 +341,31 @@ export function TrustReceiptDialog({
       ? Math.max(lockedAmountCents - depositCents - invoiceTotal, 0)
       : null
     : centsOf(rentAmount);
-  const totalCents =
-    rentCents != null && depositCents != null && invoiceTotal != null
-      ? amountLocked
-        ? lockedAmountCents
-        : rentCents + depositCents + invoiceTotal
-      : null;
   const rentInput = amountLocked && rentCents != null ? centsToDollarsInput(rentCents) : rentAmount;
+  const headerCents = amountLocked ? lockedAmountCents : amount.trim() ? centsOf(amount) : null;
 
-  function syncAmount(rent: number, deposit: number, invoicesCents: number) {
-    setAmount(centsToDollarsInput(rent + deposit + invoicesCents));
+  /** Rent is whatever of the typed amount the deposit and invoices have not taken. */
+  function applyRemainder(nextAmount: string, nextDeposit: string, invoicesCents: number) {
+    if (!nextAmount.trim()) {
+      setRentAmount('');
+      return;
+    }
+    const total = centsOf(nextAmount);
+    const deposit = centsOf(nextDeposit);
+    if (total == null || deposit == null) return;
+    setRentAmount(centsToDollarsInput(Math.max(total - deposit - invoicesCents, 0)));
   }
 
   function onAmountChange(next: string) {
     if (amountLocked) return;
     setAmount(next);
-    if (!next.trim()) {
-      setRentAmount('');
-      return;
-    }
-    const total = centsOf(next);
-    const deposit = centsOf(depositAmount) ?? 0;
-    const invoicesCents = invoiceTotal ?? 0;
-    if (total == null) return;
-    setRentAmount(centsToDollarsInput(Math.max(total - deposit - invoicesCents, 0)));
-  }
-
-  function onRentChange(next: string) {
-    if (amountLocked) return;
-    setRentAmount(next);
-    const rent = centsOf(next);
-    const deposit = centsOf(depositAmount) ?? 0;
-    if (rent == null) return;
-    syncAmount(rent, deposit, invoiceTotal ?? 0);
+    applyRemainder(next, depositAmount, invoiceTotal ?? 0);
   }
 
   function onDepositChange(next: string) {
     setDepositAmount(next);
-    const deposit = centsOf(next);
-    if (deposit == null || amountLocked) return;
-    const rent = centsOf(rentAmount) ?? 0;
-    syncAmount(rent, deposit, invoiceTotal ?? 0);
+    if (amountLocked || (centsOf(next) == null && next.trim())) return;
+    applyRemainder(amount, next, invoiceTotal ?? 0);
   }
 
   const firstInvoice = invoiceRows.find((row) => (row.cents ?? 0) > 0) ?? null;
@@ -415,12 +399,9 @@ export function TrustReceiptDialog({
   function setInvoiceAmount(invoiceId: string, value: string) {
     const nextAmounts = { ...invoiceAmounts, [invoiceId]: value };
     setInvoiceAmounts(nextAmounts);
-    if (amountLocked) return;
+    if (amountLocked || (centsOf(value) == null && value.trim())) return;
     const nextTotal = invoices.reduce((sum, invoice) => sum + (centsOf(nextAmounts[invoice.id] ?? '') ?? 0), 0);
-    const rent = centsOf(rentAmount) ?? 0;
-    const deposit = centsOf(depositAmount) ?? 0;
-    if (centsOf(value) == null && value.trim()) return;
-    syncAmount(rent, deposit, nextTotal);
+    applyRemainder(amount, depositAmount, nextTotal);
   }
 
   async function onSubmit() {
@@ -517,23 +498,8 @@ export function TrustReceiptDialog({
         <div className="grid items-center gap-x-8 gap-y-3 text-sm lg:grid-cols-2">
           <Fact label={COPY.tenant}>
             {selected ? (
-              <div className="flex h-9 items-center justify-between gap-2">
+              <div className="flex h-9 items-center">
                 <span className="truncate font-medium">{partyLabel(selected.ledgerName, selected.ledgerCode)}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 shrink-0 px-2 text-xs"
-                  disabled={pending}
-                  onClick={() => {
-                    depositEdited.current = false;
-                    setSelected(null);
-                    setInvoiceAmounts({});
-                    setDepositDetails('');
-                  }}
-                >
-                  {COPY.changeTenant}
-                </Button>
               </div>
             ) : (
               <div className="relative">
@@ -651,8 +617,8 @@ export function TrustReceiptDialog({
                   <Input
                     inputMode="decimal"
                     value={rentInput}
-                    disabled={pending || amountLocked}
-                    onChange={(event) => onRentChange(event.target.value)}
+                    readOnly
+                    disabled={pending}
                     placeholder="$0.00"
                     className="h-9 text-right tabular-nums"
                   />
@@ -719,15 +685,13 @@ export function TrustReceiptDialog({
           />
         ) : null}
 
-        {preview ? <ReceiptPreview preview={preview} /> : null}
-
         <DialogFooter>
           <Button type="button" variant="outline" disabled={pending} onClick={onClose}>
             {COPY.cancel}
           </Button>
           <Button type="button" disabled={pending || !selected} onClick={() => void onSubmit()}>
             {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-            {COPY.submit(totalCents != null && totalCents > 0 ? formatCents(totalCents) : '$0.00')}
+            {COPY.submit(headerCents != null && headerCents > 0 ? formatCents(headerCents) : '$0.00')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -856,37 +820,4 @@ function useReceiptPreview({
   }, [key, agencyId, bankAccountId, ledgerId, date, rent, invoiceId, paid]);
 
   return key && result?.key === key ? result.data : null;
-}
-
-function ReceiptPreview({ preview }: { preview: TrustReceiptPreview }) {
-  const lines = [
-    preview.rent
-      ? INVOICE_COPY.previewPaidTo(
-          formatTrustDate(preview.rent.paidToAfter),
-          formatTrustDate(preview.rent.effectivePaidToAfter),
-        )
-      : null,
-    ...preview.fees.map((fee: { willPost?: boolean; name?: string; amountCents?: number }) =>
-      fee.willPost
-        ? INVOICE_COPY.previewFee(fee.name ?? '', formatCents(fee.amountCents))
-        : INVOICE_COPY.previewFeePending(fee.name ?? '', formatCents(fee.amountCents)),
-    ),
-    preview.pendingFeesToPost.count > 0
-      ? INVOICE_COPY.previewPendingFees(
-          preview.pendingFeesToPost.count,
-          formatCents(preview.pendingFeesToPost.amountCents),
-        )
-      : null,
-    INVOICE_COPY.previewOwnerNet(formatCents(preview.ownerNetCents)),
-  ].filter((line): line is string => line != null);
-  return (
-    <div className="rounded-lg border bg-muted/40 p-3 text-xs">
-      <p className="font-medium">{INVOICE_COPY.previewTitle}</p>
-      <ul className="text-muted-foreground mt-1 space-y-0.5">
-        {lines.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
-    </div>
-  );
 }
