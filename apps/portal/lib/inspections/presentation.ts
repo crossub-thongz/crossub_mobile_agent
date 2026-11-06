@@ -37,6 +37,40 @@ export function isInspectionCancelled(inspection: Inspection): boolean {
   return inspection.status.toLowerCase().includes('cancelled');
 }
 
+/**
+ * Off the admin Activities "Active" count.
+ *
+ * Property 360° treats first review, second review, completed, and published as finished
+ * (`workflowCaseLifecycle`), even when the inspection module still has a sign-off step.
+ * The agent task list follows that count, so a house with no active task does not keep
+ * showing those jobs as overdue.
+ */
+export function isSettledInspectionActivity(inspection: Inspection): boolean {
+  if (inspection.awaitingAgentPayment) return false;
+  if (isInspectionCancelled(inspection)) return true;
+  const api = (inspection.apiStatus ?? '').toUpperCase();
+  if (api === SessionStatusEnum.CLOSED) return true;
+  if (
+    api === INSPECTION_STATUS.FIRST_REVIEW ||
+    api === INSPECTION_STATUS.SECOND_REVIEW ||
+    api === INSPECTION_STATUS.COMPLETED ||
+    api === INSPECTION_STATUS.PUBLISHED ||
+    api === INSPECTION_STATUS.CANCELLED
+  ) {
+    return true;
+  }
+  const label = inspection.status.toLowerCase();
+  if (label.includes('awaiting approval') || label.includes('awaiting payment')) return false;
+  return (
+    label.includes('completed') ||
+    label.includes('sent to tenant') ||
+    label.includes('closed') ||
+    label.includes('published') ||
+    label.includes('first review') ||
+    label.includes('second review')
+  );
+}
+
 export function isInspectionDone(inspection: Inspection): boolean {
   const api = (inspection.apiStatus ?? '').toLowerCase();
   if (api === SessionStatusEnum.CLOSED) return true;

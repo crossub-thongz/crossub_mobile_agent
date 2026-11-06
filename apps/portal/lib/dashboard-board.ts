@@ -1,4 +1,6 @@
 import { formatDate, formatTime } from '@/lib/format-datetime';
+import { isSettledInspectionActivity } from '@/lib/inspections/presentation';
+import { isSettledMaintenanceActivity } from '@/lib/property-job-rows';
 import type {
   Inspection,
   MaintenanceRequest,
@@ -265,7 +267,7 @@ export function buildDashboardBoard(input: {
   }
 
   for (const job of maintenance) {
-    if (!job.requiresApproval || isClosed(job.status)) continue;
+    if (!job.requiresApproval || isSettledMaintenanceActivity(job)) continue;
     const due = job.quoteExpiry || job.updatedAt;
     const days = due ? daysUntil(due, now) : 0;
     if (days == null || !withinHorizon(days)) continue;
@@ -319,7 +321,7 @@ export function buildDashboardBoard(input: {
 
   let toSchedule = 0;
   for (const inspection of input.inspections) {
-    if (isClosed(inspection.status)) continue;
+    if (isSettledInspectionActivity(inspection)) continue;
     if (inspection.scheduledAt) {
       const days = daysUntil(inspection.scheduledAt, now);
       if (days == null || days < 0 || !withinHorizon(days)) continue;
@@ -387,14 +389,16 @@ export function buildDashboardBoard(input: {
   }).length;
 
   const arrears = accountingRows.filter((row) => row.arrearsAmount > 0);
-  const openMaintenance = maintenance.filter((job) => !isClosed(job.status));
+  const openMaintenance = maintenance.filter((job) => !isSettledMaintenanceActivity(job));
   const delayed = openMaintenance.flatMap((job) => {
     const age = job.createdAt ? daysUntil(job.createdAt, now) : null;
     if (age == null || -age <= MAINTENANCE_OVERDUE_DAYS) return [];
     return [-age];
   });
 
-  const openInspections = input.inspections.filter((inspection) => !isClosed(inspection.status));
+  const openInspections = input.inspections.filter(
+    (inspection) => !isSettledInspectionActivity(inspection),
+  );
   const pendingFeedback = openInspections.filter(
     (inspection) => inspection.reportStatus === 'uploaded' || inspection.awaitingAgentPayment,
   ).length;

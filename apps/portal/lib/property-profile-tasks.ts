@@ -294,6 +294,7 @@ export function buildPropertyProfileTasks(input: {
   }
 
   for (const action of attention) {
+    if (action.category === 'Accounting' || action.id.startsWith('arrears-')) continue;
     const extra = taskFromNeedAction(action, jobsById);
     if (extra) tasks.push(extra);
   }

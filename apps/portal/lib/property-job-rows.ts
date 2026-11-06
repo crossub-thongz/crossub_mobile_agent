@@ -6,7 +6,8 @@ import {
   vacatingWorkflowProgress,
 } from '@/lib/case-workflows';
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
-import { isInspectionDone } from '@/lib/inspections/presentation';
+import { isInspectionDone, isSettledInspectionActivity } from '@/lib/inspections/presentation';
+import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 import { resolveIngoingInspectionDateDisplay } from '@/lib/ingoing-inspection-display';
 import { isDeletedInspection } from '@/lib/property-inspection-history';
 import {
@@ -260,14 +261,17 @@ export function splitPropertyJobRows(rows: PropertyJobRow[]): {
   };
 }
 
-function isCompletedMaintenance(request: MaintenanceRequest): boolean {
+export function isSettledMaintenanceActivity(request: MaintenanceRequest): boolean {
   if (isDeletedMaintenance(request)) return true;
+  // Invoiced jobs stay on the maintenance tab, but Activities labels them "completed"
+  // and leaves them out of the active count.
+  if (request.apiStatus === MAINTENANCE_STATUS.INVOICED) return true;
   const status = request.status.toLowerCase();
-  return status.includes('complete') || status.includes('closed');
+  return status.includes('complete') || status.includes('closed') || status.includes('invoiced');
 }
 
 function isCompletedInspection(inspection: Inspection): boolean {
-  return isInspectionDone(inspection);
+  return isSettledInspectionActivity(inspection) || isInspectionDone(inspection);
 }
 
 const INSPECTION_JOB_TYPE: Record<Inspection['type'], string> = {
@@ -351,11 +355,11 @@ export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobR
       ]
         .filter(Boolean)
         .join(' · '),
-      date: createdAt,
+      date: request.quoteExpiry ? formatDate(request.quoteExpiry) : '—',
       createdAt,
       createdAtMs,
       status: deleted ? 'Deleted' : progress.currentStepLabel,
-      phase: isCompletedMaintenance(request) ? 'completed' : 'in_progress',
+      phase: isSettledMaintenanceActivity(request) ? 'completed' : 'in_progress',
     };
   });
 }
@@ -632,6 +636,9 @@ export function buildPropertyOverviewJobRows(input: {
   accounting?: PropertyAccounting | null;
   includeCompleted?: boolean;
 }): PropertyJobRow[] {
+  // Rent arrears are an accounting balance, not an Activities task. The admin board
+  // shows 0 active tasks while this list was still raising "days outstanding".
+  void input.accounting;
   // Leasing workflow cases also surface rent reviews and end-leasing rows — those are
   // already represented by rentReviewJobRows / vacatingJobRows below.
   const leasingOnlyCases = input.leasingCases.filter((item) => item.category === 'leasing');
@@ -642,7 +649,6 @@ export function buildPropertyOverviewJobRows(input: {
     ...leasingWorkflowJobRows(leasingOnlyCases),
     ...tribunalJobRows(input.tribunalCases),
     ...vacatingJobRows(input.vacatingCases),
-    ...accountingJobRows(input.accounting),
   ]);
   if (input.includeCompleted) return organizePropertyJobRows(rows);
   return splitPropertyJobRows(rows).inProgress;
