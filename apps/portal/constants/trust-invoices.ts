@@ -142,11 +142,10 @@ export const TRUST_PREVIEW_DEBOUNCE_MS = 300;
 
 export const TRUST_BILLS_SUMMARY_COPY = {
   readyToPay: 'Ready to pay',
-  insufficient: 'Not enough funds',
+  insufficient: 'Insufficient funds',
   billsDue: 'Bills due',
-  invoicesOutstanding: 'Invoices outstanding',
-  invoicesOverdue: 'Overdue invoices',
-  invoicesNotYetDue: 'Not yet due',
+  invoicesOutstanding: 'Tenant invoices owing',
+  invoicesOverdue: (count: number) => `${count} overdue`,
 } as const;
 
 export const TRUST_INVOICES_COPY = {

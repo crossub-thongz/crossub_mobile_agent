@@ -1,16 +1,19 @@
 'use client';
 
-import { Loader2, Lock, LockOpen } from 'lucide-react';
+import { AlertTriangle, Loader2, Lock, LockOpen } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
+import { FilterChips } from '@/components/agent/filter-chips';
 import { TrustBankBalancesPanel } from '@/components/agent/trust/trust-bank-balances-panel';
+import { TrustBankStatementTab } from '@/components/agent/trust/trust-bank-statement-tab';
 import {
   TrustLoadError,
   TrustLoading,
   TrustPanel,
   TrustPill,
   TrustReasonDialog,
+  TrustStat,
 } from '@/components/agent/trust/trust-ui';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,12 +27,19 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  TRUST_BANK_RECONCILIATION_STATUS,
   TRUST_RECONCILIATION_COPY as COPY,
+  TRUST_RECONCILIATION_SUMMARY_COPY as SUMMARY_COPY,
+  TRUST_RECONCILIATION_VIEW,
+  TRUST_RECONCILIATION_VIEWS,
+  TRUST_TONE_TEXT,
+  type TrustReconciliationView,
   TRUST_RECONCILIATION_STATUS,
   TRUST_RECONCILIATION_STATUS_LABEL,
   TRUST_RECONCILIATION_STATUS_TONE,
   TRUST_RECONCILIATION_UPKEEP_COPY as UPKEEP_COPY,
 } from '@/constants/trust';
+import { useTrustOverview } from '@/hooks/use-trust-overview';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
 import {
   fetchTrustReconciliationFigures,
@@ -37,20 +47,88 @@ import {
   lockTrustReconciliationMonth,
   recordTrustBankBalance,
   revokeTrustReconciliationLock,
+  type TrustOverview,
   type TrustReconciliationFigures,
   type TrustReconciliationMonth,
 } from '@/lib/crossub-api/agent-trust-client';
 import { formatCents, formatTrustDate, parseDollarsToCents } from '@/lib/trust-accounting';
 import { cn, formatDate } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { trustReconciliationBanner } from '@/utils/trust-overview';
 import { trustFolioBalancesCents } from '@/utils/trust-reconciliation';
 
+const WARN_TEXT = TRUST_TONE_TEXT.WARN;
+
+function ReconciliationSummary({ overview }: { overview: TrustOverview }) {
+  const rec = overview.trustBankAccount.reconciliation;
+  const banner = trustReconciliationBanner(overview);
+  const unallocated = overview.openingUnallocatedCents !== 0;
+  const reconciled = rec.status === TRUST_BANK_RECONCILIATION_STATUS.RECONCILED;
+  return (
+    <div className="space-y-3">
+      {banner ? (
+        <p className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-800 dark:text-amber-200">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          {banner}
+        </p>
+      ) : null}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <TrustStat label={SUMMARY_COPY.cashbookClosing} value={formatCents(overview.cashBookBalanceCents)} />
+        <TrustStat label={SUMMARY_COPY.allocatedFolios} value={formatCents(overview.ledgerBalanceCents)} />
+        <TrustStat
+          label={SUMMARY_COPY.unallocatedOpening}
+          value={formatCents(overview.openingUnallocatedCents)}
+          tone={unallocated ? WARN_TEXT : undefined}
+        />
+        <TrustStat
+          label={SUMMARY_COPY.bankStatement}
+          value={
+            !rec.asAt
+              ? SUMMARY_COPY.notEntered
+              : reconciled
+                ? SUMMARY_COPY.reconciled
+                : SUMMARY_COPY.outBy(formatCents(rec.outByCents ?? 0))
+          }
+          tone={reconciled ? TRUST_TONE_TEXT.GOOD : WARN_TEXT}
+          hint={rec.asAt ? SUMMARY_COPY.asAt(formatTrustDate(rec.asAt)) : undefined}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Reconciliation: the month's position on top, then month-end closing or the bank statement import. */
 export function TrustReconciliationTab({
   agencyId,
   bankAccountId,
 }: {
   agencyId: string;
   bankAccountId: string;
+}) {
+  const overview = useTrustOverview(agencyId, bankAccountId);
+  const [view, setView] = useState<TrustReconciliationView>(TRUST_RECONCILIATION_VIEW.MONTH_END);
+
+  return (
+    <div className="space-y-4">
+      {overview.data ? <ReconciliationSummary overview={overview.data} /> : null}
+      <FilterChips options={TRUST_RECONCILIATION_VIEWS} value={view} onChange={setView} />
+      {view === TRUST_RECONCILIATION_VIEW.BANK_STATEMENT ? (
+        <TrustBankStatementTab agencyId={agencyId} bankAccountId={bankAccountId} />
+      ) : (
+        <MonthEndView agencyId={agencyId} bankAccountId={bankAccountId} onChanged={overview.reload} />
+      )}
+    </div>
+  );
+}
+
+function MonthEndView({
+  agencyId,
+  bankAccountId,
+  onChanged: onFiguresChanged,
+}: {
+  agencyId: string;
+  bankAccountId: string;
+  onChanged: () => void;
 }) {
   const months = useTrustResource(`${agencyId}:${bankAccountId}`, () =>
     fetchTrustReconciliationMonths(agencyId, bankAccountId),
@@ -60,6 +138,7 @@ export function TrustReconciliationTab({
   const onChanged = () => {
     months.reload();
     setChanges((n) => n + 1);
+    onFiguresChanged();
   };
 
   if (!months.data) {

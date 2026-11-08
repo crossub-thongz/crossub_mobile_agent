@@ -1,7 +1,9 @@
 'use client';
 
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
+import { FilterChips } from '@/components/agent/filter-chips';
 import { TrustReceiptDialog } from '@/components/agent/trust/trust-receipt-dialog';
 import { TrustRentProfileDialog } from '@/components/agent/trust/trust-rent-profile-dialog';
 import {
@@ -17,13 +19,22 @@ import {
   TRUST_PAGE_COPY,
   TRUST_PAGE_SIZE_MAX,
   TRUST_RENT_COPY as COPY,
+  TRUST_RENT_FILTER,
+  TRUST_RENT_FILTERS,
   TRUST_RENT_PERIOD_LABEL,
   TRUST_RENT_PROFILE_COPY as RENT_COPY,
+  TRUST_TONE_TEXT,
+  type TrustRentFilter,
 } from '@/constants/trust';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
 import { fetchTrustRentList, type TrustRentRow } from '@/lib/crossub-api/agent-trust-client';
 import { formatCents, formatTrustDate } from '@/lib/trust-accounting';
 import { cn } from '@/lib/utils';
+
+/** Paid in advance: the effective paid-to date is past today (D112: positive arrears days). */
+function isPaidInAdvance(row: TrustRentRow): boolean {
+  return row.arrearsDays != null && row.arrearsDays > 0;
+}
 
 function rentLabel(row: TrustRentRow): string {
   if (row.rentAmountCents == null || !row.rentPeriod) return '—';
@@ -38,7 +49,8 @@ export function TrustRentTab({
   bankAccountId: string;
 }) {
   const [search, setSearch] = useState('');
-  const [arrearsOnly, setArrearsOnly] = useState(false);
+  const [filter, setFilter] = useState<TrustRentFilter>(TRUST_RENT_FILTER.ALL);
+  const arrearsOnly = filter === TRUST_RENT_FILTER.ARREARS;
   const [receiptRow, setReceiptRow] = useState<TrustRentRow | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [rentRow, setRentRow] = useState<TrustRentRow | null>(null);
@@ -53,6 +65,9 @@ export function TrustRentTab({
         arrearsOnly: arrearsOnly || undefined,
       }),
   );
+
+  const rows =
+    filter === TRUST_RENT_FILTER.ADVANCE ? (data?.items ?? []).filter(isPaidInAdvance) : (data?.items ?? []);
 
   return (
     <div className="space-y-4">
@@ -69,27 +84,31 @@ export function TrustRentTab({
             tone={data.kpis.inArrearsCount > 0 ? 'text-destructive' : undefined}
           />
           <TrustStat label={COPY.paidInAdvance} value={data.kpis.paidInAdvanceCount} />
-          <TrustStat label={COPY.noRentSetup} value={data.kpis.noRentSetupCount} />
+          <TrustStat
+            label={COPY.noRentSetup}
+            value={data.kpis.noRentSetupCount}
+            tone={data.kpis.noRentSetupCount > 0 ? TRUST_TONE_TEXT.WARN : undefined}
+          />
         </div>
       ) : null}
 
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
         <TrustSearchInput value={search} onChange={setSearch} placeholder={COPY.searchPlaceholder} />
-        <Button type="button" size="sm" className="h-9" onClick={() => {
-          setReceiptRow(null);
-          setReceiptOpen(true);
-        }}>
-          {COPY.receipt}
+        <div className="min-w-0 flex-1">
+          <FilterChips options={TRUST_RENT_FILTERS} value={filter} onChange={setFilter} />
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          className="h-9 shrink-0"
+          onClick={() => {
+            setReceiptRow(null);
+            setReceiptOpen(true);
+          }}
+        >
+          <Plus className="size-4" />
+          {COPY.receiveRent}
         </Button>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            className="size-4"
-            checked={arrearsOnly}
-            onChange={(e) => setArrearsOnly(e.target.checked)}
-          />
-          {COPY.arrearsOnly}
-        </label>
       </div>
 
       {!data ? (
@@ -98,9 +117,9 @@ export function TrustRentTab({
         ) : loading ? (
           <TrustLoading />
         ) : null
-      ) : data.items.length === 0 ? (
+      ) : rows.length === 0 ? (
         <p className="text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm">
-          {query || arrearsOnly ? TRUST_PAGE_COPY.noMatches : COPY.empty}
+          {query || filter !== TRUST_RENT_FILTER.ALL ? TRUST_PAGE_COPY.noMatches : COPY.empty}
         </p>
       ) : (
         <div className={cn('overflow-x-auto rounded-xl border bg-card', loading && 'opacity-60')}>
@@ -119,7 +138,7 @@ export function TrustRentTab({
               </tr>
             </thead>
             <tbody>
-              {data.items.map((row) => (
+              {rows.map((row) => (
                 <tr key={row.ledgerId} className="border-b last:border-b-0">
                   <td className={TRUST_TABLE_CELL_CLASS}>
                     <p className="font-medium">{row.ledgerName}</p>

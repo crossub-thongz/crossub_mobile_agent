@@ -20,14 +20,6 @@ export function billsReadyToPay(summary: TrustBillsSummary): { count: number; ce
   };
 }
 
-/** Outstanding invoices not yet past their due date. */
-export function invoicesNotYetDue(summary: TrustBillsSummary): { count: number; cents: number } {
-  return {
-    count: Math.max(0, summary.invoicesOutstandingCount - summary.invoicesOverdueCount),
-    cents: Math.max(0, summary.invoicesOutstandingCents - summary.invoicesOverdueCents),
-  };
-}
-
 /** Only an invoice with nothing paid against it, and not already cancelled, can be cancelled. */
 export function canCancelTrustInvoice(invoice: TrustTenantInvoice): boolean {
   return invoice.paidCents === 0 && invoice.status !== TRUST_INVOICE_STATUS.CANCELLED;

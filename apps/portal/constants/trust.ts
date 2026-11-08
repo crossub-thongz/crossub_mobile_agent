@@ -71,75 +71,56 @@ export const TRUST_INPUT_LIMITS = {
 
 export const TRUST_TAB = {
   OVERVIEW: 'overview',
-  LEDGERS: 'ledgers',
-  TRANSACTIONS: 'transactions',
   RENT: 'rent',
+  TRANSACTIONS: 'transactions',
   BILLS: 'bills',
   DISBURSE: 'disburse',
   PENDING_MAIL: 'pending-mail',
-  BANK_FILES: 'bank-files',
-  BANK_STATEMENT: 'bank-statement',
   RECONCILIATION: 'reconciliation',
-  REPORTS: 'reports',
-  AUDIT_LOG: 'audit-log',
+  RECORDS: 'records',
   SETTINGS: 'settings',
 } as const;
 
 export type TrustTab = (typeof TRUST_TAB)[keyof typeof TRUST_TAB];
 
-/** Menu groups, matching the admin Trust Accounting sidebar. */
+/** Menu groups (Accounting V2 layout). */
 export const TRUST_NAV_SECTION = {
-  OVERVIEW: 'overview',
   DAILY: 'daily',
-  LEDGER_CONTROL: 'ledger-control',
-  ADMINISTRATION: 'administration',
+  RECORDS_CONTROL: 'records-control',
 } as const;
 
 export type TrustNavSection = (typeof TRUST_NAV_SECTION)[keyof typeof TRUST_NAV_SECTION];
 
 export const TRUST_NAV_SECTION_LABEL: Record<TrustNavSection, string> = {
-  [TRUST_NAV_SECTION.OVERVIEW]: 'Overview',
   [TRUST_NAV_SECTION.DAILY]: 'Daily accounting',
-  [TRUST_NAV_SECTION.LEDGER_CONTROL]: 'Ledger & control',
-  [TRUST_NAV_SECTION.ADMINISTRATION]: 'Administration',
+  [TRUST_NAV_SECTION.RECORDS_CONTROL]: 'Records & control',
 };
 
-/** Menu names. The screen title uses the same words, except the dashboard. */
+/** Menu names. The screen title uses the same words. */
 export const TRUST_NAV_LABEL: Record<TrustTab, string> = {
-  [TRUST_TAB.OVERVIEW]: 'Dashboard',
-  [TRUST_TAB.TRANSACTIONS]: 'Transactions',
+  [TRUST_TAB.OVERVIEW]: 'Overview',
   [TRUST_TAB.RENT]: 'Rent Payments',
+  [TRUST_TAB.TRANSACTIONS]: 'Transactions',
   [TRUST_TAB.BILLS]: 'Bills & Invoices',
   [TRUST_TAB.DISBURSE]: 'Disbursement',
   [TRUST_TAB.PENDING_MAIL]: 'Pending mail',
-  [TRUST_TAB.BANK_FILES]: 'Bank files',
-  [TRUST_TAB.BANK_STATEMENT]: 'Bank statement',
-  [TRUST_TAB.LEDGERS]: 'Folios',
   [TRUST_TAB.RECONCILIATION]: 'Reconciliation',
-  [TRUST_TAB.REPORTS]: 'Reports',
-  [TRUST_TAB.AUDIT_LOG]: 'Audit Log',
+  [TRUST_TAB.RECORDS]: 'Records & Reports',
   [TRUST_TAB.SETTINGS]: 'Trust Settings',
 };
 
 /** The title at the top of the open screen. */
-export const TRUST_SCREEN_TITLE: Record<TrustTab, string> = {
-  ...TRUST_NAV_LABEL,
-  [TRUST_TAB.OVERVIEW]: 'Trust Accounting Overview',
-};
+export const TRUST_SCREEN_TITLE: Record<TrustTab, string> = TRUST_NAV_LABEL;
 
 export const TRUST_SCREEN_SUBTITLE: Record<TrustTab, string> = {
   [TRUST_TAB.OVERVIEW]: 'Your daily accounting workspace',
-  [TRUST_TAB.TRANSACTIONS]: 'All trust money movements',
   [TRUST_TAB.RENT]: 'Paid-to, arrears and tenancy rent position',
+  [TRUST_TAB.TRANSACTIONS]: 'All trust money movements',
   [TRUST_TAB.BILLS]: 'Owner bills to pay and tenant invoices to collect',
   [TRUST_TAB.DISBURSE]: 'Pay owners, suppliers and the agency from the trust account',
   [TRUST_TAB.PENDING_MAIL]: 'Rent receipts and owner statements waiting to be emailed',
-  [TRUST_TAB.BANK_FILES]: 'ABA files for payments leaving the trust account',
-  [TRUST_TAB.BANK_STATEMENT]: 'Import a bank file and match its lines',
-  [TRUST_TAB.LEDGERS]: 'Property-linked folios and their parties',
-  [TRUST_TAB.RECONCILIATION]: 'Cash book, folios and the bank balance for the month',
-  [TRUST_TAB.REPORTS]: 'Trust reports for this account',
-  [TRUST_TAB.AUDIT_LOG]: 'Every accounting change in this workspace, newest first',
+  [TRUST_TAB.RECONCILIATION]: 'Bank statement matching and month-end closing',
+  [TRUST_TAB.RECORDS]: 'Folios, trust reports and audit history',
   [TRUST_TAB.SETTINGS]: 'Trust bank accounts, ABA details and account codes',
 };
 
@@ -147,27 +128,63 @@ export const TRUST_NAV_SECTIONS: readonly {
   id: TrustNavSection;
   items: readonly TrustTab[];
 }[] = [
-  { id: TRUST_NAV_SECTION.OVERVIEW, items: [TRUST_TAB.OVERVIEW] },
   {
     id: TRUST_NAV_SECTION.DAILY,
     items: [
-      TRUST_TAB.TRANSACTIONS,
+      TRUST_TAB.OVERVIEW,
       TRUST_TAB.RENT,
+      TRUST_TAB.TRANSACTIONS,
       TRUST_TAB.BILLS,
       TRUST_TAB.DISBURSE,
       TRUST_TAB.PENDING_MAIL,
-      TRUST_TAB.BANK_FILES,
-      TRUST_TAB.BANK_STATEMENT,
+      TRUST_TAB.RECONCILIATION,
     ],
   },
   {
-    id: TRUST_NAV_SECTION.LEDGER_CONTROL,
-    items: [TRUST_TAB.LEDGERS, TRUST_TAB.RECONCILIATION, TRUST_TAB.REPORTS],
+    id: TRUST_NAV_SECTION.RECORDS_CONTROL,
+    items: [TRUST_TAB.RECORDS, TRUST_TAB.SETTINGS],
   },
-  {
-    id: TRUST_NAV_SECTION.ADMINISTRATION,
-    items: [TRUST_TAB.AUDIT_LOG, TRUST_TAB.SETTINGS],
-  },
+];
+
+/** Records & Reports: folios, trust reports and the audit log share one screen. */
+export const TRUST_RECORDS_VIEW = {
+  FOLIOS: 'FOLIOS',
+  REPORTS: 'REPORTS',
+  AUDIT_LOG: 'AUDIT_LOG',
+} as const;
+export type TrustRecordsView = (typeof TRUST_RECORDS_VIEW)[keyof typeof TRUST_RECORDS_VIEW];
+
+export const TRUST_RECORDS_VIEWS: readonly { id: TrustRecordsView; label: string }[] = [
+  { id: TRUST_RECORDS_VIEW.FOLIOS, label: 'Folios' },
+  { id: TRUST_RECORDS_VIEW.REPORTS, label: 'Reports' },
+  { id: TRUST_RECORDS_VIEW.AUDIT_LOG, label: 'Audit log' },
+];
+
+/** Reconciliation: month-end closing and the bank statement import share one screen. */
+export const TRUST_RECONCILIATION_VIEW = {
+  MONTH_END: 'MONTH_END',
+  BANK_STATEMENT: 'BANK_STATEMENT',
+} as const;
+export type TrustReconciliationView =
+  (typeof TRUST_RECONCILIATION_VIEW)[keyof typeof TRUST_RECONCILIATION_VIEW];
+
+export const TRUST_RECONCILIATION_VIEWS: readonly { id: TrustReconciliationView; label: string }[] = [
+  { id: TRUST_RECONCILIATION_VIEW.MONTH_END, label: 'Month-end' },
+  { id: TRUST_RECONCILIATION_VIEW.BANK_STATEMENT, label: 'Bank statement' },
+];
+
+/** Rent Payments filter chips. */
+export const TRUST_RENT_FILTER = {
+  ALL: 'ALL',
+  ARREARS: 'ARREARS',
+  ADVANCE: 'ADVANCE',
+} as const;
+export type TrustRentFilter = (typeof TRUST_RENT_FILTER)[keyof typeof TRUST_RENT_FILTER];
+
+export const TRUST_RENT_FILTERS: readonly { id: TrustRentFilter; label: string }[] = [
+  { id: TRUST_RENT_FILTER.ALL, label: 'All' },
+  { id: TRUST_RENT_FILTER.ARREARS, label: 'Arrears' },
+  { id: TRUST_RENT_FILTER.ADVANCE, label: 'Paid in advance' },
 ];
 
 /** Chart-of-accounts code kinds: a bill takes an EXPENSE code. */
@@ -389,33 +406,125 @@ export const TRUST_PAGE_COPY = {
 } as const;
 
 export const TRUST_OVERVIEW_COPY = {
-  cashBook: 'Cash book',
-  ledgers: 'Ledger total',
-  /** D136: the bank opening balance not on any ledger, shown when not $0.00. */
-  openingUnallocated: 'Opening balance (not allocated to a folio)',
-  difference: 'Difference',
-  reconciliation: 'Reconciliation',
+  cashBook: 'Cashbook balance',
+  asAt: (date: string) => `As at ${date}`,
+  allocatedFolios: 'Allocated folio balances',
+  openingUnallocatedHint: (amount: string) => `${amount} opening balance unallocated`,
+  allAllocated: 'Every dollar sits on a folio',
+  paymentsPending: 'Payments pending',
+  awaitingBankFile: (count: number) => `${count} awaiting a bank file`,
+  monthReconciliation: 'Month reconciliation',
   reconciled: 'Reconciled',
   unreconciled: 'Unreconciled',
-  noBankBalance: 'No bank balance recorded',
+  monthOpen: (label: string) => `${label} · Open`,
+  monthsToLock: (label: string, count: number) =>
+    `${label} · ${count} month${count === 1 ? '' : 's'} to lock`,
+  attention: 'Needs your attention',
+  attentionCount: (count: number) => `${count} item${count === 1 ? '' : 's'}`,
+  allClear: 'Nothing needs your attention.',
+  quickActions: 'Quick actions',
+  receiveRent: 'Receive Rent',
+  createBill: 'Create Bill',
+  disburse: 'Disburse',
+  reconcile: 'Reconcile',
+  recent: 'Recent transactions',
+  viewAll: 'View all',
+  noRecent: 'No transactions yet.',
+  health: 'Trust health',
+  cashbookArithmetic: 'Cashbook arithmetic',
+  balanced: 'Balanced',
   outBy: (amount: string) => `Out by ${amount}`,
-  asAt: (date: string) => `As at ${date}`,
-  lastLocked: (label: string) => `Last locked: ${label}`,
-  nothingLocked: 'No month locked yet',
-  monthsToLock: (count: number) => `${count} month${count === 1 ? '' : 's'} to lock`,
-  today: 'Today',
-  moneyIn: 'Money in',
-  moneyOut: 'Money out',
+  unallocatedOpening: 'Unallocated opening funds',
+  needsReview: 'Needs review',
+  allocated: 'Allocated',
+  bankReconciliation: 'Bank reconciliation',
+  incomplete: 'Incomplete',
+} as const;
+
+/** "Needs your attention" rows on the Overview. */
+export const TRUST_ATTENTION = {
+  OPENING_UNALLOCATED: 'OPENING_UNALLOCATED',
+  OUT_OF_BALANCE: 'OUT_OF_BALANCE',
+  RECONCILIATION: 'RECONCILIATION',
+  PENDING_MAIL: 'PENDING_MAIL',
+  BILLS_INSUFFICIENT: 'BILLS_INSUFFICIENT',
+  INVOICES_OVERDUE: 'INVOICES_OVERDUE',
+  OWNERS_NO_PAYOUT: 'OWNERS_NO_PAYOUT',
+  OWNERS_DUE: 'OWNERS_DUE',
+  BANK_FILE: 'BANK_FILE',
+} as const;
+export type TrustAttentionId = (typeof TRUST_ATTENTION)[keyof typeof TRUST_ATTENTION];
+
+export const TRUST_ATTENTION_COPY = {
+  openingUnallocated: 'Opening balance unallocated',
+  requiresReview: (amount: string) => `${amount} requires review`,
+  outOfBalance: 'Cash book out of balance',
+  outOfBalanceDetail: (amount: string) => `Cash book and folios differ by ${amount}`,
+  reconciliation: (label: string) => `${label} reconciliation`,
+  noBankBalance: 'Bank statement balance not recorded',
+  bankOutBy: (amount: string) => `Bank is out by ${amount}`,
+  monthsToLock: (count: number) => `${count} ended month${count === 1 ? '' : 's'} still to lock`,
+  pendingMail: 'Pending document delivery',
+  pendingMailDetail: (count: number) =>
+    `${count} document${count === 1 ? '' : 's'} awaiting sending`,
+  billsInsufficient: 'Bills without enough funds',
+  billsInsufficientDetail: (count: number) =>
+    `${count} bill${count === 1 ? '' : 's'} the owner folio can't cover`,
+  invoicesOverdue: 'Overdue tenant invoices',
+  invoicesOverdueDetail: (count: number) => `${count} invoice${count === 1 ? '' : 's'} past due`,
+  ownersNoPayout: 'Owners missing payout details',
+  ownersNoPayoutDetail: (count: number) =>
+    `${count} owner${count === 1 ? '' : 's'} without a payout method`,
+  ownersDue: 'Owners due a payout',
+  ownersDueDetail: (count: number) => `${count} owner${count === 1 ? '' : 's'} ready to pay today`,
+  bankFile: 'Payments waiting for a bank file',
+  bankFileDetail: (count: number, amount: string) =>
+    `${count} payment${count === 1 ? '' : 's'} · ${amount}`,
+} as const;
+
+/** Text colour for a good or a needs-review figure on the accounting tiles. */
+export const TRUST_TONE_TEXT = {
+  GOOD: 'text-emerald-600 dark:text-emerald-400',
+  WARN: 'text-amber-600 dark:text-amber-400',
+} as const;
+
+/** Disbursement: the extra chip that opens the ABA / BPAY bank files. */
+export const TRUST_DISBURSE_BANK_FILES = 'BANK_FILES' as const;
+
+export const TRUST_DISBURSE_SUMMARY_COPY = {
+  ownersDue: 'Owners due',
+  ownersNoPayout: (count: number) => `${count} owner${count === 1 ? '' : 's'} missing payout method`,
   billsDue: 'Bills due',
   billsInsufficient: (count: number) => `${count} without enough funds`,
-  ownersDue: 'Owners due a payout',
-  ownersWithoutPayout: (count: number) => `${count} without a payout method`,
-  addPayoutDetails: 'Add payout details',
-  invoicesOutstanding: 'Tenant invoices owing',
-  invoicesOverdue: (count: number) => `${count} overdue`,
-  ledgerCounts: 'Ledgers',
-  recent: 'Recent transactions',
-  noRecent: 'No transactions yet.',
+  awaitingBankFile: 'Awaiting bank file',
+  abaBpay: 'ABA / BPAY',
+  endedOwners: 'Ended owners to pay out',
+  endedOwnersHint: 'Management ended, money still held',
+  bankFiles: 'Bank files',
+  workflow: 'Payment workflow',
+  steps: [
+    'Select eligible payees',
+    'Review available funds',
+    'Approve and post disbursement',
+    'Generate ABA / BPAY file',
+    'Bank confirmation & reconciliation',
+  ],
+} as const;
+
+export const TRUST_RECONCILIATION_SUMMARY_COPY = {
+  cashbookClosing: 'Cashbook closing',
+  allocatedFolios: 'Allocated folios',
+  unallocatedOpening: 'Unallocated opening',
+  bankStatement: 'Bank statement',
+  notEntered: 'Not entered',
+  reconciled: 'Reconciled',
+  asAt: (date: string) => `As at ${date}`,
+  outBy: (amount: string) => `Out by ${amount}`,
+  monthOpen: (label: string) => `${label} is open.`,
+  noBankBalance: 'No bank statement balance has been recorded.',
+  bankOutBy: (amount: string) => `Bank is out by ${amount}.`,
+  monthsToLock: (count: number) => `${count} ended month${count === 1 ? '' : 's'} still to lock.`,
+  openingUnallocated: 'Opening funds remain unallocated.',
 } as const;
 
 export const TRUST_LEDGERS_COPY = {
@@ -448,7 +557,7 @@ export const TRUST_LEDGERS_COPY = {
 
 export const TRUST_RENT_COPY = {
   searchPlaceholder: 'Search tenant, code or address',
-  arrearsOnly: 'Arrears only',
+  receiveRent: 'Receive Rent',
   empty: 'No tenant ledgers yet.',
   collectedThisMonth: 'Collected this month',
   inArrears: 'In arrears',
@@ -748,6 +857,13 @@ export const TRUST_RECONCILIATION_COPY = {
 } as const;
 
 // --------------------------------------------------------------------------- Transactions
+
+export const TRUST_TRANSACTION_KIND = {
+  RECEIPT: 'RECEIPT',
+  WITHDRAWAL: 'WITHDRAWAL',
+  JOURNAL: 'JOURNAL',
+  OPENING: 'OPENING',
+} as const satisfies Record<string, TrustTransactionKind>;
 
 export const TRUST_TRANSACTION_KIND_LABEL: Record<TrustTransactionKind, string> = {
   RECEIPT: 'Receipt',

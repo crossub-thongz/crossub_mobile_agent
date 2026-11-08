@@ -74,10 +74,10 @@ export function TrustStat({
   tone?: string;
 }) {
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl border bg-card px-4 py-3.5 shadow-xs">
       <p className="text-muted-foreground text-xs">{label}</p>
-      <p className={cn('mt-1 text-lg font-semibold tabular-nums', tone)}>{value}</p>
-      {hint ? <p className="text-muted-foreground mt-0.5 text-xs">{hint}</p> : null}
+      <p className={cn('mt-1.5 text-2xl font-semibold tracking-tight tabular-nums', tone)}>{value}</p>
+      {hint ? <p className="text-muted-foreground mt-1 text-xs">{hint}</p> : null}
     </div>
   );
 }

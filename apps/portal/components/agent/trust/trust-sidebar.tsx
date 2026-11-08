@@ -3,19 +3,15 @@
 import { useState } from 'react';
 import {
   ArrowLeftRight,
-  Banknote,
-  BookOpen,
   FileBarChart,
   FileText,
-  Files,
-  Upload,
   Landmark,
   LayoutDashboard,
   Mail,
   Menu,
   Receipt,
   Scale,
-  ScrollText,
+  Send,
   Settings,
   type LucideIcon,
 } from 'lucide-react';
@@ -33,17 +29,13 @@ import { cn } from '@/lib/utils';
 
 const TRUST_NAV_ICON: Record<TrustTab, LucideIcon> = {
   [TRUST_TAB.OVERVIEW]: LayoutDashboard,
-  [TRUST_TAB.TRANSACTIONS]: ArrowLeftRight,
   [TRUST_TAB.RENT]: Receipt,
+  [TRUST_TAB.TRANSACTIONS]: ArrowLeftRight,
   [TRUST_TAB.BILLS]: FileText,
-  [TRUST_TAB.DISBURSE]: Banknote,
+  [TRUST_TAB.DISBURSE]: Send,
   [TRUST_TAB.PENDING_MAIL]: Mail,
-  [TRUST_TAB.BANK_FILES]: Files,
-  [TRUST_TAB.BANK_STATEMENT]: Upload,
-  [TRUST_TAB.LEDGERS]: BookOpen,
   [TRUST_TAB.RECONCILIATION]: Scale,
-  [TRUST_TAB.REPORTS]: FileBarChart,
-  [TRUST_TAB.AUDIT_LOG]: ScrollText,
+  [TRUST_TAB.RECORDS]: FileBarChart,
   [TRUST_TAB.SETTINGS]: Settings,
 };
 

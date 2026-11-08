@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-08
+
+### Changed
+- Accounting menu follows Accounting V2 layout: Daily accounting (Overview, Rent Payments, Transactions, Bills & Invoices, Disbursement, Pending mail, Reconciliation) and Records & control (Records & Reports, Trust Settings)
+- Accounting Overview shows cashbook, allocated folios, payments pending and month reconciliation tiles, a Needs your attention list, Quick actions, Recent transactions and Trust health
+- Rent Payments filters by All, Arrears or Paid in advance chips; Receive Rent button sits on the right
+- Bills & Invoices always shows four tiles: ready to pay, insufficient funds, bills due, tenant invoices owing
+- Disbursement shows owners due, bills due, awaiting bank file and ended owners tiles, a payment workflow strip, and Bank files as a chip
+- Reconciliation shows month status banner and four tiles, with Month-end and Bank statement chips
+- Records & Reports holds Folios, Reports and Audit log chips
+- Accounting tiles use larger figures
+
 ## 2026-11-05
 
 ### Fixed

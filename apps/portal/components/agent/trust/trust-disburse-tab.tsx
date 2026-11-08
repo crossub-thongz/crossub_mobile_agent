@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { FilterChips } from '@/components/agent/filter-chips';
+import { TrustBankFilesTab } from '@/components/agent/trust/trust-bank-files-tab';
 import { TrustDisbursementHistory } from '@/components/agent/trust/trust-disbursement-history';
 import { TrustPayoutDialog } from '@/components/agent/trust/trust-payout-dialog';
 import {
@@ -16,6 +17,7 @@ import {
   TrustLoading,
   TrustPanel,
   TrustSearchInput,
+  TrustStat,
   TrustStatementPdfButton,
 } from '@/components/agent/trust/trust-ui';
 import { Button } from '@/components/ui/button';
@@ -30,7 +32,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  TRUST_DISBURSE_BANK_FILES,
   TRUST_DISBURSE_COPY as COPY,
+  TRUST_DISBURSE_SUMMARY_COPY as SUMMARY_COPY,
   TRUST_DISBURSE_PARTY_COPY,
   TRUST_DISBURSEMENT_BLOCKED_LABEL,
   TRUST_DISBURSEMENT_BLOCKED_REASON,
@@ -45,6 +49,7 @@ import {
   TRUST_STATEMENT_EMAIL_STATUS,
   type TrustDisbursementTab,
 } from '@/constants/trust';
+import { useTrustOverview } from '@/hooks/use-trust-overview';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
 import {
   disburseTrust,
@@ -52,6 +57,7 @@ import {
   type AgentTrustDisbursementResult,
   type AgentTrustStatementEmail,
   type TrustDisbursementCandidate,
+  type TrustOverview,
 } from '@/lib/crossub-api/agent-trust-client';
 import {
   formatCents,
@@ -63,6 +69,66 @@ import {
 import { cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
+type DisburseChip = TrustDisbursementTab | typeof TRUST_DISBURSE_BANK_FILES;
+
+const DISBURSE_CHIPS: readonly { id: DisburseChip; label: string }[] = [
+  ...TRUST_DISBURSEMENT_TABS,
+  { id: TRUST_DISBURSE_BANK_FILES, label: SUMMARY_COPY.bankFiles },
+];
+
+function DisburseSummary({ overview }: { overview: TrustOverview }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <TrustStat
+        label={SUMMARY_COPY.ownersDue}
+        value={overview.ownersDueCount}
+        hint={
+          overview.ownersWithoutPayoutMethodCount > 0
+            ? SUMMARY_COPY.ownersNoPayout(overview.ownersWithoutPayoutMethodCount)
+            : undefined
+        }
+      />
+      <TrustStat
+        label={SUMMARY_COPY.billsDue}
+        value={formatCents(overview.billsDueCents)}
+        hint={
+          overview.billsInsufficientCount > 0
+            ? SUMMARY_COPY.billsInsufficient(overview.billsInsufficientCount)
+            : undefined
+        }
+        tone={overview.billsInsufficientCount > 0 ? 'text-destructive' : undefined}
+      />
+      <TrustStat
+        label={SUMMARY_COPY.awaitingBankFile}
+        value={overview.poolPaymentCount}
+        hint={`${SUMMARY_COPY.abaBpay} · ${formatCents(overview.poolPaymentCents)}`}
+      />
+      <TrustStat
+        label={SUMMARY_COPY.endedOwners}
+        value={overview.endedOwnersAwaitingPayoutCount}
+        hint={SUMMARY_COPY.endedOwnersHint}
+      />
+    </div>
+  );
+}
+
+function PaymentWorkflow() {
+  return (
+    <TrustPanel title={SUMMARY_COPY.workflow}>
+      <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+        {SUMMARY_COPY.steps.map((step, index) => (
+          <li key={step} className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded-full border text-xs tabular-nums">
+              {index + 1}
+            </span>
+            {step}
+          </li>
+        ))}
+      </ol>
+    </TrustPanel>
+  );
+}
+
 export function TrustDisburseTab({
   agencyId,
   bankAccountId,
@@ -73,6 +139,8 @@ export function TrustDisburseTab({
   onOpenPendingMail?: () => void;
 }) {
   const [tab, setTab] = useState<TrustDisbursementTab>(TRUST_DISBURSEMENT_TAB.DUE_OWNERS);
+  const [showBankFiles, setShowBankFiles] = useState(false);
+  const overview = useTrustOverview(agencyId, bankAccountId);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [date, setDate] = useState(trustTodayKey);
@@ -138,6 +206,7 @@ export function TrustDisburseTab({
       setSelected(new Set());
       setConfirmKey(null);
       reload();
+      overview.reload();
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
@@ -147,6 +216,9 @@ export function TrustDisburseTab({
 
   return (
     <div className="space-y-4">
+      {overview.data ? <DisburseSummary overview={overview.data} /> : null}
+      <PaymentWorkflow />
+
       {result ? (
         <DisbursementResult
           agencyId={agencyId}
@@ -157,12 +229,19 @@ export function TrustDisburseTab({
       ) : null}
 
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
-        <TrustSearchInput value={search} onChange={setSearch} placeholder={party.searchPlaceholder} />
+        {showBankFiles ? null : (
+          <TrustSearchInput value={search} onChange={setSearch} placeholder={party.searchPlaceholder} />
+        )}
         <div className="min-w-0 flex-1">
           <FilterChips
-            options={TRUST_DISBURSEMENT_TABS}
-            value={tab}
+            options={DISBURSE_CHIPS}
+            value={showBankFiles ? TRUST_DISBURSE_BANK_FILES : tab}
             onChange={(next) => {
+              if (next === TRUST_DISBURSE_BANK_FILES) {
+                setShowBankFiles(true);
+                return;
+              }
+              setShowBankFiles(false);
               setTab(next);
               setSelected(new Set());
             }}
@@ -170,123 +249,129 @@ export function TrustDisburseTab({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="trust-disburse-date">{COPY.date}</Label>
-          <Input
-            id="trust-disburse-date"
-            type="date"
-            className="h-9 w-44"
-            value={date}
-            max={trustTodayKey()}
-            disabled={pending}
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </div>
-        <Button
-          type="button"
-          disabled={pending || selectedIds.length === 0 || !date}
-          onClick={openConfirm}
-        >
-          <Send className="size-4" />
-          {party.disburse(selectedIds.length)}
-        </Button>
-      </div>
-
-      {!data ? (
-        error ? (
-          <TrustLoadError error={error} onRetry={reload} />
-        ) : loading ? (
-          <TrustLoading />
-        ) : null
-      ) : data.items.length === 0 ? (
-        <p className="text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm">
-          {query ? TRUST_PAGE_COPY.noMatches : party.empty}
-        </p>
+      {showBankFiles ? (
+        <TrustBankFilesTab agencyId={agencyId} bankAccountId={bankAccountId} />
       ) : (
-        <div className={cn('overflow-x-auto rounded-xl border bg-card', loading && 'opacity-60')}>
-          <table className="w-full border-collapse text-sm">
-            <thead className="border-b">
-              <tr>
-                <th className={cn(TRUST_TABLE_HEAD_CLASS, 'w-10')}>
-                  <input
-                    type="checkbox"
-                    className="size-4"
-                    aria-label={COPY.selectAll}
-                    checked={allSelected}
-                    disabled={payable.length === 0 || pending}
-                    onChange={toggleAll}
-                  />
-                </th>
-                <th className={TRUST_TABLE_HEAD_CLASS}>{party.party}</th>
-                <th className={cn(TRUST_TABLE_HEAD_CLASS, 'hidden lg:table-cell')}>{COPY.property}</th>
-                <th className={cn(TRUST_TABLE_HEAD_CLASS, 'hidden text-right md:table-cell')}>
-                  {COPY.balance}
-                </th>
-                <th className={cn(TRUST_TABLE_HEAD_CLASS, 'hidden text-right md:table-cell')}>
-                  {COPY.billsDue}
-                </th>
-                <th className={cn(TRUST_TABLE_HEAD_CLASS, 'text-right')}>{COPY.available}</th>
-                <th className={cn(TRUST_TABLE_HEAD_CLASS, 'hidden lg:table-cell')}>{COPY.nextDue}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((c) => (
-                <tr key={c.ledger.id} className="border-b last:border-b-0">
-                  <td className={TRUST_TABLE_CELL_CLASS}>
-                    <input
-                      type="checkbox"
-                      className="size-4"
-                      aria-label={c.ledger.name}
-                      checked={selected.has(c.ledger.id)}
-                      disabled={!c.canDisburse || pending}
-                      onChange={() => toggle(c.ledger.id)}
-                    />
-                  </td>
-                  <td className={TRUST_TABLE_CELL_CLASS}>
-                    <p className="font-medium">{c.ledger.name}</p>
-                    <p className="text-muted-foreground font-mono text-xs">{c.ledger.code}</p>
-                    {c.blockedReason ? (
-                      <p className="mt-0.5 text-xs text-amber-600">
-                        {TRUST_DISBURSEMENT_BLOCKED_LABEL[c.blockedReason]}
-                        {c.blockedReason === TRUST_DISBURSEMENT_BLOCKED_REASON.NO_PAYOUT_METHOD ? (
-                          <>
-                            {' · '}
-                            <button
-                              type="button"
-                              className="text-primary font-medium underline-offset-2 hover:underline"
-                              onClick={() => setPayoutFor(c.ledger)}
-                            >
-                              {TRUST_PAYOUT_COPY.add}
-                            </button>
-                          </>
-                        ) : null}
-                      </p>
-                    ) : null}
-                  </td>
-                  <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-muted-foreground hidden lg:table-cell')}>
-                    {c.property?.referenceAddress ?? '—'}
-                  </td>
-                  <td className={cn(TRUST_TABLE_CELL_CLASS, 'hidden text-right tabular-nums md:table-cell')}>
-                    {formatCents(c.balanceCents)}
-                  </td>
-                  <td className={cn(TRUST_TABLE_CELL_CLASS, 'hidden text-right tabular-nums md:table-cell')}>
-                    {c.billsDueCount > 0 ? formatCents(c.billsDueCents) : '—'}
-                  </td>
-                  <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-right font-medium tabular-nums')}>
-                    {formatCents(c.availableToPayCents)}
-                  </td>
-                  <td className={cn(TRUST_TABLE_CELL_CLASS, 'hidden whitespace-nowrap lg:table-cell')}>
-                    {formatTrustDate(c.nextPayoutDue)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        <>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="trust-disburse-date">{COPY.date}</Label>
+              <Input
+                id="trust-disburse-date"
+                type="date"
+                className="h-9 w-44"
+                value={date}
+                max={trustTodayKey()}
+                disabled={pending}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              disabled={pending || selectedIds.length === 0 || !date}
+              onClick={openConfirm}
+            >
+              <Send className="size-4" />
+              {party.disburse(selectedIds.length)}
+            </Button>
+          </div>
 
-      <TrustDisbursementHistory agencyId={agencyId} bankAccountId={bankAccountId} refreshKey={runs} />
+          {!data ? (
+            error ? (
+              <TrustLoadError error={error} onRetry={reload} />
+            ) : loading ? (
+              <TrustLoading />
+            ) : null
+          ) : data.items.length === 0 ? (
+            <p className="text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm">
+              {query ? TRUST_PAGE_COPY.noMatches : party.empty}
+            </p>
+          ) : (
+            <div className={cn('overflow-x-auto rounded-xl border bg-card', loading && 'opacity-60')}>
+              <table className="w-full border-collapse text-sm">
+                <thead className="border-b">
+                  <tr>
+                    <th className={cn(TRUST_TABLE_HEAD_CLASS, 'w-10')}>
+                      <input
+                        type="checkbox"
+                        className="size-4"
+                        aria-label={COPY.selectAll}
+                        checked={allSelected}
+                        disabled={payable.length === 0 || pending}
+                        onChange={toggleAll}
+                      />
+                    </th>
+                    <th className={TRUST_TABLE_HEAD_CLASS}>{party.party}</th>
+                    <th className={cn(TRUST_TABLE_HEAD_CLASS, 'hidden lg:table-cell')}>{COPY.property}</th>
+                    <th className={cn(TRUST_TABLE_HEAD_CLASS, 'hidden text-right md:table-cell')}>
+                      {COPY.balance}
+                    </th>
+                    <th className={cn(TRUST_TABLE_HEAD_CLASS, 'hidden text-right md:table-cell')}>
+                      {COPY.billsDue}
+                    </th>
+                    <th className={cn(TRUST_TABLE_HEAD_CLASS, 'text-right')}>{COPY.available}</th>
+                    <th className={cn(TRUST_TABLE_HEAD_CLASS, 'hidden lg:table-cell')}>{COPY.nextDue}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.items.map((c) => (
+                    <tr key={c.ledger.id} className="border-b last:border-b-0">
+                      <td className={TRUST_TABLE_CELL_CLASS}>
+                        <input
+                          type="checkbox"
+                          className="size-4"
+                          aria-label={c.ledger.name}
+                          checked={selected.has(c.ledger.id)}
+                          disabled={!c.canDisburse || pending}
+                          onChange={() => toggle(c.ledger.id)}
+                        />
+                      </td>
+                      <td className={TRUST_TABLE_CELL_CLASS}>
+                        <p className="font-medium">{c.ledger.name}</p>
+                        <p className="text-muted-foreground font-mono text-xs">{c.ledger.code}</p>
+                        {c.blockedReason ? (
+                          <p className="mt-0.5 text-xs text-amber-600">
+                            {TRUST_DISBURSEMENT_BLOCKED_LABEL[c.blockedReason]}
+                            {c.blockedReason === TRUST_DISBURSEMENT_BLOCKED_REASON.NO_PAYOUT_METHOD ? (
+                              <>
+                                {' · '}
+                                <button
+                                  type="button"
+                                  className="text-primary font-medium underline-offset-2 hover:underline"
+                                  onClick={() => setPayoutFor(c.ledger)}
+                                >
+                                  {TRUST_PAYOUT_COPY.add}
+                                </button>
+                              </>
+                            ) : null}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-muted-foreground hidden lg:table-cell')}>
+                        {c.property?.referenceAddress ?? '—'}
+                      </td>
+                      <td className={cn(TRUST_TABLE_CELL_CLASS, 'hidden text-right tabular-nums md:table-cell')}>
+                        {formatCents(c.balanceCents)}
+                      </td>
+                      <td className={cn(TRUST_TABLE_CELL_CLASS, 'hidden text-right tabular-nums md:table-cell')}>
+                        {c.billsDueCount > 0 ? formatCents(c.billsDueCents) : '—'}
+                      </td>
+                      <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-right font-medium tabular-nums')}>
+                        {formatCents(c.availableToPayCents)}
+                      </td>
+                      <td className={cn(TRUST_TABLE_CELL_CLASS, 'hidden whitespace-nowrap lg:table-cell')}>
+                        {formatTrustDate(c.nextPayoutDue)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <TrustDisbursementHistory agencyId={agencyId} bankAccountId={bankAccountId} refreshKey={runs} />
+        </>
+      )}
 
       {payoutFor ? (
         <TrustPayoutDialog
@@ -296,7 +381,10 @@ export function TrustDisburseTab({
           ledgerName={payoutFor.name}
           ledgerKind={payoutFor.kind}
           onClose={() => setPayoutFor(null)}
-          onSaved={reload}
+          onSaved={() => {
+            reload();
+            overview.reload();
+          }}
         />
       ) : null}
 

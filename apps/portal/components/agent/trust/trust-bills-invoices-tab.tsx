@@ -16,9 +16,9 @@ import { useTrustResource } from '@/hooks/use-trust-resource';
 import type { TrustAccountCode } from '@/lib/crossub-api/agent-trust-client';
 import { fetchTrustBillsSummary, type TrustBillsSummary } from '@/lib/crossub-api/agent-trust-invoices-client';
 import { formatCents } from '@/lib/trust-accounting';
-import { billsReadyToPay, invoicesNotYetDue } from '@/utils/trust-invoices';
+import { billsReadyToPay } from '@/utils/trust-invoices';
 
-/** Bills & Invoices: owner bills or tenant invoices, each with its three summary tiles. */
+/** Bills & Invoices: four summary tiles, then owner bills or tenant invoices. */
 export function TrustBillsInvoicesTab({
   agencyId,
   bankAccountId,
@@ -36,7 +36,7 @@ export function TrustBillsInvoicesTab({
   return (
     <div className="space-y-4">
       <FilterChips options={TRUST_BILLS_VIEWS} value={view} onChange={setView} />
-      {summary.data ? <SummaryTiles view={view} summary={summary.data} /> : null}
+      {summary.data ? <SummaryTiles summary={summary.data} /> : null}
       {view === TRUST_BILLS_VIEW.INVOICES ? (
         <TrustInvoicesView
           agencyId={agencyId}
@@ -56,29 +56,11 @@ export function TrustBillsInvoicesTab({
   );
 }
 
-function SummaryTiles({ view, summary }: { view: TrustBillsView; summary: TrustBillsSummary }) {
-  if (view === TRUST_BILLS_VIEW.INVOICES) {
-    const notYetDue = invoicesNotYetDue(summary);
-    return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <TrustStat
-          label={COPY.invoicesOutstanding}
-          value={summary.invoicesOutstandingCount}
-          hint={formatCents(summary.invoicesOutstandingCents)}
-        />
-        <TrustStat
-          label={COPY.invoicesOverdue}
-          value={summary.invoicesOverdueCount}
-          hint={formatCents(summary.invoicesOverdueCents)}
-          tone={summary.invoicesOverdueCount > 0 ? 'text-destructive' : undefined}
-        />
-        <TrustStat label={COPY.invoicesNotYetDue} value={notYetDue.count} hint={formatCents(notYetDue.cents)} />
-      </div>
-    );
-  }
+/** The demo's four tiles: bills to pay, bills short of funds, bills due, tenant invoices owing. */
+function SummaryTiles({ summary }: { summary: TrustBillsSummary }) {
   const ready = billsReadyToPay(summary);
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <TrustStat
         label={COPY.readyToPay}
         value={ready.count}
@@ -92,6 +74,16 @@ function SummaryTiles({ view, summary }: { view: TrustBillsView; summary: TrustB
         tone={summary.insufficientCount > 0 ? 'text-destructive' : undefined}
       />
       <TrustStat label={COPY.billsDue} value={summary.billsDueCount} hint={formatCents(summary.billsDueCents)} />
+      <TrustStat
+        label={COPY.invoicesOutstanding}
+        value={summary.invoicesOutstandingCount}
+        hint={
+          summary.invoicesOverdueCount > 0
+            ? `${formatCents(summary.invoicesOutstandingCents)} · ${COPY.invoicesOverdue(summary.invoicesOverdueCount)}`
+            : formatCents(summary.invoicesOutstandingCents)
+        }
+        tone={summary.invoicesOverdueCount > 0 ? 'text-destructive' : undefined}
+      />
     </div>
   );
 }

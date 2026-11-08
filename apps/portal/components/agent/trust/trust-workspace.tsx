@@ -4,17 +4,13 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
 import { SELECT_CLASS } from '@/components/agent/maintenance-self-managed/step-card';
-import { TrustAuditLogPanel } from '@/components/agent/trust/trust-audit-log-panel';
-import { TrustBankFilesTab } from '@/components/agent/trust/trust-bank-files-tab';
-import { TrustBankStatementTab } from '@/components/agent/trust/trust-bank-statement-tab';
 import { TrustBillsInvoicesTab } from '@/components/agent/trust/trust-bills-invoices-tab';
 import { TrustDisburseTab } from '@/components/agent/trust/trust-disburse-tab';
-import { TrustLedgersTab } from '@/components/agent/trust/trust-ledgers-tab';
 import { TrustOverviewTab } from '@/components/agent/trust/trust-overview-tab';
 import { TrustPendingMailTab } from '@/components/agent/trust/trust-pending-mail-tab';
 import { TrustReconciliationTab } from '@/components/agent/trust/trust-reconciliation-tab';
+import { TrustRecordsTab } from '@/components/agent/trust/trust-records-tab';
 import { TrustRentTab } from '@/components/agent/trust/trust-rent-tab';
-import { TrustReportsTab } from '@/components/agent/trust/trust-reports-tab';
 import { TrustSettingsTab } from '@/components/agent/trust/trust-settings-tab';
 import { TrustSetupForm } from '@/components/agent/trust/trust-setup-form';
 import {
@@ -75,9 +71,7 @@ function TrustTabContent({
   const { accountCodes } = workspace;
   switch (tab) {
     case TRUST_TAB.OVERVIEW:
-      return <TrustOverviewTab {...props} onOpenTab={onOpenTab} />;
-    case TRUST_TAB.LEDGERS:
-      return <TrustLedgersTab {...props} accountCodes={accountCodes} />;
+      return <TrustOverviewTab {...props} accountCodes={accountCodes} onOpenTab={onOpenTab} />;
     case TRUST_TAB.TRANSACTIONS:
       return <TrustTransactionsTab {...props} accountCodes={accountCodes} />;
     case TRUST_TAB.RENT:
@@ -88,16 +82,10 @@ function TrustTabContent({
       return <TrustDisburseTab {...props} onOpenPendingMail={() => onOpenTab(TRUST_TAB.PENDING_MAIL)} />;
     case TRUST_TAB.PENDING_MAIL:
       return <TrustPendingMailTab {...props} />;
-    case TRUST_TAB.BANK_FILES:
-      return <TrustBankFilesTab {...props} />;
-    case TRUST_TAB.BANK_STATEMENT:
-      return <TrustBankStatementTab {...props} />;
     case TRUST_TAB.RECONCILIATION:
       return <TrustReconciliationTab {...props} />;
-    case TRUST_TAB.REPORTS:
-      return <TrustReportsTab {...props} />;
-    case TRUST_TAB.AUDIT_LOG:
-      return <TrustAuditLogPanel agencyId={agencyId} />;
+    case TRUST_TAB.RECORDS:
+      return <TrustRecordsTab {...props} accountCodes={accountCodes} />;
     case TRUST_TAB.SETTINGS:
       return <TrustSettingsTab {...props} workspace={workspace} onChanged={onWorkspaceChanged} />;
   }
@@ -165,7 +153,7 @@ function TrustContextBar({
 }
 
 /**
- * Self-Manage trust accounting. The side menu matches admin Trust Accounting. An agency without a
+ * Self-Manage trust accounting (Accounting V2 layout). The Agency / Trust account bar stays as it was. An agency without a
  * trust workspace or bank account yet gets the set-up form instead of an error.
  */
 export function TrustWorkspace({ agencies }: { agencies: readonly Agency[] }) {
