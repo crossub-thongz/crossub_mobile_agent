@@ -3,6 +3,7 @@
 ## 2026-11-09
 
 ### Fixed
+- Saving through the API works again: Cros chats and preferences, trust payout methods, fee settings and bond, and current tenancy edits
 - Confirming a Cros repair job card sends its photos, so they reach the job
 - Dashboard Upcoming Events shows inspection times in property (Sydney) time, not the browser's time zone
 
