@@ -30,6 +30,8 @@ export interface RegisterAgentInput {
   /** Self-Manage, Inspection Only or Full Service — the API rejects Legacy at signup. */
   portalServiceLevel: RegisterablePortalServiceLevel;
   acceptTerms: boolean;
+  /** Sent as a header so an older API does not reject the signup body. */
+  registrationChannel?: 'marketing_site' | 'agent_portal';
 }
 
 /**
@@ -153,7 +155,9 @@ export async function registerAgentAccount(
     officeAddress: input.officeAddress?.trim() || undefined,
     portalServiceLevel: input.portalServiceLevel,
     acceptTerms: input.acceptTerms,
-  });
+  }, input.registrationChannel
+    ? { 'x-crossub-registration-channel': input.registrationChannel }
+    : undefined);
   return result.user;
 }
 

@@ -174,9 +174,10 @@ async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
 export const api = {
   get: <T>(path: string) => request<T>(path),
   getBlob: (path: string, init?: RequestInit) => requestBlob(path, init),
-  post: <T>(path: string, body?: unknown) =>
+  post: <T>(path: string, body?: unknown, headers?: Record<string, string>) =>
     request<T>(path, {
       method: 'POST',
+      headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
   patch: <T>(path: string, body: unknown) =>

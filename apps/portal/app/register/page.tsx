@@ -26,7 +26,11 @@ import {
   saveRegisterAccountDraft,
 } from '@/lib/register-account-draft';
 import { reportRegistrationCompleted } from '@/lib/openai-ads';
-import { rememberRegistrationChannel, reportRegistrationChannel } from '@/lib/registration-channel';
+import {
+  currentRegistrationChannel,
+  rememberRegistrationChannel,
+  reportRegistrationChannel,
+} from '@/lib/registration-channel';
 import { DEFAULT_REGISTER_SERVICE_LEVEL } from '@/lib/portal-service-level';
 import { postAuthDestination } from '@/lib/system-access-agreement';
 import {
@@ -219,10 +223,11 @@ export default function RegisterPage() {
         officeAddress: workspace.officeAddress,
         portalServiceLevel: DEFAULT_REGISTER_SERVICE_LEVEL,
         acceptTerms: true,
+        registrationChannel: currentRegistrationChannel(),
       });
       await refresh();
       reportRegistrationCompleted();
-      reportRegistrationChannel();
+      await reportRegistrationChannel();
       router.replace(
         postAuthDestination(
           user,

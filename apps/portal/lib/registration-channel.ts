@@ -1,5 +1,3 @@
-import { api } from '@/lib/api';
-
 const FROM_SITE = 'site';
 const CHANNEL_KEY = 'cros_reg_from';
 
@@ -10,17 +8,26 @@ export function rememberRegistrationChannel() {
   }
 }
 
-/** Registration still succeeds if this call fails or the API is not updated yet. */
-export function reportRegistrationChannel() {
+export function currentRegistrationChannel(): 'marketing_site' | 'agent_portal' {
   const fromSite =
     sessionStorage.getItem(CHANNEL_KEY) === FROM_SITE ||
     new URLSearchParams(window.location.search).get('from') === FROM_SITE;
-  void api
-    .post('/marketing/registration-channel', {
-      channel: fromSite ? 'marketing_site' : 'agent_portal',
-    })
-    .then(() => {
-      sessionStorage.removeItem(CHANNEL_KEY);
-    })
-    .catch(() => undefined);
+  return fromSite ? 'marketing_site' : 'agent_portal';
+}
+
+/** Kept until the page moves on. A normal fetch is cancelled by that navigation. */
+export async function reportRegistrationChannel() {
+  const channel = currentRegistrationChannel();
+  try {
+    await fetch('/api/marketing/registration-channel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      keepalive: true,
+      body: JSON.stringify({ channel }),
+    });
+    sessionStorage.removeItem(CHANNEL_KEY);
+  } catch {
+    /* The account is already created. The signup request also sends the source. */
+  }
 }
