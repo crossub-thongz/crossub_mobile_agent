@@ -1,4 +1,4 @@
-import { formatDate, formatTime } from '@/lib/format-datetime';
+import { formatDate, formatPropertyDateTime, formatPropertyTime } from '@/lib/format-datetime';
 import { isSettledInspectionActivity } from '@/lib/inspections/presentation';
 import { isSettledMaintenanceActivity } from '@/lib/property-job-rows';
 import type {
@@ -110,12 +110,13 @@ function aheadPhrase(days: number, iso: string): string {
   return `In ${days} days · ${formatDate(iso)}`;
 }
 
+/** Property (Sydney) time, as Cros and the tenant's notice give it, wherever the browser is. */
 function schedulePhrase(iso: string, now: Date): string {
   const days = daysUntil(iso, now);
-  const time = formatTime(iso);
+  const time = formatPropertyTime(iso);
   if (days === 0) return `Today, ${time}`;
   if (days === 1) return `Tomorrow, ${time}`;
-  return `${formatDate(iso)}, ${time}`;
+  return formatPropertyDateTime(iso);
 }
 
 function inspectionTitle(type: Inspection['type']): string {
