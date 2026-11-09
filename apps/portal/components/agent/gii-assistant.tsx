@@ -130,6 +130,7 @@ import {
   GII_MAX_ATTACHMENTS,
   pendingToApiAttachments,
   pendingToView,
+  photosForProposalCard,
   revokePendingAttachment,
   revokePendingAttachments,
   type GiiApiAttachment,
@@ -1023,7 +1024,8 @@ export function GiiAssistant({
       if (confirmingLineId) return;
       setConfirmingLineId(lineId);
       try {
-        const result = await confirmGiiProposal(proposal.token, byVoice);
+        const photos = photosForProposalCard(lines, proposal.lines);
+        const result = await confirmGiiProposal(proposal.token, byVoice, photos);
         const replyId = settleProposal(lineId, { text: result.message, jobCases: result.jobCases });
         if (answeringVoiceRef.current && !speechMutedRef.current) speakGii(result.spoken, resumeHandsFree);
         if (result.done) void refreshPortfolio();
@@ -1038,7 +1040,7 @@ export function GiiAssistant({
         setConfirmingLineId(null);
       }
     },
-    [confirmingLineId, refreshPortfolio, resumeHandsFree, settleProposal, teamChat],
+    [confirmingLineId, lines, refreshPortfolio, resumeHandsFree, settleProposal, teamChat],
   );
 
   const cancelProposal = useCallback(

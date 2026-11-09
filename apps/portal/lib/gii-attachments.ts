@@ -1,3 +1,4 @@
+import { GII_JOB_PHOTO_LOOKBACK_MESSAGES, GII_PROPOSAL_PHOTOS_LABEL } from '@/constants/gii-proposal';
 import type { components } from '@crossub-thongz/api-contract';
 
 import { fileToBase64 } from '@/lib/file-upload';
@@ -147,4 +148,17 @@ export function filterGiiAttachmentFiles(
     slots -= 1;
   }
   return { added, rejected, overLimit: slots <= 0 && files.length > added.length };
+}
+
+/**
+ * The photos to resend when confirming a repair job card: the card's token records them, and the
+ * API refuses a Confirm that does not bring them back. Empty for a card with no photos row.
+ */
+export function photosForProposalCard(
+  lines: ReadonlyArray<{ role: string; sentAttachments?: GiiApiAttachment[] }>,
+  proposalRows: ReadonlyArray<{ label: string }>,
+): GiiApiAttachment[] {
+  if (!proposalRows.some((row) => row.label === GII_PROPOSAL_PHOTOS_LABEL)) return [];
+  const recent = lines.filter((l) => l.role === 'user').slice(-GII_JOB_PHOTO_LOOKBACK_MESSAGES).reverse();
+  return recent.find((l) => l.sentAttachments?.length)?.sentAttachments ?? [];
 }

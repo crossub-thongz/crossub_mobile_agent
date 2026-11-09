@@ -122,9 +122,17 @@ export type GiiConfirmResult = {
  * not permitted) comes back as `done: false` with its reason; only an unreachable server
  * throws.
  */
-export async function confirmGiiProposal(token: string, byVoice = false): Promise<GiiConfirmResult> {
+export async function confirmGiiProposal(
+  token: string,
+  byVoice = false,
+  photos: GiiChatAttachment[] = [],
+): Promise<GiiConfirmResult> {
   const { data, error } = await crossub.POST('/agent/gii/confirm', {
-    body: byVoice ? { token, byVoice } : { token },
+    body: {
+      token,
+      ...(byVoice ? { byVoice } : {}),
+      ...(photos.length ? { photos } : {}),
+    } as components['schemas']['GiiConfirmRequestDto'] & { photos?: GiiChatAttachment[] },
   });
   if (data) {
     return {

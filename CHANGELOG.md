@@ -3,6 +3,7 @@
 ## 2026-11-09
 
 ### Fixed
+- Confirming a Cros repair job card sends its photos, so they reach the job
 - Dashboard Upcoming Events shows inspection times in property (Sydney) time, not the browser's time zone
 
 ## 2026-11-08
