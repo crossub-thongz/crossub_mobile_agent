@@ -1,3 +1,4 @@
+import { PROPERTY_ACTIVE_LEASE_STEP } from '@/constants/property-job-rows';
 import { leasingLifecycleProgress } from '@/lib/case-workflows/leasing';
 import { rentReviewWorkflowProgress } from '@/lib/case-workflows/rent-review';
 import { vacatingWorkflowProgress } from '@/lib/case-workflows/vacating';
@@ -158,7 +159,7 @@ export function buildPropertyLeasingWorkflowCases(input: {
       category: 'leasing',
       label: workflowCaseReferenceLabel(currentLease.id, 'leasing'),
       status: 'current tenancy',
-      currentStep: 'Active lease',
+      currentStep: PROPERTY_ACTIVE_LEASE_STEP,
       detail: currentLease.approvedTenant,
     });
   }

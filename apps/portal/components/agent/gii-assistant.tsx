@@ -67,6 +67,7 @@ import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 import { AGENT_INPUT_KIND, sanitizeAgentInput } from '@/lib/agent-input-rules';
 import { stripEmojis } from '@/lib/strip-emojis';
 import { ROUTES } from '@/constants/routes';
+import { isActiveLeaseJobRow, relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
   VOICE_BUTTON_ARIA_LABEL,
   VOICE_ERROR,
@@ -509,6 +510,18 @@ export function GiiAssistant({
     data.accounting,
   ]);
 
+
+  /** A job on the property's card; its current lease opens the lease page, not a leasing task. */
+  const openPropertyJob = useCallback(
+    (row: PropertyJobRow) => {
+      if (scopedProperty && isActiveLeaseJobRow(row)) {
+        router.push(relatedPropertyJobHref(row, scopedProperty.id));
+        return;
+      }
+      openJob(row);
+    },
+    [openJob, router, scopedProperty],
+  );
 
   const briefingItems = useMemo(() => {
     if (!scopedProperty) return data.needActionItems;
@@ -1849,7 +1862,7 @@ export function GiiAssistant({
             ) : null}
             {!messageScoped && scopedProperty ? (
               propertyJobs.length > 0 ? (
-                <GiiPropertyJobsCard jobs={propertyJobs} onOpen={openJob} />
+                <GiiPropertyJobsCard jobs={propertyJobs} onOpen={openPropertyJob} />
               ) : null
             ) : !messageScoped && serverBriefing ? (
               <GiiServerBriefingCard

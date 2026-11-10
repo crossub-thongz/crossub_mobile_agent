@@ -1,8 +1,10 @@
+import { PROPERTY_ACTIVE_LEASE_STEP } from '@/constants/property-job-rows';
 import {
   inspectionDetail,
   leasingDetail,
   maintenanceDetail,
   propertyDetail,
+  propertyLeasePackage,
   rentReviewDetail,
   tribunalDetail,
   vacatingDetail,
@@ -35,8 +37,14 @@ export function propertyJobKindHref(
   }
 }
 
+/** The placeholder row for a property's current lease: its id is the lease's, not a case's. */
+export function isActiveLeaseJobRow(row: PropertyJobRow): boolean {
+  return row.kind === 'leasing' && row.status === PROPERTY_ACTIVE_LEASE_STEP;
+}
+
 /** Related-task / property-profile links into the dedicated v2 task pages. */
 export function relatedPropertyJobHref(row: PropertyJobRow, propertyId: string): string {
+  if (isActiveLeaseJobRow(row)) return propertyLeasePackage(propertyId, row.id);
   return propertyJobKindHref(
     row.kind,
     row.id,
