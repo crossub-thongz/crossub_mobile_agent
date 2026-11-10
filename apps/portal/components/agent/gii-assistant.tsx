@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, Headphones, Maximize2, Mic, Minimize2, Send, Volume2, VolumeX, X } from 'lucide-react';
+import { ArrowLeft, Building2, Headphones, Maximize2, Mic, Minimize2, Send, Volume2, VolumeX, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CrosAssistantLogo, CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
@@ -67,8 +67,12 @@ import { GII_ROLE_COPY, type AgentCopyVariant } from '@/constants/agent-copy-var
 import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 import { AGENT_INPUT_KIND, sanitizeAgentInput } from '@/lib/agent-input-rules';
 import { stripEmojis } from '@/lib/strip-emojis';
-import { GII_CARRIED_CHAT_KEY, GII_CARRIED_CHAT_TTL_MS } from '@/constants/gii-carried-chat';
-import { ROUTES } from '@/constants/routes';
+import {
+  GII_CARRIED_CHAT_COPY,
+  GII_CARRIED_CHAT_KEY,
+  GII_CARRIED_CHAT_TTL_MS,
+} from '@/constants/gii-carried-chat';
+import { leasingDetail, ROUTES } from '@/constants/routes';
 import { isActiveLeaseJobRow, relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
   VOICE_BUTTON_ARIA_LABEL,
@@ -526,7 +530,18 @@ export function GiiAssistant({
   /** Portfolio CROS — Today, chat, and past chats. */
   const isPortfolioCros = (isPanel || isModal) && isV2 && !scopedProperty && !messageScoped;
   const isFrostedV2Panel = isPanel && isV2 && !isPortfolioCros;
-  const [crosView, setCrosView] = useState<CrosPortfolioView>(carried ? 'chat' : 'today');
+  /**
+   * Today, Chat, the team and past chats show on every screen, a record's included, so a chat
+   * Open carried there (or a reload there) can still reach past chats or start a new one.
+   */
+  const hasCrosTabs = (isPanel || isModal) && isV2 && !messageScoped;
+  const [crosView, setCrosView] = useState<CrosPortfolioView>(
+    carried || effectiveLaunch.propertyId || pathPropertyId ? 'chat' : 'today',
+  );
+  /** Today or past chats is on screen in place of the chat. */
+  const crosListView = hasCrosTabs && crosView !== 'chat';
+  /** Open carried the chat here from another screen: Back takes it there again. */
+  const carriedFromPath = carried && carried.toPath === pathname ? carried.fromPath : null;
   const teamChat = useGiiHandoff(open);
   const heldThreadId = teamChat.held?.threadId ?? null;
   /** The Cros line the team chat follows (the handoff's answer), so later turns sit below it. */
@@ -558,7 +573,7 @@ export function GiiAssistant({
   /** The last transcript saved for the open chat, so an unchanged render does not save again. */
   const crosSavedKeyRef = useRef<string | null>(carried?.savedKey ?? null);
   const portfolioCrosRef = useRef(false);
-  portfolioCrosRef.current = isPortfolioCros;
+  portfolioCrosRef.current = hasCrosTabs;
 
   // On a property, Gii opens with that property's IN-PROGRESS JOBS — the same "Jobs in
   // progress" set the Overview tab shows (one shared selector, so the two never disagree),
@@ -596,13 +611,24 @@ export function GiiAssistant({
   /** A job on the property's card; its current lease opens the lease page, not a leasing task. */
   const openPropertyJob = useCallback(
     (row: PropertyJobRow) => {
-      if (scopedProperty && isActiveLeaseJobRow(row)) {
-        router.push(relatedPropertyJobHref(row, scopedProperty.id));
+      const href =
+        scopedProperty && isActiveLeaseJobRow(row)
+          ? relatedPropertyJobHref(row, scopedProperty.id)
+          : isV2 && row.kind === 'leasing'
+            ? leasingDetail(row.id)
+            : null;
+      // The row for the record already on screen would open the same page: nothing would move.
+      if (href && href === pathnameRef.current) {
+        toast.message(GII_CARRIED_CHAT_COPY.ALREADY_OPEN);
+        return;
+      }
+      if (href && scopedProperty && isActiveLeaseJobRow(row)) {
+        router.push(href);
         return;
       }
       openJob(row);
     },
-    [openJob, router, scopedProperty],
+    [isV2, openJob, router, scopedProperty],
   );
 
   const briefingItems = useMemo(() => {
@@ -627,7 +653,7 @@ export function GiiAssistant({
   // The briefing built here from the loaded list stays as the fallback when it cannot be read.
   // The list is read once for the whole app, so this card, the Cros button and the dashboard show
   // the same count; opening Cros reads it again.
-  const briefingScope = !scopedProperty && !messageScoped;
+  const briefingScope = (!scopedProperty || hasCrosTabs) && !messageScoped;
   const crosToday = useCrosToday();
   const refreshCrosToday = crosToday.refresh;
   const serverBriefing = briefingScope ? crosToday.briefing : null;
@@ -885,7 +911,7 @@ export function GiiAssistant({
   // Live briefing refreshes (5s poll) — page-scroll surfaces only; never yank scroll position.
   // Not on Cros's Today or past chats: they read from the top, and following the
   // poll dropped the agent past the greeting and the briefing.
-  const portfolioListView = isPortfolioCros && crosView !== 'chat';
+  const portfolioListView = crosListView;
   useEffect(() => {
     if (usePageScroll || portfolioListView || !stickToBottomRef.current) return;
     scrollChatToBottom('smooth');
@@ -1198,13 +1224,13 @@ export function GiiAssistant({
   }, [refreshCrosHistory, user?.id]);
 
   useEffect(() => {
-    if (isPortfolioCros && crosView === 'history') refreshCrosHistory();
-  }, [crosView, isPortfolioCros, refreshCrosHistory]);
+    if (hasCrosTabs && crosView === 'history') refreshCrosHistory();
+  }, [crosView, hasCrosTabs, refreshCrosHistory]);
 
-  // Save the portfolio chat after every settled turn, so it can be reopened on any device;
-  // a chat carried onto a record's screen is still that chat.
+  // Save the chat after every settled turn, so it can be reopened on any device; a chat on a
+  // record's screen, carried there or started there, is in past chats too.
   useEffect(() => {
-    if ((!isPortfolioCros && !carried) || !user?.id) return;
+    if ((!hasCrosTabs && !carried) || !user?.id) return;
     const input = giiConversationSaveInput(lines);
     if (!input || input.key === crosSavedKeyRef.current) return;
     if (!crosHistoryIdRef.current) crosHistoryIdRef.current = randomUuid();
@@ -1218,7 +1244,7 @@ export function GiiAssistant({
         if (crosSavedKeyRef.current === input.key) crosSavedKeyRef.current = null;
         toast.error(GII_CONVERSATION_COPY.SAVE_FAILED, { id: GII_CONVERSATION_SAVE_TOAST_ID });
       });
-  }, [carried, isPortfolioCros, lines, user?.id]);
+  }, [carried, hasCrosTabs, lines, user?.id]);
 
   /** Leaving the team's chat for another: keep it so the team button can bring it back. */
   const leaveTeamChat = () => {
@@ -1274,6 +1300,21 @@ export function GiiAssistant({
     setLines([]);
     lastTurnScreenPropertyIdRef.current = null;
     setCrosView('chat');
+  };
+
+  /** Back after Open: the chat goes with the agent to the screen Open left, as Open brought it here. */
+  const goBackWithChat = () => {
+    if (!carriedFromPath) return;
+    carriedChatStore().current = {
+      fromPath: pathnameRef.current,
+      toPath: null,
+      at: Date.now(),
+      lines: linesRef.current,
+      earlierSummary: earlierSummaryRef.current,
+      historyId: crosHistoryIdRef.current,
+      savedKey: crosSavedKeyRef.current,
+    };
+    router.push(carriedFromPath);
   };
 
   /** The agent ends the chat with the team from its card; Cros answers the next message. */
@@ -1827,6 +1868,17 @@ export function GiiAssistant({
         )}
       >
         <div className="flex min-w-0 items-center gap-2">
+          {carriedFromPath ? (
+            <button
+              type="button"
+              onClick={goBackWithChat}
+              className="text-muted-foreground hover:bg-secondary hover:text-primary -ml-2 flex size-10 shrink-0 items-center justify-center rounded-lg"
+              aria-label={GII_CARRIED_CHAT_COPY.BACK}
+              title={GII_CARRIED_CHAT_COPY.BACK}
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+          ) : null}
           <CrosAssistantLogoBadge size="xl" />
           <div className="min-w-0">
             <p className="text-sm font-bold">
@@ -1902,7 +1954,7 @@ export function GiiAssistant({
         ) : null}
       </div>
 
-      {isPortfolioCros ? (
+      {hasCrosTabs ? (
         <CrosPortfolioTabs
           view={crosView}
           onView={setCrosView}
@@ -1912,7 +1964,7 @@ export function GiiAssistant({
         />
       ) : null}
         <>
-      {scopedAddress && !isEmbedded ? (
+      {scopedAddress && !isEmbedded && !crosListView ? (
         <div className="border-border/40 border-b px-4 py-2">
           <div
             className={cn(
@@ -1936,10 +1988,10 @@ export function GiiAssistant({
         )}
       >
         <div
-          key={isPortfolioCros ? crosView : 'assistant'}
-          className={cn('space-y-3', isPortfolioCros && 'cros-panel-view-in')}
+          key={hasCrosTabs ? crosView : 'assistant'}
+          className={cn('space-y-3', hasCrosTabs && 'cros-panel-view-in')}
         >
-        {isPortfolioCros && crosView !== 'chat' ? (
+        {crosListView ? (
           <CrosPortfolioBody
             view={crosView}
             wide={workspace}
@@ -1972,7 +2024,7 @@ export function GiiAssistant({
           />
         ) : null}
 
-        {!isPortfolioCros && !data.loading && !effectiveLaunch.initialPrompt ? (
+        {!isPortfolioCros && !crosListView && !data.loading && !effectiveLaunch.initialPrompt ? (
           <div className="space-y-2">
             {!hasUserMessages ? (
               <GiiChatGreeting text={greetingText} />
@@ -2004,7 +2056,7 @@ export function GiiAssistant({
           </div>
         ) : null}
 
-        {lines.length === 0 && data.loading && !(isPortfolioCros && crosView !== 'chat') ? (
+        {lines.length === 0 && data.loading && !crosListView ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <CrosAssistantLogoBadge size="2xl" className="mb-4" />
             <p className="text-sm font-semibold">{roleCopy.askTitle}</p>
@@ -2021,7 +2073,8 @@ export function GiiAssistant({
         briefingIsEmpty &&
         !effectiveLaunch.initialPrompt &&
         !messageScoped &&
-        !isPortfolioCros ? (
+        !isPortfolioCros &&
+        !crosListView ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <p className="text-muted-foreground max-w-[260px] text-xs leading-relaxed">
               {scopedProperty
@@ -2055,7 +2108,7 @@ export function GiiAssistant({
           </div>
         ) : null}
 
-        {(!isPortfolioCros || crosView === 'chat') && lines.map((line) => (
+        {!crosListView && lines.map((line) => (
           <div key={line.id} className="space-y-2">
             <GiiChatLine
               role={line.role}
@@ -2090,7 +2143,7 @@ export function GiiAssistant({
             ) : null}
           </div>
         ))}
-        {(!isPortfolioCros || crosView === 'chat') && teamChatInView && teamChat.handoff && !teamChatAnchorId ? (
+        {!crosListView && teamChatInView && teamChat.handoff && !teamChatAnchorId ? (
           <GiiHandoffThread handoff={teamChat.handoff} onClose={endTeamChat} closing={teamChat.closing} />
         ) : null}
         </div>
@@ -2108,7 +2161,7 @@ export function GiiAssistant({
               : 'bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)] dark:bg-card',
         )}
       >
-        {!isPortfolioCros && !sending && !hasUserMessages ? (
+        {!isPortfolioCros && !crosListView && !sending && !hasUserMessages ? (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {suggestedPrompts.map((item) => (
               <button

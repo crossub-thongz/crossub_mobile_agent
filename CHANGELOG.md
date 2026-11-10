@@ -7,11 +7,14 @@
 - When the CROSSUB team ends a chat, Cros says so at once and marks the chat ended
 - End chat button on the CROSSUB team chat in Cros, so the agent can close it themselves
 - Restored: Privacy Policy and Terms of Use checkbox on login, owner email sender card on Settings, per-login Billing and Accounting access, and starting or opening another Cros chat while the team holds one
+- Back button on the Cros panel after Open, taking the chat back to the screen it came from
 
 ### Changed
 - The open Cros side panel moves the page left instead of covering it
 
 ### Fixed
+- Cros's Today, Chat, CROSSUB team and past chats tabs show on property and record screens too, so a new or past chat is always reachable
+- Tapping the job already open on the page in Cros's Jobs in progress says it is open instead of doing nothing
 - The top bar also moves left when the Cros side panel is open, so its right side is no longer hidden
 - Cros keeps the job or record it just linked, so "yes, send it" acts on it without asking for a reference
 - Pressing Open on a record in a Cros chat carries that chat, with its cards, to the record's screen instead of starting a new one
