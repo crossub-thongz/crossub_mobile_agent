@@ -2,6 +2,13 @@
 
 ## 2026-11-10
 
+### Added
+- Preview email button on Cros's Confirm card to read the owner quote email before sending
+- When the CROSSUB team ends a chat, Cros says so at once and marks the chat ended
+
+### Changed
+- The open Cros side panel moves the page left instead of covering it
+
 ### Fixed
 - Cros keeps the job or record it just linked, so "yes, send it" acts on it without asking for a reference
 - Pressing Open on a record in a Cros chat carries that chat, with its cards, to the record's screen instead of starting a new one

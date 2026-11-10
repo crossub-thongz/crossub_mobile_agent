@@ -212,7 +212,13 @@ export function AgentShell({
         <AgentSidebar onLogout={() => void logout()} />
       )}
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div
+        className={cn(
+          'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-[padding] duration-300',
+          // The open Cros panel sits beside the page, not over it: the page gives it room.
+          crosOverlay && crosOpen && !crosWorkspace && 'lg:pr-[480px]',
+        )}
+      >
         {isV2 && !immersive && !persistentChrome ? (
           <AgentShellV2Header
             unreadNotificationCount={unreadNotificationCount}

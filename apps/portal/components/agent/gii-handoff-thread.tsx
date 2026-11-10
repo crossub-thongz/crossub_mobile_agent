@@ -75,6 +75,13 @@ export function GiiHandoffThread({
           <GiiChatLine key={message.id} role="user" text={message.body} />
         ),
       )}
+      {handoff.closed ? (
+        <div className="flex items-center gap-2 pt-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+          <span className="h-px flex-1 bg-border" />
+          {GII_HANDOFF_COPY.ENDED_LABEL}
+          <span className="h-px flex-1 bg-border" />
+        </div>
+      ) : null}
       {handoff.closed ? status : null}
     </div>
   );

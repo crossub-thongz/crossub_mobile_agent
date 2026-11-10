@@ -1,6 +1,9 @@
 /** The row a repair job card shows when it carries photos, as the API writes it. */
 export const GII_PROPOSAL_PHOTOS_LABEL = 'Photos';
 
+/** The row carrying an email's full text as it will go (owner quote email), as the API writes it. */
+export const GII_PROPOSAL_EMAIL_LABEL = 'Email';
+
 /** How many of the agent's messages the API looks through for a repair job's photos. */
 export const GII_JOB_PHOTO_LOOKBACK_MESSAGES = 3;
 
@@ -10,6 +13,8 @@ export const GII_PROPOSAL_COPY = {
   CONFIRM: 'Confirm',
   CONFIRMING: 'Working…',
   CANCEL: 'Cancel',
+  PREVIEW_EMAIL: 'Preview email',
+  HIDE_EMAIL: 'Hide email',
   /** Added to the chat when the agent cancels, so Cros sees the answer on the next turn. */
   CANCELLED: 'Cancelled. Nothing was changed.',
   /** Shown when the confirm request itself fails (network, server down). */

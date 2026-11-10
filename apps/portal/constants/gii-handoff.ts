@@ -16,6 +16,10 @@ export const GII_HANDOFF_COPY = {
   BACK_FROM: (when: string) => `The team is back ${when} Sydney time`,
   CLOSED: (name: string | null) => `${name ?? `The ${GII_HANDOFF_TEAM}`} handed the chat back to Cros.`,
   CLOSED_BY_ME: 'You ended the chat with the team. Cros answers again.',
+  /** The notice when the team hands the chat back while the agent has the app open. */
+  ENDED_LIVE: (name: string | null) => `${name ?? `The ${GII_HANDOFF_TEAM}`} ended the chat. Cros answers again.`,
+  /** The divider closing a chat the team handed back. */
+  ENDED_LABEL: 'Chat ended',
   /** The button on the team chat card: the agent ends the chat themselves. */
   END_CHAT: 'End chat',
   END_CHAT_TITLE: 'End the chat with the CROSSUB team and go back to Cros',

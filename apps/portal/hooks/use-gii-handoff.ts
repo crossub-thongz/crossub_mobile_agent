@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
-import { GII_HANDOFF_POLL_MS } from '@/constants/gii-handoff';
+import { GII_HANDOFF_COPY, GII_HANDOFF_POLL_MS } from '@/constants/gii-handoff';
 import {
   closeGiiHandoff,
   getCurrentGiiHandoff,
@@ -44,13 +45,31 @@ export function useGiiHandoff(open: boolean) {
 
   useEffect(() => {
     if (!open || !isHeld || !threadId) return;
-    const timer = window.setInterval(() => {
+    const refresh = () => {
       getGiiHandoff(threadId)
         .then(setHandoff)
         .catch((err: unknown) => console.warn('[cros] team replies could not be loaded', err));
-    }, GII_HANDOFF_POLL_MS);
-    return () => window.clearInterval(timer);
+    };
+    const timer = window.setInterval(refresh, GII_HANDOFF_POLL_MS);
+    // A tab in the background polls rarely: catch up the moment the agent comes back to it.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [isHeld, open, threadId]);
+
+  /** The team handing the chat back while the app is open is said out loud, not only on the card. */
+  const heldBeforeRef = useRef<string | null>(null);
+  useEffect(() => {
+    const before = heldBeforeRef.current;
+    heldBeforeRef.current = isHeld ? threadId : null;
+    if (!before || isHeld || handoff?.threadId !== before || !handoff.closed || handoff.closedByMe) return;
+    toast.message(GII_HANDOFF_COPY.ENDED_LIVE(handoff.closedByName ?? handoff.staffName));
+  }, [handoff, isHeld, threadId]);
 
   /** Follow the thread a confirmed handoff opened or added to. */
   const adopt = useCallback((id: string) => {
