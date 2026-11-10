@@ -66,6 +66,7 @@ import { GII_ROLE_COPY, type AgentCopyVariant } from '@/constants/agent-copy-var
 import { useAgentCopyVariant } from '@/hooks/use-agent-copy-variant';
 import { AGENT_INPUT_KIND, sanitizeAgentInput } from '@/lib/agent-input-rules';
 import { stripEmojis } from '@/lib/strip-emojis';
+import { GII_CARRIED_CHAT_KEY, GII_CARRIED_CHAT_TTL_MS } from '@/constants/gii-carried-chat';
 import { ROUTES } from '@/constants/routes';
 import { isActiveLeaseJobRow, relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
@@ -190,13 +191,36 @@ function withoutProposals(lines: ChatLine[]): ChatLine[] {
  * shell, so the panel there is a new one; it takes this chat up instead of starting afresh.
  */
 type CarriedCrosChat = {
-  path: string;
+  /** The screen Open was pressed on, and the one it led to once a panel there took the chat. */
+  fromPath: string;
+  toPath: string | null;
+  at: number;
   lines: ChatLine[];
   earlierSummary: GiiEarlierSummary | null;
   historyId: string | null;
   savedKey: string | null;
 };
-let carriedCrosChat: CarriedCrosChat | null = null;
+
+function carriedChatStore(): { current: CarriedCrosChat | null } {
+  const global = globalThis as unknown as Record<string, { current: CarriedCrosChat | null } | undefined>;
+  return (global[GII_CARRIED_CHAT_KEY] ??= { current: null });
+}
+
+/**
+ * The chat carried to a panel on `pathname`, or null. Open can reach the record's screen
+ * through a job dialog, so its address is not always known: the first panel on a new screen
+ * pins the chat there, and every panel on that screen (the floating launcher mounts a second)
+ * takes it up.
+ */
+function takeCarriedChat(pathname: string): CarriedCrosChat | null {
+  const carried = carriedChatStore().current;
+  if (!carried || Date.now() - carried.at > GII_CARRIED_CHAT_TTL_MS) return null;
+  if (carried.toPath === null) {
+    if (pathname === carried.fromPath) return null;
+    carried.toPath = pathname;
+  }
+  return carried.toPath === pathname ? carried : null;
+}
 
 /** Composer grows with typed content so longer questions stay visible. */
 const COMPOSER_MIN_PX = 96;
@@ -332,14 +356,13 @@ export function GiiAssistant({
   /** The chat carried here by a record card's Open, read once when this panel mounts. */
   const carriedRef = useRef<CarriedCrosChat | null | undefined>(undefined);
   if (carriedRef.current === undefined) {
-    carriedRef.current =
-      (variant === 'panel' || variant === 'modal') && carriedCrosChat?.path === pathname ? carriedCrosChat : null;
+    carriedRef.current = variant === 'panel' || variant === 'modal' ? takeCarriedChat(pathname) : null;
   }
   const carried = carriedRef.current;
   useEffect(() => {
-    // Every panel on the opened screen takes it up (the floating launcher mounts a second one,
-    // sometimes first); leaving that screen ends it, so a later visit starts as it always has.
-    if (carriedCrosChat && carriedCrosChat.path !== pathname) carriedCrosChat = null;
+    // Leaving the screen the chat was carried to ends it: a later visit starts as it always has.
+    const store = carriedChatStore();
+    if (store.current?.toPath && store.current.toPath !== pathname) store.current = null;
   }, [pathname]);
   const isV2 = useIsAgentUiV2();
   const data = useAgentData();
@@ -364,8 +387,6 @@ export function GiiAssistant({
   const { openNotification } = useAgentNotificationDialog();
   const { notifications, markNotificationRead } = data;
 
-  /** The screen a record card in this chat opened: arriving there keeps the chat. */
-  const keepChatOnPathRef = useRef<string | null>(carried?.path ?? null);
   const openJobCaseLink = useCallback(
     async (link: GiiJobCaseLink) => {
       const target = giiRecordLinkTarget(link, portfolioData, notifications);
@@ -375,21 +396,21 @@ export function GiiAssistant({
         toast.message('Refreshing… tap Open again in a moment.');
         return;
       }
+      // The record's screen mounts its own Cros panel: the chat that linked it goes along.
+      carriedChatStore().current = {
+        fromPath: pathnameRef.current,
+        toPath: null,
+        at: Date.now(),
+        lines: linesRef.current,
+        earlierSummary: earlierSummaryRef.current,
+        historyId: crosHistoryIdRef.current,
+        savedKey: crosSavedKeyRef.current,
+      };
       if ('row' in target) {
         openJob(target.row);
         return;
       }
       if ('href' in target) {
-        // The record's screen scopes Cros to its property; the chat that linked it stays open.
-        const path = new URL(target.href, window.location.origin).pathname;
-        keepChatOnPathRef.current = path;
-        carriedCrosChat = {
-          path,
-          lines: linesRef.current,
-          earlierSummary: earlierSummaryRef.current,
-          historyId: crosHistoryIdRef.current,
-          savedKey: crosSavedKeyRef.current,
-        };
         router.push(target.href);
         return;
       }
@@ -728,8 +749,8 @@ export function GiiAssistant({
 
   useEffect(() => {
     if (!scopedProperty?.id) return;
-    // Opened from a record card in this chat: carry on here, a fresh chat would lose its cards.
-    if (keepChatOnPathRef.current === pathnameRef.current) return;
+    // Opened from a record card in a chat: carry on here, a fresh chat would lose its cards.
+    if (carried?.toPath === pathnameRef.current) return;
     setLines([]);
     // A fresh chat has no earlier property to have navigated away from.
     lastTurnScreenPropertyIdRef.current = null;
@@ -742,11 +763,6 @@ export function GiiAssistant({
     });
     initialPromptHandledRef.current = false;
   }, [scopedProperty?.id]);
-
-  useEffect(() => {
-    // Leaving the opened record's screen ends the keep: later navigation starts afresh as before.
-    if (keepChatOnPathRef.current && keepChatOnPathRef.current !== pathname) keepChatOnPathRef.current = null;
-  }, [pathname]);
 
   useEffect(
     () => () => {
