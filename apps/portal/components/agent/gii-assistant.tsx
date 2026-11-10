@@ -326,6 +326,9 @@ export function GiiAssistant({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  /** The router's path: the address bar can still read the last page when a new one first renders. */
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
   /** The chat carried here by a record card's Open, read once when this panel mounts. */
   const carriedRef = useRef<CarriedCrosChat | null | undefined>(undefined);
   if (carriedRef.current === undefined) {
@@ -334,9 +337,10 @@ export function GiiAssistant({
   }
   const carried = carriedRef.current;
   useEffect(() => {
-    // Taken up: a later visit to this screen starts as it always has.
-    if (carried && carriedCrosChat === carried) carriedCrosChat = null;
-  }, [carried]);
+    // Every panel on the opened screen takes it up (the floating launcher mounts a second one,
+    // sometimes first); leaving that screen ends it, so a later visit starts as it always has.
+    if (carriedCrosChat && carriedCrosChat.path !== pathname) carriedCrosChat = null;
+  }, [pathname]);
   const isV2 = useIsAgentUiV2();
   const data = useAgentData();
   const { user } = useAuth();
@@ -725,7 +729,7 @@ export function GiiAssistant({
   useEffect(() => {
     if (!scopedProperty?.id) return;
     // Opened from a record card in this chat: carry on here, a fresh chat would lose its cards.
-    if (keepChatOnPathRef.current === window.location.pathname) return;
+    if (keepChatOnPathRef.current === pathnameRef.current) return;
     setLines([]);
     // A fresh chat has no earlier property to have navigated away from.
     lastTurnScreenPropertyIdRef.current = null;
