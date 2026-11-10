@@ -27,6 +27,7 @@ import {
   GII_CONVERSATION_SAVE_TOAST_ID,
   GII_PENDING_TEXT,
 } from '@/constants/gii-conversation';
+import { toIsoCalendarDate } from '@/utils/calendar-date';
 import { giiAssistantHistoryContent, truncateGiiChatContent } from '@/utils/gii-chat-content';
 import { giiConversationLines, giiConversationSaveInput } from '@/utils/gii-conversation';
 import {
@@ -986,7 +987,8 @@ export function GiiAssistant({
       if (res.assessment?.propertyId) {
         contextRef.current = {
           propertyId: res.assessment.propertyId,
-          moveOutDate: res.assessment.moveOutDate,
+          // The assessment shows it as DD/MM/YYYY; the chat API takes YYYY-MM-DD back.
+          moveOutDate: toIsoCalendarDate(res.assessment.moveOutDate),
           // Choice resolved — drop the ambiguous list.
         };
       } else if (res.pendingPropertyCandidates?.length) {
