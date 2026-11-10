@@ -5,6 +5,7 @@
 ### Added
 - Preview email button on Cros's Confirm card to read the owner quote email before sending
 - When the CROSSUB team ends a chat, Cros says so at once and marks the chat ended
+- End chat button on the CROSSUB team chat in Cros, so the agent can close it themselves
 
 ### Changed
 - The open Cros side panel moves the page left instead of covering it

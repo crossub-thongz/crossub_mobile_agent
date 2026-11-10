@@ -1241,6 +1241,14 @@ export function GiiAssistant({
     setCrosView('chat');
   };
 
+  /** The agent ends the chat with the team from its card; Cros answers the next message. */
+  const endTeamChat = () => {
+    teamChat.close().catch((err: unknown) => {
+      console.warn('[cros] team chat could not be ended', err);
+      toast.error(GII_HANDOFF_COPY.END_FAILED);
+    });
+  };
+
   /** Talk to the CROSSUB team: back to the chat a person holds, or ask Cros to hand this one over. */
   const talkToTeam = () => {
     if (teamChat.held) {
@@ -1495,11 +1503,11 @@ export function GiiAssistant({
                   />
                 ) : null}
                 {teamChat.handoff && line.id === teamChatAnchorId ? (
-                  <GiiHandoffThread handoff={teamChat.handoff} />
+                  <GiiHandoffThread handoff={teamChat.handoff} onClose={endTeamChat} closing={teamChat.closing} />
                 ) : null}
               </div>
             ))}
-            {teamChat.handoff && !teamChatAnchorId ? <GiiHandoffThread handoff={teamChat.handoff} /> : null}
+            {teamChat.handoff && !teamChatAnchorId ? <GiiHandoffThread handoff={teamChat.handoff} onClose={endTeamChat} closing={teamChat.closing} /> : null}
             <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
           </div>
         )}
@@ -2033,12 +2041,12 @@ export function GiiAssistant({
             ) : null}
 
             {teamChat.handoff && line.id === teamChatAnchorId ? (
-              <GiiHandoffThread handoff={teamChat.handoff} />
+              <GiiHandoffThread handoff={teamChat.handoff} onClose={endTeamChat} closing={teamChat.closing} />
             ) : null}
           </div>
         ))}
         {(!isPortfolioCros || crosView === 'chat') && teamChat.handoff && !teamChatAnchorId ? (
-          <GiiHandoffThread handoff={teamChat.handoff} />
+          <GiiHandoffThread handoff={teamChat.handoff} onClose={endTeamChat} closing={teamChat.closing} />
         ) : null}
         </div>
 
