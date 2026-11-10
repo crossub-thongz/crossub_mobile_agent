@@ -335,6 +335,8 @@ export function GiiAssistant({
   const { openNotification } = useAgentNotificationDialog();
   const { notifications, markNotificationRead } = data;
 
+  /** The screen a record card in this chat opened: arriving there keeps the chat. */
+  const keepChatOnPathRef = useRef<string | null>(null);
   const openJobCaseLink = useCallback(
     async (link: GiiJobCaseLink) => {
       const target = giiRecordLinkTarget(link, portfolioData, notifications);
@@ -349,6 +351,8 @@ export function GiiAssistant({
         return;
       }
       if ('href' in target) {
+        // The record's screen scopes Cros to its property; the chat that linked it stays open.
+        keepChatOnPathRef.current = new URL(target.href, window.location.origin).pathname;
         router.push(target.href);
         return;
       }
@@ -668,6 +672,8 @@ export function GiiAssistant({
 
   useEffect(() => {
     if (!scopedProperty?.id) return;
+    // Opened from a record card in this chat: carry on here, a fresh chat would lose its cards.
+    if (keepChatOnPathRef.current === window.location.pathname) return;
     setLines([]);
     // A fresh chat has no earlier property to have navigated away from.
     lastTurnScreenPropertyIdRef.current = null;
@@ -680,6 +686,11 @@ export function GiiAssistant({
     });
     initialPromptHandledRef.current = false;
   }, [scopedProperty?.id]);
+
+  useEffect(() => {
+    // Leaving the opened record's screen ends the keep: later navigation starts afresh as before.
+    if (keepChatOnPathRef.current && keepChatOnPathRef.current !== pathname) keepChatOnPathRef.current = null;
+  }, [pathname]);
 
   useEffect(
     () => () => {

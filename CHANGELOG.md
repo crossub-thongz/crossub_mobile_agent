@@ -4,6 +4,7 @@
 
 ### Fixed
 - Cros keeps the job or record it just linked, so "yes, send it" acts on it without asking for a reference
+- Pressing Open on a record in a Cros chat keeps that chat open instead of starting a new one for the property
 
 ## 2026-11-09
 
