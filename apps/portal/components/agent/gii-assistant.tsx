@@ -185,6 +185,19 @@ function withoutProposals(lines: ChatLine[]): ChatLine[] {
   return lines.map((l) => (l.proposal ? { ...l, proposal: null } : l));
 }
 
+/**
+ * The chat a record card's Open carries to the screen it opens. Every page mounts its own
+ * shell, so the panel there is a new one; it takes this chat up instead of starting afresh.
+ */
+type CarriedCrosChat = {
+  path: string;
+  lines: ChatLine[];
+  earlierSummary: GiiEarlierSummary | null;
+  historyId: string | null;
+  savedKey: string | null;
+};
+let carriedCrosChat: CarriedCrosChat | null = null;
+
 /** Composer grows with typed content so longer questions stay visible. */
 const COMPOSER_MIN_PX = 96;
 const COMPOSER_MAX_PX = 220;
@@ -313,6 +326,17 @@ export function GiiAssistant({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  /** The chat carried here by a record card's Open, read once when this panel mounts. */
+  const carriedRef = useRef<CarriedCrosChat | null | undefined>(undefined);
+  if (carriedRef.current === undefined) {
+    carriedRef.current =
+      (variant === 'panel' || variant === 'modal') && carriedCrosChat?.path === pathname ? carriedCrosChat : null;
+  }
+  const carried = carriedRef.current;
+  useEffect(() => {
+    // Taken up: a later visit to this screen starts as it always has.
+    if (carried && carriedCrosChat === carried) carriedCrosChat = null;
+  }, [carried]);
   const isV2 = useIsAgentUiV2();
   const data = useAgentData();
   const { user } = useAuth();
@@ -337,7 +361,7 @@ export function GiiAssistant({
   const { notifications, markNotificationRead } = data;
 
   /** The screen a record card in this chat opened: arriving there keeps the chat. */
-  const keepChatOnPathRef = useRef<string | null>(null);
+  const keepChatOnPathRef = useRef<string | null>(carried?.path ?? null);
   const openJobCaseLink = useCallback(
     async (link: GiiJobCaseLink) => {
       const target = giiRecordLinkTarget(link, portfolioData, notifications);
@@ -353,7 +377,15 @@ export function GiiAssistant({
       }
       if ('href' in target) {
         // The record's screen scopes Cros to its property; the chat that linked it stays open.
-        keepChatOnPathRef.current = new URL(target.href, window.location.origin).pathname;
+        const path = new URL(target.href, window.location.origin).pathname;
+        keepChatOnPathRef.current = path;
+        carriedCrosChat = {
+          path,
+          lines: linesRef.current,
+          earlierSummary: earlierSummaryRef.current,
+          historyId: crosHistoryIdRef.current,
+          savedKey: crosSavedKeyRef.current,
+        };
         router.push(target.href);
         return;
       }
@@ -385,9 +417,16 @@ export function GiiAssistant({
   const [sending, setSending] = useState(false);
   /** The chat line whose proposal is being confirmed — one at a time. */
   const [confirmingLineId, setConfirmingLineId] = useState<string | null>(null);
-  const [lines, setLines] = useState<ChatLine[]>([]);
+  const [lines, setLines] = useState<ChatLine[]>(() => carried?.lines ?? []);
   /** Notes on a long chat's older lines; ignored once the chat they were made for is gone. */
-  const [earlierSummary, setEarlierSummary] = useState<GiiEarlierSummary | null>(null);
+  const [earlierSummary, setEarlierSummary] = useState<GiiEarlierSummary | null>(
+    () => carried?.earlierSummary ?? null,
+  );
+  /** The latest chat, for a record card's Open to carry to the screen it opens. */
+  const linesRef = useRef(lines);
+  linesRef.current = lines;
+  const earlierSummaryRef = useRef(earlierSummary);
+  earlierSummaryRef.current = earlierSummary;
   const summarisingRef = useRef(false);
   const voiceCaptureRef = useRef<GiiVoiceCapture | null>(null);
   /** Spoken replies (Jarvis 4.1): only a question asked by voice is answered aloud. */
@@ -461,7 +500,7 @@ export function GiiAssistant({
   /** Portfolio CROS — Today, chat, and past chats. */
   const isPortfolioCros = (isPanel || isModal) && isV2 && !scopedProperty && !messageScoped;
   const isFrostedV2Panel = isPanel && isV2 && !isPortfolioCros;
-  const [crosView, setCrosView] = useState<CrosPortfolioView>('today');
+  const [crosView, setCrosView] = useState<CrosPortfolioView>(carried ? 'chat' : 'today');
   const teamChat = useGiiHandoff(open);
   const heldThreadId = teamChat.held?.threadId ?? null;
   /** The Cros line the team chat follows (the handoff's answer), so later turns sit below it. */
@@ -472,9 +511,9 @@ export function GiiAssistant({
   }, [heldThreadId]);
   const [crosHistory, setCrosHistory] = useState<GiiConversationSummary[]>([]);
   /** The open chat's server id, minted on its first save. Null until something is asked. */
-  const crosHistoryIdRef = useRef<string | null>(null);
+  const crosHistoryIdRef = useRef<string | null>(carried?.historyId ?? null);
   /** The last transcript saved for the open chat, so an unchanged render does not save again. */
-  const crosSavedKeyRef = useRef<string | null>(null);
+  const crosSavedKeyRef = useRef<string | null>(carried?.savedKey ?? null);
   const portfolioCrosRef = useRef(false);
   portfolioCrosRef.current = isPortfolioCros;
 
@@ -1123,9 +1162,10 @@ export function GiiAssistant({
     if (isPortfolioCros && crosView === 'history') refreshCrosHistory();
   }, [crosView, isPortfolioCros, refreshCrosHistory]);
 
-  // Save the portfolio chat after every settled turn, so it can be reopened on any device.
+  // Save the portfolio chat after every settled turn, so it can be reopened on any device;
+  // a chat carried onto a record's screen is still that chat.
   useEffect(() => {
-    if (!isPortfolioCros || !user?.id) return;
+    if ((!isPortfolioCros && !carried) || !user?.id) return;
     const input = giiConversationSaveInput(lines);
     if (!input || input.key === crosSavedKeyRef.current) return;
     if (!crosHistoryIdRef.current) crosHistoryIdRef.current = crypto.randomUUID();
@@ -1139,7 +1179,7 @@ export function GiiAssistant({
         if (crosSavedKeyRef.current === input.key) crosSavedKeyRef.current = null;
         toast.error(GII_CONVERSATION_COPY.SAVE_FAILED, { id: GII_CONVERSATION_SAVE_TOAST_ID });
       });
-  }, [isPortfolioCros, lines, user?.id]);
+  }, [carried, isPortfolioCros, lines, user?.id]);
 
   const openCrosHistory = async (entry: GiiConversationSummary) => {
     try {
