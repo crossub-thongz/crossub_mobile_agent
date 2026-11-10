@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-10
+
+### Fixed
+- Cros keeps the job or record it just linked, so "yes, send it" acts on it without asking for a reference
+
 ## 2026-11-09
 
 ### Fixed

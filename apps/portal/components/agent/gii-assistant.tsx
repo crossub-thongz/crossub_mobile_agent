@@ -27,7 +27,7 @@ import {
   GII_CONVERSATION_SAVE_TOAST_ID,
   GII_PENDING_TEXT,
 } from '@/constants/gii-conversation';
-import { truncateGiiChatContent } from '@/utils/gii-chat-content';
+import { giiAssistantHistoryContent, truncateGiiChatContent } from '@/utils/gii-chat-content';
 import { giiConversationLines, giiConversationSaveInput } from '@/utils/gii-conversation';
 import {
   giiEarlierSummaryFor,
@@ -850,7 +850,7 @@ export function GiiAssistant({
 
       const mapped: GiiChatMessage[] = historyBase.map((l) => ({
         role: l.role,
-        content: l.text,
+        content: l.role === 'assistant' ? giiAssistantHistoryContent(l.text, l.jobCases) : l.text,
         ...(l.id === userLine.id && apiAttachments?.length
           ? { attachments: apiAttachments }
           : l.sentAttachments?.length

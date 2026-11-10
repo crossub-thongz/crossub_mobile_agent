@@ -24,6 +24,13 @@ export const GII_CHAT_MAX_MESSAGES = 20;
 export const GII_CHAT_MESSAGE_MAX_CHARS = 4000;
 
 /**
+ * A reply's record cards (job, rent review…) are not in its text, so a later "yes, send it"
+ * would leave Cros without the reference. History carries them as a note after the text.
+ */
+export const GII_HISTORY_RECORDS_NOTE = (labels: string[]): string =>
+  `[Records linked under this reply: ${labels.join('; ')}]`;
+
+/**
  * Long chats (Jarvis 1.2): once more than `FOLD_AT` lines follow the summary, all but the
  * last `KEEP_RECENT` are folded into it. Folding at 16 leaves room in the 20 for the
  * context seed and the next question; keeping 8 means a fold every four turns, not every one.
