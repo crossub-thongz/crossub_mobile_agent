@@ -45,6 +45,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { AGENCY_MEMBERSHIP_TIER } from '@/constants/api-enums';
 import { SELF_MANAGED_BILLING_NOTE } from '@/constants/service-plan';
 import {
+  agenciesCanViewBilling,
   isSelfManagedLevel,
   PORTAL_SERVICE_LEVEL,
   resolvePortalServiceLevel,
@@ -346,7 +347,7 @@ function PrepaidMonthlyBillingList({
 }
 
 export default function BillPage() {
-  const { primaryAgency } = useAgentData();
+  const { primaryAgency, agencies, portalAccessReady } = useAgentData();
   const { user } = useAuth();
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
@@ -817,6 +818,17 @@ export default function BillPage() {
       setPayingAll(false);
     }
   };
+
+  if (portalAccessReady && !agenciesCanViewBilling(agencies, portalAccessReady)) {
+    return (
+      <AgentShell title="Invoice">
+        <PageIntro
+          title="Billing"
+          description="Your agency principal has not given this login access to billing."
+        />
+      </AgentShell>
+    );
+  }
 
   if (!selfManaged && summary?.platformBillingDisabled) {
     return (

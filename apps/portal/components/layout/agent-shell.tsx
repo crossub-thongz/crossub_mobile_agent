@@ -38,6 +38,7 @@ import { moreNavFooterForUi, moreNavForUi, primaryNavForUi } from '@/constants/n
 import { ROUTES } from '@/constants/routes';
 import { filterNavByAccess, agencyBillingNavLabel } from '@/lib/portal-service-level';
 import { filterHiddenBillingNav } from '@/lib/platform-billing-ui';
+import { agenciesCanViewBilling } from '@/lib/portal-service-level';
 import { isShellHomePath } from '@/components/layout/shell-back-button';
 import { useScrollbarReveal } from '@/lib/use-scrollbar-reveal';
 import { useShellAsideStore } from '@/lib/shell-aside-store';
@@ -101,7 +102,8 @@ export function AgentShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(56);
-  const { hasFullManagementAccess, unreadNotificationCount, platformBillingDisabled } = useAgentData();
+  const { hasFullManagementAccess, unreadNotificationCount, platformBillingDisabled, agencies, portalAccessReady } =
+    useAgentData();
   const selfManagedAccess = useSelfManagedAccess();
   const { total: needsYouCount } = useCrosToday();
   const propertiesPageActive = useShellAsideStore((s) => s.propertiesPageActive);
@@ -158,7 +160,7 @@ export function AgentShell({
       ...filterNavByAccess(moreNavForUi(isV2), hasFullManagementAccess, selfManagedAccess),
       ...filterNavByAccess(moreNavFooterForUi(isV2), hasFullManagementAccess, selfManagedAccess),
     ].map((item) => (item.href === ROUTES.BILL ? { ...item, label: billingLabel } : item)),
-    platformBillingDisabled,
+    platformBillingDisabled || !agenciesCanViewBilling(agencies, portalAccessReady),
   );
 
   useEffect(() => {

@@ -6,6 +6,7 @@
 - Preview email button on Cros's Confirm card to read the owner quote email before sending
 - When the CROSSUB team ends a chat, Cros says so at once and marks the chat ended
 - End chat button on the CROSSUB team chat in Cros, so the agent can close it themselves
+- Restored: Privacy Policy and Terms of Use checkbox on login, owner email sender card on Settings, per-login Billing and Accounting access, and starting or opening another Cros chat while the team holds one
 
 ### Changed
 - The open Cros side panel moves the page left instead of covering it

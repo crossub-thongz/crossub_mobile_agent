@@ -27,7 +27,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAgentInbox } from '@/components/providers/agent-inbox-provider';
 import { useCrosToday } from '@/components/providers/cros-today-provider';
-import { filterNavByAccess, agencyBillingNavLabel } from '@/lib/portal-service-level';
+import { agenciesCanViewBilling, filterNavByAccess, agencyBillingNavLabel } from '@/lib/portal-service-level';
 import { filterHiddenBillingNav } from '@/lib/platform-billing-ui';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
@@ -492,7 +492,8 @@ export function AgentSidebar({
       window.removeEventListener(LEASING_VIEW_EVENT, onView);
     };
   }, [pathname]);
-  const { hasFullManagementAccess, platformBillingDisabled } = useAgentData();
+  const { hasFullManagementAccess, platformBillingDisabled, agencies, portalAccessReady } =
+    useAgentData();
   const selfManagedAccess = useSelfManagedAccess();
   const { total: needsYouCount } = useCrosToday();
   const inbox = useAgentInbox();
@@ -508,7 +509,7 @@ export function AgentSidebar({
     filterNavByAccess(menuNavForUi(isV2), hasFullManagementAccess, selfManagedAccess).map((item) =>
       item.href === ROUTES.BILL ? { ...item, label: billingLabel } : item,
     ),
-    platformBillingDisabled,
+    platformBillingDisabled || !agenciesCanViewBilling(agencies, portalAccessReady),
   );
 
   const mainNav = menuNav.filter((item) => !V2_SIDEBAR_PINNED_HREFS.has(item.href));

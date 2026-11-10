@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -56,11 +56,24 @@ type FormValues = z.infer<typeof schema>;
 
 const AGENT_GREEN = '#00bd85';
 
+/** The Privacy Policy and Terms links follow `?country=`, which needs a Suspense boundary to read. */
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const country = useSearchParams().get('country') === 'NZ' ? 'NZ' : 'AU';
+  const privacyHref = `https://www.crossub.com/${country}/privacy`;
+  const termsHref = `https://www.crossub.com/${country}/terms`;
   const { adoptUser, status, user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(true);
+  const [agreed, setAgreed] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
   const enterStarted = useRef(false);
 
@@ -95,6 +108,7 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (values: FormValues) => {
+    if (!agreed) return;
     let apiUnreachable = false;
     setLoggingIn(true);
 
@@ -254,9 +268,40 @@ export default function LoginPage() {
               </Link>
             </div>
 
+            <div className="flex items-start gap-2 text-sm text-[#52647C]">
+              <input
+                id="agree-legal"
+                type="checkbox"
+                checked={agreed}
+                onChange={(event) => setAgreed(event.target.checked)}
+                className="mt-0.5 size-4 shrink-0 rounded border-[#CED9E4] accent-[#00bd85]"
+              />
+              <label htmlFor="agree-legal">
+                I agree to the{' '}
+                <a
+                  href={privacyHref}
+                  className="font-medium underline"
+                  style={{ color: AGENT_GREEN }}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  Privacy Policy
+                </a>{' '}
+                &{' '}
+                <a
+                  href={termsHref}
+                  className="font-medium underline"
+                  style={{ color: AGENT_GREEN }}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  Terms of Use
+                </a>
+                .
+              </label>
+            </div>
+
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !agreed}
               className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[9px] text-sm font-semibold text-white disabled:opacity-70"
               style={{ backgroundColor: AGENT_GREEN }}
             >
