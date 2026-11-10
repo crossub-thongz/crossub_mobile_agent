@@ -33,6 +33,7 @@ import { useCrosToday } from '@/components/providers/cros-today-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
 import { useCrosOpenParam } from '@/hooks/use-cros-open-param';
+import { CROS_PANEL_ROOM_CLASS, useCrosPanelBesidePage } from '@/hooks/use-cros-panel-beside-page';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { moreNavFooterForUi, moreNavForUi, primaryNavForUi } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
@@ -118,6 +119,7 @@ export function AgentShell({
   const exitCrosWorkspace = useShellDockStore((state) => state.exitCrosWorkspace);
   const crosOpen = activePanel === 'gii';
   useCrosOpenParam();
+  const crosBesidePage = useCrosPanelBesidePage();
   const crosOverlay = isV2 && !showPropertyShellPreview;
   const [overlayFull, setOverlayFull] = useState(false);
   const [crosLayerReady, setCrosLayerReady] = useState(false);
@@ -218,7 +220,8 @@ export function AgentShell({
         className={cn(
           'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-[padding] duration-300',
           // The open Cros panel sits beside the page, not over it: the page gives it room.
-          crosOverlay && crosOpen && !crosWorkspace && 'lg:pr-[480px]',
+          // Under the persistent chrome, the column holding the top bar gives that room.
+          crosBesidePage && !persistentChrome && CROS_PANEL_ROOM_CLASS,
         )}
       >
         {isV2 && !immersive && !persistentChrome ? (

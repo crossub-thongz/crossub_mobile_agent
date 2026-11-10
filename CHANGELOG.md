@@ -12,6 +12,7 @@
 - The open Cros side panel moves the page left instead of covering it
 
 ### Fixed
+- The top bar also moves left when the Cros side panel is open, so its right side is no longer hidden
 - Cros keeps the job or record it just linked, so "yes, send it" acts on it without asking for a reference
 - Pressing Open on a record in a Cros chat carries that chat, with its cards, to the record's screen instead of starting a new one
 - A property's "Active lease" row opens the lease instead of "Leasing job not found"
