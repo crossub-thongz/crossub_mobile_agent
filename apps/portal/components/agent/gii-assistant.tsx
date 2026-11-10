@@ -1232,6 +1232,8 @@ export function GiiAssistant({
 
   const startCrosChat = () => {
     briefingContextRef.current = null;
+    // A new chat starts clean: no property or move-out date left by the last chat's answer.
+    contextRef.current = null;
     crosHistoryIdRef.current = null;
     crosSavedKeyRef.current = null;
     setLines([]);
