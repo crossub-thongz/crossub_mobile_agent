@@ -12,6 +12,7 @@ import {
   CONTACT_REMOVE_CONFIRM,
   MAX_TENANT_CONTACTS,
   TENANT_INVITE_STATUS_SENT,
+  TENANT_NOTICE_COPY,
 } from '@/constants/property-tenancies';
 import {
   addPropertyContact,
@@ -22,6 +23,10 @@ import {
   setPrimaryPropertyContact,
   type PropertyTenancyContact,
 } from '@/lib/crossub-api/agent-tenancy-client';
+import {
+  tenantReceivesNotices,
+  useTenantNoticeRecipients,
+} from '@/lib/tenant-notice-recipients';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
 import { PrimaryTag } from './tenancy-ui';
@@ -63,7 +68,40 @@ export function ContactListEditor({
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
-  const atLimit = role === PROPERTY_CONTACT_ROLE.TENANT && contacts.length >= MAX_TENANT_CONTACTS;
+  const notices = role === PROPERTY_CONTACT_ROLE.TENANT;
+  const noticeList = useTenantNoticeRecipients(propertyId, notices);
+  const atLimit = notices && contacts.length >= MAX_TENANT_CONTACTS;
+
+  const personIdOf = (contact: PropertyTenancyContact) => contact.personId ?? undefined;
+
+  const receivesNotices = (contact: PropertyTenancyContact) =>
+    noticeList.recipients
+      ? tenantReceivesNotices(noticeList.recipients, {
+          contactId: contact.id,
+          personId: personIdOf(contact),
+        })
+      : true;
+
+  const householdSize = Math.max(contacts.length, noticeList.recipients?.length ?? 0);
+
+  const setNoticePreference = (contact: PropertyTenancyContact, receives: boolean) => {
+    if (householdSize <= 1) return;
+    const currentlyOn = contacts.filter((item) => receivesNotices(item)).length;
+    if (!receives && currentlyOn <= 1) {
+      toast.error(TENANT_NOTICE_COPY.KEEP_ONE);
+      return;
+    }
+    const personId = personIdOf(contact);
+    void noticeList
+      .setPreference({
+        receivesNotices: receives,
+        contactId: contact.id,
+        ...(personId ? { personId } : {}),
+      })
+      .catch((err) => {
+        toast.error(apiErrorMessage(err, TENANT_NOTICE_COPY.FAILED));
+      });
+  };
 
   const run = async (action: () => Promise<string>) => {
     setBusy(true);
@@ -103,6 +141,7 @@ export function ContactListEditor({
         phone: phone || undefined,
       });
       setDraft(null);
+      if (notices) void noticeList.reload().catch(() => undefined);
       const invite = result.tenantPortalInvite;
       return invite?.status === TENANT_INVITE_STATUS_SENT
         ? `${COPY.ADDED}. ${COPY.INVITE_SENT} ${invite.email}`
@@ -114,6 +153,7 @@ export function ContactListEditor({
     void run(async () => {
       await removePropertyContact(propertyId, contact.id);
       setConfirmRemoveId(null);
+      if (notices) void noticeList.reload().catch(() => undefined);
       return COPY.REMOVED;
     });
 
@@ -161,6 +201,9 @@ export function ContactListEditor({
 
   return (
     <div className="space-y-2">
+      {notices && noticeList.failed ? (
+        <p className="text-muted-foreground text-xs">{TENANT_NOTICE_COPY.LOAD_FAILED}</p>
+      ) : null}
       {contacts.length === 0 ? (
         emptyLabel ? (
           <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-3 text-center text-xs">
@@ -185,6 +228,31 @@ export function ContactListEditor({
                     <p className="text-muted-foreground truncate text-xs">
                       {[contact.email, contact.mobile].filter(Boolean).join(' · ')}
                     </p>
+                    {notices ? (
+                      <label className="text-muted-foreground mt-1 flex items-center gap-1.5 text-[11px]">
+                        <input
+                          type="checkbox"
+                          className="size-3.5"
+                          checked={householdSize <= 1 || receivesNotices(contact)}
+                          disabled={
+                            busy ||
+                            noticeList.busy ||
+                            noticeList.recipients == null ||
+                            householdSize <= 1
+                          }
+                          aria-label={`${TENANT_NOTICE_COPY.LABEL} for ${contact.name || contact.email || 'tenant'}`}
+                          title={
+                            householdSize <= 1
+                              ? TENANT_NOTICE_COPY.SOLE
+                              : noticeList.failed
+                                ? TENANT_NOTICE_COPY.LOAD_FAILED
+                                : undefined
+                          }
+                          onChange={(event) => setNoticePreference(contact, event.target.checked)}
+                        />
+                        {TENANT_NOTICE_COPY.LABEL}
+                      </label>
+                    ) : null}
                   </div>
                   <div className="flex shrink-0 flex-wrap justify-end gap-x-3 gap-y-1 text-xs font-semibold">
                     <button type="button" className="text-primary" disabled={busy} onClick={() => setDraft(draftOf(contact))}>

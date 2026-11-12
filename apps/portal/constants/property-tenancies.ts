@@ -500,7 +500,8 @@ export const EDIT_TENANCY_COPY = {
   NO_TENANTS: 'No tenant contacts yet',
   ADD_TENANT: 'Add tenant',
   NOTICE_NAME: 'Name (all parties)',
-  NOTICE_HINT: 'One line for the whole household: the name statutory notices are served to.',
+  NOTICE_HINT:
+    'The name and the primary email are what the notice is addressed to. Every tenant with Receive notices on is copied.',
   NOTICE_EMAIL: 'Notice email',
   NOTICE_PHONE: 'Notice phone',
   LEASE_TYPE: 'Lease type',
@@ -608,6 +609,18 @@ export const REGISTRY_NAME_SKIP_NOTE: Record<string, string> = {
 
 /** `tenantPortalInvite.status` when adding a TENANT contact emailed them a login. */
 export const TENANT_INVITE_STATUS_SENT = 'sent';
+
+/**
+ * Who is copied on tenancy notices (end of lease, routine inspection, lease, maintenance).
+ * The primary address is the To line. A temporary-password email stays with that one person.
+ */
+export const TENANT_NOTICE_COPY = {
+  LABEL: 'Receive notices',
+  SOLE: 'This tenant always receives notices',
+  KEEP_ONE: 'At least one tenant must receive notices',
+  LOAD_FAILED: "Couldn't load who receives notices",
+  FAILED: "Couldn't update who receives notices",
+} as const;
 
 /** Weeks in each rent period — mirrors the admin web `RENT_PERIOD_WEEKS`. */
 export const RENT_PERIOD_WEEKS: Record<PropertyRentPeriod, number> = {

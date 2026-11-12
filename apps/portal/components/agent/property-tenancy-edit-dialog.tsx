@@ -22,6 +22,11 @@ import {
 } from '@/components/agent/property-vacate-date-field';
 import { TenancyPagerControls } from '@/components/agent/tenancy-pager-controls';
 import { PROPERTY_EDIT_COPY } from '@/constants/property-profile-edit';
+import { TENANT_NOTICE_COPY } from '@/constants/property-tenancies';
+import {
+  tenantReceivesNotices,
+  useTenantNoticeRecipients,
+} from '@/lib/tenant-notice-recipients';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import {
   addPropertyContact,
@@ -196,6 +201,7 @@ export function PropertyTenancyEditDialog({
   const [addingTenant, setAddingTenant] = useState(false);
   const [editIndex, setEditIndex] = useState(0);
   const [coTenantDrafts, setCoTenantDrafts] = useState<Record<string, CoTenantDraft>>({});
+  const notices = useTenantNoticeRecipients(propertyId, open);
 
   useEffect(() => {
     if (!open) return;
@@ -306,6 +312,7 @@ export function PropertyTenancyEditDialog({
       const contacts = await removePropertyContact(propertyId, activeContact.id);
       setTenantContacts(contacts.filter((c) => c.role === 'TENANT'));
       setEditIndex(0);
+      void notices.reload().catch(() => undefined);
       toast.success(PROPERTY_EDIT_COPY.removed);
       onSaved?.();
     } catch (err) {
@@ -461,6 +468,7 @@ export function PropertyTenancyEditDialog({
       }
 
       toast.success('Tenant added');
+      void notices.reload().catch(() => undefined);
       setTenantDraft(EMPTY_TENANT_DRAFT);
       setAddTenantOpen(false);
       onSaved?.();
@@ -693,6 +701,51 @@ export function PropertyTenancyEditDialog({
                 </div>
               </div>
             </div>
+
+            {pageContact ? (
+              <label className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                <input
+                  type="checkbox"
+                  className="size-3.5"
+                  checked={
+                    pageCount <= 1 ||
+                    notices.recipients == null ||
+                    tenantReceivesNotices(notices.recipients, { contactId: pageContact.id })
+                  }
+                  disabled={
+                    contactBusy || notices.busy || notices.recipients == null || pageCount <= 1
+                  }
+                  aria-label={`${TENANT_NOTICE_COPY.LABEL} for ${pageContact.name || pageContact.email || 'tenant'}`}
+                  title={
+                    pageCount <= 1
+                      ? TENANT_NOTICE_COPY.SOLE
+                      : notices.failed
+                        ? TENANT_NOTICE_COPY.LOAD_FAILED
+                        : undefined
+                  }
+                  onChange={(event) => {
+                    const receives = event.target.checked;
+                    if (pageCount <= 1) return;
+                    const currentlyOn =
+                      notices.recipients?.filter((person) => person.receivesNotices).length ??
+                      pageCount;
+                    if (!receives && currentlyOn <= 1) {
+                      toast.error(TENANT_NOTICE_COPY.KEEP_ONE);
+                      return;
+                    }
+                    void notices
+                      .setPreference({ receivesNotices: receives, contactId: pageContact.id })
+                      .catch((err) => {
+                        toast.error(apiErrorMessage(err, TENANT_NOTICE_COPY.FAILED));
+                      });
+                  }}
+                />
+                {TENANT_NOTICE_COPY.LABEL}
+              </label>
+            ) : null}
+            {notices.failed ? (
+              <p className="text-muted-foreground text-xs">{TENANT_NOTICE_COPY.LOAD_FAILED}</p>
+            ) : null}
 
             {pageContact ? (
               <div className="flex flex-wrap gap-2">
