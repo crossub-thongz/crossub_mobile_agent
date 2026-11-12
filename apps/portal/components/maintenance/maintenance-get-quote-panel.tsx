@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';
 
+import { Button } from '@/components/ui/button';
 import { MaintenanceQuotationReviewActions } from '@/components/maintenance/maintenance-quotation-review-actions';
 import { ContractorPreviousQuotationPanel } from '@/components/maintenance/contractor-previous-quotation-panel';
 import { MaintenanceRepairQuotationPanel } from '@/components/maintenance/maintenance-repair-quotation-panel';
@@ -23,9 +25,11 @@ import {
 import type { ApiMaintenanceRequest, ApiMaintenanceState, ApiQuotation, QuotationReviewRecord } from '@/lib/crossub-api/types';
 import {
   handleMaintenanceByOwnerCase,
+  removeAwaitingQuoteContractor,
   reviewMaintenanceQuotationDecisionCase,
   sendMaintenanceContractorFeedbackCase,
 } from '@/lib/maintenance/maintenance-case-ops';
+import { contractorHasRfqResponse } from '@/lib/maintenance/maintenance-rfq-reminder.util';
 import {
   getContractorQuotationHistory,
   hasPendingAgentCounterOffer,
@@ -40,6 +44,7 @@ import {
 import { maintenanceContractorSelectionKey } from '@/lib/maintenance/maintenance-contractor-key';
 import type { Property } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
+import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { MaintenanceContractorRfqReminderCountdown } from '@/components/maintenance/maintenance-contractor-rfq-reminder-countdown';
 import { MaintenanceQuotationApprovalReminderCountdown } from '@/components/maintenance/maintenance-quotation-approval-reminder-countdown';
 import { MaintenanceContractorEvidenceRequestsPanel } from '@/components/maintenance/maintenance-contractor-evidence-requests-panel';
@@ -100,6 +105,8 @@ function ContractorQuoteCollapsible({
   workflowRequest,
   maintenanceReminders,
   chasesAutomatically,
+  removing,
+  onRemove,
 }: {
   contractorName: string;
   contractorId: string;
@@ -115,6 +122,9 @@ function ContractorQuoteCollapsible({
   maintenanceReminders?: ApiMaintenanceState['maintenanceReminders'];
   /** False on Self-Manage, where nothing chases the tradie on a timer. */
   chasesAutomatically: boolean;
+  removing?: boolean;
+  /** Present only while this contractor has not quoted. */
+  onRemove?: () => void;
 }) {
   const [viewingPreviousId, setViewingPreviousId] = useState<string | null>(null);
   const requotedAwaitingAgent = isContractorRequotedAwaitingAgent(review, submitted);
@@ -223,6 +233,18 @@ function ContractorQuoteCollapsible({
               {statusBadgeLabel}
             </span>
           )}
+          {!submitted && onRemove ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              disabled={removing}
+              onClick={onRemove}
+            >
+              Remove
+            </Button>
+          ) : null}
           <button
             type="button"
             onClick={onToggle}
@@ -283,7 +305,8 @@ function ContractorQuoteCollapsible({
             </>
           ) : (
             <p className="text-muted-foreground text-xs">
-              Waiting for {contractorName} to submit a repair quotation via the admin portal.
+              Waiting for {contractorName} to submit a repair quotation. Remove them if this trade
+              does not belong on the job.
             </p>
           )}
         </div>
@@ -312,6 +335,7 @@ export function MaintenanceGetQuotePanel({
 }) {
   const [suggestions, setSuggestions] = useState<MaintenanceContractorSuggestion[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
+  const [removingId, setRemovingId] = useState<string | null>(null);
   // Self-Manage: the server sends no chasers and re-sources nobody, so no countdown is shown.
   const chasesAutomatically = !useIsPropertySelfManaged(ctx.item.propertyId);
 
@@ -404,6 +428,45 @@ export function MaintenanceGetQuotePanel({
   const contractorLabel = (contractorId: string) =>
     resolveContractorDisplayName(contractorId, labelArgs);
 
+  const removeContractor = (contractorId: string) => {
+    const contractorName = contractorLabel(contractorId);
+    if (!window.confirm(`Stop asking ${contractorName} to quote?`)) return;
+    const anotherAwaiting = invitedIds.some(
+      (id) =>
+        !contractorIdsMatch(id, contractorId) &&
+        !contractorHasRfqResponse(id, ctx.workspaceCase.id, quotes),
+    );
+    const quoteAlreadyIn = quotes.some(
+      (quote) =>
+        quote.maintenanceRequestId === ctx.workspaceCase.id &&
+        (quote.status === 'submitted' || quote.status === 'approved'),
+    );
+    setRemovingId(contractorId);
+    void (async () => {
+      try {
+        const result = await removeAwaitingQuoteContractor({
+          requestId: ctx.workspaceCase.id,
+          contractorId,
+          status: ctx.workspaceCase.status,
+          quoteAlreadyIn,
+          anotherContractorStillAwaiting: anotherAwaiting,
+        });
+        toast.success(
+          result.advanced
+            ? `${contractorName} removed. The job moved to pending approval.`
+            : result.advanceFailed
+              ? `${contractorName} removed. The status is still pending quotation.`
+              : `${contractorName} removed from the quote request.`,
+        );
+        await onCaseUpdated?.();
+      } catch (err) {
+        toast.error(apiErrorMessage(err));
+      } finally {
+        setRemovingId(null);
+      }
+    })();
+  };
+
   const toggleExpanded = (contractorId: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -488,6 +551,10 @@ export function MaintenanceGetQuotePanel({
                   workflowRequest={workflowRequest}
                   maintenanceReminders={maintenanceReminders}
                   chasesAutomatically={chasesAutomatically}
+                  removing={removingId !== null}
+                  onRemove={
+                    !submitted && canReview ? () => removeContractor(contractorId) : undefined
+                  }
                 />
               );
             })}

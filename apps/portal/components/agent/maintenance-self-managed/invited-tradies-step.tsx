@@ -9,11 +9,12 @@ import { Input } from '@/components/ui/input';
 import { SELF_MANAGED_MAINTENANCE_COPY as COPY } from '@/constants/self-managed-maintenance';
 import type { SelfManagedMaintenanceRun } from '@/hooks/use-self-managed-maintenance';
 import {
+  fetchAgentMaintenanceDetail,
   issueMaintenanceQuoteFormLink,
-  withdrawMaintenanceContractor,
   type AgentMaintenanceContractorRef,
   type MaintenanceQuoteFormLink,
 } from '@/lib/crossub-api/maintenance-client';
+import { removeAwaitingQuoteContractor } from '@/lib/maintenance/maintenance-case-ops';
 import { formatDateTime } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
@@ -25,6 +26,8 @@ export function InvitedTradiesStep({
   requestId,
   invited,
   quotedNames,
+  status,
+  hasSubmittedQuote,
   busy,
   run,
 }: {
@@ -32,6 +35,10 @@ export function InvitedTradiesStep({
   invited: readonly AgentMaintenanceContractorRef[];
   /** Names on the quotes in so far; a tradie who quoted can no longer be withdrawn. */
   quotedNames: ReadonlySet<string>;
+  /** Job status while quotes are still being collected. */
+  status: string;
+  /** A supplier has already sent a quote that can go to approval. */
+  hasSubmittedQuote: boolean;
   busy: boolean;
   run: SelfManagedMaintenanceRun;
 }) {
@@ -61,7 +68,19 @@ export function InvitedTradiesStep({
 
   const withdraw = (contractor: AgentMaintenanceContractorRef) => {
     if (!window.confirm(COPY.withdrawConfirm(contractor.name))) return;
-    void run(() => withdrawMaintenanceContractor(requestId, contractor.id), COPY.tradieWithdrawn);
+    const anotherAwaiting = invited.some(
+      (row) => row.id !== contractor.id && !quotedNames.has(row.name),
+    );
+    void run(async () => {
+      await removeAwaitingQuoteContractor({
+        requestId,
+        contractorId: contractor.id,
+        status,
+        quoteAlreadyIn: hasSubmittedQuote,
+        anotherContractorStillAwaiting: anotherAwaiting,
+      });
+      return fetchAgentMaintenanceDetail(requestId);
+    }, COPY.tradieWithdrawn);
   };
 
   return (
