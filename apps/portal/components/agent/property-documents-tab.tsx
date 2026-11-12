@@ -12,6 +12,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
+  isSignedLeaseAlreadyInDocuments,
+  rentReviewMayIncludeSignedLease,
+  signedLeaseExtensionPropertyDocument,
+} from '@/lib/rent-review/signed-lease-property-document';
+import { useRentReviewStore } from '@/lib/rent-review/store';
+import {
   buildDocumentChecklistByGroup,
   CREATE_PROPERTY_DOCUMENT_GROUP_LABELS,
   ensureGroupDocumentTitle,
@@ -339,8 +345,20 @@ export function PropertyDocumentsTab({
   readOnlyGroups?: CreatePropertyDocumentGroup[];
   readOnlyHint?: string;
 }) {
-  const { apiConnected, uploadDocument, deleteDocument, inspections } = useAgentData();
+  const { apiConnected, uploadDocument, deleteDocument, inspections, rentReviews } = useAgentData();
   const { detail, refresh } = usePropertyPortalDetail(propertyId, apiConnected);
+  const loadRentReview = useRentReviewStore((state) => state.loadCase);
+  const rentReviewCases = useRentReviewStore((state) => state.cases);
+  const signedLeaseReviewIds = useMemo(
+    () =>
+      rentReviews
+        .filter(
+          (review) =>
+            review.propertyId === propertyId && rentReviewMayIncludeSignedLease(review),
+        )
+        .map((review) => review.id),
+    [propertyId, rentReviews],
+  );
   const portalDocuments = detail?.documents ?? [];
   const propertyInspections = useMemo(
     () => inspections.filter((row) => row.propertyId === propertyId),
@@ -494,6 +512,17 @@ export function PropertyDocumentsTab({
     };
   }, [apiConnected, propertyId]);
 
+  useEffect(() => {
+    if (!apiConnected) return;
+    for (const id of signedLeaseReviewIds) {
+      const state = useRentReviewStore.getState();
+      if (state.cases[id] || state.status[id] === 'loading' || state.status[id] === 'error') {
+        continue;
+      }
+      void loadRentReview(id);
+    }
+  }, [apiConnected, loadRentReview, signedLeaseReviewIds]);
+
   const displayDocs = useMemo<DisplayDoc[]>(() => {
     const mapPortalDoc = (doc: (typeof portalDocuments)[number]): DisplayDoc => {
       let title = doc.title;
@@ -530,18 +559,41 @@ export function PropertyDocumentsTab({
 
     // Portal detail is the source of truth when loaded — fallback `/agent/documents`
     // re-introduces aggregated `inspection:*` rows the portal API already deduped.
-    if (apiConnected && detail) {
-      return dedupePropertyDocumentsForChecklist(portalMapped);
+    const listed = apiConnected && detail
+      ? portalMapped
+      : [
+          ...portalMapped,
+          ...fallbackDocuments.map((doc) => ({
+            id: doc.id,
+            title: doc.title,
+            uploadedAt: doc.uploadedAt,
+            href: agentDocumentPreviewHref(doc.id, doc.downloadUrl ?? doc.href),
+          })),
+        ];
+
+    // Signed lease extensions live on the rent-review workflow. Fold each one into
+    // the checklist unless a portal file recorded at the same time is already there.
+    const signedLeases: DisplayDoc[] = [];
+    const seenReviewIds = new Set<string>();
+    const addSignedLease = (reviewId: string) => {
+      if (seenReviewIds.has(reviewId)) return;
+      seenReviewIds.add(reviewId);
+      const review = rentReviewCases[reviewId];
+      if (!review || (review.propertyId && review.propertyId !== propertyId)) return;
+      const document = signedLeaseExtensionPropertyDocument(review, propertyId);
+      if (!document || isSignedLeaseAlreadyInDocuments([...listed, ...signedLeases], document)) {
+        return;
+      }
+      signedLeases.push(document);
+    };
+    for (const id of signedLeaseReviewIds) addSignedLease(id);
+    for (const review of Object.values(rentReviewCases)) {
+      if (review.propertyId === propertyId) addSignedLease(review.id);
     }
 
-    const fallbackMapped = fallbackDocuments.map((doc) => ({
-      id: doc.id,
-      title: doc.title,
-      uploadedAt: doc.uploadedAt,
-      href: agentDocumentPreviewHref(doc.id, doc.downloadUrl ?? doc.href),
-    }));
-
-    return dedupePropertyDocumentsForChecklist([...portalMapped, ...fallbackMapped]);
+    return dedupePropertyDocumentsForChecklist(
+      signedLeases.length > 0 ? [...listed, ...signedLeases] : listed,
+    );
   }, [
     portalDocuments,
     fallbackDocuments,
@@ -549,12 +601,27 @@ export function PropertyDocumentsTab({
     propertyInspections,
     apiConnected,
     detail,
+    propertyId,
+    rentReviewCases,
+    signedLeaseReviewIds,
   ]);
 
   const checklist = useMemo(
     () => buildDocumentChecklistByGroup(displayDocs),
     [displayDocs],
   );
+
+  useEffect(() => {
+    setFilesRow((current) => {
+      if (!current || !filesRowGroup) return current;
+      const fresh = checklist[filesRowGroup]?.find((row) => row.id === current.id);
+      if (!fresh) return current;
+      const same =
+        fresh.files.length === current.files.length &&
+        fresh.files.every((file, index) => file.id === current.files[index]?.id);
+      return same ? current : fresh;
+    });
+  }, [checklist, filesRowGroup]);
 
   const startUpload = (
     group: CreatePropertyDocumentGroup,
