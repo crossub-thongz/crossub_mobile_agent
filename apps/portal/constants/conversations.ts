@@ -275,6 +275,15 @@ export const CONVERSATIONS_COPY = {
   propertyHeading: 'Property',
   ownerLabel: 'Owner',
   tenantLabel: 'Tenant',
+  tenantsLabel: 'Tenants',
+  noTenantEmail: 'No email on file',
+  addTenants: (count: number) =>
+    count === 1 ? 'Add the tenant email' : `Add all ${count} tenant emails`,
+  addOtherTenants: (count: number) =>
+    count === 1 ? 'Add the other tenant' : `Add the other ${count} tenants`,
+  composeTenantsHint:
+    'Everyone on this tenancy with an email is included. Remove an address only if they should not get this email.',
+  otherTenantsNotSent: 'Sent to the first tenant. The other tenants could not be included.',
   linkedJobHeading: 'Linked job',
   openJob: 'Open job',
   openProperty: 'Open property',

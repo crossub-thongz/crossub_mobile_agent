@@ -22,7 +22,14 @@ import {
 } from '@/lib/end-leasing/agent-workflow-model';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { agentCopyVariant } from '@/lib/portal-service-level';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
+import { buildPropertyWorkflowEmailContacts } from '@/lib/job-case-email-recipients';
+import {
+  WORKFLOW_EMAIL_ROLE,
+  workflowEmailRoleMatches,
+} from '@/constants/workflow-email-recipients';
+import { usePropertyTenantContacts } from '@/lib/use-property-tenant-contacts';
 
 function StepContent({
   stepId,
@@ -57,6 +64,22 @@ export function EndLeasingAgentWorkflowPanel({
   caseData: TerminationCaseDetail;
 }) {
   const copyVariant = agentCopyVariant(useIsPropertySelfManaged(caseData.propertyId));
+  const { properties } = useAgentData();
+  const tenantContactsByProperty = usePropertyTenantContacts(
+    caseData.propertyId ? [caseData.propertyId] : [],
+  );
+  const property = properties.find((item) => item.id === caseData.propertyId);
+  const tenantRecipients = useMemo(() => {
+    const fromProperty = buildPropertyWorkflowEmailContacts(property, {
+      tenantName: caseData.tenant.name,
+      tenantContacts: caseData.propertyId ? tenantContactsByProperty[caseData.propertyId] : undefined,
+    }).filter((contact) => workflowEmailRoleMatches(contact.role, WORKFLOW_EMAIL_ROLE.TENANT));
+    if (fromProperty.length > 0) return fromProperty;
+    const email = caseData.tenant.email?.trim();
+    return email
+      ? [{ role: WORKFLOW_EMAIL_ROLE.TENANT, name: caseData.tenant.name, email }]
+      : [];
+  }, [caseData.propertyId, caseData.tenant.email, caseData.tenant.name, property, tenantContactsByProperty]);
   const workflow = useMemo(
     () => buildEndLeasingAgentWorkflow(caseData, copyVariant),
     [caseData, copyVariant],
@@ -165,17 +188,7 @@ export function EndLeasingAgentWorkflowPanel({
               emails={stageEmails}
               title="Emails & Messages History"
               agentName={caseData.agentName ?? caseData.agencyName}
-              recipientContacts={
-                caseData.tenant.email?.trim()
-                  ? [
-                      {
-                        role: 'Tenant',
-                        name: caseData.tenant.name,
-                        email: caseData.tenant.email.trim(),
-                      },
-                    ]
-                  : []
-              }
+              recipientContacts={tenantRecipients}
             />
           ) : null}
         </div>

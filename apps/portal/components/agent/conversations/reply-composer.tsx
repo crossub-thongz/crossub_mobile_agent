@@ -44,6 +44,11 @@ import {
   latestInboundMessageId,
 } from '@/lib/agent-conversations';
 import {
+  emailsOfHouseholdTenants,
+  includeHouseholdOnTenantReply,
+} from '@/lib/property-parties';
+import { useHouseholdTenants } from '@/lib/use-primary-tenant-name';
+import {
   draftAgentConversationReply,
   replyToAgentConversation,
   setAgentConversationState,
@@ -66,7 +71,7 @@ import {
   writeConversationReplyDraft,
 } from '@/utils/conversation-reply-draft';
 import { fileToEmailAttachment, filesFromDataTransfer, imageFilesFromHtml } from '@/utils/email-attachment';
-import { isEmailAddress, recipientsWithTyped } from '@/utils/email-recipients';
+import { isEmailAddress, recipientsWithTyped, splitEmailList } from '@/utils/email-recipients';
 
 type RunAction = <T>(key: ConversationAction, action: () => Promise<T>) => Promise<T | null>;
 
@@ -76,9 +81,9 @@ function initialState(detail: AgentConversationDetail) {
   if (draft && draft.text.trim()) {
     return { ...draft, subject: draft.subject || detail.subject, restored: true };
   }
-  const to = defaultReplyToEmail(detail);
+  const to = splitEmailList(defaultReplyToEmail(detail));
   return {
-    to: to ? [to] : [],
+    to,
     cc: [] as string[],
     bcc: [] as string[],
     subject: detail.subject,
@@ -108,7 +113,19 @@ export function ReplyComposer({
   onChange: (detail: AgentConversationDetail) => void;
 }) {
   const { user } = useAuth();
-  const { agencies } = useAgentData();
+  const { agencies, properties, archivedProperties, apiConnected } = useAgentData();
+  const property = useMemo(() => {
+    if (!detail.propertyId) return null;
+    return (
+      properties.find((item) => item.id === detail.propertyId) ??
+      archivedProperties.find((item) => item.id === detail.propertyId) ??
+      null
+    );
+  }, [archivedProperties, detail.propertyId, properties]);
+  const { tenants: household, ready: householdReady } = useHouseholdTenants(
+    apiConnected ? property : null,
+  );
+  const householdEmails = useMemo(() => emailsOfHouseholdTenants(household), [household]);
   const [init] = useState(() => initialState(detail));
   const [to, setTo] = useState<readonly string[]>(init.to);
   const [cc, setCc] = useState<readonly string[]>(init.cc);
@@ -131,6 +148,19 @@ export function ReplyComposer({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const busy = pending !== null;
   const replyToMessageId = useMemo(() => latestInboundMessageId(detail), [detail]);
+  const toTouched = useRef(false);
+  const householdApplied = useRef(false);
+  // A thread often starts with one tenant's address. Once the household is known, the other
+  // tenants go on To as well, unless this reply is to someone outside the tenancy or a draft.
+  useEffect(() => {
+    if (init.restored || toTouched.current || householdApplied.current || !householdReady) return;
+    householdApplied.current = true;
+    setTo((current) => includeHouseholdOnTenantReply(current, householdEmails));
+  }, [householdEmails, householdReady, init.restored]);
+  const changeTo = (next: readonly string[]) => {
+    toTouched.current = true;
+    setTo(next);
+  };
   const senderName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
   const agencyName = agencies.find((a) => a.id === detail.agencyId)?.name ?? null;
 
@@ -238,6 +268,27 @@ export function ReplyComposer({
   const finalTo = recipientsWithTyped(to, toTyped);
   const finalCc = recipientsWithTyped(cc, ccTyped);
   const finalBcc = recipientsWithTyped(bcc, bccTyped);
+  const addressed = new Set(
+    [...finalTo, ...finalCc, ...finalBcc].map((email) => email.trim().toLowerCase()),
+  );
+  const missingTenantEmails = householdReady
+    ? householdEmails.filter((email) => !addressed.has(email.toLowerCase()))
+    : [];
+  const includedTenantEmails = householdEmails.length - missingTenantEmails.length;
+  const addTenants = () => {
+    toTouched.current = true;
+    setTo((current) => {
+      const seen = new Set(current.map((email) => email.trim().toLowerCase()));
+      const next = [...current];
+      for (const email of missingTenantEmails) {
+        const key = email.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        next.push(email);
+      }
+      return next;
+    });
+  };
   const lines = [finalTo, finalCc, finalBcc];
   const badAddress = lines.flat().find((a) => !isEmailAddress(a));
   const blocker = !text.trim()
@@ -392,7 +443,7 @@ export function ReplyComposer({
           <p className="min-w-0 flex-1 truncate text-sm font-semibold">
             {isApp
               ? CONVERSATIONS_COPY.appReplyHeading(appPartiesLabel(appParties))
-              : CONVERSATIONS_COPY.replyHeading(finalTo[0])}
+              : CONVERSATIONS_COPY.replyHeading(finalTo.length > 1 ? finalTo.join(', ') : finalTo[0])}
           </p>
           {init.restored ? (
             <span className="text-muted-foreground shrink-0 text-[11px]">{CONVERSATIONS_COPY.draftRestored}</span>
@@ -418,7 +469,7 @@ export function ReplyComposer({
             <RecipientRow
               label={CONVERSATIONS_COPY.toLabel}
               recipients={to}
-              onChange={setTo}
+              onChange={changeTo}
               typed={toTyped}
               onTypedChange={setToTyped}
               disabled={busy}
@@ -429,6 +480,20 @@ export function ReplyComposer({
                 </>
               }
             />
+            {missingTenantEmails.length > 0 ? (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="text-primary text-xs font-medium hover:underline"
+                  disabled={busy}
+                  onClick={addTenants}
+                >
+                  {includedTenantEmails > 0
+                    ? CONVERSATIONS_COPY.addOtherTenants(missingTenantEmails.length)
+                    : CONVERSATIONS_COPY.addTenants(missingTenantEmails.length)}
+                </button>
+              </div>
+            ) : null}
             {showCc ? (
               <RecipientRow
                 label={CONVERSATIONS_COPY.ccLabel}

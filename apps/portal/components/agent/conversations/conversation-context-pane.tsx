@@ -38,7 +38,7 @@ import {
   unlinkAgentConversationJob,
   type AgentConversationDetail,
 } from '@/lib/crossub-api/agent-conversation-client';
-import { usePrimaryTenantName } from '@/lib/use-primary-tenant-name';
+import { useHouseholdTenants } from '@/lib/use-primary-tenant-name';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -297,9 +297,9 @@ export function ConversationContextPane({
       null
     );
   }, [archivedProperties, detail.propertyId, properties]);
-  // The portfolio row's `tenantName` is often empty; the household's Tenant 1 lives on the
-  // property contacts, as on the job pages.
-  const tenantName = usePrimaryTenantName(property);
+  // The portfolio row's `tenantName` is often one person. Contacts carry every tenant and
+  // their own email, which is what a reply has to show.
+  const { tenants: household } = useHouseholdTenants(property);
 
   const job = useMemo(
     () => resolveConversationJob(detail.caseId, { maintenance: maintenanceAll, inspections, leasingCycles }, isV2),
@@ -340,8 +340,29 @@ export function ConversationContextPane({
                 <span className="text-muted-foreground"> · {property.homeOwnerContact.email}</span>
               ) : null}
             </dd>
-            <dt className="text-muted-foreground">{CONVERSATIONS_COPY.tenantLabel}</dt>
-            <dd className="min-w-0 truncate">{tenantName}</dd>
+            <div className="col-span-2 space-y-1">
+              <p className="text-muted-foreground">
+                {household.length > 1 ? CONVERSATIONS_COPY.tenantsLabel : CONVERSATIONS_COPY.tenantLabel}
+              </p>
+              {household.length === 0 ? (
+                <p className="truncate">
+                  {property.leaseStatus === 'vacant'
+                    ? 'Vacant'
+                    : property.tenantName?.trim() || MODULE_WORKSPACE_LABELS.noValue}
+                </p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {household.map((tenant) => (
+                    <li key={tenant.id ?? `${tenant.name}-${tenant.email ?? ''}`} className="min-w-0">
+                      <p className="truncate font-medium">{tenant.name}</p>
+                      <p className="text-muted-foreground truncate">
+                        {tenant.email?.trim() || CONVERSATIONS_COPY.noTenantEmail}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </dl>
         ) : null}
         <Button asChild size="sm" variant="outline" className="mt-3 h-8 gap-1.5">
