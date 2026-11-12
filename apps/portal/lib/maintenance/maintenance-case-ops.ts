@@ -6,6 +6,7 @@ import {
   declineMaintenanceQuotation,
   inviteMaintenanceContractorsForRfq,
   requestMaintenanceEvidence,
+  withdrawMaintenanceContractor,
   sendMaintenanceContractorFeedback,
   sendMaintenanceQuotationCounterOffer,
   sendMaintenanceQuotationToLandlord,
@@ -179,6 +180,40 @@ export async function handleMaintenanceByOwnerCase(requestId: string) {
   await closeMaintenanceCaseWithReason(requestId, {
     reason: MAINTENANCE_CLOSE_REASON.HANDLED_BY_OWNER,
   });
+}
+
+const COLLECTING_QUOTE_STATUSES = new Set([
+  'pending_quotation',
+  'approved',
+  'APPROVED',
+]);
+
+/**
+ * Take one contractor who has not quoted off the request.
+ * When a quote is already in and nobody else is still to reply, the job moves to pending
+ * approval so it does not stay on pending quotation.
+ */
+export async function removeAwaitingQuoteContractor(args: {
+  requestId: string;
+  contractorId: string;
+  status: string;
+  quoteAlreadyIn: boolean;
+  anotherContractorStillAwaiting: boolean;
+}): Promise<{ advanced: boolean; advanceFailed: boolean }> {
+  await withdrawMaintenanceContractor(args.requestId, args.contractorId);
+
+  const shouldAdvance =
+    COLLECTING_QUOTE_STATUSES.has(args.status) &&
+    args.quoteAlreadyIn &&
+    !args.anotherContractorStillAwaiting;
+  if (!shouldAdvance) return { advanced: false, advanceFailed: false };
+
+  try {
+    await transitionMaintenanceCase(args.requestId, 'pending_approval');
+    return { advanced: true, advanceFailed: false };
+  } catch {
+    return { advanced: false, advanceFailed: true };
+  }
 }
 
 /** @deprecated Use confirmMaintenanceResponsibility */

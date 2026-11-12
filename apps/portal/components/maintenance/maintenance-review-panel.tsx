@@ -254,6 +254,7 @@ export function MaintenanceReviewPanel({
                   <MaintenanceResponsibilityLandlordPanel
                     requestId={ctx.item.id}
                     agencyId={agencyId}
+                    issueType={ctx.workspaceCase.issueType}
                     apiConnected={apiConnected}
                     selectedContractorIds={pendingContractorIds}
                     onChangeSelectedContractorIds={setPendingContractorIds}

@@ -208,6 +208,10 @@ export function SelfManagedMaintenancePanel({
           requestId={requestId}
           invited={detail.invitedContractors}
           quotedNames={quotedNames}
+          status={detail.status}
+          hasSubmittedQuote={detail.quotes.some(
+            (quote) => quote.status === 'submitted' || quote.status === 'approved',
+          )}
           busy={busy}
           run={run}
         />

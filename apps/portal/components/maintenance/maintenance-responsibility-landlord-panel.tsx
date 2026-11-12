@@ -19,6 +19,7 @@ import {
   fetchPreferredContractors,
   type PreferredContractor,
 } from '@/lib/crossub-api/agent-client';
+import { contractorMatchesIssue } from '@/lib/maintenance/contractor-trade-match';
 import {
   MAINTENANCE_CONTRACTOR_AUTO_PICK_COUNT,
   MAINTENANCE_CONTRACTOR_PREVIEW_COUNT,
@@ -122,6 +123,7 @@ function ContractorSuggestionRow({
 export function MaintenanceResponsibilityLandlordPanel({
   requestId,
   agencyId,
+  issueType,
   apiConnected,
   selectedContractorIds,
   onChangeSelectedContractorIds,
@@ -129,6 +131,8 @@ export function MaintenanceResponsibilityLandlordPanel({
 }: {
   requestId: string;
   agencyId?: string | null;
+  /** Used to pre-select only trades that fit this job. */
+  issueType?: string | null;
   apiConnected: boolean;
   selectedContractorIds: string[];
   onChangeSelectedContractorIds: (ids: string[]) => void;
@@ -178,12 +182,21 @@ export function MaintenanceResponsibilityLandlordPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when request/agency changes
   }, [requestId, agencyId, apiConnected]);
 
+  const orderedSuggestions = useMemo(() => {
+    return [...suggestions].sort((a, b) => {
+      const rank = (row: MaintenanceContractorSuggestion) =>
+        contractorMatchesIssue(row.serviceTypes, issueType) ? 0 : 1;
+      return rank(a) - rank(b);
+    });
+  }, [issueType, suggestions]);
+
   const { markSelectionTouched } = useContractorAutoPick({
     enabled: true,
-    contractors: suggestions,
+    contractors: orderedSuggestions,
     selectedIds: selectedContractorIds,
     onChangeSelectedIds: onChangeSelectedContractorIds,
     resetKey: requestId,
+    issueType,
   });
 
   const preferredIds = useMemo(
@@ -192,12 +205,16 @@ export function MaintenanceResponsibilityLandlordPanel({
   );
 
   const autoPickIds = useMemo(
-    () => new Set(topMaintenanceContractorIds(suggestions)),
-    [suggestions],
+    () => new Set(topMaintenanceContractorIds(orderedSuggestions, undefined, issueType)),
+    [issueType, orderedSuggestions],
+  );
+  const matchingCount = useMemo(
+    () => suggestions.filter((row) => contractorMatchesIssue(row.serviceTypes, issueType)).length,
+    [issueType, suggestions],
   );
 
-  const previewSuggestions = suggestions.slice(0, MAINTENANCE_CONTRACTOR_PREVIEW_COUNT);
-  const moreSuggestions = suggestions.slice(MAINTENANCE_CONTRACTOR_PREVIEW_COUNT);
+  const previewSuggestions = orderedSuggestions.slice(0, MAINTENANCE_CONTRACTOR_PREVIEW_COUNT);
+  const moreSuggestions = orderedSuggestions.slice(MAINTENANCE_CONTRACTOR_PREVIEW_COUNT);
 
   const toggleContractor = (contractorId: string) => {
     markSelectionTouched();
@@ -259,8 +276,8 @@ export function MaintenanceResponsibilityLandlordPanel({
           </Button>
         </div>
         <p className="text-muted-foreground mt-1 text-xs">
-          Top {MAINTENANCE_CONTRACTOR_AUTO_PICK_COUNT} ranked tradesmen are pre-selected (untick any you
-          do not want). Adjust before confirming — only your selection is sent when you submit.
+          Up to {MAINTENANCE_CONTRACTOR_AUTO_PICK_COUNT} tradesmen whose trade matches this job are
+          pre-selected. A trade that does not match stays unticked. Only your selection is invited.
         </p>
 
         <div className="mt-3 space-y-2">
@@ -272,6 +289,11 @@ export function MaintenanceResponsibilityLandlordPanel({
             </p>
           ) : (
             <>
+              {matchingCount === 0 ? (
+                <p className="text-muted-foreground text-xs">
+                  No suggested tradesman matches this job. Tick the right trade yourself, or add one.
+                </p>
+              ) : null}
               {previewSuggestions.map((contractor, index) => renderContractor(contractor, index))}
               {moreSuggestions.length > 0 ? (
                 <Button
@@ -307,7 +329,7 @@ export function MaintenanceResponsibilityLandlordPanel({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            {suggestions.map((contractor, index) => renderContractor(contractor, index))}
+            {orderedSuggestions.map((contractor, index) => renderContractor(contractor, index))}
           </div>
         </DialogContent>
       </Dialog>
