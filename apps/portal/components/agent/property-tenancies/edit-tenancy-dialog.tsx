@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -33,6 +33,11 @@ import type { PropertyTenancyOverview } from '@/lib/crossub-api/agent-tenancy-cl
 import type { Property } from '@/lib/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { dayKey } from '@/utils/current-tenancy';
+import { isSamePortalParty } from '@/utils/portal-party';
+import {
+  buildPropertyTenancyGroups,
+  selectCurrentTenancyGroup,
+} from '@/utils/property-tenancy-groups';
 import {
   openVacatingCaseForDisplayedTenancy,
   parseAmountInput,
@@ -140,7 +145,30 @@ export function EditTenancyDialog({
   const [form, setForm] = useState<TenancyForm | null>(null);
   const [saving, setSaving] = useState(false);
   const vacatingCase = openVacatingCaseForDisplayedTenancy(record);
-  const tenantContacts = record.contacts.filter((c) => c.role === PROPERTY_CONTACT_ROLE.TENANT);
+  const currentTenancy = useMemo(
+    () => selectCurrentTenancyGroup(buildPropertyTenancyGroups(record)),
+    [record],
+  );
+  const tenantContacts = useMemo(() => {
+    const householdLeaseIds = new Set(currentTenancy?.leaseIds ?? []);
+    return record.contacts.filter((contact) => {
+      if (contact.role !== PROPERTY_CONTACT_ROLE.TENANT) return false;
+      if (currentTenancy?.members.some((member) => isSamePortalParty(member, contact))) return true;
+      const onAnotherAgreement = (record.leaseHistory ?? []).some(
+        (lease) =>
+          !householdLeaseIds.has(lease.id) &&
+          isSamePortalParty(
+            {
+              name: lease.tenantName,
+              email: lease.tenant?.email,
+              mobile: lease.tenant?.mobile,
+            },
+            contact,
+          ),
+      );
+      return !onAnotherAgreement;
+    });
+  }, [record, currentTenancy]);
 
   useEffect(() => {
     if (!open) return;

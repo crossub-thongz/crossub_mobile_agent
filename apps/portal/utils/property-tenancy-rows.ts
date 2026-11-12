@@ -56,6 +56,13 @@ export interface PropertyTenancyRow {
   periodLabel: string;
   leaseStartDate?: string;
   leaseEndDate?: string;
+  /**
+   * The agreement's own term, before a registry renewal is painted on for display.
+   * Grouping uses this window so two live households that share today's registry
+   * dates are not folded into one current tenancy.
+   */
+  agreementStartDate?: string;
+  agreementEndDate?: string;
   rentWeekly?: number;
   bondAmount?: number;
   status: TenancyRowStatus;
@@ -382,6 +389,8 @@ export function buildPropertyTenancyRows(record: PropertyTenancyOverview): Prope
       periodLabel: formatPeriod(term.leaseStartDate, term.leaseEndDate),
       leaseStartDate: termStart,
       leaseEndDate: termEnd,
+      agreementStartDate: ownTerm.leaseStartDate,
+      agreementEndDate: ownTerm.leaseEndDate,
       rentWeekly: isCurrent
         ? (liveRent ?? orUndefined(lease.rentWeekly))
         : orUndefined(lease.rentWeekly),
