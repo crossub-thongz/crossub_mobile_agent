@@ -1,7 +1,7 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type ClipboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -65,7 +65,7 @@ import {
   readConversationReplyDraft,
   writeConversationReplyDraft,
 } from '@/utils/conversation-reply-draft';
-import { fileToEmailAttachment } from '@/utils/email-attachment';
+import { fileToEmailAttachment, filesFromDataTransfer, imageFilesFromHtml } from '@/utils/email-attachment';
 import { isEmailAddress, recipientsWithTyped } from '@/utils/email-recipients';
 
 type RunAction = <T>(key: ConversationAction, action: () => Promise<T>) => Promise<T | null>;
@@ -154,37 +154,69 @@ export function ReplyComposer({
     syncEditor();
   };
 
-  // Pasted text takes the email's own font and size; a paste with no text (a file) is left alone.
+  const addFiles = async (incoming: FileList | readonly File[] | null, announce = false) => {
+    const files = incoming ? Array.from(incoming) : [];
+    if (files.length === 0) return;
+    const room = CONVERSATION_ATTACHMENT_LIMITS.maxFiles - attachments.length;
+    if (room <= 0) {
+      toast.error(CONVERSATIONS_COPY.tooManyFiles(CONVERSATION_ATTACHMENT_LIMITS.maxFiles));
+      return;
+    }
+    if (files.length > room) toast.error(CONVERSATIONS_COPY.tooManyFiles(CONVERSATION_ATTACHMENT_LIMITS.maxFiles));
+    const picked = files.slice(0, room);
+    const settled = await Promise.allSettled(picked.map((file, index) => fileToEmailAttachment(file, index)));
+    const next = settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
+    const failed = settled.find((result) => result.status === 'rejected');
+    if (next.length > 0) {
+      setAttachments((prev) => [...prev, ...next]);
+      if (announce) toast.success(CONVERSATIONS_COPY.filesAttached(next.length));
+    }
+    if (failed?.status === 'rejected') {
+      const reason = failed.reason;
+      toast.error(reason instanceof Error ? reason.message : CONVERSATIONS_COPY.attachFailed);
+    }
+  };
+
+  // Pasted text takes the email's own font and size. A pasted or dropped photo becomes an
+  // attachment: the body strips <img>, so leaving it in the editor would send nothing.
   const pasteClean = (e: ClipboardEvent<HTMLDivElement>) => {
     const el = editorRef.current;
     const html = e.clipboardData.getData('text/html');
     const plain = e.clipboardData.getData('text/plain');
+    const pastedFiles = filesFromDataTransfer(e.clipboardData);
+    const plainText = plain.replace(/\u00a0/g, ' ').trim();
+    // A photo copied on its own arrives as a file, or as an image with no caption. A pasted
+    // email that also contains a logo stays text: those images are not the attachment.
+    const incoming =
+      pastedFiles.length > 0 ? pastedFiles : html && !plainText ? imageFilesFromHtml(html) : [];
+    if (incoming.length > 0) {
+      e.preventDefault();
+      void addFiles(incoming, true);
+    }
     if (!el || (!html && !plain)) return;
-    e.preventDefault();
+    if (incoming.length === 0) e.preventDefault();
     const clean = html ? pastedHtmlToComposerHtml(html) : textToEditorHtml(plain);
+    if (!clean.trim()) return;
     if (!insertHtmlAtSelection(el, clean)) el.insertAdjacentHTML('beforeend', clean);
     syncEditor();
+  };
+
+  const allowFileDrop = (e: DragEvent<HTMLDivElement>) => {
+    if (!Array.from(e.dataTransfer.types).includes('Files')) return;
+    e.preventDefault();
+  };
+
+  const dropFiles = (e: DragEvent<HTMLDivElement>) => {
+    const incoming = filesFromDataTransfer(e.dataTransfer);
+    if (incoming.length === 0) return;
+    e.preventDefault();
+    void addFiles(incoming, true);
   };
 
   const insertTemplate = (templateId: string) => {
     const template = templates.find((t) => t.id === templateId);
     if (!template) return;
     setBody(toPlainTextBody(template.body), true);
-  };
-
-  const addFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const room = CONVERSATION_ATTACHMENT_LIMITS.maxFiles - attachments.length;
-    if (room <= 0) {
-      toast.error(CONVERSATIONS_COPY.tooManyFiles(CONVERSATION_ATTACHMENT_LIMITS.maxFiles));
-      return;
-    }
-    try {
-      const next = await Promise.all(Array.from(files).slice(0, room).map(fileToEmailAttachment));
-      setAttachments((prev) => [...prev, ...next]);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : CONVERSATIONS_COPY.attachFailed);
-    }
   };
 
   const crosDraft = async () => {
@@ -351,7 +383,11 @@ export function ReplyComposer({
 
   return (
     <div className="max-h-[60vh] shrink-0 overflow-y-auto border-t px-4 py-3">
-      <div className="bg-card rounded-xl border shadow-sm">
+      <div
+        className="bg-card rounded-xl border shadow-sm"
+        onDragOver={allowFileDrop}
+        onDrop={dropFiles}
+      >
         <div className="flex min-w-0 items-center gap-2 border-b px-4 py-2">
           <p className="min-w-0 flex-1 truncate text-sm font-semibold">
             {isApp
@@ -468,7 +504,8 @@ export function ReplyComposer({
           ref={fileInputRef}
           type="file"
           multiple
-          className="hidden"
+          tabIndex={-1}
+          className="sr-only"
           onChange={(e) => {
             void addFiles(e.target.files);
             e.target.value = '';

@@ -245,6 +245,8 @@ export const CONVERSATIONS_COPY = {
   linkPlaceholder: 'https://…',
   addLink: 'Add link',
   attachFile: 'Attach a file',
+  attachLabel: 'Attach',
+  filesAttached: (count: number) => (count === 1 ? '1 file attached' : `${count} files attached`),
   removeAttachment: (name: string) => `Remove ${name}`,
   tooManyFiles: (max: number) => `Up to ${max} attachments.`,
   fileTooBig: (name: string, megabytes: number) => `${name} is over ${megabytes} MB.`,

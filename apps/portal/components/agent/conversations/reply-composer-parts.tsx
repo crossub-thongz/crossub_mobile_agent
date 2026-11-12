@@ -130,18 +130,20 @@ function ToolButton({
   icon: Icon,
   onClick,
   disabled,
+  text,
 }: {
   label: string;
   icon: LucideIcon;
   onClick: () => void;
   disabled?: boolean;
+  text?: string;
 }) {
   return (
     <Button
       type="button"
-      size="icon"
+      size={text ? 'sm' : 'icon'}
       variant="ghost"
-      className="size-7"
+      className={text ? 'h-7 gap-1 px-2' : 'size-7'}
       aria-label={label}
       title={label}
       disabled={disabled}
@@ -149,6 +151,7 @@ function ToolButton({
       onClick={onClick}
     >
       <Icon className="size-4" />
+      {text ? <span className="text-xs font-medium">{text}</span> : null}
     </Button>
   );
 }
@@ -290,6 +293,7 @@ export function ComposerToolbar({
       </Popover>
       <ToolButton
         label={CONVERSATIONS_COPY.attachFile}
+        text={CONVERSATIONS_COPY.attachLabel}
         icon={Paperclip}
         onClick={onAttach}
         disabled={disabled || attachDisabled}
