@@ -16,8 +16,15 @@ import { ApiError, fetchApiBlobFromUrl } from '@/lib/api';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import { cn } from '@/lib/utils';
 
+/**
+ * URL an `<img>` can load.
+ * Saved rows go through the preview route, which follows the private storage
+ * redirect with the session. A raw `previewUrl` is only usable for synthetic
+ * intake rows, which have no attachment record.
+ */
 export function maintenanceAttachmentPreviewUrl(att: ApiMaintenanceAttachment): string {
-  return att.previewUrl ?? `/api/maintenance/attachments/${att.id}/preview`;
+  if (/^INTAKE-/i.test(att.id)) return att.previewUrl?.trim() || '';
+  return `/api/maintenance/attachments/${att.id}/preview`;
 }
 
 /** @deprecated Use `maintenanceAttachmentPreviewUrl` — kept for older call sites during rollout. */
