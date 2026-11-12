@@ -19,6 +19,26 @@ function preferAdvancedStatus(
   return (STATUS_RANK[a] ?? 0) >= (STATUS_RANK[b] ?? 0) ? a : b;
 }
 
+function unionPhotoUrls(primary?: string[], secondary?: string[]): string[] | undefined {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  for (const raw of [...(primary ?? []), ...(secondary ?? [])]) {
+    const url = raw.trim();
+    if (!url) continue;
+    let key = url;
+    try {
+      const parsed = new URL(url);
+      key = `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, '');
+    } catch {
+      key = url.split('?')[0]?.split('#')[0]?.replace(/\/+$/, '') || url;
+    }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(url);
+  }
+  return merged.length > 0 ? merged : undefined;
+}
+
 function mergeQuotationReviews(
   prisma?: QuotationReviewRecord[],
   workflow?: QuotationReviewRecord[],
@@ -95,5 +115,6 @@ export function mergeMaintenanceCaseForLiveSync(
     scheduleEscalated: workflow.scheduleEscalated ?? prisma.scheduleEscalated,
     endLeasingLandlordResp: prisma.endLeasingLandlordResp ?? workflow.endLeasingLandlordResp,
     endLeasingMaintenance: prisma.endLeasingMaintenance ?? workflow.endLeasingMaintenance,
+    intakePhotoUrls: unionPhotoUrls(prisma.intakePhotoUrls, workflow.intakePhotoUrls),
   };
 }

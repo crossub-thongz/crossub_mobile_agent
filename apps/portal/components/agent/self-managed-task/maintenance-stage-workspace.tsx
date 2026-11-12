@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Building2, Check, CircleCheck, CircleDashed, Inbox, Minus } from 'lucide-react';
 
 import { SelfManagedMaintenancePanel } from '@/components/agent/maintenance-self-managed/self-managed-maintenance-panel';
+import { maintenanceAttachmentPreviewUrl } from '@/components/maintenance/maintenance-attachment-preview-dialog';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
@@ -220,14 +221,10 @@ export function MaintenanceStageWorkspace({
   }, [current]);
 
   const photos = attachments.filter(
-    (file) =>
-      file.maintenanceRequestId === requestId &&
-      file.kind === 'initial_evidence' &&
-      Boolean(file.previewUrl),
+    (file) => file.maintenanceRequestId === requestId && file.kind === 'initial_evidence',
   );
   const completionPhotos = attachments.filter(
-    (file) =>
-      file.maintenanceRequestId === requestId && file.kind === 'evidence' && Boolean(file.previewUrl),
+    (file) => file.maintenanceRequestId === requestId && file.kind === 'evidence',
   );
   const quotes = useMemo(
     () => [...workspace.quotations].sort((a, b) => a.price - b.price),
@@ -415,23 +412,26 @@ function StageBoard({
 
   if (stage === STAGE.REVIEW) {
     return (
-      <section className={CARD}>
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold">AI Assessment</h3>
-          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-emerald-800 uppercase dark:text-emerald-200">
-            Auto assessment
-          </span>
-        </div>
-        <div className="mt-3 grid gap-4 lg:grid-cols-2">
-          <AssessmentFields workspace={workspace} />
-          {recommendation ? (
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] p-3">
-              <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">AI Recommendation</p>
-              <p className="mt-1.5 text-sm">{recommendation}</p>
-            </div>
-          ) : null}
-        </div>
-      </section>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className={CARD}>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">AI Assessment</h3>
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-emerald-800 uppercase dark:text-emerald-200">
+              Auto assessment
+            </span>
+          </div>
+          <div className="mt-3 grid gap-4 lg:grid-cols-2">
+            <AssessmentFields workspace={workspace} />
+            {recommendation ? (
+              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] p-3">
+                <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">AI Recommendation</p>
+                <p className="mt-1.5 text-sm">{recommendation}</p>
+              </div>
+            ) : null}
+          </div>
+        </section>
+        <PhotoCard title="Photos / Videos" files={photos} />
+      </div>
     );
   }
 
@@ -589,15 +589,18 @@ function StageBoard({
             )}
           </section>
         </div>
-        <section className={CARD}>
-          <p className="text-sm font-semibold">Job information</p>
-          <div className="mt-3 space-y-2">
-            <Field label="Issue" value={workspace.issueType || '—'} />
-            <Field label="Property" value={workspace.address || '—'} />
-            <Field label="Tenant" value={workspace.tenant?.name || '—'} />
-            <Field label="Priority" value={titleCase(workspace.priority)} />
-          </div>
-        </section>
+        <div className="space-y-4">
+          <section className={CARD}>
+            <p className="text-sm font-semibold">Job information</p>
+            <div className="mt-3 space-y-2">
+              <Field label="Issue" value={workspace.issueType || '—'} />
+              <Field label="Property" value={workspace.address || '—'} />
+              <Field label="Tenant" value={workspace.tenant?.name || '—'} />
+              <Field label="Priority" value={titleCase(workspace.priority)} />
+            </div>
+          </section>
+          <PhotoCard title="Completion Photos" files={completionPhotos} />
+        </div>
       </div>
     );
   }
@@ -709,6 +712,10 @@ function PropertyCard({ workspace }: { workspace: MaintenanceWorkspaceCase }) {
   );
 }
 
+function paintableImage(file: ApiMaintenanceAttachment): boolean {
+  return file.mimeType.startsWith('image/') && !/image\/(heic|heif)/i.test(file.mimeType);
+}
+
 function PhotoCard({ title, files }: { title: string; files: ApiMaintenanceAttachment[] }) {
   return (
     <section className={CARD}>
@@ -719,18 +726,21 @@ function PhotoCard({ title, files }: { title: string; files: ApiMaintenanceAttac
         <p className="text-muted-foreground mt-3 text-xs">No photos on file.</p>
       ) : (
         <ul className="mt-3 grid grid-cols-3 gap-2">
-          {files.slice(0, 6).map((file) => (
-            <li key={file.id} className="bg-muted aspect-square overflow-hidden rounded-lg">
-              {file.previewUrl && file.mimeType.startsWith('image/') ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={file.previewUrl} alt={file.fileName} className="size-full object-cover" />
-              ) : (
-                <span className="text-muted-foreground flex size-full items-center p-1 text-center text-[10px]">
-                  {file.fileName}
-                </span>
-              )}
-            </li>
-          ))}
+          {files.map((file) => {
+            const src = maintenanceAttachmentPreviewUrl(file);
+            return (
+              <li key={file.id} className="bg-muted aspect-square overflow-hidden rounded-lg">
+                {paintableImage(file) && src ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={src} alt={file.fileName} className="size-full object-cover" />
+                ) : (
+                  <span className="text-muted-foreground flex size-full items-center p-1 text-center text-[10px]">
+                    {file.fileName}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
