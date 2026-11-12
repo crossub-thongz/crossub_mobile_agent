@@ -56,13 +56,23 @@ export interface PropertyTenancyGroup {
   moveOutDate?: string;
 }
 
+/**
+ * One agreement window, one place in the changeover, one state.
+ *
+ * The displayed term can be the registry renewal, which is the same pair of dates
+ * for every live row. Grouping on that display term folded a previous household
+ * that was never ended into the current one. The agreement's own window is the
+ * boundary a share house already shares.
+ */
 function tenancyKey(row: PropertyTenancyRow): string {
   if (row.kind !== TENANCY_ROW_KIND.LEASE) return `${row.kind}:${row.id}`;
+  const start = row.agreementStartDate !== undefined ? row.agreementStartDate : (row.leaseStartDate ?? '');
+  const end = row.agreementEndDate !== undefined ? row.agreementEndDate : (row.leaseEndDate ?? '');
   return [
     row.group,
     row.status,
-    row.leaseStartDate ?? '',
-    row.leaseEndDate ?? '',
+    start,
+    end,
     row.terminationCaseId ?? '',
     row.restoreArchivedAt ?? '',
   ].join('|');
