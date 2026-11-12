@@ -34,7 +34,7 @@ import {
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import { agentCopyVariant } from '@/lib/portal-service-level';
-import { usePrimaryTenantName } from '@/lib/use-primary-tenant-name';
+import { useHouseholdTenants } from '@/lib/use-primary-tenant-name';
 import { useResolvedInspection } from '@/lib/use-resolved-inspection';
 import {
   cn,
@@ -124,7 +124,9 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
   const currentLease = leasingRecords.find(
     (row) => row.propertyId === propertyId && row.status === 'current',
   );
-  const tenantName = usePrimaryTenantName(property);
+  const { tenants: household } = useHouseholdTenants(property);
+  const tenantName =
+    property?.leaseStatus === 'vacant' ? 'Vacant' : household[0]?.name?.trim() || '—';
   const selfManaged = useIsPropertySelfManaged(propertyId);
   const copyVariant = agentCopyVariant(selfManaged);
   const detailCopy = TASK_DETAIL_COPY[copyVariant];
@@ -231,6 +233,11 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
         tenantName={tenantName || '—'}
         tenantPhone={property?.tenantContact.phone}
         tenantEmail={property?.tenantContact.email}
+        tenants={household.map((tenant) => ({
+          name: tenant.name,
+          phone: tenant.phone,
+          email: tenant.email,
+        }))}
         landlordName={property?.homeOwnerName}
         landlordPhone={property?.homeOwnerContact.phone}
         landlordEmail={property?.homeOwnerContact.email}

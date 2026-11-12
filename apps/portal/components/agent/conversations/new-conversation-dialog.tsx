@@ -1,12 +1,14 @@
 'use client';
 
 import { Loader2, Send } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import type { ConversationPropertyOption } from '@/components/agent/conversations/conversation-list';
+import { RecipientRow } from '@/components/agent/conversations/reply-composer-parts';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { FieldLabel, SELECT_CLASS } from '@/components/agent/maintenance-self-managed/step-card';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -36,10 +38,15 @@ import {
 import { useConversationAction } from '@/hooks/use-agent-conversations';
 import {
   createAgentConversation,
+  replyToAgentConversation,
   type AgentConversationDetail,
   type AgentConversationTemplate,
 } from '@/lib/crossub-api/agent-conversation-client';
+import { emailsOfHouseholdTenants } from '@/lib/property-parties';
+import { useHouseholdTenants } from '@/lib/use-primary-tenant-name';
 import { toPlainTextBody } from '@/lib/message-body';
+import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { recipientsWithTyped } from '@/utils/email-recipients';
 
 /** Recipients an app message can go to: the tenant only. */
 const APP_RECIPIENT_OPTIONS = CONVERSATION_RECIPIENT_OPTIONS.filter((o) => CONVERSATION_APP_RECIPIENTS.has(o.id));
@@ -64,15 +71,42 @@ export function NewConversationDialog({
   onCreated: (detail: AgentConversationDetail) => void;
 }) {
   const { pending, run } = useConversationAction();
+  const { properties, archivedProperties } = useAgentData();
   const [propertyId, setPropertyId] = useState<string>(defaultPropertyId ?? CONVERSATION_SELECT_PROMPT_VALUE);
   const [channel, setChannel] = useState<ConversationReplyChannel>(CONVERSATION_REPLY_CHANNEL.EMAIL);
   const [recipient, setRecipient] = useState<ConversationRecipient>(CONVERSATION_RECIPIENT.TENANT);
   const [toEmail, setToEmail] = useState('');
+  const [tenantTo, setTenantTo] = useState<readonly string[]>([]);
+  const [tenantTyped, setTenantTyped] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const busy = pending !== null;
   const isApp = channel === CONVERSATION_REPLY_CHANNEL.APP;
+  const writingToTenants = !isApp && recipient === CONVERSATION_RECIPIENT.TENANT;
+  const selectedProperty = useMemo(() => {
+    if (propertyId === CONVERSATION_SELECT_PROMPT_VALUE) return null;
+    return (
+      properties.find((item) => item.id === propertyId) ??
+      archivedProperties.find((item) => item.id === propertyId) ??
+      null
+    );
+  }, [archivedProperties, properties, propertyId]);
+  const { tenants: household, ready: householdReady } = useHouseholdTenants(
+    writingToTenants ? selectedProperty : null,
+  );
+  const householdEmails = useMemo(() => emailsOfHouseholdTenants(household), [household]);
+  const householdKey = householdEmails.join('\n');
+  const tenantEdited = useRef(false);
+  useEffect(() => {
+    tenantEdited.current = false;
+  }, [propertyId, recipient]);
+  useEffect(() => {
+    if (!writingToTenants || !householdReady || tenantEdited.current) return;
+    setTenantTo(householdEmails);
+    setTenantTyped('');
+  }, [householdEmails, householdKey, householdReady, writingToTenants]);
   const emailRequired = !isApp && CONVERSATION_RECIPIENTS_REQUIRING_EMAIL.has(recipient);
+  const tenantAddresses = recipientsWithTyped(tenantTo, tenantTyped);
   const complete =
     propertyId !== CONVERSATION_SELECT_PROMPT_VALUE &&
     subject.trim().length > 0 &&
@@ -96,24 +130,42 @@ export function NewConversationDialog({
 
   const submit = async () => {
     if (!complete) return;
-    const email = toEmail.trim();
-    const result = await run(CONVERSATION_ACTION.SEND, () =>
-      createAgentConversation({
+    const email = writingToTenants ? (tenantAddresses[0] ?? '') : toEmail.trim();
+    const otherTenants = writingToTenants ? tenantAddresses.slice(1) : [];
+    let othersMissed: string | null = null;
+    const result = await run(CONVERSATION_ACTION.SEND, async () => {
+      const created = await createAgentConversation({
         propertyId,
         recipient,
         channel,
         subject: subject.trim(),
         body: body.trim(),
         ...(email && !isApp ? { toEmail: email } : {}),
-      }),
-    );
+      });
+      // A new thread takes one address. The reply route takes the rest, so a co-tenant is not dropped.
+      if (isApp || otherTenants.length === 0) return created;
+      try {
+        return await replyToAgentConversation(created.conversation.id, {
+          channel: CONVERSATION_REPLY_CHANNEL.EMAIL,
+          body: body.trim(),
+          toEmails: [...otherTenants],
+        });
+      } catch (err) {
+        othersMissed = apiErrorMessage(err, CONVERSATIONS_COPY.otherTenantsNotSent);
+        return created;
+      }
+    });
     if (!result) return;
     if (isApp) {
       toast.success(CONVERSATIONS_COPY.appSent(`the ${CONVERSATION_APP_NAME[recipient]}`));
+    } else if (othersMissed) {
+      toast.warning(othersMissed);
     } else if (result.delivery && result.delivery !== CONVERSATION_DELIVERY_SENT) {
       toast.warning(CONVERSATIONS_COPY.notSent(result.delivery));
     } else {
-      toast.success(result.sentTo ? `${CONVERSATIONS_COPY.sent}: ${result.sentTo}` : CONVERSATIONS_COPY.sent);
+      const sentTo =
+        writingToTenants && tenantAddresses.length > 1 ? tenantAddresses.join(', ') : result.sentTo;
+      toast.success(sentTo ? `${CONVERSATIONS_COPY.sent}: ${sentTo}` : CONVERSATIONS_COPY.sent);
     }
     onCreated(result.conversation);
   };
@@ -160,7 +212,39 @@ export function NewConversationDialog({
             {isApp ? <p className="text-muted-foreground mt-1 text-[11px]">{CONVERSATIONS_COPY.composeAppHint}</p> : null}
           </div>
 
-          {isApp ? null : (
+          {isApp ? null : writingToTenants ? (
+            <div className="space-y-2">
+              {household.length > 0 ? (
+                <ul className="space-y-1">
+                  {household.map((tenant) => (
+                    <li key={tenant.id ?? `${tenant.name}-${tenant.email ?? ''}`} className="text-xs">
+                      <span className="font-medium">{tenant.name}</span>
+                      <span className="text-muted-foreground">
+                        {' '}
+                        · {tenant.email?.trim() || CONVERSATIONS_COPY.noTenantEmail}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <RecipientRow
+                label={CONVERSATIONS_COPY.toLabel}
+                recipients={tenantTo}
+                onChange={(next) => {
+                  tenantEdited.current = true;
+                  setTenantTo(next);
+                }}
+                typed={tenantTyped}
+                onTypedChange={setTenantTyped}
+                disabled={busy || !householdReady}
+              />
+              <p className="text-muted-foreground text-[11px]">
+                {household.length > 1
+                  ? CONVERSATIONS_COPY.composeTenantsHint
+                  : CONVERSATIONS_COPY.composeEmailOptional}
+              </p>
+            </div>
+          ) : (
             <div>
               <FieldLabel htmlFor="compose-email">{CONVERSATIONS_COPY.composeEmailLabel}</FieldLabel>
               <Input

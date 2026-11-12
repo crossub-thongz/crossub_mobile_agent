@@ -51,7 +51,17 @@ type PropertyWithStrata = Property & {
 /** Landlord, tenant, strata, and agent emails for workflow compose (reply / forward). */
 export function buildPropertyWorkflowEmailContacts(
   property: Property | null | undefined,
-  options?: { tenantName?: string | null; agentEmail?: string | null; agentName?: string | null },
+  options?: {
+    tenantName?: string | null;
+    agentEmail?: string | null;
+    agentName?: string | null;
+    /** Live TENANT contacts. Co-tenants added on the tenancy are not on the registry draft. */
+    tenantContacts?: ReadonlyArray<{
+      role?: string | null;
+      name?: string | null;
+      email?: string | null;
+    }>;
+  },
 ): WorkflowEmailContact[] {
   if (!property) return [];
 
@@ -79,6 +89,24 @@ export function buildPropertyWorkflowEmailContacts(
     tenantName,
   );
   pushPartyContacts(contacts, seen, WORKFLOW_EMAIL_ROLE.TENANT, property.additionalTenants);
+  // A co-tenant added as a contact keeps their own email. The registry row above is only Tenant 1.
+  let tenantCount = contacts.filter((contact) =>
+    workflowEmailRoleMatches(contact.role, WORKFLOW_EMAIL_ROLE.TENANT),
+  ).length;
+  for (const contact of options?.tenantContacts ?? []) {
+    if (contact.role && contact.role !== 'TENANT') continue;
+    const before = contacts.length;
+    pushContact(
+      contacts,
+      seen,
+      tenantCount === 0
+        ? WORKFLOW_EMAIL_ROLE.TENANT
+        : `${WORKFLOW_EMAIL_ROLE.TENANT} ${tenantCount + 1}`,
+      contact.email,
+      contact.name,
+    );
+    if (contacts.length > before) tenantCount += 1;
+  }
 
   const draft =
     property.registryDraft && typeof property.registryDraft === 'object'

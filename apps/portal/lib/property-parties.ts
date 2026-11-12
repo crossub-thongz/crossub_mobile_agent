@@ -170,6 +170,40 @@ export function formatHouseholdTenantNames(tenants: HouseholdTenant[]): string {
   return names.join(' & ');
 }
 
+/** Emails on the current household, one per address, primary first. */
+export function emailsOfHouseholdTenants(tenants: readonly HouseholdTenant[]): string[] {
+  const seen = new Set<string>();
+  const emails: string[] = [];
+  for (const tenant of tenants) {
+    const email = tenant.email?.trim();
+    if (!email || !email.includes('@')) continue;
+    const key = email.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    emails.push(email);
+  }
+  return emails;
+}
+
+/**
+ * A reply already addressed only to people on this tenancy should include the rest of them.
+ * Replying to an owner, contractor, or anyone else stays as written.
+ */
+export function includeHouseholdOnTenantReply(
+  to: readonly string[],
+  householdEmails: readonly string[],
+): readonly string[] {
+  if (householdEmails.length < 2) return to;
+  const household = new Set(householdEmails.map((email) => email.toLowerCase()));
+  const current = to.map((email) => email.trim()).filter(Boolean);
+  if (current.length === 0 || current.some((email) => !household.has(email.toLowerCase()))) {
+    return to;
+  }
+  const seen = new Set(current.map((email) => email.toLowerCase()));
+  const missing = householdEmails.filter((email) => !seen.has(email.toLowerCase()));
+  return missing.length === 0 ? to : [...current, ...missing];
+}
+
 function sortHouseholdContacts(contacts: HouseholdPersonInput[]): HouseholdPersonInput[] {
   return [...contacts].sort((a, b) => {
     if (Boolean(a.isPrimary) !== Boolean(b.isPrimary)) return a.isPrimary ? -1 : 1;

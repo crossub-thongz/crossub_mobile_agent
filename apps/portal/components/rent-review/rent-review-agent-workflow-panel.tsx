@@ -32,6 +32,7 @@ import {
 } from '@/lib/rent-review/agent-email';
 import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { buildPropertyWorkflowEmailContacts } from '@/lib/job-case-email-recipients';
+import { usePropertyTenantContacts } from '@/lib/use-property-tenant-contacts';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
@@ -88,14 +89,22 @@ export function RentReviewAgentWorkflowPanel({
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const selfManaged = useIsPropertySelfManaged(detail.propertyId);
   const property = properties.find((p) => p.id === detail.propertyId);
+  const tenantContactsByProperty = usePropertyTenantContacts(
+    detail.propertyId ? [detail.propertyId] : [],
+  );
   const agency = agencies.find((a) => a.id === property?.agencyId);
   const agentEmail = resolveRentReviewAgentEmail({
     userEmail: user?.email,
     agencyContactEmail: agency?.contactEmail,
   });
   const recipientContacts = useMemo(
-    () => buildPropertyWorkflowEmailContacts(property, { tenantName: detail.tenantName, agentEmail }),
-    [property, detail.tenantName, agentEmail],
+    () =>
+      buildPropertyWorkflowEmailContacts(property, {
+        tenantName: detail.tenantName,
+        agentEmail,
+        tenantContacts: detail.propertyId ? tenantContactsByProperty[detail.propertyId] : undefined,
+      }),
+    [property, detail.tenantName, detail.propertyId, agentEmail, tenantContactsByProperty],
   );
   const workflow = useMemo(() => buildRentReviewAgentWorkflow(detail), [detail]);
   const [viewingStepId, setViewingStepId] = useState<RentReviewAgentStep>(workflow.liveStepId);

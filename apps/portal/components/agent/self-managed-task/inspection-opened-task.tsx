@@ -111,6 +111,7 @@ export function InspectionOpenedTask({
   tenantName,
   tenantPhone,
   tenantEmail,
+  tenants,
   landlordName,
   landlordPhone,
   landlordEmail,
@@ -135,6 +136,8 @@ export function InspectionOpenedTask({
   tenantName: string;
   tenantPhone?: string;
   tenantEmail?: string;
+  /** Each person on the tenancy. Contacts lists every email, not only Tenant 1. */
+  tenants?: ReadonlyArray<{ name: string; phone?: string; email?: string }>;
   landlordName?: string;
   landlordPhone?: string;
   landlordEmail?: string;
@@ -215,6 +218,7 @@ export function InspectionOpenedTask({
             tenantName={tenantName}
             tenantPhone={tenantPhone}
             tenantEmail={tenantEmail}
+            tenants={tenants}
             landlordName={landlordName}
             landlordPhone={landlordPhone}
             landlordEmail={landlordEmail}
@@ -274,6 +278,7 @@ function InspectionOverview({
   tenantName,
   tenantPhone,
   tenantEmail,
+  tenants,
   landlordName,
   landlordPhone,
   landlordEmail,
@@ -288,6 +293,7 @@ function InspectionOverview({
   tenantName: string;
   tenantPhone?: string;
   tenantEmail?: string;
+  tenants?: ReadonlyArray<{ name: string; phone?: string; email?: string }>;
   landlordName?: string;
   landlordPhone?: string;
   landlordEmail?: string;
@@ -306,7 +312,12 @@ function InspectionOverview({
   const dateLabel = inspection.scheduledAt ? (confirmed ? 'Inspection date' : 'Proposed date') : 'Inspection date';
   const dateValue = inspection.scheduledAt ? scheduledLabel : 'Not set';
   const contacts: { role: string; name: string; phone?: string; email?: string }[] = [];
-  if (tenantName && tenantName !== '—') {
+  const tenantPeople = (tenants ?? []).filter((tenant) => tenant.name.trim() && tenant.name !== '—');
+  if (tenantPeople.length > 0) {
+    for (const tenant of tenantPeople) {
+      contacts.push({ role: 'Tenant', name: tenant.name, phone: tenant.phone, email: tenant.email });
+    }
+  } else if (tenantName && tenantName !== '—') {
     contacts.push({ role: 'Tenant', name: tenantName, phone: tenantPhone, email: tenantEmail });
   }
   if (landlordName && landlordName !== '—') {
@@ -398,8 +409,8 @@ function InspectionOverview({
               </p>
             ) : (
               <ul className="mt-4 flex flex-col gap-4">
-                {contacts.map((contact) => (
-                  <li key={contact.role}>
+                {contacts.map((contact, index) => (
+                  <li key={`${contact.role}-${contact.name}-${contact.email ?? index}`}>
                     <div className="text-muted-foreground flex items-center gap-2 text-[13px] font-medium">
                       <Users className="size-3.5" />
                       {contact.role}

@@ -50,6 +50,7 @@ import { OpenInspectionWorkflowView } from '@/components/open-inspection/open-in
 import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { buildPropertyWorkflowEmailContacts } from '@/lib/job-case-email-recipients';
+import { usePropertyTenantContacts } from '@/lib/use-property-tenant-contacts';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
 import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
@@ -357,6 +358,7 @@ export function InspectionDetailView({
     poolInspectionRecord,
     routineInspectionRecord,
   ]);
+  const tenantContactsByProperty = usePropertyTenantContacts(insp?.propertyId ? [insp.propertyId] : []);
   const emailRecipientContacts = useMemo(() => {
     const propertyRow = insp?.propertyId
       ? properties.find((p) => p.id === insp.propertyId)
@@ -368,8 +370,9 @@ export function InspectionDetailView({
       tenantName: propertyRow?.tenantName,
       agentEmail: leasingDetail?.agentInfo.email,
       agentName: leasingDetail?.agentInfo.name,
+      tenantContacts: insp?.propertyId ? tenantContactsByProperty[insp.propertyId] : undefined,
     });
-  }, [insp?.propertyId, leasingDetail, properties]);
+  }, [insp?.propertyId, leasingDetail, properties, tenantContactsByProperty]);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [flowChangeOpen, setFlowChangeOpen] = useState(false);
   const [activityExpanded, setActivityExpanded] = useState(false);
