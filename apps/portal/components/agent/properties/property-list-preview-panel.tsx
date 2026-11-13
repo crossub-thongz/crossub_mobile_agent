@@ -33,6 +33,7 @@ import {
 } from '@/lib/property-job-rows';
 import {
   formatProfileLeaseStatus,
+  recordedBondAmount,
   resolveBondOverviewDisplay,
   resolveCurrentRent,
   resolveLeaseDates,
@@ -245,12 +246,12 @@ export function PropertyListPreviewPanel({
       : registryRent != null && registryRent > 0
         ? registryRent
         : currentRent;
-  const bondAmount =
-    sync.financial?.bondAmount ??
-    sync.record?.bondAmount ??
-    property.bondAmount ??
-    sync.bond?.amount ??
-    null;
+  const bondAmount = recordedBondAmount(
+    sync.financial?.bondAmount,
+    sync.record?.bondAmount,
+    property.bondAmount,
+    sync.bond?.amount,
+  );
   const bond = resolveBondOverviewDisplay(
     bondAmount,
     sync.bond,

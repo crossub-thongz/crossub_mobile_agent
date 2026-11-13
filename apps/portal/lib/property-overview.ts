@@ -10,7 +10,7 @@ import type { PropertyPortalAccounting } from '@/lib/property-registry-api';
 import type { PropertyBondSnapshot } from '@/lib/use-property-overview-sync';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import { inspectionDetail } from '@/constants/routes';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { coerceMoney, formatCurrency, formatDate } from '@/lib/utils';
 
 export interface PropertyReportLink {
   label: string;
@@ -183,6 +183,19 @@ export function formatBondAmount(amount: number | null | undefined): string {
 }
 
 /**
+ * The bond to show. Zero on an earlier source is unset: the tenancy financial
+ * row stays 0 after Edit tenancy writes the property bond, and `??` would keep
+ * that 0 and hide the saved amount.
+ */
+export function recordedBondAmount(...amounts: Array<unknown>): number | null {
+  for (const amount of amounts) {
+    const value = coerceMoney(amount);
+    if (value != null && value > 0) return value;
+  }
+  return null;
+}
+
+/**
  * Bond ID from the active leasing cycle — ledger entry when paid, otherwise the
  * lodgement reference extracted from the bond portal link sent by CROSSUB.
  */
@@ -252,7 +265,7 @@ export function resolveBondReference(
     const docLabel = bondReferenceLabelFromDocTitle(bondDoc.title);
     if (docLabel) return { label: docLabel };
   }
-  const amount = bond?.amount ?? lease?.bondAmount ?? property.bondAmount;
+  const amount = recordedBondAmount(bond?.amount, lease?.bondAmount, property.bondAmount);
   if (amount != null && amount > 0) {
     return {
       label: 'Pending lodgement',

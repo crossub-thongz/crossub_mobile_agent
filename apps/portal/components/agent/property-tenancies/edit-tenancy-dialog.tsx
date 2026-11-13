@@ -29,6 +29,7 @@ import {
   type TenancyLeaseTermType,
 } from '@/constants/property-tenancies';
 import { patchAgentProperty, type AgentPropertyPatch } from '@/lib/crossub-api/agent-client';
+import { recordedBondAmount } from '@/lib/property-overview';
 import type { PropertyTenancyOverview } from '@/lib/crossub-api/agent-tenancy-client';
 import type { Property } from '@/lib/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
@@ -84,7 +85,7 @@ function formFrom(property: Property, record: PropertyTenancyOverview): TenancyF
     rentPeriod,
     rentAmount: amountText(weekly ? rentAmountForPeriod(weekly, rentPeriod) : null),
     paymentReference: property.paymentReference ?? '',
-    bondAmount: amountText(record.financial.bondAmount ?? property.bondAmount),
+    bondAmount: amountText(recordedBondAmount(record.financial.bondAmount, property.bondAmount)),
     depositAmount: amountText(record.financial.depositAmount ?? property.depositAmount),
   };
 }

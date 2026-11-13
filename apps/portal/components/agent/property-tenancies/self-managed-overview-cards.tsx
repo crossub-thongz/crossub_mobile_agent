@@ -42,7 +42,7 @@ import type {
 } from '@/lib/crossub-api/agent-tenancy-client';
 import { fromProperty } from '@/lib/detail-navigation';
 import { formatDateMedium } from '@/lib/format-datetime';
-import { resolveBondOverviewDisplay } from '@/lib/property-overview';
+import { recordedBondAmount, resolveBondOverviewDisplay } from '@/lib/property-overview';
 import type { PropertyBondSnapshot } from '@/lib/use-property-overview-sync';
 import type { Property } from '@/lib/types';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -285,7 +285,11 @@ export function SelfManagedOverviewCards({
   // Rent only; invoices are their own figure (the outstanding total is both together).
   const arrears = record.arrears.rentArrears;
   const unpaidInvoices = record.arrears.invoiceArrears;
-  const bondAmount = financial.bondAmount ?? property.bondAmount ?? null;
+  const bondAmount = recordedBondAmount(
+    financial.bondAmount,
+    property.bondAmount,
+    currentTenancy?.bondAmount,
+  );
   const bondOverview = resolveBondOverviewDisplay(bondAmount, bond, hasActiveLeasingCycle);
   const bondIdLabel = bondOverview.bondIdLabel !== TENANCY_PLACEHOLDER ? bondOverview.bondIdLabel : null;
   const inspectionCadence =
