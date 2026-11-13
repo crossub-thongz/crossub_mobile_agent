@@ -13,7 +13,9 @@
     "build:portal": "pnpm --filter @crossub/portal build",
     "start": "pnpm --filter @crossub/portal start",
     "start:portal": "pnpm --filter @crossub/portal start",
-    "lint": "pnpm -r run lint"
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm --filter @crossub/portal exec tsc --noEmit",
+    "verify": "pnpm build:portal"
   },
   "packageManager": "pnpm@9.12.0",
   "engines": {

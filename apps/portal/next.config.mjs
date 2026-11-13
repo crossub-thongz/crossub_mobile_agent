@@ -8,9 +8,6 @@ const nextConfig = {
     // BFF proxy buffers POST bodies (default 10 MB); agent document uploads are base64 JSON.
     proxyClientMaxBodySize: '150mb',
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: {
     unoptimized: true,
   },

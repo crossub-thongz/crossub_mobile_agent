@@ -62,10 +62,11 @@ Talk to the backend through the **published contract**, never hand-written types
   agent is an internal Account Manager, scoped to assigned clients). Add calls in
   `apps/portal/lib/crossub-api/agent-client.ts` using the `crossub` client +
   `components['schemas'][...]` types. **Never hand-roll request/response types.**
-- ⚠️ **Current state, not the standard:** since `bd7a1533` (3 Nov 2026) `client.ts` is a hand-made
-  untyped stand-in (`GET(template: string)` returning `data?: unknown`), not `createCrossubClient`,
-  so calls through `crossub` are no longer checked against the contract. That breaks shared rule 5.
-  Do not copy or extend the pattern; putting the typed client back is planned work.
+- `client.ts` is `createCrossubClient` with `fetchWithSession` from `lib/api.ts` (cookie session and
+  401 refresh). From 3 to 13 Nov 2026 it was a hand-made untyped stand-in, written because paths
+  were "not assignable"; the real cause was a published contract older than the API. **If a path
+  or field is missing from the types, the contract needs publishing from `crossub_web` and the
+  dependency here needs a bump. Stop and say so; never edit or replace the client (shared rule 5).**
 - Legacy `lib/crossub-api/maintenance-client.ts` / `types.ts` still call the non-v1
   `/maintenance/*` endpoints — migrate onto the facade over time.
 
@@ -93,3 +94,15 @@ Talk to the backend through the **published contract**, never hand-written types
   pre-deploy command. Pushing `main` in `crossub_web` also releases to production (auto-deploy is on).
 - Local gates are still fine and expected before a push: `tsc --noEmit`, unit tests, contract build.
 - Never paste staging credentials or connection strings into code, docs or chat.
+
+### Checks
+
+- `pnpm verify` is the check to run before handing work back. It is the production build
+  (`pnpm build:portal`), and since 13 Nov 2026 the build type checks: `typescript.ignoreBuildErrors`
+  was removed from `next.config.mjs` and must not come back (shared rule 7). A type error now
+  fails the build here, in CI and on Render.
+- `pnpm typecheck` is the faster `tsc --noEmit` for use while working. It needs one earlier
+  build or dev run, because `next-env.d.ts` imports route types that Next generates.
+- `.github/workflows/ci.yml` runs `pnpm verify` on every pull request.
+- The app type checked at zero errors when this was written. Keep it there.
+- There is no lint config and no test suite yet; `pnpm lint` does not work. Do not claim either passed.

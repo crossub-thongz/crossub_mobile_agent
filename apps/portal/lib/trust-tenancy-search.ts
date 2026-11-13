@@ -75,23 +75,24 @@ export async function loadReceiptTenancies(agencyId: string, bankAccountId: stri
   }));
 }
 
+/** What the receipt dialog can be opened with: a rent row, or the part of one a bank-line suggestion carries. */
+export type ReceiptTenancySource = {
+  ledgerId?: string | null;
+  ledgerCode?: string | null;
+  ledgerName?: string | null;
+  propertyAddress?: string | null;
+  propertyReferenceAddress?: string | null;
+  paymentReference?: string | null;
+  hasRentProfile?: boolean | null;
+  rentAmountCents?: number | null;
+  rentPeriod?: string | null;
+  paidToDate?: string | null;
+  effectivePaidToDate?: string | null;
+  arrearsDays?: number | null;
+};
+
 /** A rent row or a bank-line suggestion, shaped into the tenancy the receipt dialog stores. */
-export function toReceiptTenancy(
-  row: {
-    ledgerId?: string | null;
-    ledgerCode?: string | null;
-    ledgerName?: string | null;
-    propertyAddress?: string | null;
-    propertyReferenceAddress?: string | null;
-    paymentReference?: string | null;
-    hasRentProfile?: boolean | null;
-    rentAmountCents?: number | null;
-    rentPeriod?: string | null;
-    paidToDate?: string | null;
-    effectivePaidToDate?: string | null;
-    arrearsDays?: number | null;
-  } | null,
-): ReceiptTenancy | null {
+export function toReceiptTenancy(row: ReceiptTenancySource | null): ReceiptTenancy | null {
   if (!row?.ledgerId) return null;
   return {
     ledgerId: row.ledgerId,

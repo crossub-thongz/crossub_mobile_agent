@@ -26,6 +26,7 @@ import {
   TRUST_RECEIPT_METHOD_ORDER,
   TRUST_RECEIPT_RENT_PERIOD_LABEL,
   type TrustPaymentMethod,
+  type TrustReceiptAllocationKind,
   type TrustRentPeriod,
 } from '@/constants/trust';
 import { TRUST_PREVIEW_DEBOUNCE_MS, TRUST_RECEIPT_INVOICE_COPY as INVOICE_COPY } from '@/constants/trust-invoices';
@@ -57,6 +58,7 @@ import {
   loadReceiptTenancies,
   toReceiptTenancy,
   type ReceiptTenancy,
+  type ReceiptTenancySource,
 } from '@/lib/trust-tenancy-search';
 import { amountFromWeekly } from '@/lib/rent-calculations';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
@@ -240,7 +242,7 @@ export function TrustReceiptDialog({
   agencyId: string;
   bankAccountId: string;
   /** The tenancy already chosen, when the dialog was opened from one. Search can replace it. */
-  row?: Parameters<typeof toReceiptTenancy>[0];
+  row?: ReceiptTenancySource | null;
   /** Set when this receipt was opened from a bank file or QIF line. */
   lockedAmountCents?: number;
   /** The bank line to reconcile, sent back exactly as it was read. */
@@ -426,7 +428,7 @@ export function TrustReceiptDialog({
       toast.error(COPY.allocateAll);
       return;
     }
-    const allocations: { kind: string; amountCents: number; invoiceId?: string; details?: string }[] = [];
+    const allocations: { kind: TrustReceiptAllocationKind; amountCents: number; invoiceId?: string; details?: string }[] = [];
     if (rentCents > 0) {
       allocations.push({ kind: TRUST_RECEIPT_ALLOCATION_KIND.RENT, amountCents: rentCents });
     }

@@ -3,11 +3,21 @@
 ## 2026-11-13
 
 ### Added
+- `pnpm verify` (production build with type check) and `pnpm typecheck`
+- `.github/workflows/ci.yml`: runs `pnpm verify` on every pull request
 - `.github/pull_request_template.md`: pull request checklist (real data only, no loosened checks, every behaviour change listed, AI tool use)
 - `.github/CODEOWNERS`: list of guard files (rules files, contract client, CI, lint and type settings) whose changes need senior developer review
 - `AGENTS.md`: rules file for AI coding tools, ten shared rules identical across all CROSSUB repos plus this repo's notes
 - `.cursor/rules/shared-rules.mdc`: pointer so Cursor reads `AGENTS.md`
 
+### Fixed
+- Type errors 247 to 0
+- Trust receipt opened from a bank line is typed by what the dialog reads, not as a full rent row
+
+### Changed
+- `lib/crossub-api/client.ts` is the typed contract client again (`createCrossubClient`), replacing the hand-made untyped client of 3 Nov; calls keep the cookie session and 401 refresh through `fetchWithSession`
+- `@crossub-thongz/api-contract` ^0.72.0 to ^0.73.0 (adds trust pending mail, tenant invoice PDF and team modules routes)
+- Build now fails on a type error: `typescript.ignoreBuildErrors` removed from `next.config.mjs`
 
 ## 2026-11-10
 
