@@ -43,6 +43,7 @@ import { filterTenancyRentReviews, isPropertyVacant } from '@/lib/property-leasi
 import { isPropertyInspectionOnly, isPropertySelfManaged } from '@/lib/portal-service-level';
 import {
   formatProfileLeaseStatus,
+  recordedBondAmount,
   resolveBondOverviewDisplay,
   resolveCurrentRent,
   resolveLeaseDates,
@@ -187,12 +188,12 @@ function OverviewGrid({
       : registryRent != null && registryRent > 0
         ? registryRent
         : currentRent;
-  const bondAmount =
-    sync.financial?.bondAmount ??
-    sync.record?.bondAmount ??
-    property.bondAmount ??
-    sync.bond?.amount ??
-    null;
+  const bondAmount = recordedBondAmount(
+    sync.financial?.bondAmount,
+    sync.record?.bondAmount,
+    property.bondAmount,
+    sync.bond?.amount,
+  );
   const bond = resolveBondOverviewDisplay(bondAmount, sync.bond, Boolean(leasingCycles[0]?.id));
   const leaseStatus = formatProfileLeaseStatus(
     property,

@@ -33,6 +33,7 @@ import {
 import { setCurrentPropertyTenancy } from '@/lib/crossub-api/agent-client';
 import type { PropertyTenancyOverview } from '@/lib/crossub-api/agent-tenancy-client';
 import { fromProperty } from '@/lib/detail-navigation';
+import { recordedBondAmount } from '@/lib/property-overview';
 import { formatAgreementDate, formatDateMedium } from '@/lib/format-datetime';
 import type { Property } from '@/lib/types';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -99,6 +100,8 @@ type Handlers = {
   onWithdraw: (group: PropertyTenancyGroup) => void;
   onRemove: (group: PropertyTenancyGroup) => void;
   onEditMember: (member: PropertyTenancyMember) => void;
+  /** Property bond, used when the current tenancy's own figure is still 0. */
+  propertyBondAmount?: number;
 };
 
 /** The household's actions, once per tenancy. The rare ones sit under ⋯. */
@@ -200,7 +203,9 @@ function TenancyCard({ group, ...h }: Handlers & { group: PropertyTenancyGroup }
     ? (record.overview.vacateDate ?? group.recordedVacateDate)
     : (group.recordedVacateDate ?? group.moveOutDate);
   const rent = group.rentWeekly ?? (isCurrent ? record.financial.currentRentWeekly : null);
-  const bond = group.bondAmount ?? (isCurrent ? record.financial.bondAmount : null);
+  const bond = isCurrent
+    ? recordedBondAmount(record.financial.bondAmount, h.propertyBondAmount, group.bondAmount)
+    : recordedBondAmount(group.bondAmount);
   const paidTo = isCurrent ? (record.overview.rentPaidUntilDate ?? group.rentPaidUntil) : group.rentPaidUntil;
   const arrears = isCurrent ? record.arrears.rentArrears : null;
   return (
@@ -475,6 +480,7 @@ export function PropertyTenanciesSection({
       member.personId
         ? setMemberEdit({ personId: member.personId, name: member.name, email: member.email, mobile: member.mobile })
         : undefined,
+    propertyBondAmount: property.bondAmount,
   };
 
   const addButton = (

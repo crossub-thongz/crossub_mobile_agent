@@ -7,6 +7,7 @@ import { isDeletedInspection } from '@/lib/property-inspection-history';
 import { isRentReviewDecided } from '@/lib/rent-review';
 import { deriveRentReviewDueDateFromInput } from '@/lib/rent-review/scheduling';
 import {
+  recordedBondAmount,
   resolveBondOverviewDisplay,
   resolveCurrentRent,
   resolveLeaseDates,
@@ -227,12 +228,12 @@ export function buildPropertyProfileMetrics(args: {
     reportedDays: portalAccounting?.outstandingRentDays ?? accounting?.daysInArrears ?? null,
   });
 
-  const bondAmount =
-    sync.financial?.bondAmount ??
-    sync.record?.bondAmount ??
-    property.bondAmount ??
-    sync.bond?.amount ??
-    null;
+  const bondAmount = recordedBondAmount(
+    sync.financial?.bondAmount,
+    sync.record?.bondAmount,
+    property.bondAmount,
+    sync.bond?.amount,
+  );
   const bond = resolveBondOverviewDisplay(
     bondAmount,
     sync.bond,

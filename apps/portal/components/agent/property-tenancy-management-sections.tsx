@@ -47,6 +47,7 @@ import {
 import { buildTenancyViewPages, wrapTenancyPageIndex } from '@/lib/tenancy-view-pages';
 import {
   derivePaymentCycle,
+  recordedBondAmount,
   resolveBondOverviewDisplay,
   resolveCurrentRent,
   resolveLeaseDates,
@@ -494,12 +495,12 @@ export function PropertyTenancyManagementSections({
   );
   const paymentCycle = derivePaymentCycle(displayRent);
 
-  const displayBond =
-    sync.financial?.bondAmount ??
-    sync.record?.bondAmount ??
-    property.bondAmount ??
-    sync.bond?.amount ??
-    null;
+  const displayBond = recordedBondAmount(
+    sync.financial?.bondAmount,
+    sync.record?.bondAmount,
+    property.bondAmount,
+    sync.bond?.amount,
+  );
   const bondOverview = resolveBondOverviewDisplay(
     displayBond,
     sync.bond,
