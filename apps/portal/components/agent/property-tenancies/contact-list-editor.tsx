@@ -16,8 +16,10 @@ import {
 } from '@/constants/property-tenancies';
 import {
   addPropertyContact,
+  patchAgentProperty,
   removePropertyContact,
   updatePropertyContact,
+  type AgentPropertyPatch,
 } from '@/lib/crossub-api/agent-client';
 import {
   setPrimaryPropertyContact,
@@ -43,6 +45,26 @@ function draftOf(contact: PropertyTenancyContact): Draft {
     email: contact.email ?? '',
     phone: contact.mobile ?? '',
   };
+}
+
+type LandlordSnapshot = {
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+};
+
+/** Copy the primary owner onto the property, which Overview and the rest of the app read. */
+async function mirrorPrimaryLandlord(propertyId: string, contact: LandlordSnapshot) {
+  const name = contact.name?.trim() ?? '';
+  const email = contact.email?.trim() ?? '';
+  const phone = contact.phone?.trim() ?? '';
+  const patch: AgentPropertyPatch = {
+    ...(name ? { landlordName: name } : {}),
+    ...(email ? { landlordEmail: email } : {}),
+    ...(phone ? { landlordPhone: phone } : {}),
+  };
+  if (Object.keys(patch).length === 0) return;
+  await patchAgentProperty(propertyId, patch);
 }
 
 /**
@@ -126,11 +148,23 @@ export function ContactListEditor({
     }
     void run(async () => {
       if (draft.id) {
-        await updatePropertyContact(propertyId, draft.id, {
+        const existing = contacts.find((contact) => contact.id === draft.id);
+        const saved = await updatePropertyContact(propertyId, draft.id, {
           name: name || null,
           email: email || null,
           phone: phone || null,
         });
+        if (
+          role === PROPERTY_CONTACT_ROLE.LANDLORD &&
+          (existing?.isPrimary || contacts.length === 1)
+        ) {
+          const updated = saved.find((contact) => contact.id === draft.id);
+          await mirrorPrimaryLandlord(propertyId, {
+            name: updated?.name ?? name,
+            email: updated?.email ?? email,
+            phone: updated?.phone ?? phone,
+          });
+        }
         setDraft(null);
         return COPY.SAVED;
       }
@@ -140,6 +174,13 @@ export function ContactListEditor({
         email: email || undefined,
         phone: phone || undefined,
       });
+      if (role === PROPERTY_CONTACT_ROLE.LANDLORD && contacts.length === 0) {
+        const created =
+          result.contacts.find(
+            (contact) => contact.role === PROPERTY_CONTACT_ROLE.LANDLORD && contact.isPrimary,
+          ) ?? result.contacts.find((contact) => contact.role === PROPERTY_CONTACT_ROLE.LANDLORD);
+        if (created) await mirrorPrimaryLandlord(propertyId, created);
+      }
       setDraft(null);
       if (notices) void noticeList.reload().catch(() => undefined);
       const invite = result.tenantPortalInvite;
@@ -151,7 +192,12 @@ export function ContactListEditor({
 
   const remove = (contact: PropertyTenancyContact) =>
     void run(async () => {
-      await removePropertyContact(propertyId, contact.id);
+      const remaining = await removePropertyContact(propertyId, contact.id);
+      if (role === PROPERTY_CONTACT_ROLE.LANDLORD && contact.isPrimary) {
+        const landlords = remaining.filter((item) => item.role === PROPERTY_CONTACT_ROLE.LANDLORD);
+        const next = landlords.find((item) => item.isPrimary) ?? landlords[0];
+        if (next) await mirrorPrimaryLandlord(propertyId, next);
+      }
       setConfirmRemoveId(null);
       if (notices) void noticeList.reload().catch(() => undefined);
       return COPY.REMOVED;
@@ -160,6 +206,13 @@ export function ContactListEditor({
   const makePrimary = (contact: PropertyTenancyContact) =>
     void run(async () => {
       await setPrimaryPropertyContact(propertyId, contact.id);
+      if (role === PROPERTY_CONTACT_ROLE.LANDLORD) {
+        await mirrorPrimaryLandlord(propertyId, {
+          name: contact.name,
+          email: contact.email,
+          phone: contact.mobile,
+        });
+      }
       return COPY.PRIMARY_SET;
     });
 
