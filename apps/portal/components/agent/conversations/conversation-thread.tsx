@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { ArrowLeft, CheckCircle2, Loader2, Paperclip, PanelRight, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -7,6 +8,7 @@ import { ReplyComposer } from '@/components/agent/conversations/reply-composer';
 import { MessageBody } from '@/components/agent/message-body';
 import { SELECT_CLASS } from '@/components/agent/maintenance-self-managed/step-card';
 import { Button } from '@/components/ui/button';
+import { EMAIL_ATTACHMENT_COPY } from '@/constants/email-attachments';
 import {
   CONVERSATION_ACTION,
   CONVERSATION_MESSAGE_CHANNEL_LABEL,
@@ -27,10 +29,111 @@ import {
 } from '@/lib/crossub-api/agent-conversation-client';
 import { toPlainTextBody } from '@/lib/message-body';
 import { cn, formatDateTime } from '@/lib/utils';
+import {
+  attachmentKindLabel,
+  attachmentSizeLabel,
+  emailAttachmentFacts,
+  partitionEmailAttachments,
+  resolveAttachmentName,
+} from '@/utils/received-email-attachments';
+
+function ConversationAttachments({
+  attachments,
+}: {
+  attachments: AgentConversationMessage['attachments'];
+}) {
+  const [showSignatures, setShowSignatures] = useState(false);
+  const { files, signatureImages } = partitionEmailAttachments(attachments ?? [], emailAttachmentFacts);
+  if (files.length === 0 && signatureImages.length === 0) return null;
+
+  return (
+    <div className="mt-2 space-y-1">
+      {files.length > 0 ? (
+        <ul className="space-y-1">
+          {files.map((attachment, index) => {
+            const facts = emailAttachmentFacts(attachment);
+            const name = resolveAttachmentName(facts);
+            const kind = attachmentKindLabel(facts);
+            const size = attachmentSizeLabel(facts);
+            const label = (
+              <>
+                <Paperclip className="size-3 shrink-0" />
+                <span className="min-w-0 truncate">{name}</span>
+                {kind ? (
+                  <span className="shrink-0 rounded border border-current/40 px-1 text-[10px] font-semibold tracking-wide no-underline">
+                    {kind}
+                  </span>
+                ) : null}
+                {size ? <span className="shrink-0 text-[10px] no-underline opacity-80">{size}</span> : null}
+              </>
+            );
+            return (
+              <li key={`${attachment.url ?? name}:${index}`}>
+                {attachment.url ? (
+                  <a
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex max-w-full items-center gap-1 text-xs underline underline-offset-2"
+                  >
+                    {label}
+                  </a>
+                ) : (
+                  <span className="inline-flex max-w-full items-center gap-1 text-xs">{label}</span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      {signatureImages.length > 0 ? (
+        <button
+          type="button"
+          className="text-xs underline underline-offset-2"
+          onClick={() => setShowSignatures((open) => !open)}
+        >
+          {showSignatures
+            ? EMAIL_ATTACHMENT_COPY.hideSignatureFiles
+            : EMAIL_ATTACHMENT_COPY.showSignatureFiles(signatureImages.length)}
+        </button>
+      ) : null}
+      {showSignatures ? (
+        <ul className="space-y-1">
+          {signatureImages.map((attachment, index) => {
+            const facts = emailAttachmentFacts(attachment);
+            const name = resolveAttachmentName(facts);
+            return (
+              <li key={`signature:${attachment.url ?? name}:${index}`}>
+                {attachment.url ? (
+                  <a
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex max-w-full items-center gap-1 text-xs underline underline-offset-2 opacity-80"
+                  >
+                    <Paperclip className="size-3 shrink-0" />
+                    <span className="min-w-0 truncate">{name}</span>
+                    <span className="shrink-0 rounded border border-current/40 px-1 text-[10px] font-semibold tracking-wide no-underline">
+                      {EMAIL_ATTACHMENT_COPY.kindImage}
+                    </span>
+                  </a>
+                ) : (
+                  <span className="inline-flex max-w-full items-center gap-1 text-xs opacity-80">
+                    <Paperclip className="size-3 shrink-0" />
+                    {name}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
 
 function ConversationMessageBubble({ message }: { message: AgentConversationMessage }) {
   const outbound = message.direction === CONVERSATION_MESSAGE_DIRECTION.OUTBOUND;
-  const attachments = message.attachments.filter((a) => !a.inline);
   const channelLabel = CONVERSATION_MESSAGE_CHANNEL_LABEL[message.channel];
   return (
     <div className={cn('flex w-full', outbound ? 'justify-end' : 'justify-start')}>
@@ -64,23 +167,7 @@ function ConversationMessageBubble({ message }: { message: AgentConversationMess
           </p>
         ) : null}
         <MessageBody body={toPlainTextBody(message.body)} />
-        {attachments.length > 0 ? (
-          <ul className="mt-2 space-y-1">
-            {attachments.map((a) => (
-              <li key={a.url}>
-                <a
-                  href={a.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs underline underline-offset-2"
-                >
-                  <Paperclip className="size-3" />
-                  {a.fileName}
-                </a>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        <ConversationAttachments attachments={message.attachments} />
       </div>
     </div>
   );
