@@ -5,6 +5,7 @@ import { Download, ExternalLink, FileText, Loader2, Paperclip, X } from 'lucide-
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { EMAIL_ATTACHMENT_COPY } from '@/constants/email-attachments';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,13 @@ import type { JobCaseEmailAttachment } from '@/lib/job-case-email';
 import { mimeTypeForAttachmentFilename } from '@/lib/job-case-email';
 import { ApiError, fetchApiBlobFromUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import {
+  attachmentKindLabel,
+  attachmentSizeLabel,
+  emailAttachmentFacts,
+  partitionEmailAttachments,
+  resolveAttachmentName,
+} from '@/utils/received-email-attachments';
 
 function withDownloadQuery(url: string): string {
   return url.includes('?') ? `${url}&download=1` : `${url}?download=1`;
@@ -73,6 +81,7 @@ export function EmailAttachmentList({
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [previewName, setPreviewName] = useState('');
   const [previewMime, setPreviewMime] = useState('application/pdf');
+  const [showSignatures, setShowSignatures] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -172,10 +181,17 @@ export function EmailAttachmentList({
   if (attachments.length === 0) return null;
 
   const stopRowClick = variant === 'inline' ? (event: MouseEvent) => event.stopPropagation() : undefined;
+  const { files, signatureImages } = partitionEmailAttachments(attachments, emailAttachmentFacts);
 
-  const attachmentRows = (
+  const renderRows = (rows: JobCaseEmailAttachment[]) => (
     <ul className={variant === 'panel' ? 'space-y-2' : 'mt-2 space-y-1.5'}>
-      {attachments.map((attachment, index) => {
+      {rows.map((raw, index) => {
+        const facts = emailAttachmentFacts(raw);
+        const name = resolveAttachmentName(facts);
+        const kind = attachmentKindLabel(facts);
+        const sizeLabel = attachmentSizeLabel(facts) ?? raw.sizeLabel;
+        const attachment =
+          name === raw.name && sizeLabel === raw.sizeLabel ? raw : { ...raw, name, sizeLabel };
         const rowKey = attachmentRowKey(attachment, index);
         const loading = loadingKey === rowKey;
         return (
@@ -188,11 +204,14 @@ export function EmailAttachmentList({
             )}
           >
             <FileText className="size-4 shrink-0 text-primary" />
-            <span className="min-w-0 flex-1 truncate font-medium">{attachment.name}</span>
-            {attachment.sizeLabel ? (
-              <span className="text-muted-foreground shrink-0 tabular-nums">
-                {attachment.sizeLabel}
+            {kind ? (
+              <span className="bg-muted text-foreground shrink-0 rounded px-1 py-0.5 text-[10px] font-semibold tracking-wide">
+                {kind}
               </span>
+            ) : null}
+            <span className="min-w-0 flex-1 truncate font-medium">{attachment.name}</span>
+            {sizeLabel ? (
+              <span className="text-muted-foreground shrink-0 tabular-nums">{sizeLabel}</span>
             ) : null}
             {attachment.url ? (
               <div className="ml-auto flex shrink-0 items-center gap-1">
@@ -234,6 +253,29 @@ export function EmailAttachmentList({
         );
       })}
     </ul>
+  );
+
+  const attachmentRows = (
+    <>
+      {files.length > 0 ? renderRows(files) : null}
+      {signatureImages.length > 0 ? (
+        <div className={variant === 'panel' ? 'mt-2' : 'mt-1.5'} onClick={stopRowClick}>
+          <button
+            type="button"
+            className="text-muted-foreground text-[12px] underline underline-offset-2"
+            onClick={(event) => {
+              event.stopPropagation();
+              setShowSignatures((open) => !open);
+            }}
+          >
+            {showSignatures
+              ? EMAIL_ATTACHMENT_COPY.hideSignatureFiles
+              : EMAIL_ATTACHMENT_COPY.showSignatureFiles(signatureImages.length)}
+          </button>
+          {showSignatures ? renderRows(signatureImages) : null}
+        </div>
+      ) : null}
+    </>
   );
 
   return (
