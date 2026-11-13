@@ -1,0 +1,29 @@
+# Files that guard the codebase. A change to any of these needs a review from the owner
+# before merge, whoever or whatever wrote it (AGENTS.md rule 7).
+#
+# GitHub only requests that review automatically for a private repo on a paid plan. Until then
+# this file is the agreed list: if your pull request touches one of these paths, ask the owner
+# for a review yourself.
+#
+# Last matching line wins.
+
+# Rules for AI tools
+/AGENTS.md                      @aznelite89
+/.cursor/                       @aznelite89
+
+# CI, pull request template, this file
+/.github/                       @aznelite89
+
+# Contract client and the contract copy (AGENTS.md rule 5)
+/packages/api-contract/         @aznelite89
+/apps/*/lib/crossub-api/client.ts @aznelite89
+/apps/*/src/api/client.ts       @aznelite89
+
+# Lint, type check, test and build settings
+/package.json                   @aznelite89
+/apps/*/package.json            @aznelite89
+eslint.config.*                 @aznelite89
+.eslintrc*                      @aznelite89
+tsconfig*.json                  @aznelite89
+next.config.*                   @aznelite89
+render*.yaml                    @aznelite89

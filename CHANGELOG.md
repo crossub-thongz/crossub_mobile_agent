@@ -3,6 +3,8 @@
 ## 2026-11-13
 
 ### Added
+- `.github/pull_request_template.md`: pull request checklist (real data only, no loosened checks, every behaviour change listed, AI tool use)
+- `.github/CODEOWNERS`: list of guard files (rules files, contract client, CI, lint and type settings) whose changes need senior developer review
 - `AGENTS.md`: rules file for AI coding tools, ten shared rules identical across all CROSSUB repos plus this repo's notes
 - `.cursor/rules/shared-rules.mdc`: pointer so Cursor reads `AGENTS.md`
 
