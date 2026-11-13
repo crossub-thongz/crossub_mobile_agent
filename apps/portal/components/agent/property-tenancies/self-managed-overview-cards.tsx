@@ -241,17 +241,31 @@ export function SelfManagedOverviewCards({
         mobile: property.homeOwnerContact?.phone,
       }
     : null;
-  const owners: OwnerParty[] = registryOwner
+  const landlordContacts = record.contacts.filter(
+    (contact: PropertyTenancyContact) => contact.role === PROPERTY_CONTACT_ROLE.LANDLORD,
+  );
+  const primaryLandlordContact =
+    landlordContacts.find((contact: PropertyTenancyContact) => contact.isPrimary) ??
+    landlordContacts[0];
+  // Owner contacts are the ownership record. The property landlord name is only the fallback
+  // when no contact exists, so a renamed owner is not stuck on the old snapshot.
+  const primaryOwner: OwnerParty | null = primaryLandlordContact
+    ? {
+        name: primaryLandlordContact.name?.trim() || TENANCY_PLACEHOLDER,
+        email: primaryLandlordContact.email ?? undefined,
+        mobile: primaryLandlordContact.mobile ?? undefined,
+      }
+    : registryOwner;
+  const owners: OwnerParty[] = primaryOwner
     ? [
-        registryOwner,
-        ...resolvePortalCoContacts(record.contacts, PROPERTY_CONTACT_ROLE.LANDLORD, registryOwner).map((c) => ({
+        primaryOwner,
+        ...resolvePortalCoContacts(record.contacts, PROPERTY_CONTACT_ROLE.LANDLORD, primaryOwner).map((c) => ({
           name: c.name ?? TENANCY_PLACEHOLDER,
           email: c.email ?? undefined,
           mobile: c.mobile ?? undefined,
         })),
       ]
     : [];
-  const primaryOwner = owners[0];
   const ownerNames = owners.map((o) => o.name).join(' & ');
 
   const term = resolveCurrentLeaseTerm(record, currentTenancy, Boolean(incomingTenancy));
