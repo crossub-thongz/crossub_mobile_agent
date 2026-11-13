@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-13
+
+### Added
+- `AGENTS.md`: rules file for AI coding tools, ten shared rules identical across all CROSSUB repos plus this repo's notes
+- `.cursor/rules/shared-rules.mdc`: pointer so Cursor reads `AGENTS.md`
+
+
 ## 2026-11-10
 
 ### Added
