@@ -29,7 +29,6 @@ import {
   type ReadTrustBankFileInput,
   type TrustBankFile,
   type TrustBankFileLine,
-  type TrustRentRow,
 } from '@/lib/crossub-api/agent-trust-client';
 import { fileToBase64 } from '@/lib/file-upload';
 import {
@@ -39,6 +38,7 @@ import {
   trustBankLineInput,
   trustTodayKey,
 } from '@/lib/trust-accounting';
+import type { ReceiptTenancySource } from '@/lib/trust-tenancy-search';
 import { cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
@@ -52,7 +52,7 @@ function filterOptions(counts: TrustBankFile['counts']) {
 }
 
 /** A credit line's suggested tenant, enough to open the receipt. The dialog loads the paid-to. */
-function rentRowFromLine(line: TrustBankFileLine): TrustRentRow | null {
+function rentRowFromLine(line: TrustBankFileLine): ReceiptTenancySource | null {
   const suggestion = line.suggestion;
   if (!suggestion?.ledgerId || line.amountCents <= 0) return null;
   return {

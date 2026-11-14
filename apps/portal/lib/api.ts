@@ -129,20 +129,41 @@ const parseBody = async (res: Response): Promise<unknown> => {
   }
 };
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  let res = await doFetch(path, init);
-
-  if (
-    res.status === 401 &&
-    typeof window !== 'undefined' &&
-    !shouldSkipAuthRefresh(path)
-  ) {
-    if (await tryRefreshSession()) {
-      res = await doFetch(path, init);
-    } else {
-      return clearSessionAndRedirectToLogin();
-    }
+/**
+ * Sends a request on the cookie session. On a 401 in the browser it refreshes the session once
+ * and sends again; if the refresh fails it clears the session and goes to the login page.
+ * `send` is called once per attempt, so it must build a fresh request each time.
+ */
+async function sendWithSession(path: string, send: () => Promise<Response>): Promise<Response> {
+  const res = await send();
+  if (res.status !== 401 || typeof window === 'undefined' || shouldSkipAuthRefresh(path)) {
+    return res;
   }
+  if (await tryRefreshSession()) return send();
+  return clearSessionAndRedirectToLogin();
+}
+
+/** Path of a request URL relative to the API base, e.g. `/v1/agent/properties`. */
+const pathWithinApi = (url: string): string => {
+  const { pathname } = new URL(url);
+  const base = new URL(API_URL, url).pathname.replace(/\/$/, '');
+  return pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
+};
+
+/**
+ * `fetch` for the typed contract client (`lib/crossub-api/client.ts`): the same cookie session,
+ * 401 refresh and expired-session handling as `api` and `apiV1`, so a call made through the
+ * contract client and a call made through those helpers behave the same when a session lapses.
+ */
+export function fetchWithSession(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const request = new Request(input, init);
+  return sendWithSession(pathWithinApi(request.url), () =>
+    fetch(request.clone(), { credentials: 'include', cache: 'no-store' }),
+  );
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await sendWithSession(path, () => doFetch(path, init));
 
   if (!res.ok) {
     throw new ApiError(res.status, await parseBody(res));
@@ -151,19 +172,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
-  let res = await doFetch(path, init);
-
-  if (
-    res.status === 401 &&
-    typeof window !== 'undefined' &&
-    !shouldSkipAuthRefresh(path)
-  ) {
-    if (await tryRefreshSession()) {
-      res = await doFetch(path, init);
-    } else {
-      return clearSessionAndRedirectToLogin();
-    }
-  }
+  const res = await sendWithSession(path, () => doFetch(path, init));
 
   if (!res.ok) {
     throw new ApiError(res.status, await parseBody(res));

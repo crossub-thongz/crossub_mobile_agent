@@ -1,0 +1,43 @@
+name: ci
+
+# The check every pull request has to pass: the production build, which type checks the app
+# against the API contract. It is the same command Render runs to deploy, so a pull request
+# that is red here would also fail to deploy.
+#
+# Pull requests only, plus a manual run from the Actions tab. `pnpm verify` runs the same
+# check locally.
+#
+# Never add `continue-on-error`, `|| true`, or `typescript.ignoreBuildErrors` to make this
+# green. Fix the code, or ask (AGENTS.md shared rule 7).
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build with type check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Read access to @crossub-thongz/api-contract on GitHub Packages (.npmrc reads this).
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # reads packageManager from package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build with type check
+        run: pnpm verify
