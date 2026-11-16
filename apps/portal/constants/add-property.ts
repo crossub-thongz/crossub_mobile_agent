@@ -178,6 +178,7 @@ export const ADD_PROPERTY_COPY = {
   NOTHING_TO_SAVE: 'Enter an address or link an owner first',
   DRAFT_SAVED_TOAST: 'Draft saved',
   ACTIVATION_ERRORS_HEADING: 'Fix these before activating',
+  ISSUES_TO_FIX: 'to fix before activating',
   DUPLICATE_HEADING: 'This property is already registered',
   DUPLICATE_BODY: 'This address is already registered for this agency.',
   DUPLICATE_OPEN: 'Open existing property',

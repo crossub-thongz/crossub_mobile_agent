@@ -18,6 +18,7 @@ import {
   type OwnerDrawerTab,
   type OwnerKind,
 } from '@/constants/add-property';
+import { ENVIRONMENT_BANNER_HEIGHT_VAR } from '@/constants/environment-banner';
 import { useDebouncedValue } from '@/hooks/use-trust-resource';
 import {
   searchAgencyOwners,
@@ -255,7 +256,11 @@ export function OwnerDrawer({
     staged.some((owner) => owner.personId === person.id);
 
   return createPortal(
-    <div className="fixed inset-0 z-[70]">
+    // Starts below the test environment banner, which would otherwise cover the drawer's title.
+    <div
+      className="fixed inset-x-0 bottom-0 z-[70]"
+      style={{ top: `var(${ENVIRONMENT_BANNER_HEIGHT_VAR}, 0px)` }}
+    >
       <button
         type="button"
         aria-label={OWNER_DRAWER_COPY.CLOSE}
