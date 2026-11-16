@@ -28,12 +28,20 @@ import {
   TENANCY_LEASE_TERM_TYPE_LABEL,
   type TenancyLeaseTermType,
 } from '@/constants/property-tenancies';
-import { patchAgentProperty, type AgentPropertyPatch } from '@/lib/crossub-api/agent-client';
+import {
+  patchAgentProperty,
+  updatePropertyContact,
+  type AgentPropertyPatch,
+} from '@/lib/crossub-api/agent-client';
 import { recordedBondAmount } from '@/lib/property-overview';
-import type { PropertyTenancyOverview } from '@/lib/crossub-api/agent-tenancy-client';
+import type {
+  PropertyTenancyContact,
+  PropertyTenancyOverview,
+} from '@/lib/crossub-api/agent-tenancy-client';
 import type { Property } from '@/lib/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { dayKey } from '@/utils/current-tenancy';
+import { noticePhoneToMirror } from '@/utils/notice-phone';
 import { isSamePortalParty } from '@/utils/portal-party';
 import {
   buildPropertyTenancyGroups,
@@ -90,6 +98,13 @@ function formFrom(property: Property, record: PropertyTenancyOverview): TenancyF
   };
 }
 
+/** The tenant the notice phone belongs to: the primary, otherwise the only contact. */
+function noticePhoneContact(
+  contacts: readonly PropertyTenancyContact[],
+): PropertyTenancyContact | undefined {
+  return contacts.find((contact) => contact.isPrimary) ?? (contacts.length === 1 ? contacts[0] : undefined);
+}
+
 /** Only the fields the agent changed, so an untouched field never rewrites what is on file. */
 function changedPatch(before: TenancyForm, after: TenancyForm): AgentPropertyPatch {
   const patch: AgentPropertyPatch = {};
@@ -144,6 +159,7 @@ export function EditTenancyDialog({
 }) {
   const [initial, setInitial] = useState<TenancyForm | null>(null);
   const [form, setForm] = useState<TenancyForm | null>(null);
+  const [contactPhoneAtOpen, setContactPhoneAtOpen] = useState('');
   const [saving, setSaving] = useState(false);
   const vacatingCase = openVacatingCaseForDisplayedTenancy(record);
   const currentTenancy = useMemo(
@@ -176,6 +192,7 @@ export function EditTenancyDialog({
     const seeded = formFrom(property, record);
     setInitial(seeded);
     setForm(seeded);
+    setContactPhoneAtOpen(noticePhoneContact(tenantContacts)?.mobile?.trim() ?? '');
     // Seed once per open; contact edits reload `record` and must not reset the typed form.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -196,9 +213,25 @@ export function EditTenancyDialog({
     } catch {
       return void toast.error(COPY.INVALID_AMOUNT);
     }
+    const phoneForContact = noticePhoneToMirror({
+      noticePhone: form.tenantPhone,
+      seededNoticePhone: initial.tenantPhone,
+      contactPhoneAtOpen,
+      liveContactPhone: noticePhoneContact(tenantContacts)?.mobile ?? '',
+    });
     setSaving(true);
     try {
       if (Object.keys(patch).length > 0) await patchAgentProperty(property.id, patch);
+      if (phoneForContact) {
+        const contact = noticePhoneContact(tenantContacts);
+        if (contact) {
+          await updatePropertyContact(property.id, contact.id, {
+            name: contact.name?.trim() || null,
+            email: contact.email?.trim() || null,
+            phone: phoneForContact,
+          });
+        }
+      }
       toast.success(COPY.DONE);
       onOpenChange(false);
       onSaved();
