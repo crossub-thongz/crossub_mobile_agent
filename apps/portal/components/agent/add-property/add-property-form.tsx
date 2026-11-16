@@ -73,6 +73,7 @@ const selectClass =
   'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30';
 
 const DUPLICATE_CHECK_MS = 400;
+const ACTIVATION_ISSUES_ID = 'add-property-activation-issues';
 
 const fieldId = (field: AddPropertyField) => `add-property-${field}`;
 
@@ -861,6 +862,7 @@ export function AddPropertyForm({
 
       {issues.length > 0 ? (
         <div
+          id={ACTIVATION_ISSUES_ID}
           role="alert"
           className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 dark:border-rose-900/50 dark:bg-rose-950/30"
         >
@@ -883,7 +885,21 @@ export function AddPropertyForm({
         </div>
       ) : null}
 
-      <div className="bg-background/95 sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-between gap-3 border-t px-1 py-3 backdrop-blur">
+      {/* Buttons sit on the left: the Cros chat button floats over the bottom right corner. */}
+      <div className="bg-background/95 sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-3 border-t px-1 py-3 backdrop-blur">
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void saveDraft()}
+            disabled={busy || saveState === ADD_PROPERTY_SAVE_STATE.SAVING}
+          >
+            {ADD_PROPERTY_COPY.SAVE_DRAFT}
+          </Button>
+          <Button type="button" onClick={() => void activate()} disabled={busy || !!duplicateHref}>
+            {activating ? ADD_PROPERTY_COPY.ACTIVATING : ADD_PROPERTY_COPY.ACTIVATE}
+          </Button>
+        </div>
         <p
           aria-live="polite"
           className={cn(
@@ -911,19 +927,19 @@ export function AddPropertyForm({
             </button>
           ) : null}
         </p>
-        <div className="flex gap-2">
-          <Button
+        {issues.length > 0 ? (
+          <button
             type="button"
-            variant="outline"
-            onClick={() => void saveDraft()}
-            disabled={busy || saveState === ADD_PROPERTY_SAVE_STATE.SAVING}
+            className="text-xs font-medium text-rose-600 underline dark:text-rose-400"
+            onClick={() =>
+              document
+                .getElementById(ACTIVATION_ISSUES_ID)
+                ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
           >
-            {ADD_PROPERTY_COPY.SAVE_DRAFT}
-          </Button>
-          <Button type="button" onClick={() => void activate()} disabled={busy || !!duplicateHref}>
-            {activating ? ADD_PROPERTY_COPY.ACTIVATING : ADD_PROPERTY_COPY.ACTIVATE}
-          </Button>
-        </div>
+            {issues.length} {ADD_PROPERTY_COPY.ISSUES_TO_FIX}
+          </button>
+        ) : null}
       </div>
 
       <OwnerDrawer

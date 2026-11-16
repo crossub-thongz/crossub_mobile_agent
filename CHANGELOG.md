@@ -6,12 +6,14 @@
 - Add Property is one page: address search with map, essential details, occupancy and owners, with Save Draft and Activate Property. On the test environment only; production keeps the stepped form until this is checked on staging
 - Owner drawer on Add Property: search the agency's existing owners or create one (individual or company), link several, pick one primary contact, optional ownership percentages totalling 100; Cancel discards, Save Owners commits
 - Optional property details on Add Property: furnishing (unfurnished, partly, fully), internal area, land area, floor or level, storage spaces, features and amenities
+- Add Property (test environment): a count of things to fix beside the buttons, linking to the list
 - Success screen after activation with next steps: Add Tenancy, View Property, Properties, Add Another Property
 - Property Tenancies section opens Add tenancy when reached from the success screen
 - Property page shows the PRP reference, the same one CROSSUB staff see
 - Current tenancy card on a Full Service property shows Lease Type (Fixed term or Periodic)
 
 ### Fixed
+- Add Property (test environment): Save Draft and Activate Property sit clear of the Cros chat button, and the owner drawer starts below the test environment banner
 - Empty bedrooms, bathrooms and parking on a new property stay unknown instead of being required or saved as 0
 - A draft started before its street address is typed takes the address as its name once typed
 - Full Service property page reads tenant, lease dates, rent review, bond and previous tenancies from the same source as the admin Property page
