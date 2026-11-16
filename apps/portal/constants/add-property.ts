@@ -265,12 +265,13 @@ export const ACTIVATION_SUCCESS_COPY = {
   HEADING: 'Property Activated',
   ACTIVE_BADGE: 'Active',
   NEXT_HEADING: 'Recommended next step',
-  NEXT_TENANCY_SELF_MANAGED: 'Add the tenancy for this property. The property is already selected.',
-  NEXT_TENANCY_SERVICED:
-    'Record the tenancy details on the property page so CROSSUB has them.',
+  NEXT_TENANCY: 'Add the tenancy for this property. The property is already selected.',
+  NEXT_TENANCY_AFTER_APPROVAL:
+    'CROSSUB is confirming service for this property. Add the tenancy from the property page once it is confirmed.',
+  NEXT_AWAITING_APPROVAL:
+    'CROSSUB is confirming service for this property. It is vacant, so no tenancy is needed yet.',
   NEXT_VACANT: 'The property is vacant, so no tenancy is needed yet.',
   ADD_TENANCY: 'Add Tenancy',
-  ADD_TENANCY_DETAILS: 'Add tenancy details',
   VIEW_PROPERTY: 'View Property',
   PROPERTIES: 'Properties',
   ADD_ANOTHER: 'Add Another Property',

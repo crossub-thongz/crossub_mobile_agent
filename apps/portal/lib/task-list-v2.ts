@@ -12,7 +12,6 @@ import {
   getAgencyPortalLevel,
   isInspectionOnlyAgent,
   isInspectionOnlyTaskCategory,
-  isLegacyLevel,
   isPropertyInspectionOnly,
   isPropertySelfManaged,
   isSelfManagedLevel,
@@ -671,7 +670,9 @@ export function taskServiceLabel(
 ): 'Full Service' | 'Self-Manage' | 'Inspection Only' {
   const level = getAgencyPortalLevel(agencies, row.property.agencyId);
   if (level === 'LEVEL_1_INSPECTION_ONLY') return 'Inspection Only';
-  if (isSelfManagedLevel(level) || isLegacyLevel(level)) return 'Self-Manage';
+  // Legacy clients are serviced by CROSSUB (Chan, 16 Nov 2026), so they read Full Service:
+  // their jobs show under that filter and an unassigned inspection is CROSSUB's to arrange.
+  if (isSelfManagedLevel(level)) return 'Self-Manage';
   return 'Full Service';
 }
 

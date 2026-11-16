@@ -17,17 +17,22 @@ export function ActivationSuccess({
   addressLine,
   wantsTenancy,
   selfManaged,
+  awaitingServiceApproval,
 }: {
   propertyId: string;
   addressLine: string;
   /** The agent said the property is tenanted, or that a tenancy is arranged. */
   wantsTenancy: boolean;
-  /** Self-Manage adds the tenancy itself; a serviced agency records the details for CROSSUB. */
+  /** Self-Manage adds the tenancy on its Tenancies section; a serviced agency on the Overview card. */
   selfManaged: boolean;
+  /** CROSSUB has not yet agreed to service this property, so a tenancy cannot be added yet. */
+  awaitingServiceApproval: boolean;
 }) {
+  const addTenancyQuery = `${ADD_TENANCY_QUERY_PARAM}=${ADD_TENANCY_QUERY_VALUE}`;
   const tenancyHref = selfManaged
-    ? `${propertyDetail(propertyId)}?section=tenancies&${ADD_TENANCY_QUERY_PARAM}=${ADD_TENANCY_QUERY_VALUE}`
-    : propertyDetail(propertyId);
+    ? `${propertyDetail(propertyId)}?section=tenancies&${addTenancyQuery}`
+    : `${propertyDetail(propertyId)}?${addTenancyQuery}`;
+  const canAddTenancyNow = wantsTenancy && !awaitingServiceApproval;
 
   return (
     <div className="mx-auto max-w-xl space-y-5 rounded-lg border border-border/60 bg-card p-6 text-center">
@@ -44,18 +49,18 @@ export function ActivationSuccess({
         <h3 className="text-sm font-semibold">{ACTIVATION_SUCCESS_COPY.NEXT_HEADING}</h3>
         <p className="text-muted-foreground text-sm">
           {!wantsTenancy
-            ? ACTIVATION_SUCCESS_COPY.NEXT_VACANT
-            : selfManaged
-              ? ACTIVATION_SUCCESS_COPY.NEXT_TENANCY_SELF_MANAGED
-              : ACTIVATION_SUCCESS_COPY.NEXT_TENANCY_SERVICED}
+            ? awaitingServiceApproval
+              ? ACTIVATION_SUCCESS_COPY.NEXT_AWAITING_APPROVAL
+              : ACTIVATION_SUCCESS_COPY.NEXT_VACANT
+            : awaitingServiceApproval
+              ? ACTIVATION_SUCCESS_COPY.NEXT_TENANCY_AFTER_APPROVAL
+              : ACTIVATION_SUCCESS_COPY.NEXT_TENANCY}
         </p>
-        {wantsTenancy ? (
+        {canAddTenancyNow ? (
           <Button asChild>
             <Link href={tenancyHref}>
               <Plus className="size-4" />
-              {selfManaged
-                ? ACTIVATION_SUCCESS_COPY.ADD_TENANCY
-                : ACTIVATION_SUCCESS_COPY.ADD_TENANCY_DETAILS}
+              {ACTIVATION_SUCCESS_COPY.ADD_TENANCY}
             </Link>
           </Button>
         ) : null}
