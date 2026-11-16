@@ -3,10 +3,17 @@
 ## 2026-11-16
 
 ### Added
+- Add Property is one page: address search with map, essential details, occupancy and owners, with Save Draft and Activate Property. On the test environment only; production keeps the stepped form until this is checked on staging
+- Owner drawer on Add Property: search the agency's existing owners or create one (individual or company), link several, pick one primary contact, optional ownership percentages totalling 100; Cancel discards, Save Owners commits
+- Optional property details on Add Property: furnishing (unfurnished, partly, fully), internal area, land area, floor or level, storage spaces, features and amenities
+- Success screen after activation with next steps: Add Tenancy, View Property, Properties, Add Another Property
+- Property Tenancies section opens Add tenancy when reached from the success screen
 - Property page shows the PRP reference, the same one CROSSUB staff see
 - Current tenancy card on a Full Service property shows Lease Type (Fixed term or Periodic)
 
 ### Fixed
+- Empty bedrooms, bathrooms and parking on a new property stay unknown instead of being required or saved as 0
+- A draft started before its street address is typed takes the address as its name once typed
 - Full Service property page reads tenant, lease dates, rent review, bond and previous tenancies from the same source as the admin Property page
 - A lease whose end date has passed reads Periodic, not Fixed term
 - Property page status badge follows the property's recorded status (Occupied, Vacant, Showing, Maintenance)
@@ -20,7 +27,15 @@
 - Rent reconciliation shows the PRP reference
 
 ### Changed
-- `@crossub-thongz/api-contract` ^0.73.0 to ^0.74.0
+- Activating a property needs only a valid address, a property type and owners with one primary contact; furnished, bedrooms, bathrooms and parking are optional
+- Editing the street, suburb, state or postcode by hand after picking an address clears its map pin until it is picked again
+- Activation is checked on the server, and each failed rule is listed and links to its field
+- The draft's address appears in the browser address bar after its first save, so a reload returns to it
+- `@crossub-thongz/api-contract` ^0.73.0 to ^0.75.1
+
+### Removed
+- Tenant, rent, bond, lease dates, management fees, strata and document steps from Add Property; a tenancy is added after activation and the rest on the property page
+- Routine inspection due date from Add Property
 
 ## 2026-11-13
 

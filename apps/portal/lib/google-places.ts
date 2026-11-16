@@ -16,6 +16,8 @@ export interface ParsedAustralianAddress {
   postcode: string;
   lat?: number;
   lng?: number;
+  /** The Google place this address was picked from; absent when it was not picked. */
+  placeId?: string;
 }
 
 /** Build the single street-address string stored on the property. */
