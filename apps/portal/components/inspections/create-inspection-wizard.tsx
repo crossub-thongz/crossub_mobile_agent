@@ -662,11 +662,10 @@ export function CreateInspectionWizard({
     };
     let body: CreateAgencyInspectionInput;
     if (type === AGENCY_INSPECTION_TYPE.INGOING) {
-      if (!ingoing.tenantName.trim()) throw new Error('Tenant name is required');
       if (!ingoing.moveInDate) throw new Error('Move-in date is required');
       body = {
         ...base,
-        tenantName: ingoing.tenantName.trim(),
+        tenantName: ingoing.tenantName.trim() || undefined,
         tenantEmail: ingoing.tenantEmail.trim() || undefined,
         tenantPhone: ingoing.tenantPhone.trim() || undefined,
         moveInDate: ingoing.moveInDate,
@@ -941,10 +940,10 @@ export function CreateInspectionWizard({
       }
 
       if (inspectionType === 'INGOING') {
-        if (!ingoing.tenantName.trim()) throw new Error('Tenant name is required');
-        // The move-in date stays required and stays the agent's — it is a fact about the
-        // tenancy they arranged, not a slot in CROSSUB's diary. Only the inspection time
-        // moved to us (CRS-0068).
+        // Tenant name, email and phone are optional. An ingoing can be requested before
+        // the incoming tenant is known. The move-in date stays required and stays the
+        // agent's — it is a fact about the tenancy they arranged, not a slot in CROSSUB's
+        // diary. Only the inspection time moved to us (CRS-0068).
         if (!ingoing.moveInDate) throw new Error('Move-in date is required');
         await withInspectionOrderPayment(
           'ingoing_inspection',
@@ -952,7 +951,7 @@ export function CreateInspectionWizard({
           async (platformChargeId) => {
             const created = await createAgentIngoingInspection(property.id, {
               moveInDate: ingoing.moveInDate,
-              tenantName: ingoing.tenantName.trim(),
+              tenantName: ingoing.tenantName.trim() || undefined,
               tenantEmail: ingoing.tenantEmail.trim() || undefined,
               tenantPhone: ingoing.tenantPhone.trim() || undefined,
               priority: ingoing.priority,
@@ -1708,7 +1707,7 @@ function IngoingInspectionForm({
           </select>
         </Field>
       </div>
-      <Field label="Tenant name *">
+      <Field label="Tenant name">
         <Input
           inputKind="person_name"
           value={ingoing.tenantName}
