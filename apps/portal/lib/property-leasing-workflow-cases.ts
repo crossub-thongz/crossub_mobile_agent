@@ -30,6 +30,8 @@ export interface PropertyLeasingWorkflowCase {
   detail?: string;
   sortAt?: string;
   createdAt?: string;
+  /** When the case last changed. */
+  updatedAt?: string;
 }
 
 function parseSortTimestamp(value?: string): number {
@@ -95,6 +97,7 @@ export function buildPropertyLeasingWorkflowCases(input: {
       detail: cycle.propertyAddress,
       sortAt: cycle.availableFrom,
       createdAt: cycle.createdAt,
+      updatedAt: cycle.updatedAt,
     });
   }
 
@@ -130,6 +133,7 @@ export function buildPropertyLeasingWorkflowCases(input: {
       detail: `Vacate ${vacating.vacateDate} · ${vacating.reason}`,
       sortAt: vacating.vacateDate,
       createdAt: vacating.createdAt,
+      updatedAt: vacating.updatedAt,
     });
   }
 
@@ -145,6 +149,7 @@ export function buildPropertyLeasingWorkflowCases(input: {
       detail: review.propertyAddress,
       sortAt: review.reviewDue,
       createdAt: review.createdAt,
+      updatedAt: review.updatedAt,
     });
   }
 
@@ -189,6 +194,7 @@ export function buildPropertyLeasingHistoryCases(input: {
       detail: cycle.propertyAddress,
       sortAt: cycle.availableFrom,
       createdAt: cycle.createdAt,
+      updatedAt: cycle.updatedAt,
     });
   }
 
@@ -203,6 +209,7 @@ export function buildPropertyLeasingHistoryCases(input: {
       detail: `Vacate ${vacating.vacateDate} · ${vacating.reason}`,
       sortAt: vacating.vacateDate,
       createdAt: vacating.createdAt,
+      updatedAt: vacating.updatedAt,
     });
   }
 
@@ -235,6 +242,7 @@ export function endLeasingWorkflowCaseFromVacating(
     detail: `Vacate ${vacating.vacateDate} · ${vacating.reason}`,
     sortAt: vacating.vacateDate,
     createdAt: vacating.createdAt,
+    updatedAt: vacating.updatedAt,
   };
 }
 

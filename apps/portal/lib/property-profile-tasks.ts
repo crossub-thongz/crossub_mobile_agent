@@ -135,10 +135,12 @@ function taskFromJobRow(
 ): PropertyProfileTask {
   const category = jobCategory(job);
   const maintenance = job.kind === 'maintenance' ? maintenanceById.get(job.id) : undefined;
+  // Maintenance carries its own answer (`requiresApproval`), so its step names are not read:
+  // "Review" and "Get quote" are CROSSUB's stages and were landing in Needs My Action.
   const needsApproval =
     needAction != null ||
     maintenance?.requiresApproval === true ||
-    /approv|quot|review|sign|confirm/i.test(job.status);
+    (job.kind !== 'maintenance' && /approv|quot|review|sign|confirm/i.test(job.status));
 
   const title = propertyJobDisplayTitle(job);
   const subtext = propertyJobDisplaySubtext(job);
@@ -176,8 +178,8 @@ function taskFromJobRow(
     jobRow: job,
     needAction,
     sortAt: needAction
-      ? Date.parse(needAction.updatedAt ?? '') || job.createdAtMs
-      : job.createdAtMs,
+      ? Date.parse(needAction.updatedAt ?? '') || job.updatedAtMs
+      : job.updatedAtMs,
   };
 }
 

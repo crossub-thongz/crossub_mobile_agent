@@ -37,6 +37,8 @@ import {
   INSPECTION_TYPE,
   LEASE_STATUS,
   MAINTENANCE_STATUS,
+  MAINTENANCE_WORKFLOW_STATUS,
+  MAINTENANCE_WORKFLOW_STATUS_LABEL,
   PROPERTY_APPROVAL_STATUS,
   RENT_REVIEW_WORKFLOW_STATE,
   TRIBUNAL_CASE_STATUS,
@@ -207,6 +209,7 @@ export function mapAgentProperty(
     additionalTenants: additionalTenantsFromDraft(
       list.registryDraft ?? ext.registryDraft,
     ),
+    reference: dto.reference,
     leaseStatus: dto.leaseStatus,
     propertyStatus: dto.status,
     rentWeekly: dto.rentWeekly ?? 0,
@@ -438,6 +441,7 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
       reportStatus: inspectionReportStatus(i),
       reportUrl: i.reportUrl ?? undefined,
       createdAt: i.createdAt ?? undefined,
+      updatedAt: i.updatedAt ?? undefined,
       completedAt: i.completedDate ?? undefined,
       approvedAt: i.approvedAt ?? undefined,
       reportDeclineReason: i.reportDeclineReason ?? undefined,
@@ -498,16 +502,6 @@ function awaitsQuoteDecision(m: AgentMaintenance): boolean {
   );
 }
 
-const MAINTENANCE_STATUS_LABEL: Record<AgentMaintenance['status'], string> = {
-  [MAINTENANCE_STATUS.OPEN]: 'Open',
-  [MAINTENANCE_STATUS.APPROVED]: 'Approved',
-  [MAINTENANCE_STATUS.QUOTING]: 'Quote approval',
-  [MAINTENANCE_STATUS.SCHEDULED]: 'In progress',
-  [MAINTENANCE_STATUS.INVOICED]: 'Invoiced',
-  [MAINTENANCE_STATUS.COMPLETED]: 'Completed',
-  [MAINTENANCE_STATUS.CANCELLED]: 'Deleted',
-};
-
 export function mapAgentMaintenance(
   dtos: AgentMaintenance[],
 ): MaintenanceRequest[] {
@@ -528,8 +522,9 @@ export function mapAgentMaintenance(
           ? 'Deleted'
           : isOpenTenantRejectedCase(m)
             ? TENANT_REJECTED_LABEL
-            : (MAINTENANCE_STATUS_LABEL[m.status] ?? m.status),
+            : MAINTENANCE_WORKFLOW_STATUS_LABEL[m.workflowStatus],
       apiStatus: m.status,
+      workflowStatus: m.workflowStatus,
       priority,
       responsibility: 'pending',
       contractorName: m.contractorName ?? undefined,
@@ -539,9 +534,12 @@ export function mapAgentMaintenance(
         const n = typeof amount === 'number' ? amount : Number(amount);
         return Number.isFinite(n) ? n : undefined;
       })(),
+      // The admin console's stage decides: a quote is waiting for a decision only at
+      // `pending_approval`. The stored status said QUOTING while contractors were still being
+      // asked, which told the agent to approve a quote that did not exist yet.
       requiresApproval:
-        m.status === MAINTENANCE_STATUS.QUOTING ||
-        (m.status === MAINTENANCE_STATUS.APPROVED && awaitsQuoteDecision(m)),
+        m.workflowStatus === MAINTENANCE_WORKFLOW_STATUS.PENDING_APPROVAL &&
+        awaitsQuoteDecision(m),
       ...(m.scheduleProposal
         ? {
             scheduleProposal: {
@@ -615,6 +613,7 @@ export function mapAgentRentReviews(dtos: AgentRentReview[]): RentReviewCase[] {
     completedDate: r.completedDate ?? undefined,
     dateStarted: r.dateStarted ?? undefined,
     createdAt: r.createdAt ?? undefined,
+    updatedAt: r.updatedAt ?? undefined,
     leaseType: r.leaseType ?? undefined,
     fixedTermWeeks: r.fixedTermWeeks ?? undefined,
     status:
@@ -690,6 +689,7 @@ export function mapAgentVacating(dtos: AgentVacating[]): VacatingCase[] {
       bondBreakdown:
         v.total != null ? [{ label: 'Bond total', amount: v.total }] : [],
       createdAt: v.createdAt ?? undefined,
+      updatedAt: v.updatedAt ?? undefined,
       timeline: [],
     };
   });
@@ -759,6 +759,7 @@ export function mapAgentLeasingCycles(
     rentPerWeek: c.rentPerWeek ?? undefined,
     availableFrom: c.availableFrom ?? undefined,
     createdAt: c.createdAt ?? undefined,
+    updatedAt: c.updatedAt ?? undefined,
     mainStatus: c.mainStatus ?? undefined,
     reletDecision: c.reletDecision ?? undefined,
   }));
@@ -859,6 +860,7 @@ export function mapAgentTribunal(dtos: AgentTribunal[]): TribunalCase[] {
         (t.status === TRIBUNAL_CASE_STATUS.DRAFT ||
           t.status === TRIBUNAL_CASE_STATUS.SUBMITTED),
       createdAt: t.createdAt ?? undefined,
+      updatedAt: t.updatedAt ?? undefined,
       hearingDate: t.hearingDate ?? undefined,
       rentArrearsAmount: t.rentArrearsAmount ?? null,
       rentArrearsDaysOverdue: t.rentArrearsDaysOverdue ?? null,

@@ -125,6 +125,7 @@ import {
   foldOpenPoolTwinIntoSession,
   isOpenPoolTwinOfViewingSession,
   openPoolMatchesViewingSession,
+  keepBookInspectionProgress,
   pickFresherInspection,
 } from '@/lib/inspection-mappers';
 import { openViewingsApi } from '@/lib/open-viewings-api';
@@ -809,6 +810,14 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         Boolean(row.propertyId) &&
         propertiesWithLiveOpenSessions.has(row.propertyId));
 
+    // Open-viewing sessions are re-read on every poll, so they keep the further-along rule.
+    // Any other copy is older than the book row it meets and only fills its gaps.
+    const bookIds = new Set(portfolioRows.map((row) => row.id));
+    const mergeWithBookRow = (existing: Inspection, row: Inspection): Inspection =>
+      bookIds.has(row.id) && row.source !== 'open_viewing'
+        ? keepBookInspectionProgress(existing, row)
+        : pickFresherInspection(existing, row);
+
     const byId = new Map<string, Inspection>();
     const hiddenPools: Inspection[] = [];
     for (const row of portfolioRows) {
@@ -824,7 +833,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         continue;
       }
       const existing = byId.get(row.id);
-      byId.set(row.id, existing ? pickFresherInspection(existing, row) : row);
+      byId.set(row.id, existing ? mergeWithBookRow(existing, row) : row);
     }
     // Optimistic create rows stick in localStorage until pruned. Once the agency
     // book is loaded, drop stale non-OPEN orphans so admin hard-deletes don't ghost
@@ -840,7 +849,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       }
       const existing = byId.get(row.id);
       if (existing) {
-        byId.set(row.id, pickFresherInspection(existing, row));
+        byId.set(row.id, mergeWithBookRow(existing, row));
         continue;
       }
       if (portfolio != null && row.type !== 'OPEN' && !isRecentAddedInspection(row)) continue;

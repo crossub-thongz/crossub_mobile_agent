@@ -9,8 +9,14 @@ import type {
 import type { PropertyPortalAccounting } from '@/lib/property-registry-api';
 import type { PropertyBondSnapshot } from '@/lib/use-property-overview-sync';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
+import {
+  TENANCY_LEASE_TERM_TYPE,
+  TENANCY_LEASE_TERM_TYPE_LABEL,
+  type TenancyLeaseTermType,
+} from '@/constants/property-tenancies';
 import { inspectionDetail } from '@/constants/routes';
 import { coerceMoney, formatCurrency, formatDate } from '@/lib/utils';
+import { isPastPropertyDay } from '@/utils/property-tenancy-overview';
 
 export interface PropertyReportLink {
   label: string;
@@ -433,23 +439,31 @@ export function resolveLeaseDates(
   };
 }
 
-/** Fixed when a lease end date is on file; otherwise periodic (no fixed end). */
+/**
+ * Fixed while the lease end date is still ahead; periodic once it has passed or when none is on
+ * file. The API's own answer wins when it is given, so this matches the admin Property page.
+ */
 export function deriveLeaseTermLabel(
   leaseEnd: string | null | undefined,
-  options?: { vacant?: boolean },
-): 'Fixed term' | 'Periodic' | null {
+  options?: { vacant?: boolean; termType?: TenancyLeaseTermType | null },
+): string | null {
   if (options?.vacant) return null;
+  if (options?.termType) return TENANCY_LEASE_TERM_TYPE_LABEL[options.termType];
   const day = leaseEnd?.trim().slice(0, 10);
-  return day ? 'Fixed term' : 'Periodic';
+  if (!day || isPastPropertyDay(day)) {
+    return TENANCY_LEASE_TERM_TYPE_LABEL[TENANCY_LEASE_TERM_TYPE.PERIODIC];
+  }
+  return TENANCY_LEASE_TERM_TYPE_LABEL[TENANCY_LEASE_TERM_TYPE.FIXED];
 }
 
 export function formatProfileLeaseStatus(
   property: Property,
   leaseEnd?: string | null,
+  termType?: TenancyLeaseTermType | null,
 ): string {
   if (property.leaseStatus === 'vacant') return 'Vacant';
   if (property.leaseStatus === 'vacating') return 'Vacating';
-  return deriveLeaseTermLabel(leaseEnd) ?? property.leaseStatus;
+  return deriveLeaseTermLabel(leaseEnd, { termType }) ?? property.leaseStatus;
 }
 
 /**

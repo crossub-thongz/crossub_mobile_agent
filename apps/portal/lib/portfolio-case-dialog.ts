@@ -175,6 +175,7 @@ export function accountingPortfolioToJobRow(item: PropertyAccounting): PropertyJ
     date: '—',
     createdAt: '—',
     createdAtMs: 0,
+    updatedAtMs: 0,
     status: item.arrearsAmount > 0 ? 'Collection in progress' : 'Up to date',
     phase: 'in_progress',
   };

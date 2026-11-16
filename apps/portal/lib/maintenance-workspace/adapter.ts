@@ -6,7 +6,11 @@ import {
 } from '@/lib/maintenance/infer-responsibility';
 import type { MaintenanceRequest, Property } from '@/lib/types';
 import type { AuthUser } from '@/lib/auth-types';
-import { MAINTENANCE_STATUS } from '@/constants/api-enums';
+import {
+  MAINTENANCE_STATUS,
+  MAINTENANCE_WORKFLOW_STATUS,
+  type MaintenanceWorkflowStatus,
+} from '@/constants/api-enums';
 import { maintenanceReferenceLabel } from '@/lib/workflow-case-reference';
 import { VISIT_TENANT_DECISION } from '@/constants/self-managed-maintenance';
 import { stripVisitAnchors } from '@/lib/maintenance/self-managed-steps';
@@ -34,7 +38,30 @@ const API_MAINTENANCE_STATUS_MAP: Record<string, MaintenanceWorkspaceStatus> = {
   [MAINTENANCE_STATUS.CANCELLED]: 'deleted',
 };
 
-function mapRequestStatus(status: string, apiStatus?: string): MaintenanceWorkspaceStatus {
+/** A refused case is still live work; the workspace has no stage of its own for it. */
+const WORKFLOW_STATUS_MAP: Record<MaintenanceWorkflowStatus, MaintenanceWorkspaceStatus> = {
+  [MAINTENANCE_WORKFLOW_STATUS.UNDER_REVIEW]: 'under_review',
+  [MAINTENANCE_WORKFLOW_STATUS.PENDING_EVIDENCE]: 'pending_evidence',
+  [MAINTENANCE_WORKFLOW_STATUS.PENDING_QUOTATION]: 'pending_quotation',
+  [MAINTENANCE_WORKFLOW_STATUS.PENDING_APPROVAL]: 'pending_approval',
+  [MAINTENANCE_WORKFLOW_STATUS.PENDING_SCHEDULE]: 'pending_schedule',
+  [MAINTENANCE_WORKFLOW_STATUS.IN_PROGRESS]: 'in_progress',
+  [MAINTENANCE_WORKFLOW_STATUS.TENANT_REJECTED]: 'in_progress',
+  [MAINTENANCE_WORKFLOW_STATUS.COMPLETED]: 'completed',
+  [MAINTENANCE_WORKFLOW_STATUS.CLOSED]: 'closed',
+  [MAINTENANCE_WORKFLOW_STATUS.DELETED]: 'deleted',
+};
+
+/**
+ * The admin console's stage wins when the API sent it. The stored status and the label are the
+ * fallback for rows that did not come from the portfolio.
+ */
+function mapRequestStatus(
+  status: string,
+  apiStatus?: string,
+  workflowStatus?: MaintenanceWorkflowStatus,
+): MaintenanceWorkspaceStatus {
+  if (workflowStatus) return WORKFLOW_STATUS_MAP[workflowStatus];
   if (apiStatus && API_MAINTENANCE_STATUS_MAP[apiStatus]) {
     return API_MAINTENANCE_STATUS_MAP[apiStatus];
   }
@@ -236,7 +263,7 @@ export function buildWorkspaceCaseFromRequest(
   const responsibility = resolveResponsibilityFromSources({
     explicit: item.responsibility,
     auditEntries,
-    status: mapRequestStatus(item.status, item.apiStatus),
+    status: mapRequestStatus(item.status, item.apiStatus, item.workflowStatus),
     contractorName: item.contractorName,
     invitedContractorIds: item.invitedContractorIds,
     requiresApproval: item.requiresApproval,
@@ -255,7 +282,7 @@ export function buildWorkspaceCaseFromRequest(
     address: item.propertyAddress,
     priority: mapRequestPriority(item.priority),
     responsibility,
-    status: mapRequestStatus(item.status, item.apiStatus),
+    status: mapRequestStatus(item.status, item.apiStatus, item.workflowStatus),
     createdAt,
     dueAt: item.quoteExpiry ?? createdAt,
     source: 'agent_submission',

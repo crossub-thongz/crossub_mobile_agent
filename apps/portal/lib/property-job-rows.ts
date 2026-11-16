@@ -71,6 +71,8 @@ export interface PropertyJobRow {
   createdAt: string;
   /** Milliseconds for client-side table sort. */
   createdAtMs: number;
+  /** When the record last changed; the Tasks "Updated" time and the Completed window. */
+  updatedAtMs: number;
   status: string;
   phase: PropertyJobPhase;
   /** Maintenance issue type / category (maintenance only). */
@@ -152,6 +154,11 @@ function rowCreatedAt(iso?: string): { createdAt: string; createdAtMs: number } 
     createdAt: iso ? formatDateTime(iso) : '—',
     createdAtMs,
   };
+}
+
+/** The record's last change, or its creation when the API sent no change time. */
+function rowUpdatedAtMs(updatedIso: string | undefined, createdAtMs: number): number {
+  return parseSortTime(updatedIso) || createdAtMs;
 }
 
 export function organizePropertyJobRows(rows: PropertyJobRow[]): PropertyJobRow[] {
@@ -358,6 +365,7 @@ export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobR
       date: request.quoteExpiry ? formatDate(request.quoteExpiry) : '—',
       createdAt,
       createdAtMs,
+      updatedAtMs: rowUpdatedAtMs(request.updatedAt, createdAtMs),
       status: deleted ? 'Deleted' : progress.currentStepLabel,
       phase: isSettledMaintenanceActivity(request) ? 'completed' : 'in_progress',
     };
@@ -395,6 +403,7 @@ export function inspectionJobRows(inspections: Inspection[]): PropertyJobRow[] {
       date: scheduledLabel ?? '—',
       createdAt,
       createdAtMs,
+      updatedAtMs: rowUpdatedAtMs(inspection.updatedAt, createdAtMs),
       status: deleted ? 'Deleted' : progress.currentStepLabel,
       phase: deleted || isCompletedInspection(inspection) ? 'completed' : 'in_progress',
     };
@@ -423,6 +432,7 @@ export function leasingWorkflowJobRows(cases: PropertyLeasingWorkflowCase[]): Pr
       date: item.sortAt ? formatDate(item.sortAt) : '—',
       createdAt,
       createdAtMs,
+      updatedAtMs: rowUpdatedAtMs(item.updatedAt, createdAtMs),
       status: item.currentStep,
       phase: terminal ? 'completed' : 'in_progress',
     };
@@ -454,6 +464,7 @@ export function rentReviewJobRows(
       date: dueDate ? formatDate(dueDate) : '—',
       createdAt,
       createdAtMs,
+      updatedAtMs: rowUpdatedAtMs(review.updatedAt, createdAtMs),
       status: progress.currentStepLabel,
       phase: isRentReviewDecided(review, decision) ? 'completed' : 'in_progress',
       rentReviewSchedule: getRentReviewScheduleIndicators(review) ?? undefined,
@@ -478,6 +489,7 @@ export function archivedLeasingCycleJobRows(items: ArchivedLeasingCycle[]): Prop
       date: item.availableFrom ? formatDate(item.availableFrom) : '—',
       createdAt,
       createdAtMs,
+      updatedAtMs: rowUpdatedAtMs(undefined, createdAtMs),
       status: 'Deleted',
       phase: 'completed',
     };
@@ -496,6 +508,7 @@ export function archivedEndLeasingJobRows(items: ArchivedEndLeasingCase[]): Prop
       date: item.vacateDate ? formatDate(item.vacateDate) : '—',
       createdAt,
       createdAtMs,
+      updatedAtMs: rowUpdatedAtMs(undefined, createdAtMs),
       status: 'Deleted',
       phase: 'completed',
     };
@@ -534,6 +547,7 @@ export function archivedRentReviewJobRows(
       date: dueDate ? formatDate(dueDate) : '—',
       createdAt,
       createdAtMs,
+      updatedAtMs: rowUpdatedAtMs(review?.updatedAt ?? item.cancelledAt, createdAtMs),
       status: 'Deleted',
       phase: 'completed',
     };
@@ -553,6 +567,7 @@ export function tribunalJobRows(cases: TribunalCase[]): PropertyJobRow[] {
       date: item.hearingDate ? formatDateTime(item.hearingDate) : '—',
       createdAt,
       createdAtMs,
+      updatedAtMs: rowUpdatedAtMs(item.updatedAt, createdAtMs),
       status: progress.currentStepLabel,
       phase: item.status === 'closed' ? 'completed' : 'in_progress',
     };
@@ -574,6 +589,7 @@ export function vacatingJobRows(cases: VacatingCase[]): PropertyJobRow[] {
       date: formatDate(item.vacateDate),
       createdAt,
       createdAtMs,
+      updatedAtMs: rowUpdatedAtMs(item.updatedAt, createdAtMs),
       status: progress.currentStepLabel,
       phase: terminal ? 'completed' : 'in_progress',
     };
@@ -602,6 +618,7 @@ export function accountingJobRows(accounting?: PropertyAccounting | null): Prope
         date: accounting.arrearsKeyDate ? formatDate(accounting.arrearsKeyDate) : '—',
         createdAt,
         createdAtMs,
+        updatedAtMs: rowUpdatedAtMs(undefined, createdAtMs),
         status: 'Collection in progress',
         phase: 'in_progress',
       },
@@ -619,6 +636,7 @@ export function accountingJobRows(accounting?: PropertyAccounting | null): Prope
       date: accounting.arrearsKeyDate ? formatDate(accounting.arrearsKeyDate) : '—',
       createdAt,
       createdAtMs,
+      updatedAtMs: rowUpdatedAtMs(undefined, createdAtMs),
       status: 'Collection in progress',
       phase: 'in_progress',
     },

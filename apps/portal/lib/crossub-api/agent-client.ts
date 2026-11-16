@@ -90,6 +90,7 @@ export type AgentLeasingCycle = {
   rentPerWeek?: number | null;
   availableFrom?: string | null;
   createdAt?: string | null;
+  updatedAt?: string | null;
   /** Leasing L1 main status. Optional — older API / cached payloads lack it. */
   mainStatus?: ServerLeasingMainStatus;
   reletDecision?: ServerLeasingReletDecision | null;

@@ -26,6 +26,7 @@ import {
   buildCrosHandlingJobs,
   buildPropertyProfileMetrics,
   filterNeedAttentionActions,
+  isPropertyOccupancyVacant,
   leaseOccupancyLabel,
   propertyProfileSectionsForAccess,
   type PropertyProfileSection,
@@ -42,6 +43,7 @@ import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import { filterTenancyRentReviews, isPropertyVacant } from '@/lib/property-leasing';
 import { isPropertyInspectionOnly, isPropertySelfManaged } from '@/lib/portal-service-level';
 import {
+  deriveLeaseTermLabel,
   formatProfileLeaseStatus,
   recordedBondAmount,
   resolveBondOverviewDisplay,
@@ -54,6 +56,13 @@ import { CurrentTenancyTitle } from '@/components/agent/current-tenancy-title';
 import { TenancyPagerControls } from '@/components/agent/tenancy-pager-controls';
 import { resolveCurrentTenancyRefs } from '@/lib/tenancy-references';
 import { buildTenancyViewPages, wrapTenancyPageIndex } from '@/lib/tenancy-view-pages';
+import { PROPERTY_RENT_PERIOD } from '@/constants/property-profile-edit';
+import { RENT_PERIOD_SUFFIX } from '@/constants/property-tenancies';
+import { rentAmountForPeriod } from '@/utils/property-tenancy-overview';
+import {
+  summarisePropertyTenancy,
+  type PropertyTenancySummary,
+} from '@/utils/property-tenancy-summary';
 import type {
   AgentDocument,
   ArchivedEndLeasingCase,
@@ -156,6 +165,7 @@ function OverviewGrid({
   onViewTasks,
   onNeedActionClick,
   showTenancyCard = true,
+  tenancy,
 }: {
   property: Property;
   propertyId: string;
@@ -175,12 +185,19 @@ function OverviewGrid({
   onNeedActionClick: (href: string) => void;
   /** False on Self-Manage, where the Tenancy details card replaces this summary. */
   showTenancyCard?: boolean;
+  /** The tenancy as the admin Property page shows it; null only when that read failed. */
+  tenancy: PropertyTenancySummary | null;
 }) {
   const jobsCopy = PROPERTY_JOBS_COPY[useAgentCopyVariant(property.agencyId)];
-  const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
-  const { start: leaseStart, end: leaseEnd } = resolveLeaseDates(property, currentLease);
+  const isVacant = tenancy
+    ? tenancy.vacant
+    : isPropertyVacant(property, currentLease ? [currentLease] : []);
+  const { start: leaseStart, end: leaseEnd } = tenancy
+    ? { start: tenancy.leaseStartDate, end: tenancy.leaseEndDate }
+    : resolveLeaseDates(property, currentLease);
   const currentRent = resolveCurrentRent(property, currentLease);
-  const financialRent = sync.financial?.currentRentWeekly;
+  const financialRent = tenancy?.rentWeekly ?? sync.financial?.currentRentWeekly;
+  const rentPeriod = property.rentPeriod ?? PROPERTY_RENT_PERIOD.WEEKLY;
   const registryRent = sync.record?.rentWeekly ?? property.rentWeekly;
   const displayRent =
     financialRent != null && financialRent > 0
@@ -189,6 +206,7 @@ function OverviewGrid({
         ? registryRent
         : currentRent;
   const bondAmount = recordedBondAmount(
+    tenancy?.bondAmount,
     sync.financial?.bondAmount,
     sync.record?.bondAmount,
     property.bondAmount,
@@ -197,21 +215,38 @@ function OverviewGrid({
   const bond = resolveBondOverviewDisplay(bondAmount, sync.bond, Boolean(leasingCycles[0]?.id));
   const leaseStatus = formatProfileLeaseStatus(
     property,
-    sync.overview?.leaseEndDate ?? sync.record?.leaseEndDate ?? leaseEnd ?? property.leaseEnd,
+    tenancy
+      ? tenancy.leaseEndDate
+      : (sync.overview?.leaseEndDate ?? sync.record?.leaseEndDate ?? leaseEnd ?? property.leaseEnd),
+    tenancy?.leaseTermType ?? sync.overview?.leaseTermType,
   );
+  const leaseTermLabel = isVacant
+    ? null
+    : deriveLeaseTermLabel(leaseEnd, {
+        termType: tenancy?.leaseTermType ?? sync.overview?.leaseTermType,
+      });
+  const nextRentReview = tenancy
+    ? tenancy.nextRentReviewDate
+    : (sync.overview?.nextRentReviewDate ??
+      sync.record?.nextRentReviewAt ??
+      property.nextRentReview);
   const tenantName = sync.tenantContact?.name ?? sync.record?.tenantName ?? property.tenantName;
-  const household = householdTenantsFromOverview({
-    isVacant,
-    record: sync.record,
-    tenantContact: sync.tenantContact,
-    property,
-    contacts: sync.tenantContacts,
-  });
-  const archives = parseTenancyArchiveSnapshots(property.registryDraft);
+  const household = tenancy
+    ? tenancy.tenants
+    : householdTenantsFromOverview({
+        isVacant,
+        record: sync.record,
+        tenantContact: sync.tenantContact,
+        property,
+        contacts: sync.tenantContacts,
+      });
+  const archives = tenancy
+    ? tenancy.previousTenancies
+    : parseTenancyArchiveSnapshots(property.registryDraft);
   const tenancyPages = buildTenancyViewPages({
     household,
     archives,
-    fallback: tenantName ? { name: tenantName } : undefined,
+    fallback: !tenancy && tenantName ? { name: tenantName } : undefined,
   });
   const currentTenants = tenancyPages.filter((page) => page.kind === 'current');
   const previousPages = tenancyPages.filter((page) => page.kind === 'previous');
@@ -312,31 +347,22 @@ function OverviewGrid({
                   : leaseStatus
             }
           />
+          {!viewingPrevious && leaseTermLabel ? (
+            <DetailRow label="Lease Type" value={leaseTermLabel} />
+          ) : null}
           <DetailRow
             label="Rent"
             value={
               viewingPrevious
                 ? '—'
                 : displayRent != null && displayRent > 0
-                  ? `${formatCurrency(displayRent)} / week`
+                  ? `${formatCurrency(rentAmountForPeriod(displayRent, rentPeriod))} ${RENT_PERIOD_SUFFIX[rentPeriod]}`
                   : '—'
             }
           />
           <DetailRow
             label="Rent Review"
-            value={
-              viewingPrevious
-                ? '—'
-                : sync.overview?.nextRentReviewDate ??
-                    sync.record?.nextRentReviewAt ??
-                    property.nextRentReview
-                  ? formatDate(
-                      sync.overview?.nextRentReviewDate ??
-                        sync.record?.nextRentReviewAt ??
-                        property.nextRentReview!,
-                    )
-                  : '—'
-            }
+            value={viewingPrevious || !nextRentReview ? '—' : formatDate(nextRentReview)}
           />
           <DetailRow
             label="Bond"
@@ -544,7 +570,13 @@ export function PropertyProfileV2({
     tenantSelections,
     currentLease,
   );
-  const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
+  const tenancy = useMemo(
+    () => (tenancyOverview.record ? summarisePropertyTenancy(tenancyOverview.record) : null),
+    [tenancyOverview.record],
+  );
+  const isVacant = tenancy
+    ? tenancy.vacant
+    : isPropertyVacant(property, currentLease ? [currentLease] : []);
   const inspectionOnly = isPropertyInspectionOnly(agencies, property.agencyId);
   const tenancyRentReviews = filterTenancyRentReviews(rentReviews, isVacant);
   const metrics = buildPropertyProfileMetrics({
@@ -632,10 +664,15 @@ export function PropertyProfileV2({
               <div className="min-w-0">
                 <h1 className="text-xl font-semibold tracking-tight">{streetLine}</h1>
                 <p className="text-muted-foreground mt-0.5 text-sm">{suburbLine}</p>
+                {property.reference ? (
+                  <p className="text-muted-foreground mt-0.5 font-mono text-xs">
+                    {property.reference}
+                  </p>
+                ) : null}
                 <span
                   className={cn(
                     'mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[12px] font-semibold',
-                    isVacant
+                    isPropertyOccupancyVacant(property, isVacant)
                       ? 'bg-muted text-muted-foreground'
                       : 'bg-primary/12 text-primary',
                   )}
@@ -778,6 +815,7 @@ export function PropertyProfileV2({
             onViewTasks={() => onSectionChange('tasks')}
             onNeedActionClick={onNeedActionNavigate}
             showTenancyCard={overviewReady && !isSelfManaged}
+            tenancy={tenancy}
           />
 
           {overviewReady && !isSelfManaged ? (
