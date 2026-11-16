@@ -51,7 +51,9 @@ export function buildRentReconciliationProperty(input: {
 
   return {
     id: property.id,
-    referenceCode: propertyReferenceCode(property.id),
+    // The API's PRP reference, the one the admin Property page shows; a property added
+    // while offline has none yet and keeps the local code.
+    referenceCode: property.reference ?? propertyReferenceCode(property.id),
     address: property.address,
     suburb: property.suburb,
     ownerName: property.homeOwnerName || '—',

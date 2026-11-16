@@ -227,7 +227,7 @@ export function PropertyProfileDetails({
     const { end } = resolveLeaseDates(property, currentLease);
     const leaseEnd =
       overview?.leaseEndDate ?? sync.record?.leaseEndDate ?? end ?? property.leaseEnd;
-    return formatProfileLeaseStatus(property, leaseEnd);
+    return formatProfileLeaseStatus(property, leaseEnd, overview?.leaseTermType);
   }, [property, currentLease, overview, sync.record]);
 
   const handleSaved = () => {

@@ -31,6 +31,10 @@ import type {
 import type { RentReviewDecision } from '@/lib/rent-review';
 import { tenancyReferenceLabel } from '@/lib/workflow-case-reference';
 import { formatCurrency, formatDate, resolveOutstandingArrearsDays } from '@/lib/utils';
+import { PROPERTY_STATUS, PROPERTY_STATUS_LABEL } from '@/constants/api-enums';
+import { PROPERTY_RENT_PERIOD } from '@/constants/property-profile-edit';
+import { RENT_PERIOD_SUFFIX } from '@/constants/property-tenancies';
+import { rentAmountForPeriod } from '@/utils/property-tenancy-overview';
 
 export type PropertyProfileSection =
   | 'overview'
@@ -197,6 +201,7 @@ export function buildPropertyProfileMetrics(args: {
   rentStatusTone: 'good' | 'warn' | 'muted';
 } {
   const { property, currentLease, sync, accounting, portalAccounting } = args;
+  const rentPeriod = property.rentPeriod ?? PROPERTY_RENT_PERIOD.WEEKLY;
   const currentRent = resolveCurrentRent(property, currentLease);
   const financialRent = sync.financial?.currentRentWeekly;
   const registryRent = sync.record?.rentWeekly ?? property.rentWeekly;
@@ -246,7 +251,7 @@ export function buildPropertyProfileMetrics(args: {
   return {
     rentLabel:
       displayRent != null && displayRent > 0
-        ? `${formatCurrency(displayRent)} / week`
+        ? `${formatCurrency(rentAmountForPeriod(displayRent, rentPeriod))} ${RENT_PERIOD_SUFFIX[rentPeriod]}`
         : '—',
     leaseExpiryLabel: leaseExpiry ? formatDate(leaseExpiry) : '—',
     arrearsLabel: `${daysInArrears} day${daysInArrears === 1 ? '' : 's'}`,
@@ -501,9 +506,15 @@ export function buildPropertyCalendarEvents(args: {
   return events.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
 }
 
+/** The registry's occupancy, the value the admin Property page shows; else worked out here. */
+export function isPropertyOccupancyVacant(property: Property, isVacant: boolean): boolean {
+  if (property.propertyStatus) return property.propertyStatus === PROPERTY_STATUS.VACANT;
+  return isVacant || property.leaseStatus === 'vacant';
+}
+
 export function leaseOccupancyLabel(property: Property, isVacant: boolean): string {
-  if (isVacant || property.leaseStatus === 'vacant') return 'Vacant';
-  return 'Occupied';
+  if (property.propertyStatus) return PROPERTY_STATUS_LABEL[property.propertyStatus];
+  return isPropertyOccupancyVacant(property, isVacant) ? 'Vacant' : 'Occupied';
 }
 
 export function filterNeedAttentionActions(actions: PropertyNeedAction[]): PropertyNeedAction[] {

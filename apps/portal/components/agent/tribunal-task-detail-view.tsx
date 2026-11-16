@@ -19,6 +19,7 @@ import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
 import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
 import { propertyDetail } from '@/constants/routes';
+import { useLivePoll } from '@/lib/use-live-poll';
 import { fetchAgentTribunalRentChasingDetail } from '@/lib/crossub-api/agent-workflow-client';
 import type { AgentTribunalRentChasingDetail } from '@/lib/crossub-api/agent-workflow-client';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
@@ -154,13 +155,12 @@ export function TribunalTaskDetailView({
       const next = await fetchAgentTribunalRentChasingDetail(tribunalCase.id);
       setRentChasingDetail(next);
     } catch {
-      setRentChasingDetail(null);
+      // A failed re-read keeps the last good detail on screen.
     }
   }, [rentChasing, tribunalCase.id]);
 
-  useEffect(() => {
-    void loadRentChasingDetail();
-  }, [loadRentChasingDetail]);
+  // Re-read while the page is open, so progress CROSSUB makes shows without a reload.
+  useLivePoll(loadRentChasingDetail, rentChasing);
 
   const banner = useMemo(
     () => resolveTribunalStatusBanner(tribunalCase, rentChasingDetail),

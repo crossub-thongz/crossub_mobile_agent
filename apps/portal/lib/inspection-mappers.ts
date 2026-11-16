@@ -320,6 +320,31 @@ export function pickFresherInspection(current: Inspection, incoming: Inspection)
   };
 }
 
+/**
+ * A row from the agency book meets an older copy of the same inspection (the staff list read
+ * once per session, or one kept in this browser). The book is re-read every few seconds, so
+ * what it says wins; the older copy only fills what the book does not carry. Without this an
+ * old copy at the same or a later stage kept a rescheduled time, a reassigned inspector or a
+ * report sent back for changes frozen on the agent's screen.
+ *
+ * A copy deleted here keeps the existing rule, so a case the agent just deleted does not come
+ * back for one poll.
+ */
+export function keepBookInspectionProgress(book: Inspection, older: Inspection): Inspection {
+  if (older.id !== book.id) return book;
+  if (isDeletedInspection(older) || isDeletedInspection(book)) {
+    return pickFresherInspection(book, older);
+  }
+  const fromBook = Object.fromEntries(
+    Object.entries(book).filter(([, value]) => value !== undefined && value !== null),
+  ) as Partial<Inspection>;
+  return {
+    ...older,
+    ...fromBook,
+    timeline: book.timeline.length >= older.timeline.length ? book.timeline : older.timeline,
+  } as Inspection;
+}
+
 function openSessionStatusLabel(status: SessionStatus): string {
   if (status === SessionStatusEnum.CANCELLED) return OPEN_DELETED_LABEL;
   return SESSION_STATUS_LABEL[status] ?? status;

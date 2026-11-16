@@ -39,6 +39,39 @@ export const MAINTENANCE_STATUS = {
   CANCELLED: 'CANCELLED',
 } as const;
 
+/**
+ * The maintenance stage the admin console shows. The API sends it as `workflowStatus`; the
+ * stored `status` above lags and folds several of these into one value.
+ */
+export const MAINTENANCE_WORKFLOW_STATUS = {
+  UNDER_REVIEW: 'under_review',
+  PENDING_EVIDENCE: 'pending_evidence',
+  PENDING_QUOTATION: 'pending_quotation',
+  PENDING_APPROVAL: 'pending_approval',
+  PENDING_SCHEDULE: 'pending_schedule',
+  IN_PROGRESS: 'in_progress',
+  TENANT_REJECTED: 'tenant_rejected',
+  COMPLETED: 'completed',
+  CLOSED: 'closed',
+  DELETED: 'deleted',
+} as const;
+
+export type MaintenanceWorkflowStatus =
+  (typeof MAINTENANCE_WORKFLOW_STATUS)[keyof typeof MAINTENANCE_WORKFLOW_STATUS];
+
+export const MAINTENANCE_WORKFLOW_STATUS_LABEL: Record<MaintenanceWorkflowStatus, string> = {
+  [MAINTENANCE_WORKFLOW_STATUS.UNDER_REVIEW]: 'Under review',
+  [MAINTENANCE_WORKFLOW_STATUS.PENDING_EVIDENCE]: 'Requesting evidence',
+  [MAINTENANCE_WORKFLOW_STATUS.PENDING_QUOTATION]: 'Pending quotation',
+  [MAINTENANCE_WORKFLOW_STATUS.PENDING_APPROVAL]: 'Quote approval',
+  [MAINTENANCE_WORKFLOW_STATUS.PENDING_SCHEDULE]: 'Schedule visit',
+  [MAINTENANCE_WORKFLOW_STATUS.IN_PROGRESS]: 'In progress',
+  [MAINTENANCE_WORKFLOW_STATUS.TENANT_REJECTED]: 'Tenant rejected',
+  [MAINTENANCE_WORKFLOW_STATUS.COMPLETED]: 'Completed',
+  [MAINTENANCE_WORKFLOW_STATUS.CLOSED]: 'Closed',
+  [MAINTENANCE_WORKFLOW_STATUS.DELETED]: 'Deleted',
+};
+
 /** MaintenanceOrderType — who the work is for / responsibility hint. */
 export const MAINTENANCE_ORDER_TYPE = {
   TENANT_REQUEST: 'TENANT_REQUEST',

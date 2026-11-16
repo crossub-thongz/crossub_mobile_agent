@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-11-16
+
+### Added
+- Property page shows the PRP reference, the same one CROSSUB staff see
+- Current tenancy card on a Full Service property shows Lease Type (Fixed term or Periodic)
+
+### Fixed
+- Full Service property page reads tenant, lease dates, rent review, bond and previous tenancies from the same source as the admin Property page
+- A lease whose end date has passed reads Periodic, not Fixed term
+- Property page status badge follows the property's recorded status (Occupied, Vacant, Showing, Maintenance)
+- Rent shows in the period it was agreed in (week, fortnight, month, year), not always per week
+- Maintenance jobs show the stage the admin console shows, including Pending quotation and Schedule visit
+- A maintenance job asks for quote approval only when a quote is waiting, not while quotes are still being requested
+- Maintenance Review and Get quote stages no longer sit under Needs My Action
+- Inspections follow the latest agency data; an older copy kept in the browser no longer holds a rescheduled time, inspector or report status
+- Tasks sort and filter by when a job last changed; a job completed in the last 30 days stays under Completed whatever its creation date
+- Tribunal rent chasing page re-reads its progress while open
+- Rent reconciliation shows the PRP reference
+
+### Changed
+- `@crossub-thongz/api-contract` ^0.73.0 to ^0.74.0
+
 ## 2026-11-13
 
 ### Added

@@ -1,5 +1,9 @@
 import type { PropertyRentPeriod } from '@/constants/property-profile-edit';
-import type { PropertyApprovalStatus, PropertyStatus } from '@/constants/api-enums';
+import type {
+  MaintenanceWorkflowStatus,
+  PropertyApprovalStatus,
+  PropertyStatus,
+} from '@/constants/api-enums';
 import type { AgentPortfolioId } from '@/lib/agent-scope';
 import type {
   ServerLeasingMainStatus,
@@ -85,6 +89,8 @@ export interface Property {
   tenantContact: PropertyContact;
   additionalLandlords?: PropertyPartyContact[];
   additionalTenants?: PropertyPartyContact[];
+  /** The PRP reference CROSSUB staff see on the admin Property page. */
+  reference?: string;
   leaseStatus: 'active' | 'periodic' | 'vacating' | 'vacant';
   /** The registry's occupancy today; VACANT between tenancies even when a signed lease is on file. */
   propertyStatus?: PropertyStatus;
@@ -250,6 +256,8 @@ export interface LeasingRecord {
 
 /** Active in-flight leasing cycle from the agent portfolio API. */
 export interface LeasingCycle {
+  /** When the API last changed this record. */
+  updatedAt?: string;
   id: string;
   propertyId: string;
   propertyAddress: string;
@@ -376,6 +384,8 @@ export interface NeedActionGroup {
 }
 
 export interface TribunalCase {
+  /** When the API last changed this record. */
+  updatedAt?: string;
   id: string;
   propertyId: string;
   propertyAddress: string;
@@ -481,6 +491,8 @@ export interface DashboardItem {
 }
 
 export interface MaintenanceRequest {
+  /** The stage the admin console shows (`under_review` … `closed`), when the API sends it. */
+  workflowStatus?: MaintenanceWorkflowStatus;
   id: string;
   trackingNumber: string;
   propertyId: string;
@@ -546,6 +558,8 @@ export interface MaintenanceRequest {
 }
 
 export interface Inspection {
+  /** When the API last changed this record. */
+  updatedAt?: string;
   id: string;
   /**
    * OPEN rows mapped from a viewing session keep `id` as the session UUID (viewing APIs).
@@ -648,6 +662,8 @@ export interface InheritedLeaseTerms {
 }
 
 export interface RentReviewCase {
+  /** When the API last changed this record. */
+  updatedAt?: string;
   id: string;
   propertyId: string;
   propertyAddress: string;
@@ -674,6 +690,8 @@ export interface RentReviewCase {
 }
 
 export interface VacatingCase {
+  /** When the API last changed this record. */
+  updatedAt?: string;
   id: string;
   propertyId: string;
   propertyAddress: string;
