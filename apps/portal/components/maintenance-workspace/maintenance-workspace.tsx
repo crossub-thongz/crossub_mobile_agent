@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 
 import { ApprovalPanel } from '@/components/agent/approval-panel';
 import { MaintenanceCompletionGatesPanel } from '@/components/maintenance/maintenance-completion-gates-panel';
+import { MaintenanceChangeResponsibility } from '@/components/maintenance/maintenance-change-responsibility';
 import { MaintenanceGetQuotePanel } from '@/components/maintenance/maintenance-get-quote-panel';
 import { Button } from '@/components/ui/button';
 import {
@@ -447,22 +448,34 @@ export function MaintenanceWorkspace({
                         : 'bg-muted/30',
                     )}
                   >
-                    <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
-                      {quickJumpReadOnlyMode ? 'Stage view' : 'Current Action'}
-                    </p>
-                    <p
-                      className={cn(
-                        'mt-0.5 text-sm font-semibold',
-                        quickJumpReadOnlyMode || activeStep?.status === 'active'
-                          ? 'text-primary'
-                          : 'text-muted-foreground',
-                      )}
-                    >
-                      {displayActionLabel}
-                    </p>
-                    {displayActionSublabel && (
-                      <p className="text-muted-foreground text-[12px]">{displayActionSublabel}</p>
-                    )}
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                          {quickJumpReadOnlyMode ? 'Stage view' : 'Current Action'}
+                        </p>
+                        <p
+                          className={cn(
+                            'mt-0.5 text-sm font-semibold',
+                            quickJumpReadOnlyMode || activeStep?.status === 'active'
+                              ? 'text-primary'
+                              : 'text-muted-foreground',
+                          )}
+                        >
+                          {displayActionLabel}
+                        </p>
+                        {displayActionSublabel && (
+                          <p className="text-muted-foreground text-[12px]">{displayActionSublabel}</p>
+                        )}
+                      </div>
+                      {item &&
+                      !(uiStatusForUI === 'under_review' && !quickJumpReadOnlyMode) ? (
+                        <MaintenanceChangeResponsibility
+                          ctx={{ item, workspaceCase }}
+                          apiConnected={apiConnected}
+                          onCaseUpdated={onCaseUpdated}
+                        />
+                      ) : null}
+                    </div>
                   </div>
 
                   <div
