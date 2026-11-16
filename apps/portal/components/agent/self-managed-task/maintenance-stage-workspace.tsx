@@ -272,6 +272,13 @@ export function MaintenanceStageWorkspace({
             onChanged={onChanged}
             stage={selected}
           />
+        ) : selected === STAGE.REVIEW ? (
+          <SelfManagedMaintenancePanel
+            requestId={requestId}
+            agencyId={agencyId}
+            onChanged={onChanged}
+            only="responsibility"
+          />
         ) : null}
       </div>
       <div className="min-w-0 space-y-4">

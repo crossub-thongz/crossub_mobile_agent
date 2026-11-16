@@ -58,6 +58,7 @@ export function SelfManagedMaintenancePanel({
   heading,
   className,
   stage,
+  only,
 }: {
   requestId: string;
   agencyId: string | null;
@@ -67,6 +68,8 @@ export function SelfManagedMaintenancePanel({
   className?: string;
   /** Limit the actions to one admin stage board. */
   stage?: SelfManagedMaintenanceStage;
+  /** History boards only need who-pays; the rest of the stage stays read-only. */
+  only?: 'responsibility';
 }) {
   const { detail, error, busy, reload, run } = useSelfManagedMaintenance(requestId, onChanged);
 
@@ -107,7 +110,9 @@ export function SelfManagedMaintenancePanel({
   const showSchedule = on(['progress']) && Boolean(steps.schedule);
   const showCompare = on(['quote', 'approval']) && Boolean(steps.compareQuotes);
   const showWorkOrder = on(['progress']) && Boolean(steps.workOrder && detail.workOrder);
-  const showResponsibility = on(['review']);
+  // Who pays can change at any open stage. The server sends the job back to review
+  // and refuses the change once a tradie is booked.
+  const showResponsibility = steps.open;
   const showJobDetails = !stage;
   const showTriage = on(['review']) && Boolean(steps.triage);
   const showQuotes = on(['quote']) && Boolean(steps.enterQuote);
@@ -127,6 +132,14 @@ export function SelfManagedMaintenancePanel({
     showTriage ||
     showQuotes ||
     showSplit;
+  if (only === 'responsibility') {
+    if (!showResponsibility) return null;
+    return (
+      <div className={cn('space-y-3', className)}>
+        <ResponsibilityStep detail={detail} busy={busy} run={run} />
+      </div>
+    );
+  }
   if (stage && !anyAction) return null;
 
   return (

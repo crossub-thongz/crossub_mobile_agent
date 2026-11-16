@@ -13,6 +13,7 @@ import { MaintenanceJobTypeSummary } from '@/components/maintenance/maintenance-
 import { MaintenanceInProgressPanel } from '@/components/maintenance/maintenance-in-progress-panel';
 import { MaintenanceJobCompletedPanel } from '@/components/maintenance/maintenance-job-completed-panel';
 import { MaintenanceJobCreatedPanel } from '@/components/maintenance/maintenance-job-created-panel';
+import { MaintenanceChangeResponsibility } from '@/components/maintenance/maintenance-change-responsibility';
 import { MaintenanceReviewPanel } from '@/components/maintenance/maintenance-review-panel';
 import { MaintenanceStepAudit } from '@/components/maintenance/maintenance-step-audit';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
@@ -172,6 +173,12 @@ export function MaintenanceAgentWorkflowPanel({
     workflow.steps[0];
   const resolvedViewingStepId = viewingStep?.id ?? workflow.liveStepId;
   const isLiveStep = resolvedViewingStepId === workflow.liveStepId;
+  // The live review step already shows the party picker. Everywhere else the
+  // header is the only place left to change who owns the repair.
+  const reviewPickerVisible =
+    isLiveStep &&
+    resolvedViewingStepId === MAINTENANCE_AGENT_STEP.REVIEW &&
+    ctx.workspaceCase.status === 'under_review';
   const stageEmails = useMemo(
     () =>
       enrichMaintenanceEmailRecords(
@@ -257,20 +264,30 @@ export function MaintenanceAgentWorkflowPanel({
                 <p className="text-muted-foreground mt-1 text-xs">{viewingStep.workflowName}</p>
               ) : null}
             </div>
-            {!isLiveStep ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="shrink-0 text-xs"
-                onClick={() => {
-                  setViewingStepId(workflow.liveStepId);
-                  followLiveStepRef.current = true;
-                }}
-              >
-                Back to live step
-              </Button>
-            ) : null}
+            <div className="flex min-w-[min(100%,16rem)] flex-1 flex-wrap items-start justify-end gap-2">
+              {reviewPickerVisible ? null : (
+                <MaintenanceChangeResponsibility
+                  ctx={ctx}
+                  agencyId={property?.agencyId}
+                  apiConnected={apiConnected}
+                  onCaseUpdated={onCaseUpdated}
+                />
+              )}
+              {!isLiveStep ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 text-xs"
+                  onClick={() => {
+                    setViewingStepId(workflow.liveStepId);
+                    followLiveStepRef.current = true;
+                  }}
+                >
+                  Back to live step
+                </Button>
+              ) : null}
+            </div>
           </div>
         </div>
         <div className="space-y-4 p-4">

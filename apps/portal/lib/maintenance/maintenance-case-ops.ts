@@ -26,6 +26,8 @@ function preferredRowIdForAssign(selectionKey: string): string | null {
   return null;
 }
 
+const RESPONSIBILITY_REVIEW_STATUSES = new Set(['under_review', 'pending_evidence']);
+
 export async function confirmMaintenanceResponsibility(
   requestId: string,
   responsibility: MaintenanceWorkflowResponsibility,
@@ -35,6 +37,8 @@ export async function confirmMaintenanceResponsibility(
     ccEmails?: string[];
     rfqMessage?: { subject: string; bodyText: string };
     previewContractorName?: string;
+    /** When the job has already left review, do not force it back onto pending quotation. */
+    currentStatus?: string;
   },
 ) {
   const isLandlord = responsibility === 'landlord';
@@ -59,7 +63,11 @@ export async function confirmMaintenanceResponsibility(
       rfqMessage: options?.rfqMessage,
       previewContractorName: options?.previewContractorName,
     });
-    await transitionMaintenanceCase(requestId, 'pending_quotation');
+    const stillInReview =
+      !options?.currentStatus || RESPONSIBILITY_REVIEW_STATUSES.has(options.currentStatus);
+    if (stillInReview) {
+      await transitionMaintenanceCase(requestId, 'pending_quotation');
+    }
   }
   // Tenant/strata: setResponsibility sends the email and the backend advances to in_progress.
 }
