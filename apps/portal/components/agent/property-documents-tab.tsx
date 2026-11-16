@@ -432,32 +432,26 @@ export function PropertyDocumentsTab({
             title: record.title,
             fileName: record.fileName,
           });
+          const reportQueueProgress = (pct: number) => {
+            const overall = Math.round(i * fileShare + (pct / 100) * fileShare);
+            setUploadProgress(overall);
+            setQueuePhase(pct >= 95 ? 'saving' : 'uploading');
+          };
           try {
             await uploadDocumentRef.current(file, category, fullAddressRef.current, {
               title,
               propertyId,
               skipRefresh: true,
-              onProgress: (pct) => {
-                const overall = Math.round(i * fileShare + (pct / 100) * fileShare);
-                setUploadProgress(overall);
-                setQueuePhase(pct >= 95 ? 'saving' : 'uploading');
-              },
+              onProgress: reportQueueProgress,
             });
-          } catch {
-            if (category === 'management_agreement') {
-              await uploadDocumentRef.current(file, 'lease', fullAddressRef.current, {
-                title,
-                propertyId,
-                skipRefresh: true,
-                onProgress: (pct) => {
-                  const overall = Math.round(i * fileShare + (pct / 100) * fileShare);
-                  setUploadProgress(overall);
-                  setQueuePhase(pct >= 95 ? 'saving' : 'uploading');
-                },
-              });
-            } else {
-              throw new Error('Upload failed');
-            }
+          } catch (firstErr) {
+            if (category !== 'management_agreement') throw firstErr;
+            await uploadDocumentRef.current(file, 'lease', fullAddressRef.current, {
+              title,
+              propertyId,
+              skipRefresh: true,
+              onProgress: reportQueueProgress,
+            });
           }
           await removePendingUploadRecord(propertyId, record.id);
           succeeded += 1;
@@ -739,22 +733,47 @@ export function PropertyDocumentsTab({
           ? ensureGroupDocumentTitle(group, upload.title)
           : upload.title;
 
+      const category = uploadCategoryForGroup(group);
       let succeeded = 0;
       let failed = 0;
+      let lastError: Error | null = null;
+
+      const sendFile = (
+        file: File,
+        fileCategory: typeof category,
+        index: number,
+      ) =>
+        uploadDocument(file, fileCategory, fullAddress, {
+          title: `${baseTitle} — ${file.name}`,
+          propertyId,
+          onProgress: (pct) => {
+            const overall = Math.round(((index + pct / 100) / ok.length) * 100);
+            setUploadProgress(overall);
+          },
+        });
 
       for (let i = 0; i < ok.length; i++) {
         const file = ok[i]!;
         try {
-          await uploadDocument(file, uploadCategoryForGroup(group), fullAddress, {
-            title: `${baseTitle} — ${file.name}`,
-            propertyId,
-            onProgress: (pct) => {
-              const overall = Math.round(((i + pct / 100) / ok.length) * 100);
-              setUploadProgress(overall);
-            },
-          });
+          await sendFile(file, category, i);
           succeeded += 1;
-        } catch {
+        } catch (err) {
+          if (category === 'management_agreement') {
+            try {
+              await sendFile(file, 'lease', i);
+              succeeded += 1;
+              continue;
+            } catch (retryErr) {
+              lastError =
+                retryErr instanceof Error
+                  ? retryErr
+                  : err instanceof Error
+                    ? err
+                    : new Error('Upload failed');
+            }
+          } else {
+            lastError = err instanceof Error ? err : new Error('Upload failed');
+          }
           failed += 1;
         }
       }
@@ -762,9 +781,13 @@ export function PropertyDocumentsTab({
       await refresh();
 
       if (failed > 0 && succeeded === 0) {
-        toast.error('Upload failed');
+        toast.error(lastError?.message || 'Upload failed');
       } else if (failed > 0) {
-        toast.warning(`Uploaded ${succeeded} file${succeeded === 1 ? '' : 's'}, ${failed} failed`);
+        toast.warning(
+          lastError?.message
+            ? `Uploaded ${succeeded} file${succeeded === 1 ? '' : 's'}, ${failed} failed. ${lastError.message}`
+            : `Uploaded ${succeeded} file${succeeded === 1 ? '' : 's'}, ${failed} failed`,
+        );
       } else {
         toast.success(
           succeeded === 1 ? `Uploaded ${ok[0]!.name}` : `Uploaded ${succeeded} files`,

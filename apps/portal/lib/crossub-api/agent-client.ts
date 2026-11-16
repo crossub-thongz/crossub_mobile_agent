@@ -1,6 +1,6 @@
 import type { components, operations } from '@crossub-thongz/api-contract';
 
-import { ApiError, api, apiV1 } from '@/lib/api';
+import { ApiError, api, apiV1, recoverUnauthorizedSession } from '@/lib/api';
 import { fileToBase64WithProgress } from '@/lib/file-upload';
 import type {
   ServerLeasingMainStatus,
@@ -1089,9 +1089,27 @@ export async function deleteDocument(documentId: string): Promise<void> {
   }
 }
 
-/** Same as `uploadDocument`, with XMLHttpRequest upload progress (40–100% of caller scale). */
-export async function uploadDocumentWithProgress(
-  input: UploadAgentDocumentInput,
+const UPLOAD_NAME_MAX = 255;
+const UPLOAD_MIME_MAX = 150;
+
+/** API `@MaxLength` counts JS string length. Keep names inside that before they 400. */
+function clampUploadField(value: string, max: number): string {
+  const trimmed = value.trim();
+  return trimmed.length <= max ? trimmed : trimmed.slice(0, max);
+}
+
+function readUploadXhrError(xhr: XMLHttpRequest): ApiError {
+  let body: unknown = `Request failed: ${xhr.status}`;
+  try {
+    if (xhr.responseText) body = JSON.parse(xhr.responseText) as unknown;
+  } catch {
+    body = `Request failed: ${xhr.status}`;
+  }
+  return new ApiError(xhr.status, body);
+}
+
+function postDocumentWithProgress(
+  body: string,
   onNetworkProgress?: (networkPercent: number) => void,
 ): Promise<AgentDocumentDto> {
   const url = `${API_BASE}/agent/documents`;
@@ -1118,23 +1136,40 @@ export async function uploadDocumentWithProgress(
         }
         return;
       }
-      try {
-        const body = JSON.parse(xhr.responseText) as { message?: string | string[] };
-        const message =
-          typeof body.message === 'string'
-            ? body.message
-            : Array.isArray(body.message)
-              ? body.message.join(', ')
-              : `Request failed: ${xhr.status}`;
-        reject(new Error(message));
-      } catch {
-        reject(new Error(`Request failed: ${xhr.status}`));
-      }
+      reject(readUploadXhrError(xhr));
     };
 
     xhr.onerror = () => reject(new Error('Failed to upload document'));
-    xhr.send(JSON.stringify(input));
+    xhr.send(body);
   });
+}
+
+function throwUploadError(err: unknown): never {
+  if (err instanceof ApiError) throw new Error(formatApiErrorMessage(err));
+  throw err;
+}
+
+/** Same as `uploadDocument`, with XMLHttpRequest upload progress (40–100% of caller scale). */
+export async function uploadDocumentWithProgress(
+  input: UploadAgentDocumentInput,
+  onNetworkProgress?: (networkPercent: number) => void,
+): Promise<AgentDocumentDto> {
+  const body = JSON.stringify(input);
+  try {
+    return await postDocumentWithProgress(body, onNetworkProgress);
+  } catch (err) {
+    if (!(err instanceof ApiError) || err.status !== 401) throwUploadError(err);
+  }
+  // The XHR does not go through `request()`, so a stale access cookie used to fail
+  // the upload while the rest of the page still looked signed in.
+  if (await recoverUnauthorizedSession()) {
+    try {
+      return await postDocumentWithProgress(body, onNetworkProgress);
+    } catch (err) {
+      throwUploadError(err);
+    }
+  }
+  throw new Error('Session expired');
 }
 
 type DocumentUploadMeta = {
@@ -1208,9 +1243,24 @@ async function completeDocumentUploadSession(
   }
 }
 
+async function uploadDocumentInline(
+  file: File,
+  payload: DocumentUploadMeta,
+  onNetworkProgress?: (networkPercent: number) => void,
+): Promise<AgentDocumentDto> {
+  const contentBase64 = await fileToBase64WithProgress(file, (readPct) =>
+    onNetworkProgress?.(Math.min(40, readPct)),
+  );
+  return uploadDocumentWithProgress(
+    { ...payload, contentBase64 } as UploadAgentDocumentInput,
+    (networkPct) => onNetworkProgress?.(40 + Math.round(networkPct * 0.6)),
+  );
+}
+
 /**
- * Upload a document file — uses direct-to-R2 on staging/production (presigned PUT) so large
- * files never pass through the portal BFF or API body. Falls back to base64 JSON locally.
+ * Upload a document file. Staging and production presign a direct PUT to object storage.
+ * When that session or PUT fails (missing route, bucket CORS), the file is sent as base64
+ * through POST /agent/documents instead.
  */
 export async function uploadAgentDocumentFileWithProgress(
   file: File,
@@ -1221,16 +1271,26 @@ export async function uploadAgentDocumentFileWithProgress(
   },
   onNetworkProgress?: (networkPercent: number) => void,
 ): Promise<AgentDocumentDto> {
+  if (file.size < 1) throw new Error('The file is empty');
+
+  const fileName = clampUploadField(file.name || 'document', UPLOAD_NAME_MAX) || 'document';
   const payload: DocumentUploadMeta = {
-    fileName: file.name,
-    mimeType: file.type || 'application/octet-stream',
+    fileName,
+    mimeType: clampUploadField(file.type || 'application/octet-stream', UPLOAD_MIME_MAX),
     sizeBytes: file.size,
     category: meta.category,
     propertyId: meta.propertyId,
-    title: meta.title?.trim() || file.name,
+    title: clampUploadField(meta.title?.trim() || fileName, UPLOAD_NAME_MAX) || fileName,
   };
 
-  const session = await beginDocumentUploadSession(payload);
+  let session: DocumentUploadSession = { mode: 'inline' };
+  try {
+    session = await beginDocumentUploadSession(payload);
+  } catch {
+    // Older APIs have no upload-session route. The base64 POST below is the working path.
+    session = { mode: 'inline' };
+  }
+
   if (session.mode === 'direct') {
     onNetworkProgress?.(0);
     try {
@@ -1250,13 +1310,7 @@ export async function uploadAgentDocumentFileWithProgress(
     }
   }
 
-  const contentBase64 = await fileToBase64WithProgress(file, (readPct) =>
-    onNetworkProgress?.(Math.min(40, readPct)),
-  );
-  return uploadDocumentWithProgress(
-    { ...payload, contentBase64 } as UploadAgentDocumentInput,
-    (networkPct) => onNetworkProgress?.(40 + Math.round(networkPct * 0.6)),
-  );
+  return uploadDocumentInline(file, payload, onNetworkProgress);
 }
 
 /** Key-collection DTOs — present on backend; awaiting api-contract publish. */
