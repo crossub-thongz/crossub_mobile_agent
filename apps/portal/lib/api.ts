@@ -67,6 +67,22 @@ const tryRefreshSession = (): Promise<boolean> => {
   return refreshInFlight;
 };
 
+/**
+ * Shared with the document-upload XHR, which cannot use `request()`.
+ * One refresh at a time; false means the refresh token was rejected.
+ */
+export const refreshAuthSession = (): Promise<boolean> => {
+  if (typeof window === 'undefined') return Promise.resolve(false);
+  return tryRefreshSession();
+};
+
+/** Refresh after a 401. When the refresh token is gone, send the browser to login. */
+export const recoverUnauthorizedSession = async (): Promise<boolean> => {
+  if (await refreshAuthSession()) return true;
+  await clearSessionAndRedirectToLogin();
+  return false;
+};
+
 /** Clears stale httpOnly cookies so route middleware does not bounce /login away. */
 const clearSessionAndRedirectToLogin = async (): Promise<never> => {
   if (typeof window === 'undefined') {
