@@ -43,10 +43,6 @@ import { isAgentPaymentNotification } from '@/lib/agent-payment-notification';
 import { invalidatePropertyTenantContacts } from '@/lib/property-tenant-contacts-cache';
 import { sanitizeCreatePropertyBody } from '@/lib/sanitize-create-property-body';
 import {
-  buildRegistryApiBody,
-  type PropertyRegistryAutosaveState,
-} from '@/lib/property-registry-persist';
-import {
   MAX_UPLOAD_BYTES,
   MAX_UPLOAD_LABEL,
   fileToBase64WithProgress,
@@ -294,11 +290,6 @@ interface AgentDataContextValue {
     caseContext?: StaffCaseContext,
   ) => Promise<string>;
   addProperty: (input: import('@/lib/store').NewPropertyInput) => Promise<Property>;
-  savePropertyRegistryDraft: (
-    propertyId: string | null,
-    state: PropertyRegistryAutosaveState,
-    options?: { complete?: boolean },
-  ) => Promise<Property>;
   endPropertyManagement: (
     propertyId: string,
     endOfManagementDate: string,
@@ -1253,69 +1244,6 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     [apiConnected, apiAgencies, refresh, storeAddProperty, agentPortfolioId, user],
   );
 
-  const savePropertyRegistryDraft = useCallback(
-    async (
-      propertyId: string | null,
-      state: PropertyRegistryAutosaveState,
-      options?: { complete?: boolean },
-    ): Promise<Property> => {
-      if (!apiConnected) {
-        throw new Error('Connect to the API to save properties');
-      }
-
-      const complete = options?.complete ?? false;
-      const body = sanitizeCreatePropertyBody(
-        buildRegistryApiBody(state.form, {
-          complete,
-          step: state.step,
-          furthestStepIndex: state.furthestStepIndex,
-        }),
-      );
-
-      // Autosave must never downgrade a completed property back to draft. Only send
-      // registryIntakeComplete on create (false) or explicit complete (true).
-      if (propertyId && !complete) {
-        delete (body as { registryIntakeComplete?: boolean }).registryIntakeComplete;
-      } else if (!propertyId && !complete) {
-        body.registryIntakeComplete = false;
-      }
-
-      if (!apiAgencies?.length && state.form.agencyName?.trim()) {
-        await apiCreateAgency({
-          name: state.form.agencyName.trim(),
-          company: state.form.agencyCompany?.trim() || undefined,
-          contactEmail: user?.email,
-          contactName: user
-            ? [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || undefined
-            : undefined,
-          contactPhone: user?.phone ?? undefined,
-        });
-        await refresh();
-      }
-
-      const mapWithFormLease = (dto: Awaited<ReturnType<typeof apiCreateProperty>>) => {
-        const mapped = mapAgentProperty(dto, agentPortfolioId);
-        const leaseStatus = state.form.leaseStatus as Property['leaseStatus'] | '';
-        return {
-          ...mapped,
-          leaseStatus: leaseStatus || mapped.leaseStatus,
-          registryIntakeComplete: complete,
-        };
-      };
-
-      if (propertyId) {
-        const updated = await apiUpdateProperty(propertyId, body);
-        await refresh();
-        return mapWithFormLease(updated);
-      }
-
-      const created = await apiCreateProperty(body);
-      await refresh();
-      return mapWithFormLease(created);
-    },
-    [apiConnected, apiAgencies, refresh, agentPortfolioId, user],
-  );
-
   const endPropertyManagement = useCallback(
     async (
       propertyId: string,
@@ -1820,7 +1748,6 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     ensureMessageThread,
     openStaffSupportThread,
     addProperty,
-    savePropertyRegistryDraft,
     endPropertyManagement,
     archiveProperty,
     restoreProperty,

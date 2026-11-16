@@ -34,6 +34,7 @@ import {
 import {
   AUSTRALIAN_STATE_LABEL,
   AUSTRALIAN_STATE_ORDER,
+  PROPERTY_APPROVAL_STATUS,
   PROPERTY_TYPE_LABEL,
   PROPERTY_TYPE_ORDER,
   type AustralianStateKey,
@@ -230,6 +231,7 @@ export function AddPropertyForm({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activating, setActivating] = useState(false);
   const [activatedId, setActivatedId] = useState<string | null>(null);
+  const [awaitingServiceApproval, setAwaitingServiceApproval] = useState(false);
   const [additionalOpen, setAdditionalOpen] = useState(
     Boolean(
       initialForm.internalAreaSqm ||
@@ -412,8 +414,11 @@ export function AddPropertyForm({
     setIssues([]);
     try {
       const id = await saveNow();
-      await activateProperty(id, { propertyType: form.propertyType });
+      const activated = await activateProperty(id, { propertyType: form.propertyType });
       await onActivated();
+      setAwaitingServiceApproval(
+        activated.approvalStatus === PROPERTY_APPROVAL_STATUS.PENDING,
+      );
       setActivatedId(id);
     } catch (err) {
       const failed = apiValidationIssues(err);
@@ -445,6 +450,7 @@ export function AddPropertyForm({
           form.occupancy === PROPERTY_OCCUPANCY.TENANTED || form.upcomingTenancyArranged
         }
         selfManaged={selfManaged}
+        awaitingServiceApproval={awaitingServiceApproval}
       />
     );
   }

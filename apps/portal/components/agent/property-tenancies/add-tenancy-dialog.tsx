@@ -76,6 +76,7 @@ export function AddTenancyDialog({
   onOpenChange,
   propertyId,
   agencyId,
+  peopleSearch = true,
   onSaved,
 }: {
   open: boolean;
@@ -83,6 +84,11 @@ export function AddTenancyDialog({
   propertyId: string;
   /** The property's agency — whose people the search lists. */
   agencyId?: string;
+  /**
+   * False where the agency's people cannot be searched (Full Service and Legacy: the people list
+   * is a Self-Manage screen), so tenants are typed in and no empty search box is shown.
+   */
+  peopleSearch?: boolean;
   onSaved?: () => void;
 }) {
   const [step, setStep] = useState(0);
@@ -122,7 +128,7 @@ export function AddTenancyDialog({
   }, [open]);
 
   useEffect(() => {
-    if (!open || !agencyId || term.length < PEOPLE_SEARCH_MIN_LENGTH) {
+    if (!open || !peopleSearch || !agencyId || term.length < PEOPLE_SEARCH_MIN_LENGTH) {
       setResults([]);
       setSearching(false);
       return;
@@ -142,7 +148,7 @@ export function AddTenancyDialog({
     return () => {
       cancelled = true;
     };
-  }, [agencyId, open, term]);
+  }, [agencyId, open, peopleSearch, term]);
 
   const selectedIds = new Set(
     tenants.flatMap((t) => (t.kind === 'existing' ? [t.personId] : [])),
@@ -293,7 +299,7 @@ export function AddTenancyDialog({
                   {COPY.NO_TENANTS}
                 </p>
               )}
-              {agencyId ? (
+              {!peopleSearch ? null : agencyId ? (
                 <div className="space-y-2">
                   <Input
                     value={query}

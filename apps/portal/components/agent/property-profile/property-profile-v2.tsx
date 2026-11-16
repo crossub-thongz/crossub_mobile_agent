@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   AlertCircle,
   Briefcase,
   Calendar,
   ChevronRight,
+  Plus,
   User,
   Wrench,
 } from 'lucide-react';
@@ -14,6 +16,7 @@ import { PropertyProfileActionsMenu } from '@/components/agent/property-profile/
 import { PropertyProfileIncludedUsage } from '@/components/agent/property-profile/property-profile-included-usage';
 import { PropertyProfilePhoto } from '@/components/agent/property-profile/property-profile-photo';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
+import { AddTenancyDialog } from '@/components/agent/property-tenancies/add-tenancy-dialog';
 import { PropertyTenanciesSection } from '@/components/agent/property-tenancies/property-tenancies-section';
 import { SelfManagedAgencyCard } from '@/components/agent/property-tenancies/self-managed-agency-card';
 import { SelfManagedOverviewCards } from '@/components/agent/property-tenancies/self-managed-overview-cards';
@@ -56,8 +59,11 @@ import { CurrentTenancyTitle } from '@/components/agent/current-tenancy-title';
 import { TenancyPagerControls } from '@/components/agent/tenancy-pager-controls';
 import { resolveCurrentTenancyRefs } from '@/lib/tenancy-references';
 import { buildTenancyViewPages, wrapTenancyPageIndex } from '@/lib/tenancy-view-pages';
+import { ADD_TENANCY_QUERY_PARAM, ADD_TENANCY_QUERY_VALUE } from '@/constants/add-property';
+import { PROPERTY_APPROVAL_STATUS } from '@/constants/api-enums';
+import { Button } from '@/components/ui/button';
 import { PROPERTY_RENT_PERIOD } from '@/constants/property-profile-edit';
-import { RENT_PERIOD_SUFFIX } from '@/constants/property-tenancies';
+import { RENT_PERIOD_SUFFIX, TENANCY_SECTION_COPY } from '@/constants/property-tenancies';
 import { rentAmountForPeriod } from '@/utils/property-tenancy-overview';
 import {
   summarisePropertyTenancy,
@@ -166,6 +172,7 @@ function OverviewGrid({
   onNeedActionClick,
   showTenancyCard = true,
   tenancy,
+  onAddTenancy,
 }: {
   property: Property;
   propertyId: string;
@@ -187,6 +194,8 @@ function OverviewGrid({
   showTenancyCard?: boolean;
   /** The tenancy as the admin Property page shows it; null only when that read failed. */
   tenancy: PropertyTenancySummary | null;
+  /** Present where the agent may add a tenancy by hand on this card (Full Service, Legacy). */
+  onAddTenancy?: () => void;
 }) {
   const jobsCopy = PROPERTY_JOBS_COPY[useAgentCopyVariant(property.agencyId)];
   const isVacant = tenancy
@@ -300,20 +309,28 @@ function OverviewGrid({
         subtitle={viewingPrevious ? previousSubtitle : undefined}
         icon={User}
         headerExtra={
-          <TenancyPagerControls
-            index={tenancyPageIndex}
-            count={tenancyOverviewCount}
-            onPrev={() =>
-              setTenancyPageIndex((index) =>
-                wrapTenancyPageIndex(index, tenancyOverviewCount, -1),
-              )
-            }
-            onNext={() =>
-              setTenancyPageIndex((index) =>
-                wrapTenancyPageIndex(index, tenancyOverviewCount, 1),
-              )
-            }
-          />
+          <div className="flex shrink-0 items-center gap-2">
+            {onAddTenancy ? (
+              <Button type="button" size="sm" variant="outline" onClick={onAddTenancy}>
+                <Plus className="size-3.5" />
+                {TENANCY_SECTION_COPY.ADD_TENANCY}
+              </Button>
+            ) : null}
+            <TenancyPagerControls
+              index={tenancyPageIndex}
+              count={tenancyOverviewCount}
+              onPrev={() =>
+                setTenancyPageIndex((index) =>
+                  wrapTenancyPageIndex(index, tenancyOverviewCount, -1),
+                )
+              }
+              onNext={() =>
+                setTenancyPageIndex((index) =>
+                  wrapTenancyPageIndex(index, tenancyOverviewCount, 1),
+                )
+              }
+            />
+          </div>
         }
       >
         <div className="grid grid-cols-1 sm:grid-cols-[max-content_minmax(0,1fr)]">
@@ -578,6 +595,23 @@ export function PropertyProfileV2({
     ? tenancy.vacant
     : isPropertyVacant(property, currentLease ? [currentLease] : []);
   const inspectionOnly = isPropertyInspectionOnly(agencies, property.agencyId);
+  // A serviced agency (Full Service, Legacy) adds a tenancy from the current tenancy card. The
+  // API refuses it on Inspection Only and while CROSSUB has not yet agreed to service the
+  // property, so the button is not offered there.
+  const canAddTenancy =
+    tenancyOverview.settled &&
+    !isSelfManaged &&
+    !inspectionOnly &&
+    (property.approvalStatus ?? PROPERTY_APPROVAL_STATUS.APPROVED) ===
+      PROPERTY_APPROVAL_STATUS.APPROVED;
+  const searchParams = useSearchParams();
+  const addTenancyRequested =
+    searchParams.get(ADD_TENANCY_QUERY_PARAM) === ADD_TENANCY_QUERY_VALUE;
+  const [addTenancyOpen, setAddTenancyOpen] = useState(false);
+  // Add Property's success screen links here with the dialog asked for.
+  useEffect(() => {
+    if (canAddTenancy && addTenancyRequested) setAddTenancyOpen(true);
+  }, [addTenancyRequested, canAddTenancy]);
   const tenancyRentReviews = filterTenancyRentReviews(rentReviews, isVacant);
   const metrics = buildPropertyProfileMetrics({
     property,
@@ -816,6 +850,7 @@ export function PropertyProfileV2({
             onNeedActionClick={onNeedActionNavigate}
             showTenancyCard={overviewReady && !isSelfManaged}
             tenancy={tenancy}
+            onAddTenancy={canAddTenancy ? () => setAddTenancyOpen(true) : undefined}
           />
 
           {overviewReady && !isSelfManaged ? (
@@ -834,6 +869,17 @@ export function PropertyProfileV2({
             />
           ) : null}
         </div>
+      ) : null}
+
+      {canAddTenancy ? (
+        <AddTenancyDialog
+          open={addTenancyOpen}
+          onOpenChange={setAddTenancyOpen}
+          propertyId={propertyId}
+          agencyId={property.agencyId}
+          peopleSearch={false}
+          onSaved={refreshTenancies}
+        />
       ) : null}
 
       {section === 'tenancies' && (isSelfManaged || !tenancyOverview.settled) ? (
