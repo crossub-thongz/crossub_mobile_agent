@@ -53,6 +53,13 @@ type LandlordSnapshot = {
   phone?: string | null;
 };
 
+/** Copy the primary tenant phone onto the property notice line the edit form reads. */
+async function mirrorPrimaryTenantPhone(propertyId: string, phone: string | null | undefined) {
+  const trimmed = phone?.trim() ?? '';
+  if (!trimmed) return;
+  await patchAgentProperty(propertyId, { tenantPhone: trimmed });
+}
+
 /** Copy the primary owner onto the property, which Overview and the rest of the app read. */
 async function mirrorPrimaryLandlord(propertyId: string, contact: LandlordSnapshot) {
   const name = contact.name?.trim() ?? '';
@@ -165,6 +172,12 @@ export function ContactListEditor({
             phone: updated?.phone ?? phone,
           });
         }
+        if (
+          role === PROPERTY_CONTACT_ROLE.TENANT &&
+          (existing?.isPrimary || contacts.length === 1)
+        ) {
+          await mirrorPrimaryTenantPhone(propertyId, phone);
+        }
         setDraft(null);
         return COPY.SAVED;
       }
@@ -180,6 +193,9 @@ export function ContactListEditor({
             (contact) => contact.role === PROPERTY_CONTACT_ROLE.LANDLORD && contact.isPrimary,
           ) ?? result.contacts.find((contact) => contact.role === PROPERTY_CONTACT_ROLE.LANDLORD);
         if (created) await mirrorPrimaryLandlord(propertyId, created);
+      }
+      if (role === PROPERTY_CONTACT_ROLE.TENANT && contacts.length === 0) {
+        await mirrorPrimaryTenantPhone(propertyId, phone);
       }
       setDraft(null);
       if (notices) void noticeList.reload().catch(() => undefined);
