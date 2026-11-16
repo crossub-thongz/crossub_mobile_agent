@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { ADD_TENANCY_QUERY_PARAM, ADD_TENANCY_QUERY_VALUE } from '@/constants/add-property';
 import { Archive, ChevronDown, Home, Mail, Phone, Pin, PinOff, Plus, Trash2, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -432,7 +434,11 @@ export function PropertyTenanciesSection({
   const incoming = useMemo(() => selectIncomingTenancyGroups(groups), [groups]);
   const currentGroup = useMemo(() => selectCurrentTenancyGroup(groups), [groups]);
   const past = useMemo(() => selectPastTenancyGroups(groups), [groups]);
-  const [addOpen, setAddOpen] = useState(false);
+  // Add Property's success screen links here with the dialog asked for, the property chosen.
+  const searchParams = useSearchParams();
+  const [addOpen, setAddOpen] = useState(
+    () => searchParams.get(ADD_TENANCY_QUERY_PARAM) === ADD_TENANCY_QUERY_VALUE,
+  );
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [restoreGroup, setRestoreGroup] = useState<PropertyTenancyGroup | null>(null);
   const [withdrawGroup, setWithdrawGroup] = useState<PropertyTenancyGroup | null>(null);

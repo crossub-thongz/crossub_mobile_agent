@@ -37,7 +37,7 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
       {
         title: 'Add a listing',
         description:
-          'Tap Add property (top right on desktop, or above the search on mobile). Complete registration for the address, owner, and tenancy. Unfinished drafts stay on the list so you can continue later.',
+          'Tap Add property (top right on desktop, or above the search on mobile). Enter the address, the property type and its owners, then tap Activate Property. A tenancy is added afterwards. Unfinished drafts stay on the list so you can continue later.',
       },
       {
         title: 'Find the right property',
@@ -59,7 +59,7 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
       {
         title: 'Add property',
         description:
-          'Starts property registration. You enter the address and parties. Until registration is finished the row shows as a draft — open it to continue, or delete the draft if it was created by mistake.',
+          'Starts property registration. You enter the address and link the owners on one page. Until you activate it the row shows as a draft — open it to continue, or delete the draft if it was created by mistake.',
       },
       {
         title: 'Search',

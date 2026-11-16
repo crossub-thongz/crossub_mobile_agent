@@ -28,6 +28,8 @@ interface PropertyAddressAutocompleteProps {
   disabled?: boolean;
   /** Address fields shown on the left beside the map. */
   locationFields?: ReactNode;
+  /** Let the search box span the section instead of a narrow column (Add Property). */
+  wideSearch?: boolean;
 }
 
 export function PropertyAddressAutocomplete({
@@ -36,6 +38,7 @@ export function PropertyAddressAutocomplete({
   longitude,
   disabled,
   locationFields,
+  wideSearch,
 }: PropertyAddressAutocompleteProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -64,8 +67,8 @@ export function PropertyAddressAutocomplete({
     onPlaceSelectRef.current = onPlaceSelect;
   }, [onPlaceSelect]);
 
-  const applyParsedPlace = useCallback((parsed: ParsedAustralianAddress) => {
-    onPlaceSelectRef.current(parsed);
+  const applyParsedPlace = useCallback((parsed: ParsedAustralianAddress, placeId?: string) => {
+    onPlaceSelectRef.current(placeId ? { ...parsed, placeId } : parsed);
     if (searchInputRef.current) {
       searchInputRef.current.value = '';
     }
@@ -118,19 +121,20 @@ export function PropertyAddressAutocomplete({
                         place.name,
                         place.formatted_address,
                       ]),
+                      placeId,
                     );
                     return;
                   }
                 }
                 const fallback = parsePlaceResult(place);
-                if (fallback) applyParsedPlace(fallback);
+                if (fallback) applyParsedPlace(fallback, placeId);
               },
             );
             return;
           }
 
           const parsed = parsePlaceResult(place);
-          if (parsed) applyParsedPlace(parsed);
+          if (parsed) applyParsedPlace(parsed, placeId);
         });
 
         autocompleteRef.current = autocomplete;
@@ -205,7 +209,7 @@ export function PropertyAddressAutocomplete({
   const showMapColumn = mapsEnabled && !mapsFailed;
 
   const searchBlock = mapsEnabled ? (
-    <div className="max-w-md space-y-1.5">
+    <div className={cn('space-y-1.5', !wideSearch && 'max-w-md')}>
       <Label className="text-xs font-medium text-muted-foreground">
         Search address
       </Label>
