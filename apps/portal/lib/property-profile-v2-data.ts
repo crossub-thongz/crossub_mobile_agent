@@ -59,12 +59,12 @@ export const PROPERTY_PROFILE_SECTIONS: {
 ];
 
 /**
- * Level 1 (inspection-only) does not record arrears or rent chasing. Tenancies is Self-Manage
- * only (Daniel, 27 Oct 2026): the agency records and ends its own tenancies there.
+ * Level 1 (inspection-only) does not record arrears or rent chasing, and has no Tenancies
+ * section. Full management and Self-Manage share that section.
  */
-export function propertyProfileSectionsForAccess(hasFullAccess: boolean, isSelfManaged = false) {
+export function propertyProfileSectionsForAccess(hasFullAccess: boolean, showTenancies = false) {
   return PROPERTY_PROFILE_SECTIONS.filter(
-    (tab) => (hasFullAccess || tab.id !== 'financials') && (isSelfManaged || tab.id !== 'tenancies'),
+    (tab) => (hasFullAccess || tab.id !== 'financials') && (showTenancies || tab.id !== 'tenancies'),
   );
 }
 

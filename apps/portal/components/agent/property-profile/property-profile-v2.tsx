@@ -561,7 +561,13 @@ export function PropertyProfileV2({
   const isSelfManaged = tenancyOverview.settled
     ? tenancyOverview.selfManaged
     : portalAccessReady && isPropertySelfManaged(agencies, property.agencyId);
+  const inspectionOnly = isPropertyInspectionOnly(agencies, property.agencyId);
   const overviewReady = tenancyOverview.settled || (portalAccessReady && !isSelfManaged);
+  // Full management uses the same Property, Tenancy, Owner and Agency cards as Self-Manage.
+  // Inspection-only keeps the shorter overview. A failed tenancy read falls back to that
+  // shorter overview instead of spinning.
+  const portalOverviewRecord = !inspectionOnly ? tenancyOverview.record : null;
+  const portalOverviewPending = !inspectionOnly && !tenancyOverview.settled;
   const refreshTenancies = () => {
     tenancyOverview.reload();
     onRefresh?.();
@@ -576,10 +582,10 @@ export function PropertyProfileV2({
   }, [hasFullManagementAccess, onSectionChange, portalAccessReady, section]);
 
   useEffect(() => {
-    if (section === 'tenancies' && tenancyOverview.settled && !isSelfManaged) {
+    if (section === 'tenancies' && inspectionOnly) {
       onSectionChange('overview');
     }
-  }, [isSelfManaged, onSectionChange, section, tenancyOverview.settled]);
+  }, [inspectionOnly, onSectionChange, section]);
   const sync = usePropertyOverviewSync(
     property,
     true,
@@ -594,7 +600,6 @@ export function PropertyProfileV2({
   const isVacant = tenancy
     ? tenancy.vacant
     : isPropertyVacant(property, currentLease ? [currentLease] : []);
-  const inspectionOnly = isPropertyInspectionOnly(agencies, property.agencyId);
   // A serviced agency (Full Service, Legacy) adds a tenancy from the current tenancy card. The
   // API refuses it on Inspection Only and while CROSSUB has not yet agreed to service the
   // property, so the button is not offered there.
@@ -674,12 +679,12 @@ export function PropertyProfileV2({
 
   const sectionTabs = useMemo(
     () =>
-      propertyProfileSectionsForAccess(hasFullManagementAccess, isSelfManaged).map((tab) => ({
+      propertyProfileSectionsForAccess(hasFullManagementAccess, !inspectionOnly).map((tab) => ({
         ...tab,
         label:
           tab.id === 'tasks' && taskCount > 0 ? `${tab.label} (${taskCount})` : tab.label,
       })),
-    [hasFullManagementAccess, isSelfManaged, taskCount],
+    [hasFullManagementAccess, inspectionOnly, taskCount],
   );
 
   return (
@@ -806,10 +811,10 @@ export function PropertyProfileV2({
 
       {section === 'overview' ? (
         <div className="space-y-4">
-          {isSelfManaged && tenancyOverview.record ? (
+          {portalOverviewRecord ? (
             <SelfManagedOverviewCards
               property={property}
-              record={tenancyOverview.record}
+              record={portalOverviewRecord}
               onChanged={refreshTenancies}
               onOpenTenancies={() => onSectionChange('tenancies')}
               onOpenFinancials={
@@ -820,15 +825,15 @@ export function PropertyProfileV2({
               keyFobCount={sync.keyFobCount}
             />
           ) : null}
-          {isSelfManaged && tenancyOverview.record ? (
+          {portalOverviewRecord ? (
             <SelfManagedAgencyCard
               property={property}
-              record={tenancyOverview.record}
+              record={portalOverviewRecord}
               propertyDocs={propertyDocs}
               onChanged={refreshTenancies}
             />
           ) : null}
-          {isSelfManaged && !tenancyOverview.record ? (
+          {portalOverviewPending ? (
             <TenancyOverviewGate record={null}>{() => null}</TenancyOverviewGate>
           ) : null}
           <OverviewGrid
@@ -848,12 +853,12 @@ export function PropertyProfileV2({
             tribunalCases={tribunalCases}
             onViewTasks={() => onSectionChange('tasks')}
             onNeedActionClick={onNeedActionNavigate}
-            showTenancyCard={overviewReady && !isSelfManaged}
+            showTenancyCard={overviewReady && !portalOverviewRecord && !portalOverviewPending}
             tenancy={tenancy}
             onAddTenancy={canAddTenancy ? () => setAddTenancyOpen(true) : undefined}
           />
 
-          {overviewReady && !isSelfManaged ? (
+          {overviewReady && !portalOverviewRecord && !portalOverviewPending ? (
             <PropertyProfileDetails
               property={property}
               propertyId={propertyId}
@@ -882,8 +887,8 @@ export function PropertyProfileV2({
         />
       ) : null}
 
-      {section === 'tenancies' && (isSelfManaged || !tenancyOverview.settled) ? (
-        <TenancyOverviewGate record={isSelfManaged ? tenancyOverview.record : null}>
+      {section === 'tenancies' && !inspectionOnly ? (
+        <TenancyOverviewGate record={tenancyOverview.record}>
           {(record) => (
             <PropertyTenanciesSection property={property} record={record} onChanged={refreshTenancies} />
           )}
