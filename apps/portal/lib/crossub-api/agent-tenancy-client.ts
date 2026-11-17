@@ -31,10 +31,11 @@ export async function fetchPropertyTenancyOverview(
   const result = await crossub.GET('/agent/properties/{propertyId}/tenancy-overview', {
     params: propertyPath(propertyId),
   });
-  if (result.data) return result.data;
   // This environment's contract package answers every call with an empty 503 and never
   // reaches the API. The rest of the agent facade already reads `/api/v1` through `apiV1`.
-  if (result.response?.status === 503 && result.error == null) {
+  // Check that before unwrapping: returning on `result.data` first narrows data to
+  // undefined, and the unwrap is then typed as returning nothing.
+  if (!result.data && result.response?.status === 503 && result.error == null) {
     return apiV1.get<PropertyTenancyOverview>(
       `/agent/properties/${propertyId}/tenancy-overview`,
     );
