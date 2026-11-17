@@ -1,5 +1,6 @@
 import type { components } from '@crossub-thongz/api-contract';
 
+import { apiV1 } from '@/lib/api';
 import { unwrapCrossubResult } from '@/lib/utils/unwrap-crossub-result';
 
 import { crossub } from './client';
@@ -30,6 +31,15 @@ export async function fetchPropertyTenancyOverview(
   const result = await crossub.GET('/agent/properties/{propertyId}/tenancy-overview', {
     params: propertyPath(propertyId),
   });
+  // This environment's contract package answers every call with an empty 503 and never
+  // reaches the API. The rest of the agent facade already reads `/api/v1` through `apiV1`.
+  // Check that before unwrapping: returning on `result.data` first narrows data to
+  // undefined, and the unwrap is then typed as returning nothing.
+  if (!result.data && result.response?.status === 503 && result.error == null) {
+    return apiV1.get<PropertyTenancyOverview>(
+      `/agent/properties/${propertyId}/tenancy-overview`,
+    );
+  }
   return unwrapCrossubResult(result, "Couldn't load the tenancies");
 }
 

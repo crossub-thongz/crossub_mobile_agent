@@ -1,4 +1,7 @@
-const SYDNEY_TZ = 'Australia/Sydney';
+import { PROPERTY_TIME_ZONE } from '@/constants/time-zone';
+
+/** Header and sidebar clock. Same zone as property dates, so the two cannot drift apart. */
+const CLOCK_TIME_ZONE = PROPERTY_TIME_ZONE;
 
 export const SIDEBAR_DEFAULT_WEATHER = {
   latitude: -33.8688,
@@ -50,7 +53,7 @@ export async function fetchSidebarWeather(
     latitude: String(latitude),
     longitude: String(longitude),
     current: 'temperature_2m,weather_code',
-    timezone: SYDNEY_TZ,
+    timezone: CLOCK_TIME_ZONE,
   });
   const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
   if (!response.ok) throw new Error('Weather unavailable');
@@ -69,17 +72,20 @@ export async function fetchSidebarWeather(
   };
 }
 
-export function formatSidebarDateTime(now: Date): { date: string; time: string } {
+export function formatSidebarDateTime(
+  now: Date,
+  timeZone: string = CLOCK_TIME_ZONE,
+): { date: string; time: string } {
   return {
     date: now.toLocaleDateString('en-AU', {
-      timeZone: SYDNEY_TZ,
+      timeZone,
       weekday: 'short',
       day: 'numeric',
       month: 'short',
       year: 'numeric',
     }),
     time: now.toLocaleTimeString('en-AU', {
-      timeZone: SYDNEY_TZ,
+      timeZone,
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,

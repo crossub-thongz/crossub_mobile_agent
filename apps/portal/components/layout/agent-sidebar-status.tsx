@@ -76,9 +76,29 @@ export function AgentSidebarStatus({
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
-    setNow(new Date());
-    const timer = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(timer);
+    let timer = 0;
+
+    const sync = () => {
+      setNow(new Date());
+      // Land on the next Sydney minute, not a 30s poll that can sit on the previous one.
+      const untilNextMinute = 60_000 - (Date.now() % 60_000);
+      timer = window.setTimeout(sync, Math.max(untilNextMinute, 250));
+    };
+
+    const onShow = () => {
+      if (document.visibilityState === 'hidden') return;
+      window.clearTimeout(timer);
+      sync();
+    };
+
+    sync();
+    document.addEventListener('visibilitychange', onShow);
+    window.addEventListener('focus', onShow);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onShow);
+      window.removeEventListener('focus', onShow);
+    };
   }, []);
 
   useEffect(() => {
