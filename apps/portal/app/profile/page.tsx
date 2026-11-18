@@ -12,7 +12,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { updateAgencyBilling, fetchAgencyTeam, updateAgencyPrimaryContact, type AgencyTeamMember } from '@/lib/crossub-api/agent-client';
+import { updateAgencyBilling, updateAgencyOfficeAddress, fetchAgencyTeam, updateAgencyPrimaryContact, type AgencyTeamMember } from '@/lib/crossub-api/agent-client';
 import { mapAgentAgencies } from '@/lib/crossub-api/agent-mappers';
 import type { Agency } from '@/lib/types';
 import { buildProfileHistory } from '@/lib/profile-history';
@@ -86,9 +86,16 @@ export default function ProfilePage() {
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [teamMembers, setTeamMembers] = useState<AgencyTeamMember[]>([]);
   const [primaryContactSaving, setPrimaryContactSaving] = useState(false);
+  const [officeSaving, setOfficeSaving] = useState(false);
+  const [officeEditing, setOfficeEditing] = useState(false);
+  const [savedOfficeAddress, setSavedOfficeAddress] = useState('');
+  const [officeAddress, setOfficeAddress] = useState('');
 
   const savedBillingRef = useRef(savedBilling);
   savedBillingRef.current = savedBilling;
+  const savedOfficeRef = useRef(savedOfficeAddress);
+  savedOfficeRef.current = savedOfficeAddress;
+  const officeDirtyRef = useRef(false);
 
   useEffect(() => {
     const next = billingFromAgency(primaryAgency);
@@ -104,6 +111,15 @@ export default function ProfilePage() {
     setBankBsb(next.bankBsb);
     setBankAccountNumber(next.bankAccountNumber);
     setBillingEditing(!hasInvoiceBillingDetails(next));
+  }, [primaryAgency]);
+
+  useEffect(() => {
+    const next = primaryAgency?.officeAddress?.trim() ?? '';
+    if (!next && savedOfficeRef.current) return;
+    setSavedOfficeAddress(next);
+    if (officeDirtyRef.current) return;
+    setOfficeAddress(next);
+    setOfficeEditing(!next);
   }, [primaryAgency]);
 
   useEffect(() => {
@@ -146,6 +162,31 @@ export default function ProfilePage() {
   const primaryContactLabel = selectedPrimaryMember
     ? teamMemberName(selectedPrimaryMember)
     : 'Agency';
+
+  async function saveOfficeAddress() {
+    if (!primaryAgency) return;
+    const next = officeAddress.trim();
+    if (!next) {
+      toast.error('Enter the office address.');
+      return;
+    }
+    setOfficeSaving(true);
+    try {
+      const updated = await updateAgencyOfficeAddress(primaryAgency.id, next);
+      const mapped = mapAgentAgencies([updated])[0];
+      const saved = mapped?.officeAddress?.trim() || next;
+      officeDirtyRef.current = false;
+      setSavedOfficeAddress(saved);
+      setOfficeAddress(saved);
+      setOfficeEditing(false);
+      await refresh({ force: true });
+      toast.success('Office address saved');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save the office address');
+    } finally {
+      setOfficeSaving(false);
+    }
+  }
 
   async function savePrimaryContact(userId: string | null) {
     if (!primaryAgency) return;
@@ -358,6 +399,82 @@ export default function ProfilePage() {
             )}
           </dl>
         </section>
+
+        {primaryAgency ? (
+          <section className="rounded-xl border bg-card p-4">
+            <h2 className="text-sm font-semibold">Office address</h2>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Street address or PO Box. Type it in full — a map suggestion is not required, including on a phone.
+            </p>
+            {savedOfficeAddress && !officeEditing ? (
+              <>
+                <p className="mt-3 text-sm font-medium break-words">{savedOfficeAddress}</p>
+                <Button
+                  type="button"
+                  className="mt-3"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    officeDirtyRef.current = false;
+                    setOfficeAddress(savedOfficeAddress);
+                    setOfficeEditing(true);
+                  }}
+                >
+                  Change office address
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="mt-3">
+                  <Label htmlFor="officeAddress" className="sr-only">
+                    Office address
+                  </Label>
+                  <Input
+                    id="officeAddress"
+                    inputKind="property_address"
+                    value={officeAddress}
+                    autoComplete="street-address"
+                    enterKeyHint="done"
+                    className="h-11"
+                    placeholder="e.g. PO Box 194 Southgate Sylvania"
+                    disabled={officeSaving}
+                    onChange={(e) => {
+                      officeDirtyRef.current = true;
+                      setOfficeAddress(e.target.value);
+                    }}
+                  />
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={officeSaving || !officeAddress.trim()}
+                    onClick={() => {
+                      void saveOfficeAddress();
+                    }}
+                  >
+                    {officeSaving ? 'Saving…' : 'Save office address'}
+                  </Button>
+                  {savedOfficeAddress ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={officeSaving}
+                      onClick={() => {
+                        officeDirtyRef.current = false;
+                        setOfficeAddress(savedOfficeAddress);
+                        setOfficeEditing(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  ) : null}
+                </div>
+              </>
+            )}
+          </section>
+        ) : null}
 
         {primaryAgency ? (
           <section className="rounded-xl border bg-card p-4">

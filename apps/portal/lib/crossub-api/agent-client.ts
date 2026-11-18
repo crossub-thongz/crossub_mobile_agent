@@ -29,10 +29,16 @@ type AgentRegionFields = {
   nzbn?: string | null;
 };
 
+/** Office address ships ahead of the next contract publish. */
+type AgentOfficeAddressFields = {
+  officeAddress?: string | null;
+};
+
 export type AgentAgency = components['schemas']['AgentAgencyResponseDto'] &
   AgentAccountManagerFields &
   AgentPrimaryContactFields &
-  AgentRegionFields;
+  AgentRegionFields &
+  AgentOfficeAddressFields;
 export type AgentProperty = components['schemas']['AgentPropertyResponseDto'] &
   AgentAccountManagerFields & {
     assignedAgentUserId?: string | null;
@@ -681,6 +687,17 @@ export async function updateAgencyBilling(
   return agentFetch<AgentAgency>(`/agent/agencies/${agencyId}/billing`, {
     method: 'PATCH',
     body: JSON.stringify(body),
+  });
+}
+
+/** Street address or PO Box. Typed text is stored as entered — a map pick is not required. */
+export async function updateAgencyOfficeAddress(
+  agencyId: string,
+  officeAddress: string,
+): Promise<AgentAgency> {
+  return agentFetch<AgentAgency>(`/agent/agencies/${agencyId}/office-address`, {
+    method: 'PATCH',
+    body: JSON.stringify({ officeAddress }),
   });
 }
 
