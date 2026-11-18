@@ -197,6 +197,8 @@ export interface Agency {
   name: string;
   status: AgencyStatus;
   company?: string;
+  /** Street address or PO Box. Editable from Profile. */
+  officeAddress?: string;
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;

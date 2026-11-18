@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { Building2, Mail, Phone } from 'lucide-react';
 
@@ -121,6 +122,12 @@ export default function AgencyDetailPage() {
               {agency.company ? <InfoRow label="Company" value={agency.company} /> : null}
             </>
           )}
+          <InfoRow label="Office address">
+            <span className="break-words">{agency.officeAddress?.trim() || '—'}</span>
+            <Link href={ROUTES.PROFILE} className="text-primary mt-1 inline-block text-xs font-medium">
+              Change office address
+            </Link>
+          </InfoRow>
           <InfoRow label="Status" value={STATUS_LABEL[agency.status] ?? agency.status} />
           <InfoRow label="Portal access">
             <PortalServiceLevelBadge

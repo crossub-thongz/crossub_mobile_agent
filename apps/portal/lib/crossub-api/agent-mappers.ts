@@ -331,6 +331,7 @@ export function mapAgentAgencies(dtos: AgentAgency[]): Agency[] {
     name: a.name,
     status: a.status,
     company: asString(a.company),
+    officeAddress: asString(a.officeAddress),
     contactName: asString(a.contactName),
     contactEmail: asString(a.contactEmail),
     contactPhone: asString(a.contactPhone),
