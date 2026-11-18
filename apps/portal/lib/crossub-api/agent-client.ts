@@ -1226,6 +1226,53 @@ function putFileToPresignedUrl(
   });
 }
 
+/**
+ * Browser PUT to R2 fails when the bucket CORS list omits this portal origin
+ * (the staging host is http://<ip>, which is not allowlisted). Send the same
+ * bytes to a same-origin route that PUTs them server-side.
+ */
+function relayPresignedUpload(
+  uploadUrl: string,
+  file: File,
+  mimeType: string,
+  onProgress?: (percent: number) => void,
+): Promise<void> {
+  const body = new FormData();
+  body.append('uploadUrl', uploadUrl);
+  body.append('contentType', mimeType);
+  body.append('file', file, file.name || 'document');
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/uploads/agent-document');
+    xhr.withCredentials = true;
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress?.(100);
+        resolve();
+        return;
+      }
+      let message = `Could not store the file (${xhr.status})`;
+      try {
+        const parsed = JSON.parse(xhr.responseText) as { message?: unknown };
+        if (typeof parsed.message === 'string' && parsed.message.trim()) {
+          message = parsed.message.trim();
+        }
+      } catch {
+        // keep the status message
+      }
+      reject(new Error(message));
+    };
+    xhr.onerror = () => reject(new Error('Could not store the file'));
+    xhr.send(body);
+  });
+}
+
 async function completeDocumentUploadSession(
   storageKey: string,
   meta: DocumentUploadMeta,
@@ -1259,8 +1306,9 @@ async function uploadDocumentInline(
 
 /**
  * Upload a document file. Staging and production presign a direct PUT to object storage.
- * When that session or PUT fails (missing route, bucket CORS), the file is sent as base64
- * through POST /agent/documents instead.
+ * When the browser cannot reach that URL (bucket CORS omits this portal origin), the
+ * raw file is relayed through the portal and stored with the same presigned URL.
+ * Base64 POST /agent/documents is only the last resort.
  */
 export async function uploadAgentDocumentFileWithProgress(
   file: File,
@@ -1291,22 +1339,37 @@ export async function uploadAgentDocumentFileWithProgress(
     session = { mode: 'inline' };
   }
 
-  if (session.mode === 'direct') {
+  if (session.mode === 'direct' && session.uploadUrl && session.storageKey) {
     onNetworkProgress?.(0);
+    const reportStoredProgress = (pct: number) =>
+      onNetworkProgress?.(Math.min(90, Math.round(pct * 0.9)));
+    let stored = false;
     try {
       await putFileToPresignedUrl(
         session.uploadUrl,
         file,
         payload.mimeType,
-        (pct) => onNetworkProgress?.(Math.min(90, Math.round(pct * 0.9))),
+        reportStoredProgress,
       );
+      stored = true;
+    } catch {
+      try {
+        await relayPresignedUpload(
+          session.uploadUrl,
+          file,
+          payload.mimeType,
+          reportStoredProgress,
+        );
+        stored = true;
+      } catch {
+        stored = false;
+      }
+    }
+    if (stored) {
       onNetworkProgress?.(95);
       const created = await completeDocumentUploadSession(session.storageKey, payload);
       onNetworkProgress?.(100);
       return created;
-    } catch {
-      // Direct-to-R2 PUT often fails when the bucket CORS policy omits the portal
-      // origin (upload-session still succeeds). Fall back to base64-through-API.
     }
   }
 
