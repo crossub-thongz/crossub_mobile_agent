@@ -43,8 +43,7 @@ import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import {
   buildPropertyTenancyGroups,
   removableManualLeaseIds,
-  selectCurrentTenancyGroup,
-  selectIncomingTenancyGroups,
+  selectDisplayedTenancy,
   selectPastTenancyGroups,
   type PropertyTenancyGroup,
   type PropertyTenancyMember,
@@ -419,7 +418,7 @@ function PastTenancies({ groups, handlers }: { groups: PropertyTenancyGroup[]; h
  * Tenancies (Self-Manage): the admin Property Portal's Tenancies tab as redesigned in PR #37 —
  * current tenancy, upcoming tenancy, past tenancies with search — with Add tenancy, Archive
  * tenancy, Set as current / Use lease dates, Restore tenant, Archive incoming tenancy and Remove
- * tenancy.
+ * tenancy. An empty current slot is filled by the earliest upcoming agreement, then the next.
  */
 export function PropertyTenanciesSection({
   property,
@@ -431,8 +430,7 @@ export function PropertyTenanciesSection({
   onChanged: () => void;
 }) {
   const groups = useMemo(() => buildPropertyTenancyGroups(record), [record]);
-  const incoming = useMemo(() => selectIncomingTenancyGroups(groups), [groups]);
-  const currentGroup = useMemo(() => selectCurrentTenancyGroup(groups), [groups]);
+  const { primary, upcoming } = useMemo(() => selectDisplayedTenancy(groups), [groups]);
   const past = useMemo(() => selectPastTenancyGroups(groups), [groups]);
   // Add Property's success screen links here with the dialog asked for, the property chosen.
   const searchParams = useSearchParams();
@@ -524,21 +522,19 @@ export function PropertyTenanciesSection({
         ) : (
           <>
             <section className="space-y-2">
-              {currentGroup ? (
-                <TenancyCard group={currentGroup} {...handlers} />
+              {primary ? (
+                <TenancyCard group={primary} {...handlers} />
               ) : (
                 <div className="bg-muted/10 rounded-xl border border-dashed px-4 py-6 text-center">
                   <p className="text-sm font-medium">{COPY.VACANT}</p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    {incoming.length > 0 ? COPY.VACANT_INCOMING : COPY.VACANT_HINT}
-                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">{COPY.VACANT_HINT}</p>
                 </div>
               )}
             </section>
 
-            {incoming.length > 0 ? (
+            {upcoming.length > 0 ? (
               <section className="space-y-2">
-                {incoming.map((group) => (
+                {upcoming.map((group) => (
                   <TenancyCard key={group.id} group={group} {...handlers} />
                 ))}
               </section>

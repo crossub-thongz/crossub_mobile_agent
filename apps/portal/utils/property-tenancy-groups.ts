@@ -247,6 +247,35 @@ export function selectIncomingTenancyGroups(
   return groups.filter((group) => group.group === TENANCY_ROW_GROUP.INCOMING);
 }
 
+/** Undated agreements sort after every dated one, so a real start date fills an empty slot first. */
+const UNDATED_START = '9999-99-99';
+
+function compareByStart(a: PropertyTenancyGroup, b: PropertyTenancyGroup): number {
+  const aStart = a.leaseStartDate || UNDATED_START;
+  const bStart = b.leaseStartDate || UNDATED_START;
+  if (aStart === bStart) return 0;
+  return aStart < bStart ? -1 : 1;
+}
+
+/**
+ * Who fills the primary slot, and who stays queued behind them.
+ *
+ * A started current tenancy keeps the slot. When that slot is empty, the earliest
+ * upcoming agreement fills it, and the one after fills it if that one is gone.
+ * Nothing waits for its start date. The filling agreement stays upcoming, so the
+ * card keeps that agreement's own rent, bond and dates.
+ */
+export function selectDisplayedTenancy(groups: readonly PropertyTenancyGroup[]): {
+  primary: PropertyTenancyGroup | undefined;
+  upcoming: PropertyTenancyGroup[];
+} {
+  const current = selectCurrentTenancyGroup(groups);
+  const incoming = selectIncomingTenancyGroups(groups).slice().sort(compareByStart);
+  if (current) return { primary: current, upcoming: incoming };
+  const [primary, ...upcoming] = incoming;
+  return { primary, upcoming };
+}
+
 export function selectPastTenancyGroups(
   groups: readonly PropertyTenancyGroup[],
 ): PropertyTenancyGroup[] {

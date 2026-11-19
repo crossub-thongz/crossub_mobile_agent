@@ -29,6 +29,7 @@ import {
   TENANCY_LEASE_TERM_TYPE,
   TENANCY_LEASE_TERM_TYPE_LABEL,
   TENANCY_PLACEHOLDER,
+  TENANCY_ROW_GROUP,
   TENANCY_ROW_STATUS,
   TENANCY_ROW_STATUS_TONE,
   TENANCY_SECTION_COPY,
@@ -51,8 +52,7 @@ import { isSamePortalParty, resolvePortalCoContacts } from '@/utils/portal-party
 import {
   buildPropertyTenancyGroups,
   formatHouseholdLabel,
-  selectCurrentTenancyGroup,
-  selectIncomingTenancyGroups,
+  selectDisplayedTenancy,
   type PropertyTenancyGroup,
   type PropertyTenancyMember,
 } from '@/utils/property-tenancy-groups';
@@ -177,6 +177,106 @@ function TenantBlock({
   );
 }
 
+/** An upcoming agreement filling the empty current slot, still read from that agreement. */
+function UpcomingTenancyBody({
+  group,
+  queued,
+  onViewMember,
+}: {
+  group: PropertyTenancyGroup;
+  queued: readonly PropertyTenancyGroup[];
+  onViewMember: (member: PropertyTenancyMember) => void;
+}) {
+  const rent = group.rentWeekly;
+  const rentFigure = rent != null && rent > 0 ? formatCurrency(rent) : null;
+  const bond = recordedBondAmount(group.bondAmount);
+  const periodic = group.status === TENANCY_ROW_STATUS.PERIODIC || !group.leaseEndDate;
+  const agreement =
+    TENANCY_LEASE_TERM_TYPE_LABEL[
+      periodic ? TENANCY_LEASE_TERM_TYPE.PERIODIC : TENANCY_LEASE_TERM_TYPE.FIXED
+    ];
+  const vacate = group.recordedVacateDate ?? group.moveOutDate;
+  return (
+    <div className="space-y-4">
+      <p className="text-sm font-semibold">
+        {TENANCY_SECTION_COPY.INCOMING}
+        {group.members.length > 0 ? (
+          <PrimaryTag
+            label={`${group.members.length} ${
+              group.members.length === 1 ? TENANCY_SECTION_COPY.TENANT : TENANCY_SECTION_COPY.TENANTS
+            }`}
+          />
+        ) : null}
+      </p>
+
+      <MicroHeading>{OVERVIEW_LABEL.FINANCIAL_SUMMARY}</MicroHeading>
+      <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-teal-700/10 bg-teal-500/[0.04]">
+        <Metric
+          label={OVERVIEW_LABEL.CURRENT_RENT}
+          value={rentFigure ?? TENANCY_PLACEHOLDER}
+          suffix={rentFigure ? RENT_PERIOD_SUFFIX.WEEKLY : undefined}
+        />
+        <Metric
+          label={OVERVIEW_LABEL.PAID_TO}
+          value={overviewDate(group.rentPaidUntil)}
+          muted={!group.rentPaidUntil}
+        />
+        <Metric label={OVERVIEW_LABEL.RENT_ARREARS} value={TENANCY_PLACEHOLDER} muted />
+        <Metric
+          label={OVERVIEW_LABEL.BOND}
+          value={bond != null ? formatCurrency(bond) : TENANCY_PLACEHOLDER}
+          muted={bond == null}
+        />
+      </div>
+
+      <div>
+        <MicroHeading>{OVERVIEW_LABEL.TENANTS}</MicroHeading>
+        {group.members.length > 0 ? (
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            {group.members.map((member) => (
+              <TenantBlock
+                key={member.id}
+                member={member}
+                onView={member.personId ? () => onViewMember(member) : undefined}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground mt-2 text-xs">{TENANCY_PLACEHOLDER}</p>
+        )}
+      </div>
+
+      <div className="border-t pt-4">
+        <MicroHeading>{OVERVIEW_LABEL.AGREEMENT_DATES}</MicroHeading>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <DateFact label={OVERVIEW_LABEL.TENANCY_STARTED} value={overviewDate(group.leaseStartDate)} />
+          <DateFact
+            label={OVERVIEW_LABEL.CURRENT_AGREEMENT}
+            value={agreement}
+            hint={
+              periodic
+                ? OVERVIEW_COPY.NO_FIXED_END
+                : group.leaseEndDate
+                  ? overviewDate(group.leaseEndDate)
+                  : undefined
+            }
+          />
+          <DateFact
+            label={OVERVIEW_LABEL.VACATE_DATE}
+            value={vacate ? overviewDate(vacate) : OVERVIEW_COPY.NOT_SCHEDULED}
+            quiet={!vacate}
+            emphasis={Boolean(vacate)}
+          />
+        </div>
+      </div>
+
+      {queued.map((item) => (
+        <IncomingStrip key={item.id} incoming={item} />
+      ))}
+    </div>
+  );
+}
+
 function IncomingStrip({ incoming }: { incoming: PropertyTenancyGroup }) {
   return (
     <div
@@ -228,8 +328,11 @@ export function SelfManagedOverviewCards({
   const [inviteBusy, setInviteBusy] = useState(false);
 
   const groups = useMemo(() => buildPropertyTenancyGroups(record), [record]);
-  const currentTenancy = useMemo(() => selectCurrentTenancyGroup(groups), [groups]);
-  const incomingTenancy = useMemo(() => selectIncomingTenancyGroups(groups)[0], [groups]);
+  const displayed = useMemo(() => selectDisplayedTenancy(groups), [groups]);
+  const currentTenancy =
+    displayed.primary?.group === TENANCY_ROW_GROUP.CURRENT ? displayed.primary : undefined;
+  const promotedTenancy = displayed.primary && !currentTenancy ? displayed.primary : undefined;
+  const queuedUpcoming = displayed.upcoming;
   const primaryMember = currentTenancy?.members.find((m) => m.isPrimary);
   const primaryContact = primaryMember ? contactForMember(record.contacts, primaryMember) : undefined;
   const canInvite = Boolean(primaryMember?.email?.includes('@'));
@@ -268,7 +371,7 @@ export function SelfManagedOverviewCards({
     : [];
   const ownerNames = owners.map((o) => o.name).join(' & ');
 
-  const term = resolveCurrentLeaseTerm(record, currentTenancy, Boolean(incomingTenancy));
+  const term = resolveCurrentLeaseTerm(record, currentTenancy, queuedUpcoming.length > 0);
   const leaseTermType = resolveLeaseTermType(record, currentTenancy, term);
   const previousFixedEnd = resolvePreviousFixedTermEnd(record, currentTenancy, leaseTermType, term);
   const vacateDate = resolveTenancyVacateDate(record);
@@ -421,12 +524,21 @@ export function SelfManagedOverviewCards({
                   {currentTenancy.statusLabel}
                 </span>
               )
+            ) : promotedTenancy ? (
+              <span
+                className={cn(
+                  'shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
+                  TENANCY_ROW_STATUS_TONE[promotedTenancy.status],
+                )}
+              >
+                {promotedTenancy.statusLabel}
+              </span>
             ) : undefined
           }
           footer={
             <div className="flex justify-end">
               <CardLink
-                label={currentTenancy ? OVERVIEW_ACTION.TENANCY_HISTORY : OVERVIEW_ACTION.START_TENANCY}
+                label={displayed.primary ? OVERVIEW_ACTION.TENANCY_HISTORY : OVERVIEW_ACTION.START_TENANCY}
                 onClick={onOpenTenancies}
               />
             </div>
@@ -512,7 +624,9 @@ export function SelfManagedOverviewCards({
                 </div>
               </div>
 
-              {incomingTenancy ? <IncomingStrip incoming={incomingTenancy} /> : null}
+              {queuedUpcoming.map((item) => (
+                <IncomingStrip key={item.id} incoming={item} />
+              ))}
               {currentTenancy.movedOutReason ? (
                 <p className="text-muted-foreground text-xs">{currentTenancy.movedOutReason}</p>
               ) : null}
@@ -572,11 +686,16 @@ export function SelfManagedOverviewCards({
                 <DateFact label={OVERVIEW_LABEL.PAYMENT_FREQUENCY} value={PROPERTY_RENT_PERIOD_LABEL[rentPeriod]} />
               </Fold>
             </div>
+          ) : promotedTenancy ? (
+            <UpcomingTenancyBody
+              group={promotedTenancy}
+              queued={queuedUpcoming}
+              onViewMember={editMember}
+            />
           ) : (
             <div className="space-y-2">
               <p className="text-base font-semibold">{OVERVIEW_COPY.VACANT}</p>
               <p className="text-muted-foreground text-xs">{OVERVIEW_COPY.VACANT_HINT}</p>
-              {incomingTenancy ? <IncomingStrip incoming={incomingTenancy} /> : null}
             </div>
           )}
         </PropertyProfileInfoCard>
