@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { TrustAccountCodeDialog } from '@/components/agent/trust/trust-account-code-dialog';
 import { TrustAddBankAccountDialog } from '@/components/agent/trust/trust-add-bank-account-dialog';
 import { TrustBankAccountDialog } from '@/components/agent/trust/trust-bank-account-dialog';
+import { TrustFeeTemplatesPanel } from '@/components/agent/trust/trust-fee-templates-panel';
 import { TrustWorkspaceSettingsTables } from '@/components/agent/trust/trust-settings-summary';
 import { TrustPanel } from '@/components/agent/trust/trust-ui';
 import { TRUST_SETTINGS_TAB_COPY as COPY } from '@/constants/trust';
@@ -51,6 +52,7 @@ export function TrustSettingsTab({
           }}
         />
       </TrustPanel>
+      <TrustFeeTemplatesPanel agencyId={agencyId} accountCodes={workspace.accountCodes} />
 
       {editingAccount ? (
         <TrustBankAccountDialog

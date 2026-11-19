@@ -6,6 +6,11 @@
 - Trust opens for principals and accountants of Full Service and Legacy agencies, so they can set up and run their own trust account
 - New bill warns when the supplier already has a bill with the same invoice no. and saves only after Save anyway
 - Owner folio Bills panel: Pending bills and Paid bills list supplier bills and agency fees together; tick and Pay selected pays them in full together or not at all
+- Trust Settings: Fee templates section to add, edit, archive, restore or delete the agency's fee rules (management, letting, statement, inspection, recurring, manual, bill and invoice fees) with scope, tax code and income category
+- Owner folio Fees set here panel: add a fee template with its amount or rate from a date, change it or switch it off from a date, see its history, and raise or skip missed recurring periods
+- Charge a fee: pick a manual fee template or a one-off; a template already charged this month asks before charging it again
+- Fees panel: Edit amount on a pending fee, with a reason
+- Bills panel: a pending fee whose rent receipt was reversed shows a warning to check it
 
 ### Changed
 - Bank statement: Accept all matched payments links matched withdrawals only; deposits are receipted from their row
@@ -13,6 +18,9 @@
 - Owner summary drops Reserved for bills; Available to pay is the balance less withheld
 - Disburse warns when an owner still has bills due or pending fees; it no longer pays them
 - Fees panel: Collect all pending collects every pending fee together or none
+
+### Removed
+- Recurring fees panel on the owner folio, replaced by fee templates and Fees set here
 
 ## 2026-11-16
 

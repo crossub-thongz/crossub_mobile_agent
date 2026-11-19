@@ -88,9 +88,17 @@ export type TrustPayoutMethod = components['schemas']['TrustPayoutMethodDto'];
 export type PutTrustPayoutMethodsInput = components['schemas']['PutPayoutMethodsDto'];
 export type TrustPayoutMethodRowInput = components['schemas']['PayoutMethodRowDto'];
 export type SetTrustPayoutScheduleInput = components['schemas']['SetPayoutScheduleDto'];
-export type TrustFeeSetting = components['schemas']['TrustFeeSettingDto'];
-export type PutTrustFeeSettingsInput = components['schemas']['PutFeeSettingsDto'];
-export type TrustFeeSettingInput = components['schemas']['TrustFeeSettingInputDto'];
+export type TrustFeeTemplate = components['schemas']['TrustFeeTemplateDto'];
+export type TrustFeeTemplateRuleInput = components['schemas']['FeeTemplateRuleDto'];
+export type UpdateTrustFeeTemplateInput = components['schemas']['UpdateFeeTemplateDto'];
+export type TrustFeeAssignments = components['schemas']['TrustFeeAssignmentsDto'];
+export type TrustFeeAssignment = components['schemas']['TrustFeeAssignmentDto'];
+export type TrustFeeAssignmentVersion = components['schemas']['TrustFeeAssignmentVersionDto'];
+export type TrustFeeMissedPeriod = components['schemas']['TrustFeeMissedPeriodDto'];
+export type CreateTrustFeeAssignmentInput = components['schemas']['CreateFeeAssignmentDto'];
+export type AddTrustFeeAssignmentVersionInput = components['schemas']['AddFeeAssignmentVersionDto'];
+export type ResolveTrustMissedFeePeriodInput = components['schemas']['ResolveMissedFeePeriodDto'];
+export type EditTrustFeeChargeInput = components['schemas']['EditFeeChargeDto'];
 export type TrustRentProfile = components['schemas']['TrustRentProfileDto'];
 export type SetTrustBondInput = components['schemas']['SetBondDto'];
 export type ResetTrustRentInput = components['schemas']['RentResetDto'];
@@ -466,6 +474,18 @@ export async function createTrustFeeCharge(
   return unwrapCrossubResult(result, "Couldn't charge the fee");
 }
 
+export async function editTrustFeeCharge(
+  agencyId: string,
+  chargeId: string,
+  body: EditTrustFeeChargeInput,
+): Promise<TrustFeeCharge> {
+  const result = await crossub.PATCH('/agent/agencies/{agencyId}/trust/fee-charges/{chargeId}', {
+    params: { path: { agencyId, chargeId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't change the fee");
+}
+
 export async function postPendingTrustFees(
   agencyId: string,
   ledgerId: string,
@@ -727,6 +747,57 @@ export async function updateTrustBankAccount(
   return unwrapCrossubResult(result, "Couldn't save the trust bank account");
 }
 
+// --------------------------------------------------------------------------- Fee templates (D148)
+
+export async function fetchTrustFeeTemplates(agencyId: string, includeArchived = false): Promise<TrustFeeTemplate[]> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/fee-templates', {
+    params: { path: { agencyId }, query: { includeArchived } },
+  });
+  return unwrapCrossubResult(result, "Couldn't load the fee templates");
+}
+
+export async function createTrustFeeTemplate(
+  agencyId: string,
+  body: TrustFeeTemplateRuleInput,
+): Promise<TrustFeeTemplate> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/fee-templates', {
+    params: { path: { agencyId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't add the fee template");
+}
+
+export async function updateTrustFeeTemplate(
+  agencyId: string,
+  templateId: string,
+  body: UpdateTrustFeeTemplateInput,
+): Promise<TrustFeeTemplate> {
+  const result = await crossub.PATCH('/agent/agencies/{agencyId}/trust/fee-templates/{templateId}', {
+    params: { path: { agencyId, templateId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't save the fee template");
+}
+
+export async function deleteTrustFeeTemplate(agencyId: string, templateId: string): Promise<void> {
+  const result = await crossub.DELETE('/agent/agencies/{agencyId}/trust/fee-templates/{templateId}', {
+    params: { path: { agencyId, templateId } },
+  });
+  if (result.error) unwrapCrossubResult(result, "Couldn't delete the fee template");
+}
+
+export async function setTrustFeeTemplateArchived(
+  agencyId: string,
+  templateId: string,
+  archived: boolean,
+): Promise<TrustFeeTemplate> {
+  const params = { path: { agencyId, templateId } };
+  const result = archived
+    ? await crossub.POST('/agent/agencies/{agencyId}/trust/fee-templates/{templateId}/archive', { params })
+    : await crossub.POST('/agent/agencies/{agencyId}/trust/fee-templates/{templateId}/restore', { params });
+  return unwrapCrossubResult(result, archived ? "Couldn't archive the fee template" : "Couldn't restore the fee template");
+}
+
 export async function createTrustAccountCode(
   agencyId: string,
   body: CreateTrustAccountCodeInput,
@@ -834,24 +905,51 @@ export async function setTrustPayoutSchedule(
   return unwrapCrossubResult(result, "Couldn't save the payout schedule");
 }
 
-export async function fetchTrustFeeSettings(agencyId: string, ledgerId: string): Promise<TrustFeeSetting[]> {
-  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/fee-settings', {
+// --------------------------------------------------------------------------- Fee assignments (D149)
+
+export async function fetchTrustFeeAssignments(agencyId: string, ledgerId: string): Promise<TrustFeeAssignments> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/fee-assignments', {
     params: { path: { agencyId, ledgerId } },
   });
-  return unwrapCrossubResult(result, "Couldn't load the recurring fees");
+  return unwrapCrossubResult(result, "Couldn't load the fees");
 }
 
-/** Replace-all: settings left out are switched off. */
-export async function putTrustFeeSettings(
+export async function createTrustFeeAssignment(
   agencyId: string,
   ledgerId: string,
-  body: PutTrustFeeSettingsInput,
-): Promise<TrustFeeSetting[]> {
-  const result = await crossub.PUT('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/fee-settings', {
+  body: CreateTrustFeeAssignmentInput,
+): Promise<TrustFeeAssignments> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/fee-assignments', {
     params: { path: { agencyId, ledgerId } },
     body,
   });
-  return unwrapCrossubResult(result, "Couldn't save the recurring fees");
+  return unwrapCrossubResult(result, "Couldn't add the fee");
+}
+
+export async function addTrustFeeAssignmentVersion(
+  agencyId: string,
+  ledgerId: string,
+  assignmentId: string,
+  body: AddTrustFeeAssignmentVersionInput,
+): Promise<TrustFeeAssignments> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/fee-assignments/{assignmentId}/versions',
+    { params: { path: { agencyId, ledgerId, assignmentId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't change the fee");
+}
+
+export async function resolveTrustMissedFeePeriod(
+  agencyId: string,
+  ledgerId: string,
+  assignmentId: string,
+  body: ResolveTrustMissedFeePeriodInput,
+): Promise<TrustFeeAssignments> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/fee-assignments/{assignmentId}/missed-periods',
+    { params: { path: { agencyId, ledgerId, assignmentId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't settle the missed period");
 }
 
 export async function setTrustBond(

@@ -31,8 +31,13 @@ export type TrustLedgerFileFormat =
   operations['AgentTrustController_ledgerFile']['parameters']['path']['format'];
 export type TrustPayoutFrequency = Schemas['SetPayoutScheduleDto']['payoutFrequency'];
 export type TrustPayoutRowMethod = Schemas['PayoutMethodRowDto']['method'];
-export type TrustFeeTrigger = Schemas['TrustFeeSettingInputDto']['trigger'];
-export type TrustFeeCalc = Schemas['TrustFeeSettingInputDto']['calc'];
+export type TrustFeeTrigger = Schemas['FeeTemplateRuleDto']['trigger'];
+export type TrustFeeCalc = Schemas['FeeTemplateRuleDto']['calc'];
+export type TrustFeeScope = Schemas['FeeTemplateRuleDto']['scope'];
+export type TrustFeeTaxCode = Schemas['FeeTemplateRuleDto']['taxCode'];
+export type TrustFeeRecurringFrequency = NonNullable<Schemas['FeeTemplateRuleDto']['recurringFrequency']>;
+export type TrustFeeTemplateStatus = Schemas['TrustFeeTemplateDto']['status'];
+export type TrustFeeMissedPeriodAction = Schemas['ResolveMissedFeePeriodDto']['action'];
 export type TrustAccountCodeKind = Schemas['CreateAccountCodeDto']['kind'];
 export type TrustOpenableLedgerKind = Schemas['AgentOpenLedgerDto']['kind'];
 export type TrustDisbursementTab = NonNullable<
@@ -1042,7 +1047,13 @@ export const TRUST_FEES_COPY = {
 
 export const TRUST_NEW_FEE_COPY = {
   title: 'Charge a fee',
-  description: 'A one-off fee on this owner ledger. It waits as pending until you pay it from Bills on this owner.',
+  description: 'A fee on this owner ledger. It waits as pending until you pay it from Bills on this owner.',
+  source: 'Fee',
+  oneOff: 'One-off fee',
+  fromTemplate: (name: string, amount: string) => `${name} · ${amount}`,
+  duplicateTitle: 'Charged already this month',
+  duplicateDescription: 'This fee was already charged to this owner this month. Charge it again?',
+  duplicateConfirm: 'Charge again',
   name: 'Fee name',
   amount: 'Amount ($)',
   gstInclusive: 'Amount includes GST',
@@ -1505,29 +1516,19 @@ export const TRUST_FEE_TRIGGER = {
   SUPPLIER_BILL_CREATED: 'SUPPLIER_BILL_CREATED',
   RECURRING: 'RECURRING',
   MANUAL: 'MANUAL',
+  STATEMENT: 'STATEMENT',
 } as const satisfies Record<string, TrustFeeTrigger>;
 
-/** In the order the form offers them; the staff app's order. */
-export const TRUST_FEE_TRIGGERS: readonly TrustFeeTrigger[] = [
-  TRUST_FEE_TRIGGER.EVERY_RENT_RECEIPT,
-  TRUST_FEE_TRIGGER.FIRST_RENT_RECEIPT,
-  TRUST_FEE_TRIGGER.OWNER_INVOICE_RECEIPT,
-  TRUST_FEE_TRIGGER.SUPPLIER_BILL_CREATED,
-  TRUST_FEE_TRIGGER.AGREEMENT_RENEWED,
-  TRUST_FEE_TRIGGER.INSPECTION_COMPLETED,
-  TRUST_FEE_TRIGGER.RECURRING,
-  TRUST_FEE_TRIGGER.MANUAL,
-];
-
 export const TRUST_FEE_TRIGGER_LABEL: Record<TrustFeeTrigger, string> = {
-  EVERY_RENT_RECEIPT: 'Every rent receipt',
-  FIRST_RENT_RECEIPT: 'First rent receipt',
-  AGREEMENT_RENEWED: 'Agreement renewed (not charged yet)',
+  EVERY_RENT_RECEIPT: 'Every rent receipt (management fee)',
+  FIRST_RENT_RECEIPT: 'First rent receipt of a tenancy (letting fee)',
+  AGREEMENT_RENEWED: 'Agreement renewed',
   OWNER_INVOICE_RECEIPT: 'Owner invoice paid',
-  INSPECTION_COMPLETED: 'Inspection completed (not charged yet)',
+  INSPECTION_COMPLETED: 'Inspection completed',
   SUPPLIER_BILL_CREATED: 'Supplier bill created',
-  RECURRING: 'Recurring (not charged yet)',
-  MANUAL: 'Manual',
+  RECURRING: 'Recurring',
+  MANUAL: 'Charged by hand',
+  STATEMENT: 'Statement period (first rent of the month)',
 };
 
 export const TRUST_FEE_CALC = {
@@ -1537,38 +1538,181 @@ export const TRUST_FEE_CALC = {
 
 export const TRUST_FEE_CALC_LABEL: Record<TrustFeeCalc, string> = {
   FIXED: 'Fixed amount',
-  PERCENT: 'Percent of the money in',
+  PERCENT: 'Percentage',
 };
+
+export const TRUST_FEE_SCOPE = {
+  PROPERTY: 'PROPERTY',
+  OWNERSHIP: 'OWNERSHIP',
+} as const satisfies Record<string, TrustFeeScope>;
+
+export const TRUST_FEE_SCOPE_LABEL: Record<TrustFeeScope, string> = {
+  PROPERTY: 'Property',
+  OWNERSHIP: 'Owner folio',
+};
+
+export const TRUST_FEE_TAX_CODE = {
+  GST: 'GST',
+  GST_FREE: 'GST_FREE',
+} as const satisfies Record<string, TrustFeeTaxCode>;
+
+export const TRUST_FEE_TAX_CODE_LABEL: Record<TrustFeeTaxCode, string> = {
+  GST: 'GST 10% (included)',
+  GST_FREE: 'GST free',
+};
+
+export const TRUST_FEE_RECURRING_FREQUENCY = {
+  MONTHLY: 'MONTHLY',
+  QUARTERLY: 'QUARTERLY',
+  YEARLY: 'YEARLY',
+} as const satisfies Record<string, TrustFeeRecurringFrequency>;
+
+export const TRUST_FEE_RECURRING_FREQUENCY_LABEL: Record<TrustFeeRecurringFrequency, string> = {
+  MONTHLY: 'Monthly',
+  QUARTERLY: 'Quarterly',
+  YEARLY: 'Yearly',
+};
+
+export const TRUST_FEE_TEMPLATE_STATUS = {
+  ACTIVE: 'ACTIVE',
+  ARCHIVED: 'ARCHIVED',
+} as const satisfies Record<string, TrustFeeTemplateStatus>;
+
+export const TRUST_FEE_MISSED_PERIOD_ACTION = {
+  RAISE: 'RAISE',
+  SKIP: 'SKIP',
+} as const satisfies Record<string, TrustFeeMissedPeriodAction>;
+
+/**
+ * Which calculations and scopes each trigger's template takes (PRD Step 4, D148); mirrors the API's
+ * TRUST_FEE_TEMPLATE_RULES. A trigger mapped to null is not offered.
+ */
+export const TRUST_FEE_TEMPLATE_RULES: Readonly<
+  Record<TrustFeeTrigger, { calcs: readonly TrustFeeCalc[]; scopes: readonly TrustFeeScope[] } | null>
+> = {
+  EVERY_RENT_RECEIPT: { calcs: [TRUST_FEE_CALC.PERCENT], scopes: [TRUST_FEE_SCOPE.PROPERTY, TRUST_FEE_SCOPE.OWNERSHIP] },
+  FIRST_RENT_RECEIPT: {
+    calcs: [TRUST_FEE_CALC.FIXED, TRUST_FEE_CALC.PERCENT],
+    scopes: [TRUST_FEE_SCOPE.PROPERTY, TRUST_FEE_SCOPE.OWNERSHIP],
+  },
+  OWNER_INVOICE_RECEIPT: {
+    calcs: [TRUST_FEE_CALC.FIXED, TRUST_FEE_CALC.PERCENT],
+    scopes: [TRUST_FEE_SCOPE.PROPERTY, TRUST_FEE_SCOPE.OWNERSHIP],
+  },
+  SUPPLIER_BILL_CREATED: {
+    calcs: [TRUST_FEE_CALC.FIXED, TRUST_FEE_CALC.PERCENT],
+    scopes: [TRUST_FEE_SCOPE.PROPERTY, TRUST_FEE_SCOPE.OWNERSHIP],
+  },
+  STATEMENT: { calcs: [TRUST_FEE_CALC.FIXED], scopes: [TRUST_FEE_SCOPE.OWNERSHIP] },
+  INSPECTION_COMPLETED: { calcs: [TRUST_FEE_CALC.FIXED], scopes: [TRUST_FEE_SCOPE.PROPERTY, TRUST_FEE_SCOPE.OWNERSHIP] },
+  RECURRING: { calcs: [TRUST_FEE_CALC.FIXED], scopes: [TRUST_FEE_SCOPE.OWNERSHIP] },
+  MANUAL: { calcs: [TRUST_FEE_CALC.FIXED], scopes: [TRUST_FEE_SCOPE.PROPERTY, TRUST_FEE_SCOPE.OWNERSHIP] },
+  AGREEMENT_RENEWED: null,
+};
+
+/** The triggers a new template may take, in the order the form offers them. */
+export const TRUST_FEE_TEMPLATE_TRIGGERS: readonly TrustFeeTrigger[] = [
+  TRUST_FEE_TRIGGER.EVERY_RENT_RECEIPT,
+  TRUST_FEE_TRIGGER.FIRST_RENT_RECEIPT,
+  TRUST_FEE_TRIGGER.STATEMENT,
+  TRUST_FEE_TRIGGER.INSPECTION_COMPLETED,
+  TRUST_FEE_TRIGGER.RECURRING,
+  TRUST_FEE_TRIGGER.MANUAL,
+  TRUST_FEE_TRIGGER.SUPPLIER_BILL_CREATED,
+  TRUST_FEE_TRIGGER.OWNER_INVOICE_RECEIPT,
+];
 
 /** Basis points in one percent. */
 export const TRUST_BASIS_POINTS_PER_PERCENT = 100;
 
-export const TRUST_FEE_SETTINGS_COPY = {
-  title: 'Recurring fees',
-  empty: 'No recurring fees. Add the management fee to charge it on every rent receipt.',
-  add: 'Add fee',
+export const TRUST_FEE_TEMPLATES_COPY = {
+  title: 'Fee templates',
+  description: 'Your agency fee rules. Amounts are set on each property or owner folio.',
+  empty: 'No fee templates yet. Add the management fee to start.',
+  add: 'Add template',
+  showArchived: 'Show archived',
   edit: 'Edit',
-  off: 'off',
-  dialogAddTitle: 'Add recurring fee',
+  archive: 'Archive',
+  restore: 'Restore',
+  remove: 'Delete',
+  archived: 'Archived',
+  locked: 'In use',
+  inUse: (count: number) => (count === 1 ? 'Set on 1 property or folio' : `Set on ${count} properties or folios`),
+  dialogAddTitle: 'Add fee template',
   dialogEditTitle: (name: string) => `Edit ${name}`,
-  dialogDescription: 'Charged on the owner ledger each time the trigger happens.',
+  dialogDescription: 'The rule only. The amount or rate is set where the fee is used.',
+  lockedNote: 'This template is in use, so only its name and income category can change.',
   name: 'Fee name',
   namePlaceholder: 'Management fee',
-  trigger: 'When',
+  scope: 'Set on',
+  trigger: 'When it is charged',
   calc: 'How',
-  amount: 'Amount ($)',
-  rate: 'Rate (%)',
-  gstInclusive: 'Includes GST',
+  percentOf: (base: string) => `Percentage of ${base.toLowerCase()}`,
+  taxCode: 'Tax',
+  frequency: 'Every',
   category: 'Income category',
   chooseCategory: 'Choose a category',
-  active: 'Charging',
-  incomplete: 'Fill in the name, amount or rate, and category',
+  incomplete: 'Fill in the name, how it is charged and the category',
+  submit: 'Save template',
+  cancel: 'Cancel',
+  saved: 'Fee template saved',
+  archivedDone: 'Fee template archived',
+  restoredDone: 'Fee template restored',
+  removedDone: 'Fee template deleted',
+  confirmRemove: (name: string) => `Delete ${name}? It has never been used.`,
+} as const;
+
+export const TRUST_FEE_ASSIGNMENTS_COPY = {
+  title: 'Fees set here',
+  empty: 'No fees set on this owner folio or its property yet.',
+  noTemplates: 'Add fee templates in Settings first.',
+  add: 'Add fee',
+  change: 'Change',
+  history: 'History',
+  hideHistory: 'Hide history',
+  off: 'off',
+  propertyNote: 'Property fee: it applies to whoever owns the property.',
+  notInForce: 'Not in force yet',
+  from: (date: string) => `from ${date}`,
+  lastCharged: (date: string) => `last charged ${date}`,
+  describeFixed: (amount: string, trigger: string) => `${amount} · ${trigger}`,
+  describePercent: (rate: string, base: string | null, trigger: string) =>
+    base ? `${rate}% of ${base.toLowerCase()} · ${trigger}` : `${rate}% · ${trigger}`,
+  version: (date: string, value: string, on: boolean) => `${date}: ${value}${on ? '' : ' (off)'}`,
+  addTitle: 'Add fee',
+  addDescription: 'Pick one of your fee templates and set its amount or rate here.',
+  template: 'Fee template',
+  chooseTemplate: 'Choose a template',
+  changeTitle: (name: string) => `Change ${name}`,
+  changeDescription: 'Applies from the date you pick. Fees already charged keep their amount.',
+  amount: 'Amount incl. tax ($)',
+  rate: 'Rate (%)',
+  effectiveFrom: 'From',
+  enabled: 'Charging',
+  incomplete: 'Fill in the template, the amount or rate and the date',
   rateInvalid: 'Enter a rate above 0%, e.g. 7.7',
   submit: 'Save fee',
   cancel: 'Cancel',
-  saved: 'Recurring fees saved',
-  describeFixed: (amount: string, trigger: string) => `${amount} · ${trigger}`,
-  describePercent: (rate: string, trigger: string) => `${rate}% · ${trigger}`,
+  saved: 'Fee saved',
+  missedTitle: 'Missed periods',
+  missedNote: 'These periods were not charged. Raise each one or skip it.',
+  missedRow: (from: string, to: string, amount: string) => `${from} to ${to} · ${amount}`,
+  raise: 'Raise',
+  skip: 'Skip',
+  raised: 'Fee raised as pending',
+  skipped: 'Period skipped',
+} as const;
+
+export const TRUST_EDIT_FEE_COPY = {
+  action: 'Edit amount',
+  title: (name: string) => `Change ${name}`,
+  description: 'Only a pending fee can change. GST follows its tax code.',
+  amount: 'New amount incl. tax ($)',
+  reason: 'Reason',
+  incomplete: 'Enter an amount above $0 and a reason',
+  submit: 'Save amount',
+  cancel: 'Cancel',
+  done: 'Fee amount changed',
 } as const;
 
 export const TRUST_BOND_COPY = {

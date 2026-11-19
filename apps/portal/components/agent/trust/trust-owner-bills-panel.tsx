@@ -197,6 +197,9 @@ function OwnerBillRow({
             .filter(Boolean)
             .join(' · ')}
         </p>
+        {item.reviewWarning ? (
+          <p className="text-xs text-amber-700 dark:text-amber-300">{item.reviewWarning}</p>
+        ) : null}
       </div>
       <div className="text-right">
         <p className="text-sm font-medium tabular-nums">{formatCents(item.amountCents)}</p>
