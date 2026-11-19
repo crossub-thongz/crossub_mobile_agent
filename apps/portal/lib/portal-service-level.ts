@@ -166,6 +166,22 @@ export function hasSelfManagedTrustAccess(agencies: Agency[]): boolean {
   return selfManagedTrustAgencies(agencies).length > 0;
 }
 
+/**
+ * Agencies whose trust account this login may open from Trust: Self-Manage, and since the
+ * Accounting PRD (Daniel, 19 Nov 2026) Full Service and Legacy too, which run their own trust here.
+ * Inspection Only has no trust. An agency whose trust CROSSUB runs is told so by the API.
+ */
+export function trustAgencies(agencies: Agency[]): Agency[] {
+  return agencies.filter(
+    (a) => !isInspectionOnlyLevel(resolvePortalServiceLevel(a.portalServiceLevel)) && agencyHasAccountingAccess(a),
+  );
+}
+
+/** True when the agent may open Trust for at least one agency. */
+export function hasAgencyTrustAccess(agencies: Agency[]): boolean {
+  return trustAgencies(agencies).length > 0;
+}
+
 export function hasFullManagementAccess(agencies: Agency[]): boolean {
   return agencies.some(
     (a) => !isInspectionOnlyLevel(resolvePortalServiceLevel(a.portalServiceLevel)),
@@ -342,6 +358,8 @@ export type SelfManagedNavAccess = {
   selfManaged: boolean;
   selfManagedPrincipal: boolean;
   selfManagedTrust: boolean;
+  /** Trust is open to this login on any agency (Self-Manage or Full Service), see {@link trustAgencies}. */
+  agencyTrust: boolean;
 };
 
 export function filterNavByAccess<
@@ -358,7 +376,7 @@ export function filterNavByAccess<
         return selfManagedAccess?.selfManagedPrincipal === true;
       }
       if (item.portalAccess === PORTAL_NAV_ACCESS.SELF_MANAGED_TRUST) {
-        return seesTrust;
+        return selfManagedAccess?.agencyTrust === true;
       }
       return true;
     })

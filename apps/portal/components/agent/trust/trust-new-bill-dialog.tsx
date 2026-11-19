@@ -36,6 +36,7 @@ import {
 } from '@/lib/crossub-api/agent-trust-client';
 import { billCategoryCodes, parseDollarsToCents, trustTodayKey } from '@/lib/trust-accounting';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { duplicateBillNumbersFromError } from '@/lib/utils/trust-bill-duplicate';
 
 export function TrustNewBillDialog({
   agencyId,
@@ -77,6 +78,8 @@ export function TrustNewBillDialog({
   const [amount, setAmount] = useState('');
   const [priority, setPriority] = useState<TrustBillPriority>(TRUST_BILL_PRIORITY.NORMAL);
   const [pending, setPending] = useState(false);
+  /** Bills of this supplier with the same invoice no.; set after the API warns, cleared on edit. */
+  const [duplicateOf, setDuplicateOf] = useState<number[] | null>(null);
   const [addingSupplier, setAddingSupplier] = useState(false);
 
   const lookupsLoading = owners.loading || suppliers.loading;
@@ -108,6 +111,7 @@ export function TrustNewBillDialog({
         dueDate: dueDate || undefined,
         details: details.trim(),
         invoiceReference: invoiceReference.trim() || undefined,
+        allowDuplicateReference: duplicateOf ? true : undefined,
         amountCents,
         priority,
       });
@@ -115,7 +119,9 @@ export function TrustNewBillDialog({
       onCreated();
       onClose();
     } catch (err) {
-      toast.error(apiErrorMessage(err));
+      const duplicates = duplicateBillNumbersFromError(err);
+      if (duplicates) setDuplicateOf(duplicates);
+      else toast.error(apiErrorMessage(err));
     } finally {
       setPending(false);
     }
@@ -162,7 +168,10 @@ export function TrustNewBillDialog({
               className={SELECT_CLASS}
               value={supplierLedgerId}
               disabled={pending || lookupsLoading || noSuppliers}
-              onChange={(e) => setSupplierLedgerId(e.target.value)}
+              onChange={(e) => {
+                setSupplierLedgerId(e.target.value);
+                setDuplicateOf(null);
+              }}
             >
               <option value="">{COPY.chooseSupplier}</option>
               {suppliers.data?.items.map((ledger) => (
@@ -268,8 +277,14 @@ export function TrustNewBillDialog({
               id="trust-bill-reference"
               value={invoiceReference}
               disabled={pending}
-              onChange={(e) => setInvoiceReference(e.target.value)}
+              onChange={(e) => {
+                setInvoiceReference(e.target.value);
+                setDuplicateOf(null);
+              }}
             />
+            {duplicateOf ? (
+              <p className="text-xs text-amber-700 dark:text-amber-300">{COPY.duplicate(duplicateOf)}</p>
+            ) : null}
           </div>
         </div>
         <DialogFooter>
@@ -282,7 +297,7 @@ export function TrustNewBillDialog({
             onClick={() => void onSubmit()}
           >
             {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-            {COPY.submit}
+            {duplicateOf ? COPY.submitDuplicate : COPY.submit}
           </Button>
         </DialogFooter>
         {addingSupplier ? (

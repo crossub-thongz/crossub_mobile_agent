@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   canRecordLettingMoney,
+  hasAgencyTrustAccess,
   hasSelfManagedAgency,
   hasSelfManagedPrincipalAccess,
   hasSelfManagedTrustAccess,
@@ -29,6 +30,7 @@ export function useSelfManagedAccess(): SelfManagedAccess {
       selfManaged: hasSelfManagedAgency(agencies),
       selfManagedPrincipal: hasSelfManagedPrincipalAccess(agencies),
       selfManagedTrust: hasSelfManagedTrustAccess(agencies),
+      agencyTrust: hasAgencyTrustAccess(agencies),
     }),
     [agencies, loading],
   );

@@ -735,6 +735,9 @@ export const TRUST_NEW_BILL_COPY = {
   priority: 'Priority',
   incomplete: 'Fill in the owner, supplier, category, details and amount',
   submit: 'Save bill',
+  submitDuplicate: 'Save anyway',
+  duplicate: (billNumbers: readonly number[]) =>
+    `This supplier already has bill #${billNumbers.join(', #')} with the same invoice no. Check it is not a duplicate, then press Save anyway.`,
   cancel: 'Cancel',
   saved: (billNumber: number) => `Bill #${billNumber} saved`,
 } as const;
@@ -991,7 +994,7 @@ export const TRUST_FEES_COPY = {
 
 export const TRUST_NEW_FEE_COPY = {
   title: 'Charge a fee',
-  description: 'A one-off fee on this owner ledger. It posts now if the owner has the funds, otherwise it waits.',
+  description: 'A one-off fee on this owner ledger. It waits as pending until you collect it with Post pending.',
   name: 'Fee name',
   amount: 'Amount ($)',
   gstInclusive: 'Amount includes GST',
@@ -1118,7 +1121,7 @@ export const TRUST_BANK_STATEMENT_COPY = {
   lineInFuture: 'That line is dated after today, so it cannot be receipted yet',
   link: 'Match',
   unlink: 'Unmatch',
-  processAll: (count: number) => `Accept all suggested (${count})`,
+  processAll: (count: number) => `Accept all matched payments (${count})`,
   processed: (count: number) => `${count} line${count === 1 ? '' : 's'} reconciled`,
   failed: (count: number) => `${count} line${count === 1 ? '' : 's'} could not be reconciled`,
   unlinked: 'Bank line unmatched',

@@ -9,18 +9,18 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
 import { TRUST_PAGE_COPY } from '@/constants/trust';
 import { useSelfManagedAccess } from '@/hooks/use-self-managed-access';
-import { selfManagedTrustAgencies } from '@/lib/portal-service-level';
+import { trustAgencies as trustAgenciesOf } from '@/lib/portal-service-level';
 
 /**
- * Self-Manage trust accounting (plan Phase 3) — the agency's principal or accountant. Everyone
- * else goes back to the dashboard.
+ * Trust accounting — the agency's principal or accountant, on a Self-Manage agency (plan Phase 3)
+ * or a Full Service one (Accounting PRD, 19 Nov 2026). Everyone else goes back to the dashboard.
  */
 export default function TrustPage() {
   const router = useRouter();
   const { agencies } = useAgentData();
-  const { ready, selfManagedTrust } = useSelfManagedAccess();
-  const trustAgencies = useMemo(() => selfManagedTrustAgencies(agencies), [agencies]);
-  const redirect = ready && !selfManagedTrust;
+  const { ready, agencyTrust } = useSelfManagedAccess();
+  const trustAgencies = useMemo(() => trustAgenciesOf(agencies), [agencies]);
+  const redirect = ready && !agencyTrust;
 
   useEffect(() => {
     if (redirect) router.replace(ROUTES.DASHBOARD);
