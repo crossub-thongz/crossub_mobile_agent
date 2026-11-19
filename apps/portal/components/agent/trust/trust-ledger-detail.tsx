@@ -2,7 +2,7 @@
 
 import { ArrowLeft } from 'lucide-react';
 
-import { TrustFeeSettingsPanel } from '@/components/agent/trust/trust-fee-settings-panel';
+import { TrustFeeAssignmentsPanel } from '@/components/agent/trust/trust-fee-assignments-panel';
 import { TrustFeesPanel } from '@/components/agent/trust/trust-fees-panel';
 import { TrustLedgerActions } from '@/components/agent/trust/trust-ledger-actions';
 import { TrustLedgerBalanceCheck } from '@/components/agent/trust/trust-ledger-balance-check';
@@ -105,7 +105,7 @@ export function TrustLedgerDetail({
                   accountCodes={accountCodes}
                   onChanged={ledger.reload}
                 />
-                <TrustFeeSettingsPanel agencyId={agencyId} ledgerId={ledgerId} accountCodes={accountCodes} />
+                <TrustFeeAssignmentsPanel agencyId={agencyId} ledgerId={ledgerId} onChanged={ledger.reload} />
                 <TrustWithholdsPanel agencyId={agencyId} ledgerId={ledgerId} onChanged={ledger.reload} />
               </div>
             ) : ledger.data.kind === TRUST_LEDGER_KIND.TENANT && ledger.data.rentProfile ? (

@@ -8,21 +8,15 @@ import {
   TRUST_BPAY_BILLER_PATTERN,
   TRUST_BPAY_REFERENCE_PATTERN,
   TRUST_BSB_PATTERN,
-  TRUST_FEE_CALC,
-  TRUST_FEE_SETTINGS_COPY as FEE_COPY,
   TRUST_PAYEE_ACCOUNT_NUMBER_PATTERN,
   TRUST_PAYOUT_COPY as PAYOUT_COPY,
   TRUST_PAYOUT_METHOD,
   TRUST_SPLIT_FULL_BASIS_POINTS,
-  type TrustFeeCalc,
-  type TrustFeeTrigger,
   type TrustPayoutRowMethod,
 } from '@/constants/trust';
 import type {
   TrustAccountSetupInput,
   TrustBankAccount,
-  TrustFeeSetting,
-  TrustFeeSettingInput,
   TrustPayoutMethod,
   TrustPayoutMethodRowInput,
   UpdateTrustBankAccountInput,
@@ -253,73 +247,4 @@ export function trustPayoutRowsInput(rows: readonly TrustPayoutRowDraft[]): Trus
   }
   if (out.length > 0 && total !== TRUST_SPLIT_FULL_BASIS_POINTS) return fail(PAYOUT_COPY.shareInvalid);
   return pass(out);
-}
-
-// --------------------------------------------------------------------------- Recurring fees
-
-/** A fee setting as typed; `id` keeps an existing setting. */
-export type TrustFeeSettingDraft = {
-  id: string | null;
-  name: string;
-  trigger: TrustFeeTrigger;
-  calc: TrustFeeCalc;
-  amount: string;
-  ratePercent: string;
-  gstInclusive: boolean;
-  accountCodeId: string;
-  isActive: boolean;
-};
-
-export function trustFeeSettingDraft(
-  setting: TrustFeeSetting | null,
-  defaults: { trigger: TrustFeeTrigger; name: string; accountCodeId: string },
-): TrustFeeSettingDraft {
-  return {
-    id: setting?.id ?? null,
-    name: setting?.name ?? defaults.name,
-    trigger: setting?.trigger ?? defaults.trigger,
-    calc: setting?.calc ?? TRUST_FEE_CALC.PERCENT,
-    amount: centsToDollarsInput(setting?.amountCents),
-    ratePercent: setting?.rateBasisPoints != null ? basisPointsToPercentInput(setting.rateBasisPoints) : '',
-    gstInclusive: setting?.gstInclusive ?? true,
-    accountCodeId: setting?.accountCode.id ?? defaults.accountCodeId,
-    isActive: setting?.isActive ?? true,
-  };
-}
-
-/** A saved setting as the replace-all PUT sends it back unchanged. */
-export function trustFeeSettingInputOf(setting: TrustFeeSetting): TrustFeeSettingInput {
-  return {
-    id: setting.id,
-    trigger: setting.trigger,
-    name: setting.name,
-    calc: setting.calc,
-    amountCents: setting.amountCents ?? null,
-    rateBasisPoints: setting.rateBasisPoints ?? null,
-    gstInclusive: setting.gstInclusive,
-    accountCodeId: setting.accountCode.id,
-    isActive: setting.isActive,
-  };
-}
-
-export function trustFeeSettingInput(draft: TrustFeeSettingDraft): TrustFormResult<TrustFeeSettingInput> {
-  const name = draft.name.trim();
-  if (!name || !draft.accountCodeId) return fail(FEE_COPY.incomplete);
-  const base = {
-    id: draft.id ?? undefined,
-    trigger: draft.trigger,
-    name,
-    calc: draft.calc,
-    gstInclusive: draft.gstInclusive,
-    accountCodeId: draft.accountCodeId,
-    isActive: draft.isActive,
-  };
-  if (draft.calc === TRUST_FEE_CALC.FIXED) {
-    const amountCents = parseDollarsToCents(draft.amount);
-    if (amountCents == null || amountCents <= 0) return fail(FEE_COPY.incomplete);
-    return pass({ ...base, amountCents, rateBasisPoints: null });
-  }
-  const rateBasisPoints = percentInputToBasisPoints(draft.ratePercent);
-  if (rateBasisPoints == null) return fail(FEE_COPY.rateInvalid);
-  return pass({ ...base, amountCents: null, rateBasisPoints });
 }

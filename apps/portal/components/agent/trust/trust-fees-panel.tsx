@@ -29,6 +29,7 @@ import {
   TRUST_FEE_CHARGE_STATUS,
   TRUST_FEE_CHARGE_STATUS_LABEL,
   TRUST_FEE_CHARGE_STATUS_TONE,
+  TRUST_EDIT_FEE_COPY as EDIT_COPY,
   TRUST_FEES_COPY as COPY,
   TRUST_NEW_FEE_COPY as NEW_COPY,
   TRUST_PAGE_SIZE_MAX,
@@ -37,6 +38,8 @@ import {
 import { useTrustResource } from '@/hooks/use-trust-resource';
 import {
   createTrustFeeCharge,
+  editTrustFeeCharge,
+  fetchTrustFeeAssignments,
   fetchTrustFeeCharges,
   postPendingTrustFees,
   waiveTrustFeeCharge,
@@ -53,6 +56,10 @@ import {
 } from '@/lib/trust-accounting';
 import { cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { isDuplicateFeeError, manualFeeOptions } from '@/lib/utils/trust-fee-templates';
+
+/** The "Fee" picker's value for a one-off fee (anything else is a MANUAL assignment id). */
+const ONE_OFF = '';
 
 function NewFeeDialog({
   agencyId,
@@ -68,6 +75,11 @@ function NewFeeDialog({
   onCreated: () => void;
 }) {
   const categories = feeCategoryCodes(accountCodes);
+  const assignments = useTrustResource(`${agencyId}:${ledgerId}:fee-assignments`, () =>
+    fetchTrustFeeAssignments(agencyId, ledgerId),
+  );
+  const templates = manualFeeOptions(assignments.data?.assignments ?? []);
+  const [assignmentId, setAssignmentId] = useState(ONE_OFF);
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [gstInclusive, setGstInclusive] = useState(true);
@@ -75,31 +87,60 @@ function NewFeeDialog({
   const [chargeDate, setChargeDate] = useState(trustTodayKey);
   const [idempotencyKey] = useState(newTrustIdempotencyKey);
   const [pending, setPending] = useState(false);
+  const [confirmDuplicate, setConfirmDuplicate] = useState(false);
+  const oneOff = assignmentId === ONE_OFF;
 
-  async function submit() {
+  async function submit(allowDuplicate = false) {
     const amountCents = parseDollarsToCents(amount);
-    if (!name.trim() || !amountCents || !accountCodeId || !chargeDate) {
+    if (!chargeDate || (oneOff && (!name.trim() || !amountCents || !accountCodeId))) {
       toast.error(NEW_COPY.incomplete);
       return;
     }
     setPending(true);
     try {
-      await createTrustFeeCharge(agencyId, ledgerId, {
-        idempotencyKey,
-        name: name.trim(),
-        amountCents,
-        gstInclusive,
-        accountCodeId,
-        chargeDate,
-      });
+      await createTrustFeeCharge(
+        agencyId,
+        ledgerId,
+        oneOff
+          ? { idempotencyKey, name: name.trim(), amountCents: amountCents ?? 0, gstInclusive, accountCodeId, chargeDate }
+          : { idempotencyKey, assignmentId, chargeDate, ...(allowDuplicate ? { allowDuplicate: true } : {}) },
+      );
       toast.success(NEW_COPY.done);
       onCreated();
       onClose();
     } catch (err) {
-      toast.error(apiErrorMessage(err));
+      if (!oneOff && !allowDuplicate && isDuplicateFeeError(err)) setConfirmDuplicate(true);
+      else toast.error(apiErrorMessage(err));
     } finally {
       setPending(false);
     }
+  }
+
+  if (confirmDuplicate) {
+    return (
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open && !pending) onClose();
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{NEW_COPY.duplicateTitle}</DialogTitle>
+            <DialogDescription>{NEW_COPY.duplicateDescription}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={pending} onClick={onClose}>
+              {NEW_COPY.cancel}
+            </Button>
+            <Button type="button" disabled={pending} onClick={() => void submit(true)}>
+              {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+              {NEW_COPY.duplicateConfirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
@@ -115,26 +156,49 @@ function NewFeeDialog({
           <DialogDescription>{NEW_COPY.description}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="trust-fee-name">{NEW_COPY.name}</Label>
-            <Input
-              id="trust-fee-name"
-              value={name}
-              disabled={pending}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+          {templates.length > 0 ? (
             <div className="space-y-1.5">
-              <Label htmlFor="trust-fee-amount">{NEW_COPY.amount}</Label>
-              <Input
-                id="trust-fee-amount"
-                inputMode="decimal"
-                value={amount}
+              <Label htmlFor="trust-fee-source">{NEW_COPY.source}</Label>
+              <select
+                id="trust-fee-source"
+                className={SELECT_CLASS}
+                value={assignmentId}
                 disabled={pending}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => setAssignmentId(e.target.value)}
+              >
+                <option value={ONE_OFF}>{NEW_COPY.oneOff}</option>
+                {templates.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {NEW_COPY.fromTemplate(row.template.name, formatCents(row.current?.amountCents ?? 0))}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          {oneOff ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="trust-fee-name">{NEW_COPY.name}</Label>
+              <Input
+                id="trust-fee-name"
+                value={name}
+                disabled={pending}
+                onChange={(e) => setName(e.target.value)}
               />
             </div>
+          ) : null}
+          <div className="grid grid-cols-2 gap-3">
+            {oneOff ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="trust-fee-amount">{NEW_COPY.amount}</Label>
+                <Input
+                  id="trust-fee-amount"
+                  inputMode="decimal"
+                  value={amount}
+                  disabled={pending}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+              </div>
+            ) : null}
             <div className="space-y-1.5">
               <Label htmlFor="trust-fee-date">{NEW_COPY.date}</Label>
               <Input
@@ -147,37 +211,41 @@ function NewFeeDialog({
               />
             </div>
           </div>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={gstInclusive}
-              disabled={pending}
-              onChange={(e) => setGstInclusive(e.target.checked)}
-              className="rounded border-border"
-            />
-            {NEW_COPY.gstInclusive}
-          </label>
-          <div className="space-y-1.5">
-            <Label htmlFor="trust-fee-category">{NEW_COPY.category}</Label>
-            {categories.length === 0 ? (
-              <p className="text-muted-foreground text-sm">{NEW_COPY.noCategories}</p>
-            ) : (
-              <select
-                id="trust-fee-category"
-                className={SELECT_CLASS}
-                value={accountCodeId}
-                disabled={pending}
-                onChange={(e) => setAccountCodeId(e.target.value)}
-              >
-                <option value="">{NEW_COPY.chooseCategory}</option>
-                {categories.map((code) => (
-                  <option key={code.id} value={code.id}>
-                    {code.code} {code.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+          {oneOff ? (
+            <>
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={gstInclusive}
+                  disabled={pending}
+                  onChange={(e) => setGstInclusive(e.target.checked)}
+                  className="rounded border-border"
+                />
+                {NEW_COPY.gstInclusive}
+              </label>
+              <div className="space-y-1.5">
+                <Label htmlFor="trust-fee-category">{NEW_COPY.category}</Label>
+                {categories.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">{NEW_COPY.noCategories}</p>
+                ) : (
+                  <select
+                    id="trust-fee-category"
+                    className={SELECT_CLASS}
+                    value={accountCodeId}
+                    disabled={pending}
+                    onChange={(e) => setAccountCodeId(e.target.value)}
+                  >
+                    <option value="">{NEW_COPY.chooseCategory}</option>
+                    {categories.map((code) => (
+                      <option key={code.id} value={code.id}>
+                        {code.code} {code.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </>
+          ) : null}
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" disabled={pending} onClick={onClose}>
@@ -185,7 +253,7 @@ function NewFeeDialog({
           </Button>
           <Button
             type="button"
-            disabled={pending || categories.length === 0}
+            disabled={pending || (oneOff && categories.length === 0)}
             onClick={() => void submit()}
           >
             {pending ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -197,7 +265,89 @@ function NewFeeDialog({
   );
 }
 
-/** An owner ledger's fee charges: charge a one-off fee, post what is pending, or waive one. */
+/** Change a PENDING fee's amount with a reason (PRD Step 4: agent edits only). */
+function EditFeeDialog({
+  agencyId,
+  charge,
+  onClose,
+  onSaved,
+}: {
+  agencyId: string;
+  charge: TrustFeeCharge;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [amount, setAmount] = useState(() => (charge.amountCents / 100).toFixed(2));
+  const [reason, setReason] = useState('');
+  const [pending, setPending] = useState(false);
+
+  async function save() {
+    const amountCents = parseDollarsToCents(amount);
+    if (!amountCents || amountCents <= 0 || !reason.trim()) {
+      toast.error(EDIT_COPY.incomplete);
+      return;
+    }
+    setPending(true);
+    try {
+      await editTrustFeeCharge(agencyId, charge.id, { amountCents, reason: reason.trim() });
+      toast.success(EDIT_COPY.done);
+      onSaved();
+      onClose();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !pending) onClose();
+      }}
+    >
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{EDIT_COPY.title(charge.name)}</DialogTitle>
+          <DialogDescription>{EDIT_COPY.description}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="trust-fee-edit-amount">{EDIT_COPY.amount}</Label>
+            <Input
+              id="trust-fee-edit-amount"
+              inputMode="decimal"
+              value={amount}
+              disabled={pending}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="trust-fee-edit-reason">{EDIT_COPY.reason}</Label>
+            <Input
+              id="trust-fee-edit-reason"
+              value={reason}
+              disabled={pending}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" disabled={pending} onClick={onClose}>
+            {EDIT_COPY.cancel}
+          </Button>
+          <Button type="button" disabled={pending} onClick={() => void save()}>
+            {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+            {EDIT_COPY.submit}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** An owner ledger's fee charges: charge a fee, collect what is pending, change or waive one. */
 export function TrustFeesPanel({
   agencyId,
   ledgerId,
@@ -211,6 +361,7 @@ export function TrustFeesPanel({
 }) {
   const [creating, setCreating] = useState(false);
   const [waiving, setWaiving] = useState<TrustFeeCharge | null>(null);
+  const [editing, setEditing] = useState<TrustFeeCharge | null>(null);
   const [posting, setPosting] = useState(false);
   const { data, error, loading, reload } = useTrustResource(`${agencyId}:${ledgerId}:fees`, () =>
     fetchTrustFeeCharges(agencyId, ledgerId, { pageSize: TRUST_PAGE_SIZE_MAX }),
@@ -307,15 +458,26 @@ export function TrustFeesPanel({
                       </td>
                       <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-right')}>
                         {charge.status === TRUST_FEE_CHARGE_STATUS.PENDING ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 text-xs"
-                            onClick={() => setWaiving(charge)}
-                          >
-                            {COPY.waive}
-                          </Button>
+                          <span className="inline-flex gap-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs"
+                              onClick={() => setEditing(charge)}
+                            >
+                              {EDIT_COPY.action}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs"
+                              onClick={() => setWaiving(charge)}
+                            >
+                              {COPY.waive}
+                            </Button>
+                          </span>
                         ) : null}
                       </td>
                     </tr>
@@ -335,6 +497,9 @@ export function TrustFeesPanel({
           onClose={() => setCreating(false)}
           onCreated={changed}
         />
+      ) : null}
+      {editing ? (
+        <EditFeeDialog agencyId={agencyId} charge={editing} onClose={() => setEditing(null)} onSaved={changed} />
       ) : null}
       {waiving ? (
         <TrustReasonDialog
