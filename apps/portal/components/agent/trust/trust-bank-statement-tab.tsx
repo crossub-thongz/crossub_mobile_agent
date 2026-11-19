@@ -142,7 +142,6 @@ export function TrustBankStatementTab({
         lines: lines.map((line) => ({
           bankLine: trustBankLineInput(line),
           idempotencyKey: keys[line.key] ?? newTrustIdempotencyKey(),
-          ledgerId: line.suggestion?.ledgerId ?? undefined,
           transactionId: line.suggestion?.transactionId ?? undefined,
         })),
       });
@@ -181,7 +180,10 @@ export function TrustBankStatementTab({
     setReceiptLine(line);
   }
 
-  const matched = file?.lines.filter((line) => line.status === TRUST_BANK_LINE_STATUS.MATCHED) ?? [];
+  // Only matched withdrawals are accepted in bulk: a deposit is never receipted from a match
+  // (Accounting PRD C04); the agent receipts it from its row and confirms the allocation.
+  const matched =
+    file?.lines.filter((line) => line.status === TRUST_BANK_LINE_STATUS.MATCHED && line.amountCents < 0) ?? [];
   const receiptRow = receiptLine ? rentRowFromLine(receiptLine) : null;
   const shown =
     file?.lines.filter((line) => filter === TRUST_BANK_LINE_FILTER_ALL || line.status === filter) ?? [];
@@ -319,7 +321,7 @@ export function TrustBankStatementTab({
                                   {COPY.receipt}
                                 </Button>
                               ) : null}
-                              {line.status === TRUST_BANK_LINE_STATUS.MATCHED ? (
+                              {line.status === TRUST_BANK_LINE_STATUS.MATCHED && line.amountCents < 0 ? (
                                 <Button
                                   type="button"
                                   size="sm"

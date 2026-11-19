@@ -2,8 +2,8 @@ import type { Agency } from '@/lib/types';
 import { LEASING_PAGE_VIEW, type LeasingPageView } from '@/constants/module-workspace';
 import { ROUTES } from '@/constants/routes';
 import {
+  hasAgencyTrustAccess,
   hasSelfManagedAgency,
-  hasSelfManagedTrustAccess,
   isInspectionOnlyAgent,
   PORTAL_SERVICE_LEVEL,
   resolvePortalServiceLevel,
@@ -91,7 +91,7 @@ export function trainingAudience(agencies: Agency[]): TrainingAudience {
         level === PORTAL_SERVICE_LEVEL.FULL_MANAGEMENT || level === PORTAL_SERVICE_LEVEL.LEGACY
       );
     }),
-    trust: hasSelfManagedTrustAccess(agencies),
+    trust: hasAgencyTrustAccess(agencies),
   };
 }
 

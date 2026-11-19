@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-19
+
+### Added
+- Trust opens for principals and accountants of Full Service and Legacy agencies, so they can set up and run their own trust account
+- New bill warns when the supplier already has a bill with the same invoice no. and saves only after Save anyway
+
+### Changed
+- Bank statement: Accept all matched payments links matched withdrawals only; deposits are receipted from their row
+- Charge a fee: the fee waits as pending until collected with Post pending
+
 ## 2026-11-16
 
 ### Added
