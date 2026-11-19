@@ -7,7 +7,6 @@ import { RentReconciliationCaseDialog } from '@/components/accounting/rent-recon
 import {
   PropertyLeasingCaseWorkflowDialog,
 } from '@/components/agent/property-leasing-case-workflow-dialog';
-import { PropertyMaintenanceCaseDialog } from '@/components/agent/property-maintenance-case-dialog';
 import { PropertyRentReviewCaseWorkflowDialog } from '@/components/agent/property-rent-review-case-workflow-dialog';
 import { RentChasingArrearsDialog } from '@/components/agent/rent-chasing-arrears-dialog';
 import { TribunalCaseDetailDialog } from '@/components/agent/tribunal-case-detail-dialog';
@@ -55,7 +54,6 @@ export function PropertyOverviewJobDialog({
   onClose,
   property,
   propertyId,
-  maintenance,
   rentReviews,
   rentReviewDecisions,
   leasingCases,
@@ -88,17 +86,15 @@ export function PropertyOverviewJobDialog({
   const isV2 = useIsAgentUiV2();
   const open = job != null;
 
+  const opensTaskPage = job != null && (job.kind === 'maintenance' || (isV2 && hasDedicatedV2TaskPage(job.kind)));
+
   useEffect(() => {
-    if (!isV2 || !job || !hasDedicatedV2TaskPage(job.kind)) return;
+    if (!job || !opensTaskPage) return;
     router.replace(relatedPropertyJobHref(job, propertyId));
     onClose();
-  }, [isV2, job, onClose, propertyId, router]);
+  }, [job, onClose, opensTaskPage, propertyId, router]);
 
-  if (!job) {
-    return null;
-  }
-
-  if (isV2 && hasDedicatedV2TaskPage(job.kind)) {
+  if (!job || opensTaskPage) {
     return null;
   }
 
@@ -121,19 +117,6 @@ export function PropertyOverviewJobDialog({
         inspectionId={job.id}
         navContext={fromProperty(propertyId, profileTabForJobKind(job.kind))}
         size={JOB_CASE_DIALOG_SIZE}
-      />
-    );
-  }
-
-  if (job.kind === 'maintenance') {
-    const request = maintenance.find((item) => item.id === job.id) ?? null;
-    return (
-      <PropertyMaintenanceCaseDialog
-        open={open}
-        onClose={onClose}
-        request={request}
-        property={property}
-        propertyId={propertyId}
       />
     );
   }
