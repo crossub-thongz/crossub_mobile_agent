@@ -5,10 +5,14 @@
 ### Added
 - Trust opens for principals and accountants of Full Service and Legacy agencies, so they can set up and run their own trust account
 - New bill warns when the supplier already has a bill with the same invoice no. and saves only after Save anyway
+- Owner folio Bills panel: Pending bills and Paid bills list supplier bills and agency fees together; tick and Pay selected pays them in full together or not at all
 
 ### Changed
 - Bank statement: Accept all matched payments links matched withdrawals only; deposits are receipted from their row
-- Charge a fee: the fee waits as pending until collected with Post pending
+- Charge a fee: the fee waits as pending until paid from the owner's Bills panel
+- Owner summary drops Reserved for bills; Available to pay is the balance less withheld
+- Disburse warns when an owner still has bills due or pending fees; it no longer pays them
+- Fees panel: Collect all pending collects every pending fee together or none
 
 ## 2026-11-16
 

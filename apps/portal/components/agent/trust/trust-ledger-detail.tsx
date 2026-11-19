@@ -7,6 +7,7 @@ import { TrustFeesPanel } from '@/components/agent/trust/trust-fees-panel';
 import { TrustLedgerActions } from '@/components/agent/trust/trust-ledger-actions';
 import { TrustLedgerBalanceCheck } from '@/components/agent/trust/trust-ledger-balance-check';
 import { TrustLedgerSummaryPanel } from '@/components/agent/trust/trust-ledger-summary-panel';
+import { TrustOwnerBillsPanel } from '@/components/agent/trust/trust-owner-bills-panel';
 import { TrustTenantExtras } from '@/components/agent/trust/trust-tenant-extras';
 import { TrustTenantPanel } from '@/components/agent/trust/trust-tenant-panel';
 import { TrustWithholdsPanel } from '@/components/agent/trust/trust-withholds-panel';
@@ -91,6 +92,12 @@ export function TrustLedgerDetail({
             <LedgerEntries agencyId={agencyId} ledgerId={ledgerId} />
             {ledger.data.kind === TRUST_LEDGER_KIND.OWNER ? (
               <div className="space-y-4">
+                <TrustOwnerBillsPanel
+                  agencyId={agencyId}
+                  ledgerId={ledgerId}
+                  reloadKey={`${ledger.data.balanceCents}:${ledger.data.entryCount}`}
+                  onChanged={ledger.reload}
+                />
                 <OwnerStatements agencyId={agencyId} ledger={ledger.data} />
                 <TrustFeesPanel
                   agencyId={agencyId}

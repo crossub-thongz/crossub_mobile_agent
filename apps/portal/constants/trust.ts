@@ -791,6 +791,10 @@ export const TRUST_DISBURSE_COPY = {
   balance: 'Balance',
   billsDue: 'Bills due',
   available: 'To pay',
+  unpaidWarning: (bills: number, fees: string | null) =>
+    `${bills > 0 ? `${bills} bill${bills === 1 ? '' : 's'} due` : ''}${bills > 0 && fees ? ' and ' : ''}${
+      fees ? `${fees} fees` : ''
+    } still pending. Disburse won't pay them, pay them from the owner folio 1st.`,
   nextDue: 'Next due',
   date: 'Disbursement date',
   selectAll: 'Select all payable',
@@ -805,6 +809,48 @@ export const TRUST_DISBURSE_COPY = {
     `${count} owner statement${count === 1 ? '' : 's'} ${count === 1 ? 'is' : 'are'} waiting in Pending mail.`,
   openPendingMail: 'Open Pending mail',
   dismiss: 'Dismiss',
+} as const;
+
+/** Owner folio Pending Bills / Paid Bills (Accounting PRD Step 3, D147). */
+export const TRUST_OWNER_BILL_LIST = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+} as const satisfies Record<string, Schemas['TrustOwnerBillListDto']['list']>;
+export type TrustOwnerBillList = (typeof TRUST_OWNER_BILL_LIST)[keyof typeof TRUST_OWNER_BILL_LIST];
+
+export const TRUST_OWNER_BILL_SOURCE = {
+  SUPPLIER_BILL: 'SUPPLIER_BILL',
+  AGENCY_FEE: 'AGENCY_FEE',
+} as const satisfies Record<string, Schemas['TrustOwnerBillItemDto']['source']>;
+
+export const TRUST_OWNER_BILL_SOURCE_LABEL: Record<Schemas['TrustOwnerBillItemDto']['source'], string> = {
+  SUPPLIER_BILL: 'Supplier bill',
+  AGENCY_FEE: 'Agency fee',
+};
+
+export const TRUST_OWNER_BILLS_COPY = {
+  title: 'Bills',
+  tabs: { PENDING: 'Pending bills', PAID: 'Paid bills' } as Record<TrustOwnerBillList, string>,
+  emptyPending: 'Nothing waiting to be paid.',
+  emptyPaid: 'No bills or fees paid yet.',
+  available: (amount: string) => `Available ${amount}`,
+  selected: (selected: string, available: string) => `Selected ${selected} of ${available} available`,
+  overAvailable: 'More than the owner has available. Nothing will be paid.',
+  paySelected: (count: number) => `Pay selected (${count})`,
+  shortBy: (amount: string) => `Short ${amount}`,
+  due: (date: string) => `Due ${date}`,
+  charged: (date: string) => `Charged ${date}`,
+  paidOn: (date: string, auditNumber: number | null) =>
+    auditNumber ? `Paid ${date} · #${auditNumber}` : `Paid ${date}`,
+  confirmTitle: 'Pay selected bills',
+  confirmDescription:
+    'Paid together in full, or not at all. Money moves from the owner folio to the supplier and agency folios; nothing leaves the bank yet.',
+  confirmTotal: 'Total',
+  confirmAvailable: 'Owner available',
+  confirm: 'Pay now',
+  cancel: 'Cancel',
+  done: (count: number, amount: string) => `${count} paid, ${amount}`,
+  notEnough: (shortfall: string) => `Not enough available, short ${shortfall}. Nothing was paid.`,
 } as const;
 
 export const TRUST_STATEMENT_EMAIL_COPY = {
@@ -980,11 +1026,13 @@ export const TRUST_FEES_COPY = {
   title: 'Fees',
   empty: 'No fees charged yet.',
   charge: 'Charge fee',
-  postPending: 'Post pending',
+  postPending: 'Collect all pending',
   pending: (amount: string, count: number) => `${amount} pending (${count})`,
   postedThisMonth: (amount: string) => `${amount} posted this month`,
   postedResult: (posted: number, stillPending: number) =>
-    `${posted} posted, ${stillPending} still pending`,
+    posted > 0
+      ? `${posted} collected`
+      : `Not enough available to collect all ${stillPending} pending fees. Nothing was collected.`,
   waive: 'Waive',
   date: 'Date',
   fee: 'Fee',
@@ -994,7 +1042,7 @@ export const TRUST_FEES_COPY = {
 
 export const TRUST_NEW_FEE_COPY = {
   title: 'Charge a fee',
-  description: 'A one-off fee on this owner ledger. It waits as pending until you collect it with Post pending.',
+  description: 'A one-off fee on this owner ledger. It waits as pending until you pay it from Bills on this owner.',
   name: 'Fee name',
   amount: 'Amount ($)',
   gstInclusive: 'Amount includes GST',

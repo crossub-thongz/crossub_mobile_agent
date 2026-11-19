@@ -346,6 +346,14 @@ export function TrustDisburseTab({
                             ) : null}
                           </p>
                         ) : null}
+                        {c.billsDueCount > 0 || c.pendingFeeCents > 0 ? (
+                          <p className="mt-0.5 text-xs text-amber-600">
+                            {COPY.unpaidWarning(
+                              c.billsDueCount,
+                              c.pendingFeeCents > 0 ? formatCents(c.pendingFeeCents) : null,
+                            )}
+                          </p>
+                        ) : null}
                       </td>
                       <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-muted-foreground hidden lg:table-cell')}>
                         {c.property?.referenceAddress ?? '—'}

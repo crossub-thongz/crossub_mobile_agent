@@ -316,7 +316,6 @@ export const TRUST_LEDGER_SUMMARY_COPY = {
   moneyIn: 'Money in',
   moneyOut: 'Money out',
   net: 'Net',
-  reserved: 'Reserved for bills',
   withheld: 'Withheld',
   availableToPay: 'Available to pay',
   pendingBills: (count: number) => `${count} bill${count === 1 ? '' : 's'} waiting`,

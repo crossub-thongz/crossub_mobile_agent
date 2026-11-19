@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * This month in, out and net on an owner, supplier or agency folio; an owner also shows what is
- * reserved for bills, withheld and available to pay. `reloadKey` changes after an edit elsewhere
+ * withheld and available to pay (balance less withheld; pending bills reserve nothing). `reloadKey` changes after an edit elsewhere
  * on the ledger page.
  */
 export function TrustLedgerSummaryPanel({
@@ -47,7 +47,6 @@ export function TrustLedgerSummaryPanel({
           {isOwner ? (
             <>
               <div className="border-t pt-1" />
-              <Line label={COPY.reserved} value={formatCents(data.reservedCents)} />
               <Line
                 label={COPY.withheld}
                 value={formatCents(data.withheldCents)}
