@@ -51,6 +51,11 @@ export type TrustFeeChargeList = components['schemas']['TrustFeeChargeListDto'];
 export type CreateTrustFeeChargeInput = components['schemas']['CreateManualFeeDto'];
 export type WaiveTrustFeeChargeInput = components['schemas']['WaiveFeeChargeDto'];
 export type TrustPostPendingFeesResult = components['schemas']['TrustPostPendingFeesResultDto'];
+export type TrustOwnerBillList = components['schemas']['TrustOwnerBillListDto'];
+export type TrustOwnerBillItem = components['schemas']['TrustOwnerBillItemDto'];
+export type PayTrustOwnerBillsInput = components['schemas']['CollectOwnerFolioBillsDto'];
+export type TrustOwnerCollectResult = components['schemas']['TrustOwnerCollectResultDto'];
+type TrustOwnerBillListQuery = operations['AgentTrustController_listOwnerBills']['parameters']['query'];
 export type TrustPaymentsSummary = components['schemas']['TrustPaymentsSummaryDto'];
 export type TrustPaymentBatch = components['schemas']['TrustPaymentBatchDto'];
 export type TrustPaymentBatchList = components['schemas']['TrustPaymentBatchListDto'];
@@ -470,6 +475,31 @@ export async function postPendingTrustFees(
     { params: { path: { agencyId, ledgerId } } },
   );
   return unwrapCrossubResult(result, "Couldn't post the pending fees");
+}
+
+/** Owner folio Pending Bills or Paid Bills: supplier bills and agency fees together (PRD phase 2). */
+export async function fetchTrustOwnerBills(
+  agencyId: string,
+  ledgerId: string,
+  query: TrustOwnerBillListQuery = {},
+): Promise<TrustOwnerBillList> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/owner-bills', {
+    params: { path: { agencyId, ledgerId }, query },
+  });
+  return unwrapCrossubResult(result, "Couldn't load the owner's bills");
+}
+
+/** Pay the selected bills and fees of one owner in full, all together or none (409 with the reason). */
+export async function payTrustOwnerBills(
+  agencyId: string,
+  ledgerId: string,
+  body: PayTrustOwnerBillsInput,
+): Promise<TrustOwnerCollectResult> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/owner-bills/pay', {
+    params: { path: { agencyId, ledgerId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't pay the selected bills");
 }
 
 export async function waiveTrustFeeCharge(
