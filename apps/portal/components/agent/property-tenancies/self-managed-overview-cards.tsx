@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Home, KeyRound, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { PropertyAssignedAgentDialog } from '@/components/agent/property-assigned-agent-dialog';
 import { PropertyBondEditDialog } from '@/components/agent/property-bond-edit-dialog';
 import { PropertyBuildingContactsDialog } from '@/components/agent/property-building-contacts-dialog';
 import { PropertyFactsEditDialog } from '@/components/agent/property-facts-edit-dialog';
@@ -324,6 +325,7 @@ export function SelfManagedOverviewCards({
   const [ownersOpen, setOwnersOpen] = useState(false);
   const [paymentRefOpen, setPaymentRefOpen] = useState(false);
   const [bondOpen, setBondOpen] = useState(false);
+  const [agentOpen, setAgentOpen] = useState(false);
   const [detailsEdit, setDetailsEdit] = useState<TenantDetailsTarget | null>(null);
   const [inviteBusy, setInviteBusy] = useState(false);
 
@@ -474,6 +476,9 @@ export function SelfManagedOverviewCards({
               <PersonAvatar name={propertyManager || TENANCY_PLACEHOLDER} tone={OVERVIEW_CARD_TONE.PROPERTY.avatar} small />
               <span className="truncate text-sm font-medium">{propertyManager || TENANCY_PLACEHOLDER}</span>
             </div>
+            {property.agencyId ? (
+              <CardLink className="mt-0.5" label={OVERVIEW_ACTION.EDIT} onClick={() => setAgentOpen(true)} />
+            ) : null}
           </div>
           <ContactColumn
             label={OVERVIEW_LABEL.BUILDING_MANAGER}
@@ -778,6 +783,12 @@ export function SelfManagedOverviewCards({
       </div>
 
       <PropertyFactsEditDialog open={factsOpen} onOpenChange={setFactsOpen} property={property} onSaved={onChanged} />
+      <PropertyAssignedAgentDialog
+        open={agentOpen}
+        onOpenChange={setAgentOpen}
+        property={property}
+        onSaved={onChanged}
+      />
       <PropertyBuildingContactsDialog
         open={buildingOpen}
         onOpenChange={setBuildingOpen}
