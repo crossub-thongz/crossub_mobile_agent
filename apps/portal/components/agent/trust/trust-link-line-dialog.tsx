@@ -20,33 +20,32 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  TRUST_BANK_STATEMENT_COPY,
-  TRUST_LINK_LINE_COPY as COPY,
   TRUST_LINK_LINE_WINDOW_DAYS,
   TRUST_PAGE_SIZE_MAX,
   TRUST_TRANSACTION_CATEGORY,
+  TRUST_TRANSACTION_DISPLAY_STATUS,
   TRUST_TRANSACTIONS_COPY,
 } from '@/constants/trust';
+import {
+  TRUST_BANK_WORKSPACE_COPY,
+  TRUST_MATCH_LINE_COPY as COPY,
+} from '@/constants/trust-bank-workspace';
 import { useTrustResource } from '@/hooks/use-trust-resource';
 import {
   fetchTrustTransactions,
-  linkTrustBankLine,
-  type TrustBankFileLine,
+  matchTrustBankLine,
+  type MatchTrustBankLineInput,
+  type TrustBankWorkspaceLine,
 } from '@/lib/crossub-api/agent-trust-client';
-import {
-  isPostedOriginalTrustTransaction,
-  formatCents,
-  formatTrustDate,
-  shiftTrustDateKey,
-  trustBankLineInput,
-  trustTodayKey,
-} from '@/lib/trust-accounting';
+import { formatCents, formatTrustDate, shiftTrustDateKey, trustTodayKey } from '@/lib/trust-accounting';
 import { cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { isMatchCandidate } from '@/utils/trust-bank-workspace';
 
 /**
- * Match an unmatched bank line to the posted receipt or withdrawal it is: same amount, not yet
- * on a statement, dated within a month either side.
+ * PRD phase 5 (D159, D161): match a saved bank line to exactly one thing — an unreconciled posted
+ * receipt or withdrawal of the same signed amount nearby, or (a debit) the payment batch whose
+ * total the bank paid as one debit. A cent out or the wrong way is never offered (UAT 16).
  */
 export function TrustLinkLineDialog({
   agencyId,
@@ -57,35 +56,32 @@ export function TrustLinkLineDialog({
 }: {
   agencyId: string;
   bankAccountId: string;
-  line: TrustBankFileLine;
+  line: TrustBankWorkspaceLine;
   onClose: () => void;
   onLinked: () => void;
 }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const today = trustTodayKey();
   const windowEnd = shiftTrustDateKey(line.lineDate, TRUST_LINK_LINE_WINDOW_DAYS);
-  const { data, error, loading, reload } = useTrustResource(`${agencyId}:${line.key}`, () =>
+  const { data, error, loading, reload } = useTrustResource(`${agencyId}:${line.id}:match`, () =>
     fetchTrustTransactions(agencyId, bankAccountId, {
       pageSize: TRUST_PAGE_SIZE_MAX,
       category:
         line.amountCents > 0 ? TRUST_TRANSACTION_CATEGORY.MONEY_IN : TRUST_TRANSACTION_CATEGORY.MONEY_OUT,
-      reconciled: false,
       from: shiftTrustDateKey(line.lineDate, -TRUST_LINK_LINE_WINDOW_DAYS),
       to: windowEnd < today ? windowEnd : today,
     }),
   );
-  const candidates = (data?.items ?? []).filter(
-    (tx) => tx.cashAmountCents === line.amountCents && isPostedOriginalTrustTransaction(tx),
+  const candidates = (data?.items ?? []).filter((tx) =>
+    isMatchCandidate(tx, line.amountCents, TRUST_TRANSACTION_DISPLAY_STATUS.UNRECONCILED),
   );
+  const batch = line.suggestedBatch ?? null;
 
-  async function link(transactionId: string) {
-    setPendingId(transactionId);
+  async function match(key: string, body: MatchTrustBankLineInput) {
+    setPendingId(key);
     try {
-      await linkTrustBankLine(agencyId, bankAccountId, {
-        bankLine: trustBankLineInput(line),
-        transactionId,
-      });
-      toast.success(TRUST_BANK_STATEMENT_COPY.linked);
+      await matchTrustBankLine(agencyId, line.id, body);
+      toast.success(TRUST_BANK_WORKSPACE_COPY.matched);
       onLinked();
       onClose();
     } catch (err) {
@@ -109,6 +105,29 @@ export function TrustLinkLineDialog({
             {line.memo} · {COPY.description(formatCents(line.amountCents), formatTrustDate(line.lineDate))}
           </DialogDescription>
         </DialogHeader>
+        {batch ? (
+          <div className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+            <div>
+              <p className="font-medium">
+                {COPY.batch} · {TRUST_BANK_WORKSPACE_COPY.matchedBatch(batch.batchNumber, batch.paymentCount)}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {formatTrustDate(batch.processingDate)} · {formatCents(batch.totalCents)} · {COPY.batchHint}
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              disabled={pendingId !== null}
+              onClick={() => void match(batch.id, { paymentBatchId: batch.id })}
+            >
+              {pendingId === batch.id ? <Loader2 className="size-3.5 animate-spin" /> : null}
+              {COPY.choose}
+            </Button>
+          </div>
+        ) : null}
         {!data ? (
           error ? (
             <TrustLoadError error={error} onRetry={reload} />
@@ -116,7 +135,7 @@ export function TrustLinkLineDialog({
             <TrustLoading />
           )
         ) : candidates.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{COPY.empty}</p>
+          batch ? null : <p className="text-muted-foreground text-sm">{COPY.empty}</p>
         ) : (
           <div className={cn('max-h-[50vh] overflow-auto rounded-lg border', loading && 'opacity-60')}>
             <table className="w-full border-collapse text-sm">
@@ -139,9 +158,7 @@ export function TrustLinkLineDialog({
                     </td>
                     <td className={TRUST_TABLE_CELL_CLASS}>
                       <p className="font-medium">{tx.description}</p>
-                      {tx.partyName ? (
-                        <p className="text-muted-foreground text-xs">{tx.partyName}</p>
-                      ) : null}
+                      {tx.partyName ? <p className="text-muted-foreground text-xs">{tx.partyName}</p> : null}
                     </td>
                     <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-right')}>
                       <Button
@@ -150,7 +167,7 @@ export function TrustLinkLineDialog({
                         variant="outline"
                         className="h-7 text-xs"
                         disabled={pendingId !== null}
-                        onClick={() => void link(tx.id)}
+                        onClick={() => void match(tx.id, { transactionId: tx.id })}
                       >
                         {pendingId === tx.id ? <Loader2 className="size-3.5 animate-spin" /> : null}
                         {COPY.choose}

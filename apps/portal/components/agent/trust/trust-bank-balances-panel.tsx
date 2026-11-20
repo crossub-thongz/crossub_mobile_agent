@@ -13,6 +13,7 @@ import {
 } from '@/components/agent/trust/trust-ui';
 import { Button } from '@/components/ui/button';
 import { TRUST_RECONCILIATION_UPKEEP_COPY as COPY } from '@/constants/trust';
+import { TRUST_RECONCILIATION_PHASE5_COPY as PHASE5_COPY } from '@/constants/trust-bank-workspace';
 import { useTrustResource } from '@/hooks/use-trust-resource';
 import { fetchTrustBankBalances, removeTrustBankBalance } from '@/lib/crossub-api/agent-trust-client';
 import { formatCents, formatTrustDate } from '@/lib/trust-accounting';
@@ -83,6 +84,12 @@ export function TrustBankBalancesPanel({
                   </td>
                   <td className={cn(TRUST_TABLE_CELL_CLASS, row.isReconciled ? 'text-emerald-600' : 'text-amber-600')}>
                     {row.isReconciled ? COPY.reconciled : COPY.outBy(formatCents(row.outByCents))}
+                    {/* PRD phase 5 (D165): the check as made, frozen when the balance was recorded. */}
+                    {row.checkedDifferenceCents != null ? (
+                      <p className="text-muted-foreground text-xs">
+                        {PHASE5_COPY.checkedAt}: {PHASE5_COPY.checkedDifference(formatCents(row.checkedDifferenceCents))}
+                      </p>
+                    ) : null}
                   </td>
                   <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-right')}>
                     <Button

@@ -82,6 +82,8 @@ export const TRUST_AUDIT_ACTION_LABEL: Record<TrustAuditAction, string> = {
   WORKSPACE_MEMBER_REMOVED: 'Member removed',
   BANK_BALANCE_RECORDED: 'Bank balance recorded',
   BANK_BALANCE_REMOVED: 'Bank balance removed',
+  RECON_ADJUSTMENT_ADDED: 'Reconciliation adjustment added',
+  RECON_ADJUSTMENT_REMOVED: 'Reconciliation adjustment removed',
 };
 
 /** The action filter's order: as the API enum reads (setup, posting, bank, bills, money out, control). */
@@ -120,6 +122,7 @@ export const TRUST_AUDIT_ENTITY_LABEL: Record<TrustAuditEntityType, string> = {
   TrustBankBalance: 'Bank balance',
   TrustRentRate: 'Rent rate',
   TrustAllocationCorrection: 'Allocation correction',
+  TrustReconciliationAdjustment: 'Reconciliation adjustment',
 };
 
 export const TRUST_AUDIT_ENTITY_ORDER = Object.keys(TRUST_AUDIT_ENTITY_LABEL) as TrustAuditEntityType[];

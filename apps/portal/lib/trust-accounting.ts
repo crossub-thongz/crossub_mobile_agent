@@ -10,8 +10,6 @@ import {
 import { ApiError } from '@/lib/api';
 import type {
   TrustAccountCode,
-  TrustBankFileLine,
-  TrustBankLineInput,
   TrustReportQuery,
   TrustTransaction,
 } from '@/lib/crossub-api/agent-trust-client';
@@ -131,20 +129,13 @@ export function trustMonthStartKey(key: string): string {
   return `${key.slice(0, 8)}01`;
 }
 
-/** A bank line exactly as the read returned it, to send back with a reconcile call (D98). */
-export function trustBankLineInput(line: TrustBankFileLine): TrustBankLineInput {
-  return {
-    lineDate: line.lineDate,
-    memo: line.memo,
-    amountCents: line.amountCents,
-    reference: line.reference ?? null,
-    ordinal: line.ordinal,
-  };
-}
-
-/** A posted original (not a reversal): what may be reversed or matched to a bank line. */
+/**
+ * A posted original (not a reversal): what may be reversed or matched to a bank line. PRD phase 5
+ * (D160): a posted receipt or withdrawal reads Reconciled or Unreconciled, so "posted" is any
+ * status but Reversed.
+ */
 export function isPostedOriginalTrustTransaction(transaction: TrustTransaction): boolean {
   return (
-    transaction.displayStatus === TRUST_TRANSACTION_DISPLAY_STATUS.POSTED && !transaction.isReversal
+    transaction.displayStatus !== TRUST_TRANSACTION_DISPLAY_STATUS.REVERSED && !transaction.isReversal
   );
 }

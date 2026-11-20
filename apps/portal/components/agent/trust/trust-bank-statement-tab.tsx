@@ -1,7 +1,7 @@
 'use client';
 
-import { Loader2, RefreshCw, Upload } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Loader2, Upload } from 'lucide-react';
+import { useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
 import { FilterChips } from '@/components/agent/filter-chips';
@@ -10,49 +10,54 @@ import { TrustReceiptDialog } from '@/components/agent/trust/trust-receipt-dialo
 import {
   TRUST_TABLE_CELL_CLASS,
   TRUST_TABLE_HEAD_CLASS,
-  TrustPill,
+  TrustConfirmDialog,
+  TrustLoadError,
+  TrustLoading,
+  TrustReasonDialog,
 } from '@/components/agent/trust/trust-ui';
 import { Button } from '@/components/ui/button';
+import { TRUST_BANK_FILE } from '@/constants/trust';
 import {
-  TRUST_BANK_FILE,
-  TRUST_BANK_LINE_FILTER_ALL,
-  TRUST_BANK_LINE_STATUS,
-  TRUST_BANK_LINE_STATUS_LABEL,
-  TRUST_BANK_LINE_STATUS_TONE,
-  TRUST_BANK_STATEMENT_COPY as COPY,
-  type TrustBankLineFilter,
-} from '@/constants/trust';
+  TRUST_BANK_LINE_VIEW,
+  TRUST_BANK_LINE_VIEW_LABEL,
+  TRUST_BANK_LINE_VIEW_ORDER,
+  TRUST_BANK_LINES_PAGE_SIZE,
+  TRUST_BANK_WORKSPACE_COPY as COPY,
+} from '@/constants/trust-bank-workspace';
+import { useTrustResource } from '@/hooks/use-trust-resource';
 import {
-  processMatchedTrustBankLines,
-  readTrustBankStatement,
-  unlinkTrustBankLine,
-  type ReadTrustBankFileInput,
-  type TrustBankFile,
-  type TrustBankFileLine,
+  deleteTrustBankLine,
+  fetchTrustBankLines,
+  importTrustBankFile,
+  matchSuggestedTrustBankLines,
+  matchTrustBankLine,
+  unmatchTrustBankLine,
+  type TrustBankWorkspace,
+  type TrustBankWorkspaceLine,
 } from '@/lib/crossub-api/agent-trust-client';
 import { fileToBase64 } from '@/lib/file-upload';
-import {
-  formatCents,
-  formatTrustDate,
-  newTrustIdempotencyKey,
-  trustBankLineInput,
-  trustTodayKey,
-} from '@/lib/trust-accounting';
+import { formatCents, formatTrustDate, trustTodayKey } from '@/lib/trust-accounting';
 import type { ReceiptTenancySource } from '@/lib/trust-tenancy-search';
-import { cn } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { pageCount, suggestedMatchOf, suggestionText } from '@/utils/trust-bank-workspace';
 
-function filterOptions(counts: TrustBankFile['counts']) {
-  return [
-    { id: TRUST_BANK_LINE_FILTER_ALL, label: `${COPY.all} (${counts.all})` },
-    { id: TRUST_BANK_LINE_STATUS.UNMATCHED, label: `${COPY.unmatched} (${counts.unmatched})` },
-    { id: TRUST_BANK_LINE_STATUS.MATCHED, label: `${COPY.matched} (${counts.matched})` },
-    { id: TRUST_BANK_LINE_STATUS.PROCESSED, label: `${COPY.reconciled} (${counts.reconciled})` },
-  ] as const satisfies readonly { id: TrustBankLineFilter; label: string }[];
+type View = TrustBankWorkspaceLine['view'];
+
+function viewOptions(counts: TrustBankWorkspace['counts'] | undefined) {
+  const countOf: Record<View, number | undefined> = {
+    UNMATCHED: counts?.unmatched,
+    MATCHED: counts?.matched,
+    DELETED: counts?.deleted,
+  };
+  return TRUST_BANK_LINE_VIEW_ORDER.map((id) => ({
+    id,
+    label: countOf[id] === undefined ? TRUST_BANK_LINE_VIEW_LABEL[id] : `${TRUST_BANK_LINE_VIEW_LABEL[id]} (${countOf[id]})`,
+  }));
 }
 
 /** A credit line's suggested tenant, enough to open the receipt. The dialog loads the paid-to. */
-function rentRowFromLine(line: TrustBankFileLine): ReceiptTenancySource | null {
+function rentRowFromLine(line: TrustBankWorkspaceLine): ReceiptTenancySource | null {
   const suggestion = line.suggestion;
   if (!suggestion?.ledgerId || line.amountCents <= 0) return null;
   return {
@@ -67,22 +72,11 @@ function rentRowFromLine(line: TrustBankFileLine): ReceiptTenancySource | null {
   };
 }
 
-function suggestionText(line: TrustBankFileLine): string | null {
-  const s = line.suggestion;
-  if (!s) return null;
-  if (s.ledgerName) {
-    return COPY.suggestionTenant(s.ledgerName, s.propertyReferenceAddress ?? s.propertyAddress ?? null);
-  }
-  if (s.transactionAuditNumber != null) {
-    return COPY.suggestionTransaction(s.transactionAuditNumber, s.transactionDescription ?? '');
-  }
-  return null;
-}
-
 /**
- * Import a QIF bank statement and reconcile it line by line, as the staff bank statement screen
- * does: accept a suggested match, match a line to a posted transaction, or unmatch a reconciled
- * line. The file is never stored (D98), so every action re-reads it to refresh the statuses.
+ * The bank workspace (PRD phase 5, D159, D161): imported lines are kept until matched or deleted,
+ * across every import. Match a line to its suggestion, to a picked unreconciled transaction or to a
+ * payment batch total; receipt a deposit and then match the line to the new receipt; delete a line
+ * with a reason; unmatch. Importing and matching never post anything.
  */
 export function TrustBankStatementTab({
   agencyId,
@@ -92,29 +86,18 @@ export function TrustBankStatementTab({
   bankAccountId: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [upload, setUpload] = useState<ReadTrustBankFileInput | null>(null);
-  const [file, setFile] = useState<TrustBankFile | null>(null);
-  const [keys, setKeys] = useState<Record<string, string>>({});
-  const [filter, setFilter] = useState<TrustBankLineFilter>(TRUST_BANK_LINE_FILTER_ALL);
-  const [reading, setReading] = useState(false);
-  const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [linking, setLinking] = useState<TrustBankFileLine | null>(null);
-  const [receiptLine, setReceiptLine] = useState<TrustBankFileLine | null>(null);
+  const [view, setView] = useState<View>(TRUST_BANK_LINE_VIEW.UNMATCHED);
+  const [page, setPage] = useState(1);
+  const [importing, setImporting] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [linking, setLinking] = useState<TrustBankWorkspaceLine | null>(null);
+  const [receiptLine, setReceiptLine] = useState<TrustBankWorkspaceLine | null>(null);
+  const [deleting, setDeleting] = useState<TrustBankWorkspaceLine | null>(null);
+  const [unmatching, setUnmatching] = useState<TrustBankWorkspaceLine | null>(null);
 
-  async function read(input: ReadTrustBankFileInput) {
-    setReading(true);
-    try {
-      const next = await readTrustBankStatement(agencyId, bankAccountId, input);
-      setUpload(input);
-      setFile(next);
-      // One idempotency key per line per read: a double submit posts once.
-      setKeys(Object.fromEntries(next.lines.map((line) => [line.key, newTrustIdempotencyKey()])));
-    } catch (err) {
-      toast.error(apiErrorMessage(err, COPY.readFailed));
-    } finally {
-      setReading(false);
-    }
-  }
+  const lines = useTrustResource(`${agencyId}:${bankAccountId}:bank-lines:${view}:${page}`, () =>
+    fetchTrustBankLines(agencyId, bankAccountId, { view, page, pageSize: TRUST_BANK_LINES_PAGE_SIZE }),
+  );
 
   async function onFileChosen(chosen: File | undefined) {
     if (inputRef.current) inputRef.current.value = '';
@@ -123,55 +106,61 @@ export function TrustBankStatementTab({
       toast.error(COPY.tooLarge);
       return;
     }
-    await read({
-      fileName: chosen.name,
-      mimeType: chosen.type || TRUST_BANK_FILE.DEFAULT_MIME_TYPE,
-      sizeBytes: chosen.size,
-      contentBase64: await fileToBase64(chosen),
-    });
-  }
-
-  function refresh() {
-    if (upload) void read(upload);
-  }
-
-  async function processLines(lines: readonly TrustBankFileLine[], busy: string) {
-    setBusyKey(busy);
+    setImporting(true);
     try {
-      const result = await processMatchedTrustBankLines(agencyId, bankAccountId, {
-        lines: lines.map((line) => ({
-          bankLine: trustBankLineInput(line),
-          idempotencyKey: keys[line.key] ?? newTrustIdempotencyKey(),
-          transactionId: line.suggestion?.transactionId ?? undefined,
-        })),
+      const result = await importTrustBankFile(agencyId, bankAccountId, {
+        fileName: chosen.name,
+        mimeType: chosen.type || TRUST_BANK_FILE.DEFAULT_MIME_TYPE,
+        sizeBytes: chosen.size,
+        contentBase64: await fileToBase64(chosen),
       });
-      if (result.processedCount > 0) toast.success(COPY.processed(result.processedCount));
-      if (result.failed.length > 0) {
-        toast.error(`${COPY.failed(result.failed.length)}: ${result.failed[0].reason}`);
-      }
-      refresh();
+      if (result.alreadyImported) toast.info(COPY.alreadyImported);
+      else toast.success(COPY.imported(result.newLineCount, result.duplicateLineCount));
+      if (result.skippedBeforeOpeningCount > 0) toast.info(COPY.skipped(result.skippedBeforeOpeningCount));
+      setView(TRUST_BANK_LINE_VIEW.UNMATCHED);
+      setPage(1);
+      lines.reload();
     } catch (err) {
-      toast.error(apiErrorMessage(err));
+      toast.error(apiErrorMessage(err, COPY.importFailed));
     } finally {
-      setBusyKey(null);
+      setImporting(false);
     }
   }
 
-  async function unlink(line: TrustBankFileLine) {
-    if (!line.savedLineId) return;
-    setBusyKey(line.key);
+  async function accept(line: TrustBankWorkspaceLine) {
+    const target = suggestedMatchOf(line);
+    if (!target) return;
+    setBusyId(line.id);
     try {
-      await unlinkTrustBankLine(agencyId, line.savedLineId);
-      toast.success(COPY.unlinked);
-      refresh();
+      await matchTrustBankLine(agencyId, line.id, target);
+      toast.success(COPY.matched);
+      lines.reload();
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
-      setBusyKey(null);
+      setBusyId(null);
     }
   }
 
-  function openReceipt(line: TrustBankFileLine) {
+  async function acceptAll(candidates: readonly TrustBankWorkspaceLine[]) {
+    setBusyId(TRUST_BANK_LINE_VIEW.UNMATCHED);
+    try {
+      const result = await matchSuggestedTrustBankLines(
+        agencyId,
+        bankAccountId,
+        candidates.map((line) => line.id),
+      );
+      if (result.matchedCount > 0) toast.success(COPY.matchedCount(result.matchedCount));
+      if (result.failed.length > 0) toast.error(`${COPY.failedCount(result.failed.length)}: ${result.failed[0].reason}`);
+      lines.reload();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function openReceipt(line: TrustBankWorkspaceLine) {
     if (line.amountCents <= 0) return;
     if (line.lineDate > trustTodayKey()) {
       toast.error(COPY.lineInFuture);
@@ -180,42 +169,33 @@ export function TrustBankStatementTab({
     setReceiptLine(line);
   }
 
-  // Only matched withdrawals are accepted in bulk: a deposit is never receipted from a match
-  // (Accounting PRD C04); the agent receipts it from its row and confirms the allocation.
-  const matched =
-    file?.lines.filter((line) => line.status === TRUST_BANK_LINE_STATUS.MATCHED && line.amountCents < 0) ?? [];
-  const receiptRow = receiptLine ? rentRowFromLine(receiptLine) : null;
-  const shown =
-    file?.lines.filter((line) => filter === TRUST_BANK_LINE_FILTER_ALL || line.status === filter) ?? [];
-  const busy = reading || busyKey !== null;
+  /** Step two of "Receipt": the posted receipt explains the line (never sent as a bank line). */
+  async function matchReceipted(line: TrustBankWorkspaceLine, transactionId: string) {
+    try {
+      await matchTrustBankLine(agencyId, line.id, { transactionId });
+      toast.success(COPY.receiptThenMatch);
+    } catch (err) {
+      toast.error(`${COPY.receiptNotMatched}: ${apiErrorMessage(err)}`);
+    } finally {
+      lines.reload();
+    }
+  }
+
+  const data = lines.data;
+  const acceptable = view === TRUST_BANK_LINE_VIEW.UNMATCHED ? (data?.items ?? []).filter((line) => suggestedMatchOf(line)) : [];
+  const busy = importing || busyId !== null;
+  const pages = data ? pageCount(data.total, data.pageSize) : 1;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-2 rounded-xl border bg-card p-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0 text-sm">
-          {file ? (
-            <>
-              <p className="font-medium">{file.fileName}</p>
-              <p className="text-muted-foreground text-xs">
-                {COPY.summary(file.lineCount, formatTrustDate(file.dateFrom), formatTrustDate(file.dateTo))}
-                {file.skippedBeforeOpeningCount > 0
-                  ? ` · ${COPY.skipped(file.skippedBeforeOpeningCount)}`
-                  : ''}
-              </p>
-            </>
-          ) : (
-            <p className="text-muted-foreground">{COPY.intro}</p>
-          )}
+          <p className="text-muted-foreground">{COPY.intro}</p>
+          <p className="text-muted-foreground mt-1 text-xs">{COPY.workspaceHint}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {file ? (
-            <Button type="button" variant="outline" size="sm" disabled={busy} onClick={refresh}>
-              <RefreshCw className="size-4" />
-              {COPY.reread}
-            </Button>
-          ) : null}
           <Button type="button" size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>
-            {reading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+            {importing ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
             {COPY.choose}
           </Button>
           <input
@@ -228,171 +208,230 @@ export function TrustBankStatementTab({
         </div>
       </div>
 
-      {file ? (
-        <>
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
-            <div className="min-w-0 flex-1">
-              <FilterChips options={filterOptions(file.counts)} value={filter} onChange={setFilter} />
-            </div>
-            {matched.length > 0 ? (
-              <Button
-                type="button"
-                size="sm"
-                disabled={busy}
-                onClick={() => void processLines(matched, TRUST_BANK_LINE_STATUS.MATCHED)}
-              >
-                {busyKey === TRUST_BANK_LINE_STATUS.MATCHED ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : null}
-                {COPY.processAll(matched.length)}
-              </Button>
-            ) : null}
-          </div>
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
+        <div className="min-w-0 flex-1">
+          <FilterChips
+            options={viewOptions(data?.counts)}
+            value={view}
+            onChange={(next) => {
+              setView(next);
+              setPage(1);
+            }}
+          />
+        </div>
+        {acceptable.length > 0 ? (
+          <Button type="button" size="sm" disabled={busy} onClick={() => void acceptAll(acceptable)}>
+            {busyId === TRUST_BANK_LINE_VIEW.UNMATCHED ? <Loader2 className="size-4 animate-spin" /> : null}
+            {COPY.acceptAll(acceptable.length)}
+          </Button>
+        ) : null}
+      </div>
 
-          {shown.length === 0 ? (
-            <p className="text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm">
-              {COPY.empty}
-            </p>
-          ) : (
-            <div className={cn('overflow-x-auto rounded-xl border bg-card', reading && 'opacity-60')}>
-              <table className="w-full border-collapse text-sm">
-                <thead className="border-b">
-                  <tr>
-                    <th className={TRUST_TABLE_HEAD_CLASS}>{COPY.date}</th>
-                    <th className={TRUST_TABLE_HEAD_CLASS}>{COPY.memo}</th>
-                    <th className={cn(TRUST_TABLE_HEAD_CLASS, 'text-right')}>{COPY.amount}</th>
-                    <th className={TRUST_TABLE_HEAD_CLASS}>{COPY.status}</th>
-                    <th className={cn(TRUST_TABLE_HEAD_CLASS, 'hidden lg:table-cell')}>{COPY.match}</th>
-                    <th className={TRUST_TABLE_HEAD_CLASS} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {shown.map((line) => {
-                    const suggestion = suggestionText(line);
-                    return (
-                      <tr key={line.key} className="border-b last:border-b-0">
-                        <td className={cn(TRUST_TABLE_CELL_CLASS, 'whitespace-nowrap')}>
-                          {formatTrustDate(line.lineDate)}
-                        </td>
-                        <td className={TRUST_TABLE_CELL_CLASS}>
-                          <p>{line.memo}</p>
-                          {line.reference ? (
-                            <p className="text-muted-foreground text-xs">{line.reference}</p>
-                          ) : null}
-                        </td>
-                        <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-right tabular-nums')}>
-                          {formatCents(line.amountCents)}
-                        </td>
-                        <td className={TRUST_TABLE_CELL_CLASS}>
-                          <TrustPill className={TRUST_BANK_LINE_STATUS_TONE[line.status]}>
-                            {TRUST_BANK_LINE_STATUS_LABEL[line.status]}
-                          </TrustPill>
-                        </td>
-                        <td className={cn(TRUST_TABLE_CELL_CLASS, 'hidden lg:table-cell')}>
-                          {line.transaction ? (
-                            <p>{COPY.reconciledTo(line.transaction.auditNumber, line.transaction.description)}</p>
-                          ) : suggestion ? (
-                            <>
-                              <p>{suggestion}</p>
-                              {line.suggestion?.amountDiffersFromRent ? (
-                                <p className="text-amber-700 text-xs dark:text-amber-300">
-                                  {COPY.amountDiffers}
-                                </p>
-                              ) : null}
-                            </>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-right whitespace-nowrap')}>
-                          {busyKey === line.key ? (
-                            <Loader2 className="ml-auto size-4 animate-spin" />
-                          ) : (
-                            <div className="flex justify-end gap-1.5">
-                              {line.amountCents > 0 && line.status !== TRUST_BANK_LINE_STATUS.PROCESSED ? (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 text-xs"
-                                  disabled={busy}
-                                  onClick={() => openReceipt(line)}
-                                >
-                                  {COPY.receipt}
-                                </Button>
-                              ) : null}
-                              {line.status === TRUST_BANK_LINE_STATUS.MATCHED && line.amountCents < 0 ? (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 text-xs"
-                                  disabled={busy}
-                                  onClick={() => void processLines([line], line.key)}
-                                >
-                                  {COPY.processOne}
-                                </Button>
-                              ) : null}
-                              {line.status === TRUST_BANK_LINE_STATUS.UNMATCHED ? (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 text-xs"
-                                  disabled={busy}
-                                  onClick={() => setLinking(line)}
-                                >
-                                  {COPY.link}
-                                </Button>
-                              ) : null}
-                              {line.status === TRUST_BANK_LINE_STATUS.PROCESSED && line.savedLineId ? (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 text-xs"
-                                  disabled={busy}
-                                  onClick={() => void unlink(line)}
-                                >
-                                  {COPY.unlink}
-                                </Button>
-                              ) : null}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
+      {!data ? (
+        lines.error ? (
+          <TrustLoadError error={lines.error} onRetry={lines.reload} />
+        ) : (
+          <TrustLoading />
+        )
+      ) : data.items.length === 0 ? (
+        <p className="text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm">{COPY.empty}</p>
+      ) : (
+        <div className={cn('overflow-x-auto rounded-xl border bg-card', lines.loading && 'opacity-60')}>
+          <table className="w-full border-collapse text-sm">
+            <thead className="border-b">
+              <tr>
+                <th className={TRUST_TABLE_HEAD_CLASS}>{COPY.date}</th>
+                <th className={TRUST_TABLE_HEAD_CLASS}>{COPY.memo}</th>
+                <th className={cn(TRUST_TABLE_HEAD_CLASS, 'text-right')}>{COPY.amount}</th>
+                <th className={cn(TRUST_TABLE_HEAD_CLASS, 'hidden lg:table-cell')}>{COPY.match}</th>
+                <th className={TRUST_TABLE_HEAD_CLASS} />
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((line) => (
+                <WorkspaceRow
+                  key={line.id}
+                  line={line}
+                  busy={busy}
+                  working={busyId === line.id}
+                  onAccept={() => void accept(line)}
+                  onPick={() => setLinking(line)}
+                  onReceipt={() => openReceipt(line)}
+                  onDelete={() => setDeleting(line)}
+                  onUnmatch={() => setUnmatching(line)}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {data && pages > 1 ? (
+        <div className="flex items-center justify-end gap-2 text-sm">
+          <span className="text-muted-foreground">{COPY.page(page, pages)}</span>
+          <Button type="button" size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            {COPY.previous}
+          </Button>
+          <Button type="button" size="sm" variant="outline" disabled={page >= pages} onClick={() => setPage(page + 1)}>
+            {COPY.next}
+          </Button>
+        </div>
       ) : null}
 
       {linking ? (
         <TrustLinkLineDialog
-          key={linking.key}
+          key={linking.id}
           agencyId={agencyId}
           bankAccountId={bankAccountId}
           line={linking}
           onClose={() => setLinking(null)}
-          onLinked={refresh}
+          onLinked={lines.reload}
         />
       ) : null}
 
       {receiptLine ? (
         <TrustReceiptDialog
-          key={receiptLine.key}
+          key={receiptLine.id}
           agencyId={agencyId}
           bankAccountId={bankAccountId}
-          row={receiptRow}
+          row={rentRowFromLine(receiptLine)}
           lockedAmountCents={receiptLine.amountCents}
-          bankLine={trustBankLineInput(receiptLine)}
+          presetDate={receiptLine.lineDate}
           onClose={() => setReceiptLine(null)}
-          onReceipted={refresh}
+          onReceipted={(transactionId) => void matchReceipted(receiptLine, transactionId)}
+        />
+      ) : null}
+
+      {deleting ? (
+        <TrustReasonDialog
+          title={COPY.deleteTitle}
+          description={COPY.deleteDescription}
+          reasonLabel={COPY.deleteReason}
+          reasonRequired={COPY.deleteReasonRequired}
+          submitLabel={COPY.deleteSubmit}
+          cancelLabel={COPY.cancel}
+          destructive
+          onSubmit={async (reason) => {
+            await deleteTrustBankLine(agencyId, deleting.id, { reason });
+            toast.success(COPY.deleted);
+            lines.reload();
+          }}
+          onClose={() => setDeleting(null)}
+        />
+      ) : null}
+
+      {unmatching ? (
+        <TrustConfirmDialog
+          title={COPY.unmatchTitle}
+          description={COPY.unmatchDescription}
+          submitLabel={COPY.unmatchSubmit}
+          cancelLabel={COPY.cancel}
+          onConfirm={async () => {
+            await unmatchTrustBankLine(agencyId, unmatching.id);
+            toast.success(COPY.unmatched);
+            lines.reload();
+          }}
+          onClose={() => setUnmatching(null)}
         />
       ) : null}
     </div>
+  );
+}
+
+function WorkspaceRow({
+  line,
+  busy,
+  working,
+  onAccept,
+  onPick,
+  onReceipt,
+  onDelete,
+  onUnmatch,
+}: {
+  line: TrustBankWorkspaceLine;
+  busy: boolean;
+  working: boolean;
+  onAccept: () => void;
+  onPick: () => void;
+  onReceipt: () => void;
+  onDelete: () => void;
+  onUnmatch: () => void;
+}) {
+  const isUnmatched = line.view === TRUST_BANK_LINE_VIEW.UNMATCHED;
+  const suggestion = isUnmatched ? suggestionText(line) : null;
+  const canAccept = isUnmatched && suggestedMatchOf(line) !== null;
+
+  let detail: ReactNode = <span className="text-muted-foreground">—</span>;
+  if (line.view === TRUST_BANK_LINE_VIEW.MATCHED) {
+    const what = line.transaction
+      ? COPY.matchedTransaction(line.transaction.auditNumber, line.transaction.description)
+      : line.batch
+        ? COPY.matchedBatch(line.batch.batchNumber, line.batch.paymentCount)
+        : null;
+    detail = (
+      <>
+        <p>{what ?? '—'}</p>
+        {line.matchedAt ? (
+          <p className="text-muted-foreground text-xs">{COPY.matchedBy(line.matchedByName ?? null, formatDate(line.matchedAt))}</p>
+        ) : null}
+      </>
+    );
+  } else if (line.view === TRUST_BANK_LINE_VIEW.DELETED) {
+    detail = <p className="text-muted-foreground">{COPY.deletedBy(line.deletedReason ?? '', line.deletedByName ?? null)}</p>;
+  } else if (suggestion) {
+    detail = (
+      <>
+        <p>{suggestion}</p>
+        {line.suggestion?.amountDiffersFromRent ? (
+          <p className="text-amber-700 text-xs dark:text-amber-300">{COPY.amountDiffers}</p>
+        ) : null}
+      </>
+    );
+  }
+
+  return (
+    <tr className="border-b last:border-b-0">
+      <td className={cn(TRUST_TABLE_CELL_CLASS, 'whitespace-nowrap')}>{formatTrustDate(line.lineDate)}</td>
+      <td className={TRUST_TABLE_CELL_CLASS}>
+        <p>{line.memo}</p>
+        {line.reference ? <p className="text-muted-foreground text-xs">{line.reference}</p> : null}
+        {line.importFileName ? <p className="text-muted-foreground text-xs">{line.importFileName}</p> : null}
+      </td>
+      <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-right tabular-nums')}>{formatCents(line.amountCents)}</td>
+      <td className={cn(TRUST_TABLE_CELL_CLASS, 'hidden lg:table-cell')}>{detail}</td>
+      <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-right whitespace-nowrap')}>
+        {working ? (
+          <Loader2 className="ml-auto size-4 animate-spin" />
+        ) : (
+          <div className="flex justify-end gap-1.5">
+            {canAccept ? (
+              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onAccept}>
+                {COPY.accept}
+              </Button>
+            ) : null}
+            {isUnmatched && line.amountCents > 0 ? (
+              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onReceipt}>
+                {COPY.receipt}
+              </Button>
+            ) : null}
+            {isUnmatched ? (
+              <Button type="button" size="sm" variant="outline" className="h-7 text-xs" disabled={busy} onClick={onPick}>
+                {COPY.pick}
+              </Button>
+            ) : null}
+            {isUnmatched ? (
+              <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" disabled={busy} onClick={onDelete}>
+                {COPY.delete}
+              </Button>
+            ) : null}
+            {line.view === TRUST_BANK_LINE_VIEW.MATCHED ? (
+              <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" disabled={busy} onClick={onUnmatch}>
+                {COPY.unmatch}
+              </Button>
+            ) : null}
+          </div>
+        )}
+      </td>
+    </tr>
   );
 }

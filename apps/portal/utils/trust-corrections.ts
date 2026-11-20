@@ -59,6 +59,6 @@ export function isCorrectableReceipt(transaction: {
   rentReceipt?: unknown;
   entries: ReadonlyArray<{ ledgerKind: string; amountCents: number }>;
 }): boolean {
-  if (transaction.kind !== TRUST_TRANSACTION_KIND.RECEIPT || transaction.displayStatus !== TRUST_TRANSACTION_DISPLAY_STATUS.POSTED || transaction.isReversal) return false;
+  if (transaction.kind !== TRUST_TRANSACTION_KIND.RECEIPT || transaction.displayStatus === TRUST_TRANSACTION_DISPLAY_STATUS.REVERSED || transaction.isReversal) return false;
   return Boolean(transaction.rentReceipt) || transaction.entries.some((entry) => entry.ledgerKind === TRUST_LEDGER_KIND.TENANT && entry.amountCents > 0);
 }

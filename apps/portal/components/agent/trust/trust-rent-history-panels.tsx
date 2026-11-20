@@ -8,6 +8,7 @@ import { TrustCorrectionLegs } from '@/components/agent/trust/trust-correction-d
 import {
   TRUST_TABLE_CELL_CLASS,
   TRUST_TABLE_HEAD_CLASS,
+  TrustConfirmDialog,
   TrustLoadError,
   TrustLoading,
   TrustPanel,
@@ -70,17 +71,15 @@ export function TrustRentRatesPanel({
 }) {
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<TrustRentRate | null>(null);
   const rates = [...(profile.rates ?? [])].sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
 
   async function remove(rate: TrustRentRate) {
-    if (!window.confirm(RATES_COPY.removeConfirm(formatTrustDate(rate.effectiveFrom)))) return;
     setRemovingId(rate.id);
     try {
       await removeTrustRentRate(agencyId, ledger.id, rate.id);
       toast.success(RATES_COPY.removed);
       onChanged();
-    } catch (err) {
-      toast.error(apiErrorMessage(err));
     } finally {
       setRemovingId(null);
     }
@@ -113,7 +112,7 @@ export function TrustRentRatesPanel({
                     className="size-7"
                     aria-label={RATES_COPY.remove}
                     disabled={removingId === rate.id}
-                    onClick={() => void remove(rate)}
+                    onClick={() => setConfirming(rate)}
                   >
                     <Trash2 className="size-3.5" />
                   </Button>
@@ -123,6 +122,17 @@ export function TrustRentRatesPanel({
           ))}
         </ul>
       )}
+      {confirming ? (
+        <TrustConfirmDialog
+          title={RATES_COPY.remove}
+          description={RATES_COPY.removeConfirm(formatTrustDate(confirming.effectiveFrom))}
+          submitLabel={RATES_COPY.remove}
+          cancelLabel={RATES_COPY.cancel}
+          destructive
+          onConfirm={() => remove(confirming)}
+          onClose={() => setConfirming(null)}
+        />
+      ) : null}
       {adding ? (
         <RateDialog agencyId={agencyId} ledger={ledger} profile={profile} onClose={() => setAdding(false)} onSaved={onChanged} />
       ) : null}

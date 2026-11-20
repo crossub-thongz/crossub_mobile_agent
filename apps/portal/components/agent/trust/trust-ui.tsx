@@ -365,3 +365,66 @@ export function TrustReasonDialog({
     </Dialog>
   );
 }
+
+/** An in-app yes/no confirm (never the browser's `window.confirm`). */
+export function TrustConfirmDialog({
+  title,
+  description,
+  submitLabel,
+  cancelLabel,
+  destructive,
+  onConfirm,
+  onClose,
+}: {
+  title: string;
+  description: string;
+  submitLabel: string;
+  cancelLabel: string;
+  destructive?: boolean;
+  onConfirm: () => Promise<void>;
+  onClose: () => void;
+}) {
+  const [pending, setPending] = useState(false);
+
+  async function submit() {
+    setPending(true);
+    try {
+      await onConfirm();
+      onClose();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !pending) onClose();
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" disabled={pending} onClick={onClose}>
+            {cancelLabel}
+          </Button>
+          <Button
+            type="button"
+            variant={destructive ? 'destructive' : 'default'}
+            disabled={pending}
+            onClick={() => void submit()}
+          >
+            {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+            {submitLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
