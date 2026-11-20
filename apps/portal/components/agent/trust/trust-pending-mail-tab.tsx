@@ -22,6 +22,7 @@ import {
   fetchAgentPendingMail,
   sendAgentPendingMail,
   type AgentPendingMail,
+  type AgentPendingMailKind,
   type AgentPendingMailStatus,
 } from '@/lib/crossub-api/agent-pending-mail-client';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
@@ -42,10 +43,20 @@ const FILTERS: readonly { id: MailFilter; label: string }[] = [
   { id: FILTER.FAILED, label: 'Failed' },
 ];
 
-const KIND_LABEL = {
+const KIND_LABEL: Record<AgentPendingMailKind, string> = {
   [AGENT_PENDING_MAIL_KIND.TENANT_RECEIPT]: 'Rent receipt',
   [AGENT_PENDING_MAIL_KIND.OWNER_STATEMENT]: 'Owner statement',
-} as const;
+  [AGENT_PENDING_MAIL_KIND.CORRECTION_ADVICE]: 'Correction advice',
+  [AGENT_PENDING_MAIL_KIND.RENT_REMINDER]: 'Rent reminder',
+  [AGENT_PENDING_MAIL_KIND.RENT_ARREARS_ALERT]: 'Rent 7 days behind',
+};
+
+/** Reminders and the agent alert are plain emails: no PDF to download. */
+const KINDS_WITH_DOCUMENT: ReadonlySet<AgentPendingMailKind> = new Set([
+  AGENT_PENDING_MAIL_KIND.TENANT_RECEIPT,
+  AGENT_PENDING_MAIL_KIND.OWNER_STATEMENT,
+  AGENT_PENDING_MAIL_KIND.CORRECTION_ADVICE,
+]);
 
 const STATUS_LABEL: Record<AgentPendingMailStatus, string> = {
   PENDING: 'Pending',
@@ -64,7 +75,7 @@ function filenameFor(mail: AgentPendingMail): string {
   return `${base || 'document'}.pdf`;
 }
 
-/** Receipts and owner statements for this trust account. Send is manual and leaves from the agency. */
+/** Receipts, statements, correction advice and rent reminders for this trust account; Send leaves from the agency. */
 export function TrustPendingMailTab({
   agencyId,
   bankAccountId,
@@ -115,7 +126,9 @@ export function TrustPendingMailTab({
       }
     >
       <p className="text-muted-foreground mb-3 text-sm">
-        Rent receipts go to the tenant. Owner statements go to the owner. Nothing sends until you press Send.
+        Rent receipts, correction advice and rent reminders go to the tenant. Owner statements go to the owner. The
+        7-day rent alert comes to you. Nothing sends until you press Send, unless automatic reminders are on in
+        Settings.
         {mail.data ? ` ${mail.data.pendingCount} waiting.` : ''}
       </p>
       {mail.error ? <TrustLoadError error={mail.error} onRetry={mail.reload} /> : null}
@@ -153,12 +166,14 @@ export function TrustPendingMailTab({
                   </td>
                   <td className={cn(TRUST_TABLE_CELL_CLASS, 'text-right')}>
                     <div className="flex flex-wrap justify-end gap-2">
-                      <TrustDownloadButton
-                        label="PDF"
-                        filename={filenameFor(row)}
-                        fetchBlob={() => downloadAgentPendingMailPdf(agencyId, bankAccountId, row.id)}
-                        failedMessage="Couldn't download the document"
-                      />
+                      {KINDS_WITH_DOCUMENT.has(row.kind) ? (
+                        <TrustDownloadButton
+                          label="PDF"
+                          filename={filenameFor(row)}
+                          fetchBlob={() => downloadAgentPendingMailPdf(agencyId, bankAccountId, row.id)}
+                          failedMessage="Couldn't download the document"
+                        />
+                      ) : null}
                       {row.status !== AGENT_PENDING_MAIL_STATUS.SENT ? (
                         <Button
                           type="button"
