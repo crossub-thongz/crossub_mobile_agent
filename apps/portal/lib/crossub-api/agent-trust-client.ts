@@ -71,6 +71,20 @@ export type ProcessMatchedBankLinesInput = components['schemas']['ProcessMatched
 export type TrustProcessMatchedResult = components['schemas']['TrustProcessMatchedResultDto'];
 export type TrustBankLineReconciled = components['schemas']['TrustBankLineReconciledDto'];
 export type TrustBankLineUnlinked = components['schemas']['TrustBankLineUnlinkedDto'];
+// PRD phase 5 (D159–D165): the saved bank workspace and reconciliation adjustments.
+export type TrustBankImportResult = components['schemas']['TrustBankImportResultDto'];
+export type TrustBankWorkspace = components['schemas']['TrustBankWorkspaceDto'];
+export type TrustBankWorkspaceLine = components['schemas']['TrustBankWorkspaceLineDto'];
+export type TrustBankLineBatch = components['schemas']['TrustBankLineBatchDto'];
+export type MatchTrustBankLineInput = components['schemas']['MatchBankLineDto'];
+export type DeleteTrustBankLineInput = components['schemas']['DeleteBankLineDto'];
+export type TrustMatchSuggestedResult = components['schemas']['TrustMatchSuggestedResultDto'];
+export type TrustReconAdjustment = components['schemas']['TrustReconAdjustmentDto'];
+export type TrustReconAdjustmentList = components['schemas']['TrustReconAdjustmentListDto'];
+export type AddTrustReconAdjustmentInput = components['schemas']['AddReconAdjustmentDto'];
+export type RemoveTrustReconAdjustmentInput = components['schemas']['RemoveReconAdjustmentDto'];
+export type TrustReconciliationItem = components['schemas']['TrustReconciliationItemDto'];
+export type TrustBankLinesQuery = NonNullable<operations['AgentTrustController_listBankLines']['parameters']['query']>;
 export type TrustCashReport = components['schemas']['TrustCashReportDto'];
 export type TrustFolioBalanceReport = components['schemas']['TrustFolioBalanceReportDto'];
 export type TrustUnpresentedReport = components['schemas']['TrustUnpresentedReportDto'];
@@ -664,6 +678,114 @@ export async function unlinkTrustBankLine(
     { params: { path: { agencyId, lineId } } },
   );
   return unwrapCrossubResult(result, "Couldn't unmatch the bank line");
+}
+
+// --------------------------------------------------------------------------- Bank workspace (PRD phase 5)
+
+/** Saves the file's new lines as unmatched bank evidence; nothing is posted (D159). */
+export async function importTrustBankFile(
+  agencyId: string,
+  bankAccountId: string,
+  body: ReadTrustBankFileInput,
+): Promise<TrustBankImportResult> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/bank-imports',
+    { params: { path: { agencyId, bankAccountId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't import the bank file");
+}
+
+export async function fetchTrustBankLines(
+  agencyId: string,
+  bankAccountId: string,
+  query: TrustBankLinesQuery = {},
+): Promise<TrustBankWorkspace> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/bank-lines',
+    { params: { path: { agencyId, bankAccountId }, query } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the bank lines");
+}
+
+export async function matchSuggestedTrustBankLines(
+  agencyId: string,
+  bankAccountId: string,
+  lineIds: string[],
+): Promise<TrustMatchSuggestedResult> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/bank-lines/match-suggested',
+    { params: { path: { agencyId, bankAccountId } }, body: { lineIds } },
+  );
+  return unwrapCrossubResult(result, "Couldn't match the lines");
+}
+
+export async function matchTrustBankLine(
+  agencyId: string,
+  lineId: string,
+  body: MatchTrustBankLineInput,
+): Promise<TrustBankWorkspaceLine> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/bank-lines/{lineId}/match', {
+    params: { path: { agencyId, lineId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't match the bank line");
+}
+
+export async function unmatchTrustBankLine(agencyId: string, lineId: string): Promise<TrustBankWorkspaceLine> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/bank-lines/{lineId}/unmatch', {
+    params: { path: { agencyId, lineId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't unmatch the bank line");
+}
+
+export async function deleteTrustBankLine(
+  agencyId: string,
+  lineId: string,
+  body: DeleteTrustBankLineInput,
+): Promise<TrustBankWorkspaceLine> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/bank-lines/{lineId}/delete', {
+    params: { path: { agencyId, lineId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't delete the bank line");
+}
+
+// --------------------------------------------------------------------------- Reconciliation adjustments (D163)
+
+export async function fetchTrustReconAdjustments(
+  agencyId: string,
+  bankAccountId: string,
+): Promise<TrustReconAdjustmentList> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/reconciliation-adjustments',
+    { params: { path: { agencyId, bankAccountId } } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the adjustments");
+}
+
+export async function addTrustReconAdjustment(
+  agencyId: string,
+  bankAccountId: string,
+  body: AddTrustReconAdjustmentInput,
+): Promise<TrustReconAdjustmentList> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/reconciliation-adjustments',
+    { params: { path: { agencyId, bankAccountId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't add the adjustment");
+}
+
+export async function removeTrustReconAdjustment(
+  agencyId: string,
+  bankAccountId: string,
+  adjustmentId: string,
+  body: RemoveTrustReconAdjustmentInput,
+): Promise<TrustReconAdjustmentList> {
+  const result = await crossub.POST(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/reconciliation-adjustments/{adjustmentId}/remove',
+    { params: { path: { agencyId, bankAccountId, adjustmentId } }, body },
+  );
+  return unwrapCrossubResult(result, "Couldn't remove the adjustment");
 }
 
 // --------------------------------------------------------------------------- Reports

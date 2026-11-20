@@ -123,16 +123,22 @@ export const TRUST_TENANT_HISTORY_ROW_KIND = {
 export const TRUST_TENANT_HISTORY_STATUS = {
   POSTED: 'POSTED',
   REVERSED: 'REVERSED',
+  RECONCILED: 'RECONCILED',
+  UNRECONCILED: 'UNRECONCILED',
 } as const satisfies Record<string, TrustTenantHistoryStatus>;
 
 export const TRUST_TENANT_HISTORY_STATUS_LABEL: Record<TrustTenantHistoryStatus, string> = {
   POSTED: 'Posted',
   REVERSED: 'Reversed',
+  RECONCILED: 'Reconciled',
+  UNRECONCILED: 'Unreconciled',
 };
 
 export const TRUST_TENANT_HISTORY_STATUS_TONE: Record<TrustTenantHistoryStatus, string> = {
   POSTED: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
   REVERSED: 'bg-muted text-muted-foreground',
+  RECONCILED: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  UNRECONCILED: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
 };
 
 /** Wait this long after typing before asking the API for a preview. */

@@ -238,6 +238,7 @@ export function TrustReceiptDialog({
   row = null,
   lockedAmountCents,
   bankLine,
+  presetDate,
   onClose,
   onReceipted,
 }: {
@@ -249,8 +250,11 @@ export function TrustReceiptDialog({
   lockedAmountCents?: number;
   /** The bank line to reconcile, sent back exactly as it was read. */
   bankLine?: TrustBankLineInput;
+  /** PRD phase 5: the date of the workspace bank line the receipt is for (still editable). */
+  presetDate?: string;
   onClose: () => void;
-  onReceipted: () => void;
+  /** Called with the posted receipt's id (the workspace matches its bank line to it). */
+  onReceipted: (transactionId: string) => void;
 }) {
   const amountLocked = lockedAmountCents != null;
   const [selected, setSelected] = useState<ReceiptTenancy | null>(() => toReceiptTenancy(row ?? null));
@@ -262,7 +266,7 @@ export function TrustReceiptDialog({
   const [depositAmount, setDepositAmount] = useState('');
   const [depositDetails, setDepositDetails] = useState('');
   const [invoiceAmounts, setInvoiceAmounts] = useState<Record<string, string>>({});
-  const [date, setDate] = useState(bankLine?.lineDate ?? trustTodayKey());
+  const [date, setDate] = useState(bankLine?.lineDate ?? presetDate ?? trustTodayKey());
   const [method, setMethod] = useState<TrustPaymentMethod>(TRUST_PAYMENT_METHOD.EFT);
   const depositEdited = useRef(false);
   const [addNote, setAddNote] = useState(false);
@@ -472,7 +476,7 @@ export function TrustReceiptDialog({
         ...(bankLine ? { bankLine } : {}),
       });
       toast.success(COPY.done(tx.receiptNumber));
-      onReceipted();
+      onReceipted(tx.id);
       onClose();
     } catch (err) {
       setIdempotencyKey(trustIdempotencyKeyAfterError(err, idempotencyKey));

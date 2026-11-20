@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { TrustBankBalancesPanel } from '@/components/agent/trust/trust-bank-balances-panel';
 import { TrustBankStatementTab } from '@/components/agent/trust/trust-bank-statement-tab';
+import { TrustReconAdjustmentsPanel } from '@/components/agent/trust/trust-recon-adjustments-panel';
 import {
   TrustLoadError,
   TrustLoading,
@@ -39,6 +40,10 @@ import {
   TRUST_RECONCILIATION_STATUS_TONE,
   TRUST_RECONCILIATION_UPKEEP_COPY as UPKEEP_COPY,
 } from '@/constants/trust';
+import {
+  TRUST_RECONCILIATION_PHASE5_COPY as PHASE5_COPY,
+  TRUST_TRANSIT_KIND_LABEL,
+} from '@/constants/trust-bank-workspace';
 import { useTrustOverview } from '@/hooks/use-trust-overview';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
 import {
@@ -49,6 +54,7 @@ import {
   revokeTrustReconciliationLock,
   type TrustOverview,
   type TrustReconciliationFigures,
+  type TrustReconciliationItem,
   type TrustReconciliationMonth,
 } from '@/lib/crossub-api/agent-trust-client';
 import { formatCents, formatTrustDate, parseDollarsToCents } from '@/lib/trust-accounting';
@@ -197,12 +203,51 @@ function MonthEndView({
           />
         ) : null}
       </div>
+      <TrustReconAdjustmentsPanel
+        agencyId={agencyId}
+        bankAccountId={bankAccountId}
+        refreshKey={changes}
+        onChanged={onChanged}
+      />
       <TrustBankBalancesPanel
         agencyId={agencyId}
         bankAccountId={bankAccountId}
         refreshKey={changes}
         onChanged={onChanged}
       />
+    </div>
+  );
+}
+
+/** PRD phase 5 (D162, D164): the receipts and withdrawals not yet matched to the bank, with transit tags. */
+function UnmatchedItems({ title, items }: { title: string; items: readonly TrustReconciliationItem[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="space-y-1">
+      <p className="text-muted-foreground text-xs font-medium">{title}</p>
+      <ul className="divide-y text-sm">
+        {items.map((item) => (
+          <li key={item.transactionId} className="flex items-start justify-between gap-3 py-1.5">
+            <div className="min-w-0">
+              <p>
+                #{item.auditNumber} {item.description}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {formatTrustDate(item.dateKey)}
+                {item.partyName ? ` · ${item.partyName}` : ''}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {item.transitKind ? (
+                <TrustPill className="bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                  {TRUST_TRANSIT_KIND_LABEL[item.transitKind]}
+                </TrustPill>
+              ) : null}
+              <span className="tabular-nums">{formatCents(item.amountCents)}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -392,10 +437,18 @@ function MonthFigures({
           <dl className="text-sm">
             <Row label={COPY.statementBalance} value={formatCents(bank.statementBalanceCents ?? statementCents)} />
             <Row label={COPY.unpresentedDeposits} value={formatCents(bank.unreconciledDepositsCents)} />
+            {/* D164: informational subtypes, already inside the line above. */}
+            {bank.cashNotBankedCents !== 0 ? (
+              <Row label={`  ${PHASE5_COPY.ofWhichCash}`} value={formatCents(bank.cashNotBankedCents)} />
+            ) : null}
             <Row
               label={COPY.unpresentedWithdrawals}
               value={formatCents(bank.unreconciledWithdrawalsCents)}
             />
+            {bank.withdrawalsNotProcessedCents !== 0 ? (
+              <Row label={`  ${PHASE5_COPY.ofWhichNotProcessed}`} value={formatCents(bank.withdrawalsNotProcessedCents)} />
+            ) : null}
+            <Row label={PHASE5_COPY.adjustments} value={formatCents(bank.adjustmentsCents)} />
             <Row label={COPY.reconciledBalance} value={formatCents(bank.reconciledBalanceCents)} strong />
           </dl>
         </TrustPanel>
@@ -441,6 +494,17 @@ function MonthFigures({
           </p>
         </TrustPanel>
       </div>
+
+      <TrustPanel title={PHASE5_COPY.unreconciledItems}>
+        {bank.unreconciledDeposits.length + bank.unreconciledWithdrawals.length === 0 ? (
+          <p className="text-muted-foreground text-sm">{PHASE5_COPY.noItems}</p>
+        ) : (
+          <div className="space-y-3">
+            <UnmatchedItems title={PHASE5_COPY.deposits} items={bank.unreconciledDeposits} />
+            <UnmatchedItems title={PHASE5_COPY.withdrawals} items={bank.unreconciledWithdrawals} />
+          </div>
+        )}
+      </TrustPanel>
 
       <Dialog
         open={lockOpen}

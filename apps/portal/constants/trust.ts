@@ -24,7 +24,6 @@ export type TrustTransactionCategory = NonNullable<
 >;
 export type TrustFeeChargeStatus = Schemas['TrustFeeChargeDto']['status'];
 export type TrustBatchMethod = Schemas['CreatePaymentBatchDto']['method'];
-export type TrustBankLineStatus = Schemas['TrustBankFileLineDto']['status'];
 export type TrustReportKind =
   operations['AgentTrustController_reportCsv']['parameters']['path']['kind'];
 export type TrustLedgerFileFormat =
@@ -175,7 +174,7 @@ export type TrustReconciliationView =
 
 export const TRUST_RECONCILIATION_VIEWS: readonly { id: TrustReconciliationView; label: string }[] = [
   { id: TRUST_RECONCILIATION_VIEW.MONTH_END, label: 'Month-end' },
-  { id: TRUST_RECONCILIATION_VIEW.BANK_STATEMENT, label: 'Bank statement' },
+  { id: TRUST_RECONCILIATION_VIEW.BANK_STATEMENT, label: 'Bank lines' },
 ];
 
 /** Rent Payments filter chips. */
@@ -929,16 +928,24 @@ export const TRUST_TRANSACTION_KIND_LABEL: Record<TrustTransactionKind, string> 
 export const TRUST_TRANSACTION_DISPLAY_STATUS = {
   POSTED: 'POSTED',
   REVERSED: 'REVERSED',
+  /** PRD phase 5 (D160): a receipt or withdrawal with a confirmed bank match. */
+  RECONCILED: 'RECONCILED',
+  /** PRD phase 5 (D160): a receipt or withdrawal not matched to the bank yet. */
+  UNRECONCILED: 'UNRECONCILED',
 } as const satisfies Record<string, TrustTransactionDisplayStatus>;
 
 export const TRUST_TRANSACTION_DISPLAY_STATUS_LABEL: Record<TrustTransactionDisplayStatus, string> = {
   POSTED: 'Posted',
   REVERSED: 'Reversed',
+  RECONCILED: 'Reconciled',
+  UNRECONCILED: 'Unreconciled',
 };
 
 export const TRUST_TRANSACTION_DISPLAY_STATUS_TONE: Record<TrustTransactionDisplayStatus, string> = {
   POSTED: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
   REVERSED: 'bg-muted text-muted-foreground',
+  RECONCILED: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  UNRECONCILED: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
 };
 
 export const TRUST_TRANSACTION_CATEGORY = {
@@ -1125,75 +1132,6 @@ export const TRUST_BANK_FILE = {
   ACCEPT: '.qif,application/qif,text/plain',
   DEFAULT_MIME_TYPE: 'application/qif',
   MAX_BYTES: 2 * 1024 * 1024,
-} as const;
-
-export const TRUST_BANK_LINE_STATUS = {
-  UNMATCHED: 'UNMATCHED',
-  MATCHED: 'MATCHED',
-  PROCESSED: 'PROCESSED',
-  DISMISSED: 'DISMISSED',
-} as const satisfies Record<string, TrustBankLineStatus>;
-
-export const TRUST_BANK_LINE_STATUS_LABEL: Record<TrustBankLineStatus, string> = {
-  UNMATCHED: 'Unmatched',
-  MATCHED: 'Suggested match',
-  PROCESSED: 'Reconciled',
-  DISMISSED: 'Dismissed',
-};
-
-export const TRUST_BANK_LINE_STATUS_TONE: Record<TrustBankLineStatus, string> = {
-  UNMATCHED: 'bg-destructive/15 text-destructive',
-  MATCHED: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
-  PROCESSED: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
-  DISMISSED: 'bg-muted text-muted-foreground',
-};
-
-export const TRUST_BANK_LINE_FILTER_ALL = 'ALL' as const;
-export type TrustBankLineFilter = TrustBankLineStatus | typeof TRUST_BANK_LINE_FILTER_ALL;
-
-export const TRUST_BANK_STATEMENT_COPY = {
-  intro:
-    'Import the bank statement as a QIF file. Nothing in the file is stored: only the lines you reconcile are kept.',
-  choose: 'Import QIF file',
-  reread: 'Read again',
-  tooLarge: 'The file is larger than 2 MB',
-  readFailed: "Couldn't read the bank statement",
-  summary: (lines: number, from: string, to: string) => `${lines} lines, ${from} to ${to}`,
-  skipped: (count: number) => `${count} before the account opened were left out`,
-  all: 'All',
-  unmatched: 'Unmatched',
-  matched: 'Suggested',
-  reconciled: 'Reconciled',
-  empty: 'No lines here.',
-  date: 'Date',
-  memo: 'Statement text',
-  amount: 'Amount',
-  status: 'Status',
-  match: 'Match',
-  suggestionTenant: (name: string, address: string | null) =>
-    address ? `Rent from ${name}, ${address}` : `Rent from ${name}`,
-  suggestionTransaction: (n: number, description: string) => `#${n} ${description}`,
-  amountDiffers: 'Amount differs from the rent',
-  reconciledTo: (n: number, description: string) => `#${n} ${description}`,
-  processOne: 'Accept',
-  receipt: 'Receipt',
-  lineInFuture: 'That line is dated after today, so it cannot be receipted yet',
-  link: 'Match',
-  unlink: 'Unmatch',
-  processAll: (count: number) => `Accept all matched payments (${count})`,
-  processed: (count: number) => `${count} line${count === 1 ? '' : 's'} reconciled`,
-  failed: (count: number) => `${count} line${count === 1 ? '' : 's'} could not be reconciled`,
-  unlinked: 'Bank line unmatched',
-  linked: 'Bank line matched',
-} as const;
-
-export const TRUST_LINK_LINE_COPY = {
-  title: 'Match bank line',
-  description: (amount: string, date: string) =>
-    `Posted transactions of ${amount} not yet on a statement, around ${date}.`,
-  empty: 'No posted transaction of this amount is waiting. Post the receipt or payment first.',
-  choose: 'Match',
-  cancel: 'Cancel',
 } as const;
 
 /** How many days either side of a bank line to look for its transaction. */

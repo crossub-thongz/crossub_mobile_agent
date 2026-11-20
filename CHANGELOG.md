@@ -3,6 +3,11 @@
 ## 2026-11-20
 
 ### Added
+- Bank lines workspace on Reconciliation: imported QIF lines are kept until matched or deleted, across every import, with Unmatched, Matched and Deleted tabs and counts
+- Bank lines: accept a suggested match, match to an unreconciled transaction of the same amount or to a payment batch total, receipt a deposit and match it in one go, delete a line with a reason, unmatch, and accept all suggested
+- Reconciliation adjustments panel: add a signed adjustment from a date with a reason, remove it from a date; locked months keep it
+- Month-end figures show adjustments, cash not banked and payments not processed, and the transactions not yet matched to the bank
+- Bank balances show the bank minus cash book difference as it was when the balance was recorded
 - Tenant folio Rent rates panel: dated rent changes with add and remove; rent is charged each day at the rate in force and the current paid-to re-rates
 - Tenant folio Move-out panel: set, change or clear the move-out date with a preview; rent paid past it moves from the owner back to the tenant deposit in one step, refused whole when the owner lacks funds
 - New receipt warns when rent goes past the move-out and offers Put the rest to Deposit
@@ -10,6 +15,13 @@
 - Corrections list on the tenant folio and on the corrected receipt
 - Pending mail shows correction advice (with PDF), rent reminders and the 7-day rent alert
 - Trust Settings: Send rent reminders automatically, per trust bank account, off by default
+
+### Changed
+- Transactions read Reconciled or Unreconciled, from a confirmed bank match
+- Removing a rent rate asks in the app instead of the browser
+
+### Removed
+- The read-only bank statement read that kept nothing; bank files now import into the bank lines workspace
 
 ## 2026-11-19
 
