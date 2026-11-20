@@ -26,6 +26,16 @@ export function suggestedMatchOf(
   return transactionId ? { transactionId } : null;
 }
 
+/** The payment batches the match dialog offers a debit (D161): the server's options, suggested first. */
+export function matchBatchOptions<T extends { id: string }>(line: {
+  suggestedBatch?: T | null;
+  batchOptions?: readonly T[] | null;
+}): T[] {
+  const suggested = line.suggestedBatch ?? null;
+  const rest = (line.batchOptions ?? []).filter((batch) => batch.id !== suggested?.id);
+  return suggested ? [suggested, ...rest] : rest;
+}
+
 /** The suggestion line under a row: a match to accept, else (money in) a tenant to receipt to. */
 export function suggestionText(line: WorkspaceLineLike): string | null {
   if (line.suggestedBatch) return COPY.suggestionBatch(line.suggestedBatch.batchNumber, line.suggestedBatch.paymentCount);

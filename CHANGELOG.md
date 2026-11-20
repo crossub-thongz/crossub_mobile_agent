@@ -16,6 +16,9 @@
 - Pending mail shows correction advice (with PDF), rent reminders and the 7-day rent alert
 - Trust Settings: Send rent reminders automatically, per trust bank account, off by default
 
+### Fixed
+- Bank line Match lists every payment batch of the line's total, not only the suggested one
+
 ### Changed
 - Transactions read Reconciled or Unreconciled, from a confirmed bank match
 - Removing a rent rate asks in the app instead of the browser

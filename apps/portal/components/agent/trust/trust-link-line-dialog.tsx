@@ -40,7 +40,7 @@ import {
 import { formatCents, formatTrustDate, shiftTrustDateKey, trustTodayKey } from '@/lib/trust-accounting';
 import { cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
-import { isMatchCandidate } from '@/utils/trust-bank-workspace';
+import { isMatchCandidate, matchBatchOptions } from '@/utils/trust-bank-workspace';
 
 /**
  * PRD phase 5 (D159, D161): match a saved bank line to exactly one thing — an unreconciled posted
@@ -75,7 +75,7 @@ export function TrustLinkLineDialog({
   const candidates = (data?.items ?? []).filter((tx) =>
     isMatchCandidate(tx, line.amountCents, TRUST_TRANSACTION_DISPLAY_STATUS.UNRECONCILED),
   );
-  const batch = line.suggestedBatch ?? null;
+  const batches = matchBatchOptions(line);
 
   async function match(key: string, body: MatchTrustBankLineInput) {
     setPendingId(key);
@@ -105,8 +105,8 @@ export function TrustLinkLineDialog({
             {line.memo} · {COPY.description(formatCents(line.amountCents), formatTrustDate(line.lineDate))}
           </DialogDescription>
         </DialogHeader>
-        {batch ? (
-          <div className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+        {batches.map((batch) => (
+          <div key={batch.id} className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">
             <div>
               <p className="font-medium">
                 {COPY.batch} · {TRUST_BANK_WORKSPACE_COPY.matchedBatch(batch.batchNumber, batch.paymentCount)}
@@ -127,7 +127,7 @@ export function TrustLinkLineDialog({
               {COPY.choose}
             </Button>
           </div>
-        ) : null}
+        ))}
         {!data ? (
           error ? (
             <TrustLoadError error={error} onRetry={reload} />
@@ -135,7 +135,7 @@ export function TrustLinkLineDialog({
             <TrustLoading />
           )
         ) : candidates.length === 0 ? (
-          batch ? null : <p className="text-muted-foreground text-sm">{COPY.empty}</p>
+          batches.length > 0 ? null : <p className="text-muted-foreground text-sm">{COPY.empty}</p>
         ) : (
           <div className={cn('max-h-[50vh] overflow-auto rounded-lg border', loading && 'opacity-60')}>
             <table className="w-full border-collapse text-sm">
