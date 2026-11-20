@@ -6,6 +6,7 @@ import { TrustAccountCodeDialog } from '@/components/agent/trust/trust-account-c
 import { TrustAddBankAccountDialog } from '@/components/agent/trust/trust-add-bank-account-dialog';
 import { TrustBankAccountDialog } from '@/components/agent/trust/trust-bank-account-dialog';
 import { TrustFeeTemplatesPanel } from '@/components/agent/trust/trust-fee-templates-panel';
+import { TrustRentRemindersPanel } from '@/components/agent/trust/trust-rent-reminders-panel';
 import { TrustWorkspaceSettingsTables } from '@/components/agent/trust/trust-settings-summary';
 import { TrustPanel } from '@/components/agent/trust/trust-ui';
 import { TRUST_SETTINGS_TAB_COPY as COPY } from '@/constants/trust';
@@ -53,6 +54,7 @@ export function TrustSettingsTab({
         />
       </TrustPanel>
       <TrustFeeTemplatesPanel agencyId={agencyId} accountCodes={workspace.accountCodes} />
+      <TrustRentRemindersPanel agencyId={agencyId} bankAccounts={workspace.bankAccounts} onChanged={onChanged} />
 
       {editingAccount ? (
         <TrustBankAccountDialog

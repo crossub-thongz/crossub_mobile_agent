@@ -10,6 +10,12 @@ import { crossub } from './client';
 export const AGENT_PENDING_MAIL_KIND = {
   TENANT_RECEIPT: 'TENANT_RECEIPT',
   OWNER_STATEMENT: 'OWNER_STATEMENT',
+  /** PRD phase 4 (D157): the tenant's copy of an allocation correction (with a PDF). */
+  CORRECTION_ADVICE: 'CORRECTION_ADVICE',
+  /** PRD phase 4 (D158): rent 1 or 3 days behind, to the tenant (no PDF). */
+  RENT_REMINDER: 'RENT_REMINDER',
+  /** PRD phase 4 (D158): rent 7 days behind, to the agent (no PDF). */
+  RENT_ARREARS_ALERT: 'RENT_ARREARS_ALERT',
 } as const;
 export type AgentPendingMailKind = (typeof AGENT_PENDING_MAIL_KIND)[keyof typeof AGENT_PENDING_MAIL_KIND];
 

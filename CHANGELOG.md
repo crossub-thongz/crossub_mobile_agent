@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-20
+
+### Added
+- Tenant folio Rent rates panel: dated rent changes with add and remove; rent is charged each day at the rate in force and the current paid-to re-rates
+- Tenant folio Move-out panel: set, change or clear the move-out date with a preview; rent paid past it moves from the owner back to the tenant deposit in one step, refused whole when the owner lacks funds
+- New receipt warns when rent goes past the move-out and offers Put the rest to Deposit
+- Transaction detail: Correct allocation on a posted tenant receipt moves its Rent or Deposit to Rent or Deposit of this or another tenant, with a preview of money moves, available funds, paid-to before and after and the management fee on it
+- Corrections list on the tenant folio and on the corrected receipt
+- Pending mail shows correction advice (with PDF), rent reminders and the 7-day rent alert
+- Trust Settings: Send rent reminders automatically, per trust bank account, off by default
+
 ## 2026-11-19
 
 ### Added

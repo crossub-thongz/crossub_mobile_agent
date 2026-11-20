@@ -29,6 +29,7 @@ import {
   type TrustReceiptAllocationKind,
   type TrustRentPeriod,
 } from '@/constants/trust';
+import { TRUST_RECEIPT_LIABILITY_COPY as LIABILITY_COPY } from '@/constants/trust-corrections';
 import { TRUST_PREVIEW_DEBOUNCE_MS, TRUST_RECEIPT_INVOICE_COPY as INVOICE_COPY } from '@/constants/trust-invoices';
 import { TRUST_TRANSACTION_LIMITS } from '@/constants/trust-transactions';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
@@ -64,6 +65,7 @@ import { amountFromWeekly } from '@/lib/rent-calculations';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { trustIdempotencyKeyAfterError } from '@/utils/trust-transactions';
 import { cn } from '@/lib/utils';
+import { depositWithRest, rentExcessCents } from '@/utils/trust-corrections';
 
 /** Calendar days from `fromKey` to `toKey`. Negative when `toKey` is earlier. */
 function calendarDaysBetween(fromKey: string, toKey: string): number {
@@ -380,6 +382,7 @@ export function TrustReceiptDialog({
     invoiceId: firstInvoice?.invoice.id ?? null,
     invoiceCents: firstInvoice?.cents ?? null,
   });
+  const excessCents = rentExcessCents(preview?.rent);
   const rentPeriodLabel = selected
     ? rentPaymentPeriodLabel({
         paidTo: paidToDate,
@@ -671,6 +674,22 @@ export function TrustReceiptDialog({
             </tbody>
           </table>
         </div>
+
+        {/* PRD phase 4 (D155): rent past the move-out can't be receipted as rent. */}
+        {excessCents > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+            <span>{LIABILITY_COPY.over(formatCents(preview?.rent?.maxRentCents ?? 0))}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={() => onDepositChange(centsToDollarsInput(depositWithRest(depositCents, excessCents)))}
+            >
+              {LIABILITY_COPY.restToDeposit}
+            </Button>
+          </div>
+        ) : null}
 
         {invoices.length > 0 ? (
           <UnpaidInvoices

@@ -9,6 +9,11 @@ import { TrustLedgerBalanceCheck } from '@/components/agent/trust/trust-ledger-b
 import { TrustLedgerSummaryPanel } from '@/components/agent/trust/trust-ledger-summary-panel';
 import { TrustOwnerBillsPanel } from '@/components/agent/trust/trust-owner-bills-panel';
 import { TrustTenantExtras } from '@/components/agent/trust/trust-tenant-extras';
+import {
+  TrustLedgerCorrectionsPanel,
+  TrustMoveOutPanel,
+  TrustRentRatesPanel,
+} from '@/components/agent/trust/trust-rent-history-panels';
 import { TrustTenantPanel } from '@/components/agent/trust/trust-tenant-panel';
 import { TrustWithholdsPanel } from '@/components/agent/trust/trust-withholds-panel';
 import {
@@ -116,6 +121,19 @@ export function TrustLedgerDetail({
                   profile={ledger.data.rentProfile}
                   onChanged={ledger.reload}
                 />
+                <TrustRentRatesPanel
+                  agencyId={agencyId}
+                  ledger={ledger.data}
+                  profile={ledger.data.rentProfile}
+                  onChanged={ledger.reload}
+                />
+                <TrustMoveOutPanel
+                  agencyId={agencyId}
+                  ledger={ledger.data}
+                  profile={ledger.data.rentProfile}
+                  onChanged={ledger.reload}
+                />
+                <TrustLedgerCorrectionsPanel key={ledger.data.balanceCents} agencyId={agencyId} ledgerId={ledgerId} />
               </div>
             ) : null}
           </div>

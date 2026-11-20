@@ -1,9 +1,10 @@
 'use client';
 
-import { Undo2 } from 'lucide-react';
+import { ArrowLeftRight, Undo2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
+import { TrustCorrectionDialog } from '@/components/agent/trust/trust-correction-dialog';
 import {
   TRUST_TABLE_CELL_CLASS,
   TRUST_TABLE_HEAD_CLASS,
@@ -29,8 +30,10 @@ import {
   TRUST_TRANSACTION_KIND_LABEL,
   TRUST_TRANSACTIONS_COPY as COPY,
 } from '@/constants/trust';
+import { TRUST_CORRECTION_ALLOCATION_OPTIONS, TRUST_CORRECTION_COPY } from '@/constants/trust-corrections';
 import { useTrustResource } from '@/hooks/use-trust-resource';
 import {
+  fetchTrustTransactionCorrections,
   fetchTrustTransaction,
   reverseTrustTransaction,
   type TrustTransaction,
@@ -42,6 +45,31 @@ import {
   newTrustIdempotencyKey,
 } from '@/lib/trust-accounting';
 import { cn } from '@/lib/utils';
+import { isCorrectableReceipt } from '@/utils/trust-corrections';
+
+const allocationLabel = (kind: string) =>
+  TRUST_CORRECTION_ALLOCATION_OPTIONS.find((option) => option.id === kind)?.label ?? kind;
+
+/** PRD phase 4 (D156): the corrections made to this receipt, oldest first. */
+function ReceiptCorrections({ agencyId, transactionId, version }: { agencyId: string; transactionId: string; version: number }) {
+  const { data } = useTrustResource(`${agencyId}:${transactionId}:corrections:${version}`, () =>
+    fetchTrustTransactionCorrections(agencyId, transactionId),
+  );
+  if (!data || data.items.length === 0) return null;
+  return (
+    <div className="space-y-1 rounded-lg border p-3">
+      <p className="text-xs font-medium">{TRUST_CORRECTION_COPY.listTitle}</p>
+      {data.items.map((row) => (
+        <p key={row.id} className="text-xs">
+          {`${formatTrustDate(row.createdAt.slice(0, 10))} · ${formatCents(row.amountCents)} · ${TRUST_CORRECTION_COPY.movedBetween(
+            `${allocationLabel(row.fromKind)} (${row.fromLedgerName})`,
+            `${allocationLabel(row.toKind)} (${row.toLedgerName})`,
+          )} · ${row.reason}`}
+        </p>
+      ))}
+    </div>
+  );
+}
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -146,6 +174,8 @@ export function TrustTransactionDialog({
     fetchTrustTransaction(agencyId, transactionId),
   );
   const [reversing, setReversing] = useState(false);
+  const [correcting, setCorrecting] = useState(false);
+  const [correctionsVersion, setCorrectionsVersion] = useState(0);
   const [idempotencyKey] = useState(newTrustIdempotencyKey);
 
   async function reverse(reason: string) {
@@ -159,7 +189,7 @@ export function TrustTransactionDialog({
   return (
     <>
       <Dialog
-        open={!reversing}
+        open={!reversing && !correcting}
         onOpenChange={(open) => {
           if (!open) onClose();
         }}
@@ -170,13 +200,24 @@ export function TrustTransactionDialog({
             <DialogDescription>{data?.description ?? ''}</DialogDescription>
           </DialogHeader>
           {data ? (
-            <TransactionBody tx={data} />
+            <div className="space-y-3">
+              <TransactionBody tx={data} />
+              {isCorrectableReceipt(data) ? (
+                <ReceiptCorrections agencyId={agencyId} transactionId={transactionId} version={correctionsVersion} />
+              ) : null}
+            </div>
           ) : error ? (
             <TrustLoadError error={error} onRetry={reload} />
           ) : (
             <TrustLoading />
           )}
           <DialogFooter>
+            {data && isCorrectableReceipt(data) ? (
+              <Button type="button" variant="outline" onClick={() => setCorrecting(true)}>
+                <ArrowLeftRight className="size-4" />
+                {TRUST_CORRECTION_COPY.action}
+              </Button>
+            ) : null}
             {data && isPostedOriginalTrustTransaction(data) ? (
               <Button type="button" variant="outline" onClick={() => setReversing(true)}>
                 <Undo2 className="size-4" />
@@ -189,6 +230,18 @@ export function TrustTransactionDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {correcting && data ? (
+        <TrustCorrectionDialog
+          agencyId={agencyId}
+          transaction={data}
+          onClose={() => setCorrecting(false)}
+          onCorrected={() => {
+            setCorrectionsVersion((n) => n + 1);
+            onReversed();
+            reload();
+          }}
+        />
+      ) : null}
       {reversing && data ? (
         <TrustReasonDialog
           title={TRUST_REVERSE_COPY.title(data.auditNumber)}

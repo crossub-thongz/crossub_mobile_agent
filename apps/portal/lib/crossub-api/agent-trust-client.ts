@@ -113,6 +113,18 @@ export type TrustDisbursementRunList = components['schemas']['TrustDisbursementR
 export type TrustStatementPreview = components['schemas']['TrustStatementPreviewDto'];
 export type RevokeTrustReconciliationInput = components['schemas']['RevokeReconciliationDto'];
 export type TrustBankBalances = components['schemas']['TrustBankBalancesDto'];
+// PRD phase 4 (rent rates, move-out, allocation corrections).
+export type TrustRentRate = components['schemas']['TrustRentRateDto'];
+export type SetTrustRentRateInput = components['schemas']['SetRentRateDto'];
+export type SetTrustMoveOutInput = components['schemas']['SetMoveOutDto'];
+export type TrustMoveOutPreview = components['schemas']['TrustMoveOutPreviewDto'];
+export type TrustCorrectionLeg = components['schemas']['TrustCorrectionLegDto'];
+export type TrustCorrectionPaidTo = components['schemas']['TrustCorrectionPaidToDto'];
+export type TrustCorrectionPreview = components['schemas']['TrustCorrectionPreviewDto'];
+export type CorrectTrustAllocationInput = components['schemas']['CorrectAllocationDto'];
+export type ConfirmTrustCorrectionInput = components['schemas']['ConfirmAllocationCorrectionDto'];
+export type TrustAllocationCorrection = components['schemas']['TrustAllocationCorrectionDto'];
+export type TrustAllocationCorrectionList = components['schemas']['TrustAllocationCorrectionListDto'];
 
 export type ListTrustLedgersQuery = NonNullable<
   operations['AgentTrustController_listLedgers']['parameters']['query']
@@ -1118,4 +1130,101 @@ export async function removeTrustBankBalance(
     { params: { path: { agencyId, bankAccountId, date } } },
   );
   return unwrapCrossubResult(result, "Couldn't remove the bank balance");
+}
+
+// --------------------------------------------------------------------------- Rent rates, move-out, corrections (PRD phase 4)
+
+/** Add a dated rent rate, or change the amount on that date; re-rates the current coverage. */
+export async function setTrustRentRate(
+  agencyId: string,
+  ledgerId: string,
+  body: SetTrustRentRateInput,
+): Promise<TrustLedger> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/rent-rates', {
+    params: { path: { agencyId, ledgerId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't save the rent rate");
+}
+
+/** Remove a dated rent rate added by mistake. */
+export async function removeTrustRentRate(agencyId: string, ledgerId: string, rateId: string): Promise<TrustLedger> {
+  const result = await crossub.DELETE('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/rent-rates/{rateId}', {
+    params: { path: { agencyId, ledgerId, rateId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't remove the rent rate");
+}
+
+/** What setting the move-out would do (rent paid past it, owner funds); posts nothing. */
+export async function previewTrustMoveOut(
+  agencyId: string,
+  ledgerId: string,
+  body: SetTrustMoveOutInput,
+): Promise<TrustMoveOutPreview> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/move-out/preview', {
+    params: { path: { agencyId, ledgerId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't preview the move-out");
+}
+
+/** Set or clear the move-out; rent paid past it moves to the tenant deposit, all or nothing. */
+export async function setTrustMoveOut(
+  agencyId: string,
+  ledgerId: string,
+  body: SetTrustMoveOutInput,
+): Promise<TrustLedger> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/move-out', {
+    params: { path: { agencyId, ledgerId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't set the move-out");
+}
+
+/** Allocation and move-out corrections touching a tenant folio, newest first. */
+export async function fetchTrustLedgerCorrections(
+  agencyId: string,
+  ledgerId: string,
+): Promise<TrustAllocationCorrectionList> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/ledgers/{ledgerId}/corrections', {
+    params: { path: { agencyId, ledgerId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't load the corrections");
+}
+
+/** Preview moving part of a receipt's Rent or Deposit elsewhere; posts nothing. */
+export async function previewTrustCorrection(
+  agencyId: string,
+  transactionId: string,
+  body: CorrectTrustAllocationInput,
+): Promise<TrustCorrectionPreview> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/transactions/{transactionId}/correction-preview', {
+    params: { path: { agencyId, transactionId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't preview the correction");
+}
+
+/** Correct a receipt's allocation: all journals and paid-to in one go, or nothing. */
+export async function confirmTrustCorrection(
+  agencyId: string,
+  transactionId: string,
+  body: ConfirmTrustCorrectionInput,
+): Promise<TrustAllocationCorrection> {
+  const result = await crossub.POST('/agent/agencies/{agencyId}/trust/transactions/{transactionId}/corrections', {
+    params: { path: { agencyId, transactionId } },
+    body,
+  });
+  return unwrapCrossubResult(result, "Couldn't correct the allocation");
+}
+
+/** The corrections of one receipt, oldest first. */
+export async function fetchTrustTransactionCorrections(
+  agencyId: string,
+  transactionId: string,
+): Promise<TrustAllocationCorrectionList> {
+  const result = await crossub.GET('/agent/agencies/{agencyId}/trust/transactions/{transactionId}/corrections', {
+    params: { path: { agencyId, transactionId } },
+  });
+  return unwrapCrossubResult(result, "Couldn't load the corrections");
 }

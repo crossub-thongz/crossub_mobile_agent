@@ -62,6 +62,10 @@ export const TRUST_AUDIT_ACTION_LABEL: Record<TrustAuditAction, string> = {
   FEE_TEMPLATE_SET: 'Fee template saved',
   FEE_ASSIGNMENT_SET: 'Fee set on folio or property',
   FEE_CHARGE_EDITED: 'Pending fee amount changed',
+  RENT_RATE_SET: 'Rent rate set',
+  RENT_RATE_REMOVED: 'Rent rate removed',
+  MOVE_OUT_SET: 'Move-out date set',
+  ALLOCATION_CORRECTED: 'Allocation corrected',
   PAYOUT_METHOD_SET: 'Payment methods saved',
   PAYOUT_SCHEDULE_SET: 'Payout schedule saved',
   WITHHOLD_CREATED: 'Amount withheld',
@@ -114,6 +118,8 @@ export const TRUST_AUDIT_ENTITY_LABEL: Record<TrustAuditEntityType, string> = {
   TrustReconciliationLock: 'Reconciliation',
   TrustWorkspaceMember: 'Workspace member',
   TrustBankBalance: 'Bank balance',
+  TrustRentRate: 'Rent rate',
+  TrustAllocationCorrection: 'Allocation correction',
 };
 
 export const TRUST_AUDIT_ENTITY_ORDER = Object.keys(TRUST_AUDIT_ENTITY_LABEL) as TrustAuditEntityType[];
