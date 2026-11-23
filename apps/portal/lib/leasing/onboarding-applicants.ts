@@ -75,7 +75,7 @@ export function collectOnboardingApplicants(input: {
       phone: current.phone || phone,
       applicationId: current.applicationId ?? person.applicationId,
       contactId: current.contactId ?? person.contactId,
-      personId: current.personId ?? clean(person.personId) || undefined,
+      personId: current.personId ?? (clean(person.personId) || undefined),
       isPrimary: current.isPrimary || person.isPrimary,
     };
   };
