@@ -35,6 +35,7 @@ import {
   resolveOverviewLeaseTerm,
   selectCurrentTenancies,
   splitIncomingTenancies,
+  type LeaseTerm,
   type TenancyTermRow,
 } from '@/utils/current-tenancy';
 import { isSamePortalParty, resolvePortalCoContacts, splitJoinedTenantName } from '@/utils/portal-party';
@@ -303,7 +304,11 @@ function liveRentForCurrentRows(
 }
 
 /** Current + upcoming + past tenancies for the Tenancies section. */
-export function buildPropertyTenancyRows(record: PropertyTenancyOverview): PropertyTenancyRow[] {
+export function buildPropertyTenancyRows(
+  record: PropertyTenancyOverview,
+  /** Dates the Edit tenancy dialog saved. Current rows print these instead of the agreement on file. */
+  registry?: LeaseTerm,
+): PropertyTenancyRow[] {
   const cycle = activeLeasingCycle(record);
   const leases = [...record.leaseHistory].sort(
     (a, b) => parseIsoDate(b.leaseStartDate) - parseIsoDate(a.leaseStartDate),
@@ -348,9 +353,10 @@ export function buildPropertyTenancyRows(record: PropertyTenancyOverview): Prope
   const archives = record.archivedTenancies;
   const rows: PropertyTenancyRow[] = [];
   const mergedArchives = new Set<PropertyTenancyArchive>();
+  const savedStart = dayKey(registry?.leaseStartDate);
   const registryTerm = {
-    leaseStartDate: orUndefined(record.overview.leaseStartDate),
-    leaseEndDate: orUndefined(record.overview.leaseEndDate),
+    leaseStartDate: savedStart ?? orUndefined(record.overview.leaseStartDate),
+    leaseEndDate: dayKey(registry?.leaseEndDate) ?? orUndefined(record.overview.leaseEndDate),
   };
 
   for (const lease of leases) {
@@ -361,11 +367,13 @@ export function buildPropertyTenancyRows(record: PropertyTenancyOverview): Prope
       leaseEndDate: orUndefined(lease.leaseEndDate),
     };
     const term = isCurrent
-      ? resolveOverviewLeaseTerm({
-          household: ownTerm,
-          registry: registryTerm,
-          hasIncomingHousehold: incomingLeases.length > 0,
-        })
+      ? savedStart
+        ? registryTerm
+        : resolveOverviewLeaseTerm({
+            household: ownTerm,
+            registry: registryTerm,
+            hasIncomingHousehold: incomingLeases.length > 0,
+          })
       : ownTerm;
     const termStart = term.leaseStartDate || undefined;
     const termEnd = term.leaseEndDate || undefined;
@@ -489,8 +497,16 @@ export function buildPropertyTenancyRows(record: PropertyTenancyOverview): Prope
 
   const tenant = record.tenant;
   if (leases.length === 0 && tenant?.name?.trim()) {
-    const start = orUndefined(tenant.leaseStartDate ?? record.overview.leaseStartDate);
-    const end = orUndefined(tenant.leaseEndDate ?? record.overview.leaseEndDate);
+    const start = orUndefined(
+      (savedStart ? registryTerm.leaseStartDate : undefined) ??
+        tenant.leaseStartDate ??
+        record.overview.leaseStartDate,
+    );
+    const end = orUndefined(
+      (savedStart ? registryTerm.leaseEndDate : undefined) ??
+        tenant.leaseEndDate ??
+        record.overview.leaseEndDate,
+    );
     const termination = assignTerminationCase(openCases, start, tenancyStarts, true);
     const snapshot = currentTenancyStatus(
       { leaseStartDate: start, leaseEndDate: end },

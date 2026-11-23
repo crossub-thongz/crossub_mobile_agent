@@ -48,6 +48,7 @@ import {
   type PropertyTenancyGroup,
   type PropertyTenancyMember,
 } from '@/utils/property-tenancy-groups';
+import { savedLeaseTerm } from '@/utils/property-tenancy-overview';
 import { canArchiveTenant } from '@/utils/property-tenancy-rows';
 
 import { AddTenancyDialog } from './add-tenancy-dialog';
@@ -431,7 +432,14 @@ export function PropertyTenanciesSection({
   record: PropertyTenancyOverview;
   onChanged: () => void;
 }) {
-  const groups = useMemo(() => buildPropertyTenancyGroups(record), [record]);
+  const savedTerm = useMemo(
+    () => savedLeaseTerm(property, record),
+    [property.leaseStart, property.leaseEnd, record],
+  );
+  const groups = useMemo(
+    () => buildPropertyTenancyGroups(record, savedTerm ?? undefined),
+    [record, savedTerm],
+  );
   const { primary, upcoming } = useMemo(() => selectDisplayedTenancy(groups), [groups]);
   const past = useMemo(() => selectPastTenancyGroups(groups), [groups]);
   // Add Property's success screen links here with the dialog asked for, the property chosen.
@@ -451,7 +459,10 @@ export function PropertyTenanciesSection({
     ? TENANCY_EMPTY_STATE_KIND.OCCUPIED_UNRECORDED
     : TENANCY_EMPTY_STATE_KIND.NEVER_LET;
   const emptyState = TENANCY_EMPTY_STATE[emptyStateKey];
-  const registryTerm = [record.overview.leaseStartDate, record.overview.leaseEndDate]
+  const registryTerm = [
+    savedTerm?.leaseStartDate ?? record.overview.leaseStartDate,
+    savedTerm?.leaseEndDate ?? record.overview.leaseEndDate,
+  ]
     .filter((d): d is string => Boolean(d))
     .map((d) => formatDateMedium(d))
     .join(` ${COPY.PERIOD_SEPARATOR} `);

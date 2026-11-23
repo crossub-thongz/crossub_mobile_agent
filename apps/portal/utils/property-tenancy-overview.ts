@@ -121,6 +121,23 @@ export function resolveUpcomingAcceptedRentChange(
   return candidates.sort((a, b) => a.startDate.localeCompare(b.startDate))[0] ?? null;
 }
 
+/**
+ * Lease dates the Edit tenancy dialog saved on the property.
+ * Null when the property has no start date, so the agreement on file stays on the card.
+ * A missing end falls back to the tenancy overview, the same way the dialog does.
+ */
+export function savedLeaseTerm(
+  property: { leaseStart?: string | null; leaseEnd?: string | null },
+  record: PropertyTenancyOverview,
+): LeaseTerm | null {
+  const leaseStartDate = dayKey(property.leaseStart);
+  if (!leaseStartDate) return null;
+  return {
+    leaseStartDate,
+    leaseEndDate: dayKey(property.leaseEnd) ?? dayKey(record.overview.leaseEndDate) ?? undefined,
+  };
+}
+
 /** The current household's term, or the registry's when that is the later, begun term. */
 export function resolveCurrentLeaseTerm(
   record: PropertyTenancyOverview,

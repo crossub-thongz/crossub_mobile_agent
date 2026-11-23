@@ -10,6 +10,7 @@ import {
 } from '@/constants/property-tenancies';
 import type { PropertyTenancyOverview } from '@/lib/crossub-api/agent-tenancy-client';
 import { isSamePortalParty, type PortalParty } from '@/utils/portal-party';
+import type { LeaseTerm } from '@/utils/current-tenancy';
 import { buildPropertyTenancyRows, type PropertyTenancyRow } from '@/utils/property-tenancy-rows';
 
 /**
@@ -128,8 +129,11 @@ function orderCurrentMembers(
     .map(({ member }) => member);
 }
 
-export function buildPropertyTenancyGroups(record: PropertyTenancyOverview): PropertyTenancyGroup[] {
-  const rows = buildPropertyTenancyRows(record);
+export function buildPropertyTenancyGroups(
+  record: PropertyTenancyOverview,
+  registry?: LeaseTerm,
+): PropertyTenancyGroup[] {
+  const rows = buildPropertyTenancyRows(record, registry);
   const groups = new Map<string, PropertyTenancyGroup>();
 
   for (const row of rows) {

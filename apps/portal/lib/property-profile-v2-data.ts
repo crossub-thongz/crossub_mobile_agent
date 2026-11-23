@@ -213,11 +213,12 @@ export function buildPropertyProfileMetrics(args: {
         : currentRent;
 
   const { end: leaseEnd } = resolveLeaseDates(property, currentLease);
+  // The edit dialog writes the property end. The tenancy overview can keep the previous agreement.
   const leaseExpiry =
-    sync.overview?.leaseEndDate ??
-    sync.record?.leaseEndDate ??
-    leaseEnd ??
-    property.leaseEnd;
+    property.leaseEnd ||
+    sync.overview?.leaseEndDate ||
+    sync.record?.leaseEndDate ||
+    leaseEnd;
 
   const rentPaidTo = resolveRentPaidTo(
     sync.record?.rentPaidUntil ??
