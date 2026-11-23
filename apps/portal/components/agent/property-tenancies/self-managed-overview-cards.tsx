@@ -238,7 +238,7 @@ function UpcomingTenancyBody({
               <TenantBlock
                 key={member.id}
                 member={member}
-                onView={member.personId ? () => onViewMember(member) : undefined}
+                onView={member.personId || member.contactId ? () => onViewMember(member) : undefined}
               />
             ))}
           </div>
@@ -413,8 +413,14 @@ export function SelfManagedOverviewCards({
     property.assignedPortalAgentName?.trim() || property.accountManagerName?.trim() || '';
 
   const editMember = (member: PropertyTenancyMember) =>
-    member.personId
-      ? setDetailsEdit({ personId: member.personId, name: member.name, email: member.email, mobile: member.mobile })
+    member.personId || member.contactId
+      ? setDetailsEdit({
+          personId: member.personId,
+          contactId: member.contactId,
+          name: member.name,
+          email: member.email,
+          mobile: member.mobile,
+        })
       : undefined;
 
   const invitePrimary = async () => {
@@ -614,7 +620,7 @@ export function SelfManagedOverviewCards({
                     <TenantBlock
                       key={member.id}
                       member={member}
-                      onView={member.personId ? () => editMember(member) : undefined}
+                      onView={member.personId || member.contactId ? () => editMember(member) : undefined}
                       invite={
                         member.isPrimary && canInvite ? (
                           <CardLink

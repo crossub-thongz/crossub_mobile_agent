@@ -146,6 +146,8 @@ export interface LeasingContract {
   waterChargedSeparately?: boolean;
   specialConditions: LeasingContractCondition[];
   confirmed: boolean;
+  /** Every person on the lease draft. Absent on older payloads that only name one tenant. */
+  jointTenants?: { name: string; email?: string; phone?: string }[];
 }
 
 export interface LeasingDepositState {

@@ -25,6 +25,8 @@ export interface PropertyTenancyMember {
   leaseId?: string;
   /** The person behind them, when known — gates "View contact" (edit details). */
   personId?: string;
+  /** Property contact row, when this member is already a contact. Edits can use this without a person id. */
+  contactId?: string;
   /** The member the property record mirrors: statutory notices go to them. */
   isPrimary: boolean;
 }
@@ -93,6 +95,7 @@ function addMember(members: PropertyTenancyMember[], candidate: PropertyTenancyM
   existing.mobile ??= candidate.mobile;
   existing.leaseId ??= candidate.leaseId;
   existing.personId ??= candidate.personId;
+  existing.contactId ??= candidate.contactId;
   existing.isPrimary ||= candidate.isPrimary;
 }
 
@@ -197,6 +200,7 @@ export function buildPropertyTenancyGroups(record: PropertyTenancyOverview): Pro
         email: coTenant.email ?? undefined,
         mobile: coTenant.mobile ?? undefined,
         personId: coTenant.personId ?? personIdFor(record, coTenant),
+        contactId: coTenant.id,
         isPrimary: false,
       });
     }
@@ -215,6 +219,7 @@ export function buildPropertyTenancyGroups(record: PropertyTenancyOverview): Pro
         if (row.email) member.email = row.email;
         if (row.mobile) member.mobile = row.mobile;
         member.personId ??= row.personId ?? undefined;
+        member.contactId ??= row.id;
       }
       group.members = orderCurrentMembers(record, group.members);
     }

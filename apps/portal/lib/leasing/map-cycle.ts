@@ -71,6 +71,13 @@ function mapContract(
       text: c.text,
     })),
     confirmed: d.confirmed ?? false,
+    jointTenants: (d.jointTenants ?? [])
+      .map((tenant) => ({
+        name: tenant.name?.trim() ?? '',
+        email: u(tenant.email),
+        phone: u(tenant.phone),
+      }))
+      .filter((tenant) => tenant.name || tenant.email || tenant.phone),
   };
 }
 

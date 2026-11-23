@@ -20,12 +20,16 @@ import {
   TENANT_DETAILS_COPY as COPY,
   TENANT_RECORD_LAYER_LABEL,
 } from '@/constants/property-tenancies';
+import { updatePropertyContact } from '@/lib/crossub-api/agent-client';
 import { updateTenantDetails } from '@/lib/crossub-api/agent-tenancy-client';
 import { splitApplicantName } from '@/lib/tenant-provision-prefill';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
 export type TenantDetailsTarget = {
-  personId: string;
+  /** Tenant person record. Saving this also updates their login and property contact. */
+  personId?: string;
+  /** Property contact, used when this applicant has no person record yet. */
+  contactId?: string;
   name: string;
   email?: string;
   mobile?: string;
@@ -64,18 +68,33 @@ export function TenantDetailsDialog({
 
   const submit = async () => {
     if (!target) return;
+    const nextName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
+    const nextEmail = email.trim();
+    const nextPhone = phone.trim();
     setSaving(true);
     try {
-      const result = await updateTenantDetails(propertyId, target.personId, {
-        firstName: firstName.trim() || null,
-        lastName: lastName.trim() || null,
-        email: email.trim() || null,
-        phone: phone.trim() || null,
-      });
-      const touched = result.updated.map((layer) => TENANT_RECORD_LAYER_LABEL[layer] ?? layer);
-      toast.success(touched.length > 0 ? `${COPY.DONE}: ${touched.join(', ')}` : COPY.NOTHING);
-      const note = result.registrySkipped ? REGISTRY_NAME_SKIP_NOTE[result.registrySkipped] : '';
-      if (note) toast.warning(note);
+      if (target.personId) {
+        const result = await updateTenantDetails(propertyId, target.personId, {
+          firstName: firstName.trim() || null,
+          lastName: lastName.trim() || null,
+          email: nextEmail || null,
+          phone: nextPhone || null,
+        });
+        const touched = result.updated.map((layer) => TENANT_RECORD_LAYER_LABEL[layer] ?? layer);
+        toast.success(touched.length > 0 ? `${COPY.DONE}: ${touched.join(', ')}` : COPY.NOTHING);
+        const note = result.registrySkipped ? REGISTRY_NAME_SKIP_NOTE[result.registrySkipped] : '';
+        if (note) toast.warning(note);
+      } else if (target.contactId) {
+        await updatePropertyContact(propertyId, target.contactId, {
+          name: nextName || null,
+          email: nextEmail || null,
+          phone: nextPhone || null,
+        });
+        toast.success(COPY.DONE);
+      } else {
+        toast.error(COPY.FAILED);
+        return;
+      }
       onOpenChange(false);
       onSaved();
     } catch (err) {
