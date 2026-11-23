@@ -93,6 +93,8 @@ function summaryLine(group: PropertyTenancyGroup): string {
 
 type Handlers = {
   record: PropertyTenancyOverview;
+  /** Registry tenant name. An intake draft's name is not on the property yet. */
+  registryTenantName?: string | null;
   propertyId: string;
   pinBusy: boolean;
   onPin: (tenancyId: string | null) => void;
@@ -125,7 +127,7 @@ function TenancyActions({ group, ...h }: Handlers & { group: PropertyTenancyGrou
   }
 
   const menu: TenancyMenuItem[] = [];
-  if (group.group === TENANCY_ROW_GROUP.CURRENT && canArchiveTenant(h.record)) {
+  if (group.group === TENANCY_ROW_GROUP.CURRENT && canArchiveTenant(h.record, h.registryTenantName)) {
     menu.push({ key: 'archive', label: COPY.ARCHIVE_TENANCY, icon: Archive, onSelect: h.onArchive });
   }
   if (group.leaseId && group.canPinAsCurrent) {
@@ -138,7 +140,7 @@ function TenancyActions({ group, ...h }: Handlers & { group: PropertyTenancyGrou
       onSelect: () => h.onPin(group.pinnedAsCurrent ? null : leaseId),
     });
   }
-  if (group.restoreArchivedAt && !canArchiveTenant(h.record)) {
+  if (group.restoreArchivedAt && !canArchiveTenant(h.record, h.registryTenantName)) {
     menu.push({ key: 'restore', label: COPY.RESTORE, icon: Undo2, onSelect: () => h.onRestore(group) });
   }
   if (group.group === TENANCY_ROW_GROUP.INCOMING && group.leasingCaseId) {
@@ -471,12 +473,18 @@ export function PropertyTenanciesSection({
     }
   };
 
+  const registryTenantName =
+    property.registryIntakeComplete === false ? null : property.tenantName;
   const handlers: Handlers = {
     record,
+    registryTenantName,
     propertyId: record.propertyId,
     pinBusy,
     onPin: (tenancyId) => void handlePin(tenancyId),
-    onArchive: () => setArchiveOpen(true),
+    onArchive: () => {
+      if (!canArchiveTenant(record, registryTenantName)) return;
+      setArchiveOpen(true);
+    },
     onRestore: setRestoreGroup,
     onWithdraw: setWithdrawGroup,
     onRemove: setRemoveGroup,
@@ -552,7 +560,13 @@ export function PropertyTenanciesSection({
         agencyId={property.agencyId}
         onSaved={onChanged}
       />
-      <ArchiveTenancyDialog open={archiveOpen} onOpenChange={setArchiveOpen} record={record} onDone={onChanged} />
+      <ArchiveTenancyDialog
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        record={record}
+        registryTenantName={registryTenantName}
+        onDone={onChanged}
+      />
       <RestoreTenancyDialog
         open={restoreGroup != null}
         onOpenChange={(next) => (next ? undefined : setRestoreGroup(null))}
