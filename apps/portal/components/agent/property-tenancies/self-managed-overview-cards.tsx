@@ -62,6 +62,7 @@ import {
   rentAmountForPeriod,
   resolveCurrentLeaseTerm,
   resolveLeaseTermType,
+  savedLeaseTerm,
   resolvePreviousFixedTermEnd,
   resolveTenancyVacateDate,
   resolveUpcomingAcceptedRentChange,
@@ -329,7 +330,14 @@ export function SelfManagedOverviewCards({
   const [detailsEdit, setDetailsEdit] = useState<TenantDetailsTarget | null>(null);
   const [inviteBusy, setInviteBusy] = useState(false);
 
-  const groups = useMemo(() => buildPropertyTenancyGroups(record), [record]);
+  const savedTerm = useMemo(
+    () => savedLeaseTerm(property, record),
+    [property.leaseStart, property.leaseEnd, record],
+  );
+  const groups = useMemo(
+    () => buildPropertyTenancyGroups(record, savedTerm ?? undefined),
+    [record, savedTerm],
+  );
   const displayed = useMemo(() => selectDisplayedTenancy(groups), [groups]);
   const currentTenancy =
     displayed.primary?.group === TENANCY_ROW_GROUP.CURRENT ? displayed.primary : undefined;
@@ -373,7 +381,8 @@ export function SelfManagedOverviewCards({
     : [];
   const ownerNames = owners.map((o) => o.name).join(' & ');
 
-  const term = resolveCurrentLeaseTerm(record, currentTenancy, queuedUpcoming.length > 0);
+  const term =
+    savedTerm ?? resolveCurrentLeaseTerm(record, currentTenancy, queuedUpcoming.length > 0);
   const leaseTermType = resolveLeaseTermType(record, currentTenancy, term);
   const previousFixedEnd = resolvePreviousFixedTermEnd(record, currentTenancy, leaseTermType, term);
   const vacateDate = resolveTenancyVacateDate(record);
