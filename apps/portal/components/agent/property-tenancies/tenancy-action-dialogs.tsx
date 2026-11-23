@@ -32,7 +32,7 @@ import {
   removableManualLeaseIds,
   type PropertyTenancyGroup,
 } from '@/utils/property-tenancy-groups';
-import { openTerminationCaseForArchive } from '@/utils/property-tenancy-rows';
+import { canArchiveTenant, openTerminationCaseForArchive } from '@/utils/property-tenancy-rows';
 
 /** The tenancy actions that ask before they act: archive, restore, archive incoming, remove. */
 
@@ -117,16 +117,20 @@ export function ArchiveTenancyDialog({
   open,
   onOpenChange,
   record,
+  registryTenantName,
   onDone,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   record: PropertyTenancyOverview;
+  /** Registry tenant name, so a name that only exists on the overview cannot confirm. */
+  registryTenantName?: string | null;
   onDone: () => void;
 }) {
   const openCase = openTerminationCaseForArchive(record);
   const tenantName = record.tenant?.name?.trim();
   const hasIncoming = (record.currentTenancy?.incomingTenancyIds.length ?? 0) > 0;
+  const allowed = canArchiveTenant(record, registryTenantName);
   const { busy, submit } = useAction(
     async () => {
       await archivePropertyTenancy(record.propertyId);
@@ -151,7 +155,11 @@ export function ArchiveTenancyDialog({
       busy={busy}
       confirmLabel={TENANCY_SECTION_COPY.ARCHIVE_TENANCY}
       confirmIcon={Archive}
-      onConfirm={() => void submit()}
+      confirmDisabled={!allowed}
+      onConfirm={() => {
+        if (!allowed) return;
+        void submit();
+      }}
     >
       {openCase ? (
         <div className="flex gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5">

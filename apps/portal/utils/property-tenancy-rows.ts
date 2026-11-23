@@ -27,6 +27,8 @@ import type {
 } from '@/lib/crossub-api/agent-tenancy-client';
 import { formatDateMedium } from '@/lib/format-datetime';
 import {
+  dayKey,
+  dayKeyOf,
   hasMovedOut,
   isPeriodicTenancy,
   isTenancyStatusLive,
@@ -114,13 +116,61 @@ function activeLeasingCycle(record: PropertyTenancyOverview): PropertyTenancyCas
   );
 }
 
-/** Is there a current tenant to archive? Mirrors the API's own guard. */
-export function canArchiveTenant(record: PropertyTenancyOverview): boolean {
-  if (record.tenant?.name?.trim()) return true;
-  if ((record.currentTenancy?.tenancyIds?.length ?? 0) > 0) return true;
-  return record.contacts.some(
-    (c) => c.role === PROPERTY_CONTACT_ROLE.TENANT && Boolean(c.name?.trim()),
+function recordedLabel(value?: string | null): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === TENANCY_PLACEHOLDER) return null;
+  return trimmed;
+}
+
+/**
+ * A live agreement "Archive tenancy" will end. One with no start date cannot be shown to be
+ * the household moving in, so the API ends it; one that starts after today is left alone.
+ */
+function agreementEndedByArchive(lease: PropertyTenancyLease, today = new Date()): boolean {
+  if (!isTenancyStatusLive(lease)) return false;
+  const begins = dayKey(lease.leaseStartDate);
+  if (!begins) return true;
+  return begins <= dayKeyOf(today);
+}
+
+/**
+ * The property card's tenant name is the registry column when one is stored. With none, the
+ * card borrows a contact or the person on a live agreement. A name borrowed from an agreement
+ * that has not started is not someone the archive will file away.
+ */
+function registryNameIsArchivable(
+  record: PropertyTenancyOverview,
+  registryTenantName?: string | null,
+): boolean {
+  if (!recordedLabel(registryTenantName)) return false;
+  const live = record.leaseHistory.filter((lease) => isTenancyStatusLive(lease));
+  if (live.length === 0 || live.some((lease) => agreementEndedByArchive(lease))) return true;
+  const registry = { name: registryTenantName };
+  return !live.some(
+    (lease) =>
+      isSamePortalParty(registry, { name: lease.tenantName }) ||
+      isSamePortalParty(registry, lease.tenant),
   );
+}
+
+/**
+ * Is there a current tenant the archive will accept?
+ *
+ * The overview name is not enough: it can be an applicant, or someone approved before any
+ * agreement exists, and the API then refuses with "no current tenant to archive". It accepts
+ * a registry tenant name, a live tenant contact, or a live agreement that has already started.
+ */
+export function canArchiveTenant(
+  record: PropertyTenancyOverview,
+  registryTenantName?: string | null,
+): boolean {
+  if (
+    record.contacts.some((contact) => contact.role === PROPERTY_CONTACT_ROLE.TENANT)
+  ) {
+    return true;
+  }
+  if (record.leaseHistory.some((lease) => agreementEndedByArchive(lease))) return true;
+  return registryNameIsArchivable(record, registryTenantName);
 }
 
 /** The open end of lease an archive would cancel, if any — a warning, not a block. */
