@@ -15,7 +15,10 @@ export interface PortalParty {
   mobile?: string | null;
 }
 
-/** Score at which two rows are the same human: a phone (2) or a name (4); an email alone (1) is not. */
+/**
+ * Score at which two rows are the same human: a phone (2) or a name (4); an email alone (1) is not.
+ * Two different email addresses are two people, even when the names match.
+ */
 const SAME_PARTY_SCORE = 2;
 const NAME_SCORE = 4;
 const PHONE_SCORE = 2;
@@ -49,6 +52,9 @@ function matchScore(a: PortalParty, b: PortalParty): number {
 }
 
 export function isSamePortalParty(a: PortalParty, b: PortalParty): boolean {
+  const aEmail = emailKey(a.email);
+  const bEmail = emailKey(b.email);
+  if (aEmail && bEmail && aEmail !== bEmail) return false;
   return matchScore(a, b) >= SAME_PARTY_SCORE;
 }
 

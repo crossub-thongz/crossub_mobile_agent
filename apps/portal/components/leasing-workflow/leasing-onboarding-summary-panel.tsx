@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronDown, Mail, Phone, UserCheck } from 'lucide-react';
+import { ChevronDown, UserCheck } from 'lucide-react';
 
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
+import { LeasingApplicantContacts } from '@/components/leasing-workflow/leasing-applicant-contacts';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useOpenInspectionEmailSources } from '@/hooks/use-open-inspection-email-sources';
@@ -58,24 +59,7 @@ export function LeasingOnboardingSummaryPanel({ detail }: { detail: LeasingPrope
             <UserCheck className="text-muted-foreground size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
-              Confirmed tenant
-            </p>
-            <p className="mt-0.5 text-sm font-semibold">{tenant.applicant}</p>
-            <div className="text-muted-foreground mt-2 space-y-1 text-[12.5px]">
-              {tenant.email ? (
-                <p className="flex items-center gap-1.5">
-                  <Mail className="size-3.5 shrink-0" />
-                  <span className="truncate">{tenant.email}</span>
-                </p>
-              ) : null}
-              {tenant.phone ? (
-                <p className="flex items-center gap-1.5">
-                  <Phone className="size-3.5 shrink-0" />
-                  <span>{tenant.phone}</span>
-                </p>
-              ) : null}
-            </div>
+            <LeasingApplicantContacts detail={detail} />
           </div>
         </div>
 

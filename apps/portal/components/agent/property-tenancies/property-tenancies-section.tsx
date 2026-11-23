@@ -265,7 +265,7 @@ function TenancyCard({ group, ...h }: Handlers & { group: PropertyTenancyGroup }
                 <HouseholdMember
                   key={member.id}
                   member={member}
-                  onEdit={member.personId ? () => h.onEditMember(member) : undefined}
+                  onEdit={member.personId || member.contactId ? () => h.onEditMember(member) : undefined}
                 />
               ))}
             </div>
@@ -489,8 +489,14 @@ export function PropertyTenanciesSection({
     onWithdraw: setWithdrawGroup,
     onRemove: setRemoveGroup,
     onEditMember: (member) =>
-      member.personId
-        ? setMemberEdit({ personId: member.personId, name: member.name, email: member.email, mobile: member.mobile })
+      member.personId || member.contactId
+        ? setMemberEdit({
+            personId: member.personId,
+            contactId: member.contactId,
+            name: member.name,
+            email: member.email,
+            mobile: member.mobile,
+          })
         : undefined,
     propertyBondAmount: property.bondAmount,
   };

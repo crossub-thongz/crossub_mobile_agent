@@ -115,7 +115,7 @@ export function isSameHouseholdPerson(
 ): boolean {
   const aEmail = householdPersonKey(null, a.email);
   const bEmail = householdPersonKey(null, b.email);
-  if (aEmail && bEmail && aEmail === bEmail) return true;
+  if (aEmail && bEmail) return aEmail === bEmail;
   const aName = householdPersonKey(a.name, null);
   const bName = householdPersonKey(b.name, null);
   return Boolean(aName) && aName === bName;
@@ -142,9 +142,9 @@ export function mergeHouseholdTenants(input: {
     if (name.toLowerCase() === 'vacant') return;
     const emailKey = householdPersonKey(null, email);
     const nameKey = householdPersonKey(name, null);
-    if ((emailKey && seen.has(emailKey)) || (nameKey && seen.has(nameKey))) {
-      return;
-    }
+    // A second email is a second person, even when the names are identical.
+    if (emailKey && seen.has(emailKey)) return;
+    if (!emailKey && nameKey && seen.has(nameKey)) return;
     if (!emailKey && !nameKey) return;
     if (emailKey) seen.add(emailKey);
     if (nameKey) seen.add(nameKey);
@@ -216,14 +216,7 @@ function matchingHouseholdContact(
   name?: string | null,
   email?: string | null,
 ): HouseholdPersonInput | undefined {
-  const emailKey = householdPersonKey(null, email);
-  const nameKey = householdPersonKey(name, null);
-  return contacts.find((row) => {
-    const rowEmail = householdPersonKey(null, row.email);
-    if (emailKey && rowEmail && emailKey === rowEmail) return true;
-    const rowName = householdPersonKey(row.name, null);
-    return Boolean(nameKey) && nameKey === rowName;
-  });
+  return contacts.find((row) => isSameHouseholdPerson({ name, email }, row));
 }
 
 export function householdTenantsFromOverview(input: {
