@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import { TrustReceiptRentSetup } from '@/components/agent/trust/trust-receipt-rent-setup';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,6 +26,7 @@ import {
   TRUST_RECEIPT_METHOD_LABEL,
   TRUST_RECEIPT_METHOD_ORDER,
   TRUST_RECEIPT_RENT_PERIOD_LABEL,
+  TRUST_RECEIPT_RENT_SETUP_COPY as RENT_SETUP_COPY,
   type TrustPaymentMethod,
   type TrustReceiptAllocationKind,
   type TrustRentPeriod,
@@ -326,6 +328,9 @@ export function TrustReceiptDialog({
   const overdueDays = arrearsDays != null && arrearsDays < 0 ? Math.abs(arrearsDays) : null;
   const rentLabel = rentDetailsLabel(trustRentCents ?? tenancy?.cents ?? null, trustRentPeriod ?? tenancy?.period ?? null);
   const hasRentProfile = profile != null || Boolean(selected?.hasRentProfile);
+  // The loaded ledger is the word on it: no rent profile means rent cannot be receipted yet.
+  const needsRentSetup =
+    selected != null && ledger.data != null && ledger.data.id === selected.ledgerId && ledger.data.rentProfile == null;
   const ownerLabel =
     owners.data?.items
       .map((owner: { name?: string | null; code?: string | null }) => partyLabel(owner.name ?? '', owner.code ?? ''))
@@ -461,6 +466,10 @@ export function TrustReceiptDialog({
     }
     if (allocations.length === 0) {
       toast.error(COPY.amountInvalid);
+      return;
+    }
+    if (rentCents > 0 && needsRentSetup) {
+      toast.error(RENT_SETUP_COPY.required);
       return;
     }
 
@@ -613,6 +622,17 @@ export function TrustReceiptDialog({
           </div>
           <Fact label={COPY.details}>{selected ? rentLabel : COPY.empty}</Fact>
         </div>
+
+        {needsRentSetup && selected && !tenancyRent.loading ? (
+          <TrustReceiptRentSetup
+            key={`${selected.ledgerId}:${tenancy ? 'tenancy' : 'blank'}`}
+            agencyId={agencyId}
+            ledgerId={selected.ledgerId}
+            defaults={tenancy}
+            disabled={pending}
+            onSaved={ledger.reload}
+          />
+        ) : null}
 
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full min-w-[40rem] border-collapse text-sm">
