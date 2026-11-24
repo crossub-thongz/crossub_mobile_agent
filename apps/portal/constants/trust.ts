@@ -678,6 +678,13 @@ export const TRUST_RECEIPT_COPY = {
   empty: '—',
 } as const;
 
+/** Rent set-up on the tenant receipt, for a tenant ledger that has no rent yet. */
+export const TRUST_RECEIPT_RENT_SETUP_COPY = {
+  title: 'Rent is not set up for this tenant yet',
+  description: 'Confirm the rent and the date it is paid to, then save. The receipt carries on from there.',
+  required: 'Save the rent for this tenant before you receipt rent',
+} as const;
+
 /** How the receipt states the rent, e.g. "$1,150.00 weekly". */
 export const TRUST_RECEIPT_RENT_PERIOD_LABEL: Record<TrustRentPeriod, string> = {
   WEEKLY: 'weekly',

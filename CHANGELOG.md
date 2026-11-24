@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-24
+
+### Fixed
+- New tenant receipt on a tenant ledger with no rent set up asks for the rent and paid-to date and saves them there, instead of refusing the receipt
+
 ## 2026-11-20
 
 ### Added
