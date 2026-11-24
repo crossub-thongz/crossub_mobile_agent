@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import type { ConversationPropertyOption } from '@/components/agent/conversations/conversation-list';
-import { RecipientRow } from '@/components/agent/conversations/reply-composer-parts';
+import { AttachControl, AttachmentChips, RecipientRow } from '@/components/agent/conversations/reply-composer-parts';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { FieldLabel, SELECT_CLASS } from '@/components/agent/maintenance-self-managed/step-card';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -24,6 +24,7 @@ import {
   CONVERSATION_ACTION,
   CONVERSATION_APP_NAME,
   CONVERSATION_APP_RECIPIENTS,
+  CONVERSATION_ATTACHMENT_LIMITS,
   CONVERSATION_CHANNEL_OPTIONS,
   CONVERSATION_DELIVERY_SENT,
   CONVERSATION_RECIPIENT,
@@ -39,6 +40,7 @@ import { useConversationAction } from '@/hooks/use-agent-conversations';
 import {
   createAgentConversation,
   replyToAgentConversation,
+  type AgentConversationAttachmentUpload,
   type AgentConversationDetail,
   type AgentConversationTemplate,
 } from '@/lib/crossub-api/agent-conversation-client';
@@ -46,6 +48,7 @@ import { emailsOfHouseholdTenants } from '@/lib/property-parties';
 import { useHouseholdTenants } from '@/lib/use-primary-tenant-name';
 import { toPlainTextBody } from '@/lib/message-body';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { fileToEmailAttachment } from '@/utils/email-attachment';
 import { recipientsWithTyped } from '@/utils/email-recipients';
 
 /** Recipients an app message can go to: the tenant only. */
@@ -80,6 +83,7 @@ export function NewConversationDialog({
   const [tenantTyped, setTenantTyped] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const [attachments, setAttachments] = useState<readonly AgentConversationAttachmentUpload[]>([]);
   const busy = pending !== null;
   const isApp = channel === CONVERSATION_REPLY_CHANNEL.APP;
   const writingToTenants = !isApp && recipient === CONVERSATION_RECIPIENT.TENANT;
@@ -120,6 +124,25 @@ export function NewConversationDialog({
     }
   };
 
+  const addFiles = async (incoming: readonly File[]) => {
+    if (incoming.length === 0) return;
+    const room = CONVERSATION_ATTACHMENT_LIMITS.maxFiles - attachments.length;
+    if (room <= 0) {
+      toast.error(CONVERSATIONS_COPY.tooManyFiles(CONVERSATION_ATTACHMENT_LIMITS.maxFiles));
+      return;
+    }
+    if (incoming.length > room) toast.error(CONVERSATIONS_COPY.tooManyFiles(CONVERSATION_ATTACHMENT_LIMITS.maxFiles));
+    const picked = incoming.slice(0, room);
+    const settled = await Promise.allSettled(picked.map((file, index) => fileToEmailAttachment(file, index)));
+    const next = settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
+    const failed = settled.find((result) => result.status === 'rejected');
+    if (next.length > 0) setAttachments((prev) => [...prev, ...next]);
+    if (failed?.status === 'rejected') {
+      const reason = failed.reason;
+      toast.error(reason instanceof Error ? reason.message : CONVERSATIONS_COPY.attachFailed);
+    }
+  };
+
   const insertTemplate = (templateId: string) => {
     const template = templates.find((t) => t.id === templateId);
     if (!template) return;
@@ -141,6 +164,7 @@ export function NewConversationDialog({
         subject: subject.trim(),
         body: body.trim(),
         ...(email && !isApp ? { toEmail: email } : {}),
+        ...(attachments.length && !isApp ? { attachments: [...attachments] } : {}),
       });
       // A new thread takes one address. The reply route takes the rest, so a co-tenant is not dropped.
       if (isApp || otherTenants.length === 0) return created;
@@ -149,6 +173,7 @@ export function NewConversationDialog({
           channel: CONVERSATION_REPLY_CHANNEL.EMAIL,
           body: body.trim(),
           toEmails: [...otherTenants],
+          ...(attachments.length ? { attachments: [...attachments] } : {}),
         });
       } catch (err) {
         othersMissed = apiErrorMessage(err, CONVERSATIONS_COPY.otherTenantsNotSent);
@@ -300,6 +325,20 @@ export function NewConversationDialog({
               onChange={(e) => setBody(e.target.value)}
             />
           </div>
+
+          {isApp ? null : (
+            <div className="space-y-2">
+              <AttachControl
+                disabled={busy || attachments.length >= CONVERSATION_ATTACHMENT_LIMITS.maxFiles}
+                onPickFiles={(files) => void addFiles(files)}
+              />
+              <AttachmentChips
+                attachments={attachments}
+                disabled={busy}
+                onRemove={(index) => setAttachments((prev) => prev.filter((_, i) => i !== index))}
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter>

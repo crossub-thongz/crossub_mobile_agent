@@ -145,7 +145,6 @@ export function ReplyComposer({
   const appParties = useMemo(() => conversationAppParties(detail), [detail]);
   const isApp = channel === CONVERSATION_REPLY_CHANNEL.APP && appParties.length > 0;
   const editorRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const busy = pending !== null;
   const replyToMessageId = useMemo(() => latestInboundMessageId(detail), [detail]);
   const toTouched = useRef(false);
@@ -531,7 +530,9 @@ export function ReplyComposer({
             <ComposerToolbar
               editorRef={editorRef}
               onEdited={syncEditor}
-              onAttach={() => fileInputRef.current?.click()}
+              onPickFiles={(files) => {
+                void addFiles(files);
+              }}
               attachDisabled={attachments.length >= CONVERSATION_ATTACHMENT_LIMITS.maxFiles}
               disabled={busy}
             >
@@ -564,18 +565,6 @@ export function ReplyComposer({
             </>
           )}
         </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          tabIndex={-1}
-          className="sr-only"
-          onChange={(e) => {
-            void addFiles(e.target.files);
-            e.target.value = '';
-          }}
-        />
 
         <div className="flex flex-wrap items-center justify-between gap-2 px-3 pt-2 pb-3">
           <p className="text-muted-foreground min-w-0 truncate text-[11px]">
