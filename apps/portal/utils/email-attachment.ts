@@ -11,6 +11,46 @@ const MEGABYTE = 1024 * 1024;
 const BASE64_CHUNK_BYTES = 0x8000;
 const DATA_URL_IMAGE = /^data:(image\/[a-z0-9.+-]+);base64,([a-z0-9+/=\s]+)$/i;
 
+/**
+ * Browsers often leave `file.type` empty for Word, Excel and similar documents.
+ * The extension supplies the type those files would otherwise be sent without.
+ */
+const MIME_BY_EXTENSION: Record<string, string> = {
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  csv: 'text/csv',
+  txt: 'text/plain',
+  rtf: 'application/rtf',
+  odt: 'application/vnd.oasis.opendocument.text',
+  ods: 'application/vnd.oasis.opendocument.spreadsheet',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  heic: 'image/heic',
+};
+
+function extensionOf(fileName: string): string {
+  const base = fileName.trim().toLowerCase().split(/[/\\]/).pop() ?? '';
+  const dot = base.lastIndexOf('.');
+  if (dot <= 0 || dot === base.length - 1) return '';
+  return base.slice(dot + 1);
+}
+
+function attachmentMimeType(file: File): string {
+  const reported = file.type.trim().toLowerCase();
+  const fromName = MIME_BY_EXTENSION[extensionOf(file.name)];
+  // Windows and some browsers report Word and Excel as octet-stream, or leave the type empty.
+  if (!reported || reported === FALLBACK_MIME_TYPE) return fromName ?? FALLBACK_MIME_TYPE;
+  return reported;
+}
+
 /** The per-file ceiling the API applies to this type. */
 export function maxAttachmentBytes(mimeType: string): number {
   return mimeType.startsWith(VIDEO_MIME_PREFIX)
@@ -70,7 +110,7 @@ function fileFromDataUrl(dataUrl: string, index: number): File | null {
 
 /** A picked file as the reply request carries it (base64). Throws when it is over the cap. */
 export async function fileToEmailAttachment(file: File, index = 0): Promise<AgentConversationAttachmentUpload> {
-  const mimeType = file.type || FALLBACK_MIME_TYPE;
+  const mimeType = attachmentMimeType(file);
   const fileName = attachmentFileName(file.name, mimeType, index);
   const max = maxAttachmentBytes(mimeType);
   if (file.size > max) throw new Error(CONVERSATIONS_COPY.fileTooBig(fileName, max / MEGABYTE));

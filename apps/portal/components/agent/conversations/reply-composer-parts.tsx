@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useRef, useState, type ReactNode, type RefObject } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -31,6 +31,7 @@ import {
   type ConversationSendMode,
 } from '@/constants/conversations';
 import type { AgentConversationAttachmentUpload } from '@/lib/crossub-api/agent-conversation-client';
+import { cn } from '@/lib/utils';
 import { compactComposerHtml, escapeHtml } from '@/utils/composer-html';
 import { addRecipient } from '@/utils/email-recipients';
 
@@ -166,20 +167,60 @@ function runCommand(command: ComposerFormatCommand, value?: string) {
 }
 
 /**
+ * The picker has to be the thing the user clicks. A clipped input (`sr-only` is
+ * `clip-path: inset(50%)`) plus a scripted `.click()` after `mousedown` preventDefault
+ * never opens the dialog, so a document never attaches.
+ */
+export function AttachControl({
+  disabled,
+  onPickFiles,
+}: {
+  disabled: boolean;
+  onPickFiles: (files: readonly File[]) => void;
+}) {
+  return (
+    <label
+      className={cn(
+        buttonVariants({ variant: 'ghost', size: 'sm' }),
+        'relative h-7 cursor-pointer gap-1 px-2',
+        disabled && 'pointer-events-none opacity-50',
+      )}
+      title={CONVERSATIONS_COPY.attachFile}
+    >
+      <Paperclip className="size-4" />
+      <span className="text-xs font-medium">{CONVERSATIONS_COPY.attachLabel}</span>
+      <input
+        type="file"
+        multiple
+        disabled={disabled}
+        aria-label={CONVERSATIONS_COPY.attachFile}
+        className="absolute inset-0 z-10 cursor-pointer opacity-[0.02]"
+        onClick={(e) => e.stopPropagation()}
+        onChange={(e) => {
+          const picked = e.target.files ? Array.from(e.target.files) : [];
+          e.target.value = '';
+          if (picked.length > 0) onPickFiles(picked);
+        }}
+      />
+    </label>
+  );
+}
+
+/**
  * Bold, italic, underline, lists, clear pasted styling and link on the editor, attach, and the
  * caller's own controls (template, Cros) on the right.
  */
 export function ComposerToolbar({
   editorRef,
   onEdited,
-  onAttach,
+  onPickFiles,
   attachDisabled,
   disabled,
   children,
 }: {
   editorRef: RefObject<HTMLDivElement | null>;
   onEdited: () => void;
-  onAttach: () => void;
+  onPickFiles: (files: readonly File[]) => void;
   attachDisabled: boolean;
   disabled: boolean;
   children?: ReactNode;
@@ -291,13 +332,7 @@ export function ComposerToolbar({
           </div>
         </PopoverContent>
       </Popover>
-      <ToolButton
-        label={CONVERSATIONS_COPY.attachFile}
-        text={CONVERSATIONS_COPY.attachLabel}
-        icon={Paperclip}
-        onClick={onAttach}
-        disabled={disabled || attachDisabled}
-      />
+      <AttachControl disabled={disabled || attachDisabled} onPickFiles={onPickFiles} />
       {children ? <div className="ml-auto flex items-center gap-1.5">{children}</div> : null}
     </div>
   );
