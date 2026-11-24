@@ -311,8 +311,9 @@ export function TrustBankStatementTab({
           submitLabel={COPY.deleteSubmit}
           cancelLabel={COPY.cancel}
           destructive
+          optional
           onSubmit={async (reason) => {
-            await deleteTrustBankLine(agencyId, deleting.id, { reason });
+            await deleteTrustBankLine(agencyId, deleting.id, { reason: reason || undefined });
             toast.success(COPY.deleted);
             lines.reload();
           }}

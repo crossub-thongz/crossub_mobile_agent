@@ -127,6 +127,7 @@ export type TrustDisbursementRunList = components['schemas']['TrustDisbursementR
 export type TrustStatementPreview = components['schemas']['TrustStatementPreviewDto'];
 export type RevokeTrustReconciliationInput = components['schemas']['RevokeReconciliationDto'];
 export type TrustBankBalances = components['schemas']['TrustBankBalancesDto'];
+export type TrustCashBookBalance = components['schemas']['TrustCashBookBalanceDto'];
 // PRD phase 4 (rent rates, move-out, allocation corrections).
 export type TrustRentRate = components['schemas']['TrustRentRateDto'];
 export type SetTrustRentRateInput = components['schemas']['SetRentRateDto'];
@@ -1239,6 +1240,19 @@ export async function fetchTrustBankBalances(
     { params: { path: { agencyId, bankAccountId }, query } },
   );
   return unwrapCrossubResult(result, "Couldn't load the bank balances");
+}
+
+/** The cash book on `date` (YYYY-MM-DD, today or earlier). */
+export async function fetchTrustCashBookBalance(
+  agencyId: string,
+  bankAccountId: string,
+  date: string,
+): Promise<TrustCashBookBalance> {
+  const result = await crossub.GET(
+    '/agent/agencies/{agencyId}/trust/bank-accounts/{bankAccountId}/cash-book-balance/{date}',
+    { params: { path: { agencyId, bankAccountId, date } } },
+  );
+  return unwrapCrossubResult(result, "Couldn't load the cash book balance");
 }
 
 /** `date` is YYYY-MM-DD. */

@@ -282,7 +282,7 @@ export function TrustDownloadButton({
   );
 }
 
-/** A required-reason dialog (reverse a transaction, waive a fee). */
+/** A reason dialog (reverse a transaction, waive a fee). The reason is required unless `optional`. */
 export function TrustReasonDialog({
   title,
   description,
@@ -291,13 +291,17 @@ export function TrustReasonDialog({
   submitLabel,
   cancelLabel,
   destructive,
+  optional,
   onSubmit,
   onClose,
 }: {
   title: string;
   description: string;
   reasonLabel: string;
+  /** Shown when the reason is left blank. Unused when `optional`. */
   reasonRequired: string;
+  /** The reason may be left blank; `onSubmit` then gets an empty string. */
+  optional?: boolean;
   submitLabel: string;
   cancelLabel: string;
   destructive?: boolean;
@@ -311,7 +315,7 @@ export function TrustReasonDialog({
 
   async function submit() {
     setTouched(true);
-    if (!trimmed) return;
+    if (!trimmed && !optional) return;
     setPending(true);
     try {
       await onSubmit(trimmed);
@@ -345,7 +349,7 @@ export function TrustReasonDialog({
             disabled={pending}
             onChange={(e) => setReason(e.target.value)}
           />
-          {touched && !trimmed ? <p className="text-destructive text-xs">{reasonRequired}</p> : null}
+          {touched && !trimmed && !optional ? <p className="text-destructive text-xs">{reasonRequired}</p> : null}
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" disabled={pending} onClick={onClose}>

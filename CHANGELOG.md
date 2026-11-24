@@ -2,8 +2,16 @@
 
 ## 2026-11-24
 
+### Added
+- Record bank balance: pick the day the balance is for, today or earlier
+- Record bank balance shows the cash book balance on that day, the bank statement balance typed and the difference
+
 ### Fixed
 - New tenant receipt on a tenant ledger with no rent set up asks for the rent and paid-to date and saves them there, instead of refusing the receipt
+
+### Changed
+- New tenant receipt: the Rent amount can be typed; what it no longer takes goes to the Deposit so the total stays the amount
+- Deleting a bank line no longer needs a reason
 
 ## 2026-11-20
 

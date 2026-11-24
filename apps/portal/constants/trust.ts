@@ -916,6 +916,14 @@ export const TRUST_RECONCILIATION_COPY = {
   cancel: 'Cancel',
 } as const;
 
+/** The bank balance card: the cash book on the chosen day against the balance being typed. */
+export const TRUST_RECORD_BALANCE_COPY = {
+  cashBookOn: (date: string) => `Cash book balance on ${date}`,
+  difference: 'Difference (bank less cash book)',
+  hint: 'The cash book is every receipt and payment posted up to that day. Imported bank lines count once they are receipted or matched.',
+  empty: '—',
+} as const;
+
 // --------------------------------------------------------------------------- Transactions
 
 export const TRUST_TRANSACTION_KIND = {

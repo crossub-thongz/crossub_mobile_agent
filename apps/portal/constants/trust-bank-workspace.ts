@@ -81,8 +81,8 @@ export const TRUST_BANK_WORKSPACE_COPY = {
   receiptNotMatched: 'Receipt posted. Match the bank line to it from the Unmatched list',
   deleteTitle: 'Delete bank line',
   deleteDescription:
-    'The line leaves the workspace and is kept with your reason. The cash book is not changed.',
-  deleteReason: 'Reason',
+    'The line leaves the workspace and is kept on the Deleted tab. The cash book is not changed.',
+  deleteReason: 'Reason (optional)',
   deleteReasonRequired: 'Give a reason',
   deleteSubmit: 'Delete line',
   unmatchTitle: 'Unmatch bank line',

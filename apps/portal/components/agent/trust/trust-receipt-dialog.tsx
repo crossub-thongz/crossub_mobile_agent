@@ -265,6 +265,8 @@ export function TrustReceiptDialog({
   const [rentAmount, setRentAmount] = useState(() =>
     amountLocked ? centsToDollarsInput(lockedAmountCents) : '',
   );
+  // What is being typed in the Rent box of a bank-line receipt, where rent is otherwise derived.
+  const [rentDraft, setRentDraft] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
   const [depositDetails, setDepositDetails] = useState('');
   const [invoiceAmounts, setInvoiceAmounts] = useState<Record<string, string>>({});
@@ -354,7 +356,9 @@ export function TrustReceiptDialog({
       ? Math.max(lockedAmountCents - depositCents - invoiceTotal, 0)
       : null
     : centsOf(rentAmount);
-  const rentInput = amountLocked && rentCents != null ? centsToDollarsInput(rentCents) : rentAmount;
+  const rentInput = amountLocked
+    ? rentDraft ?? (rentCents != null ? centsToDollarsInput(rentCents) : rentAmount)
+    : rentAmount;
   const headerCents = amountLocked ? lockedAmountCents : amount.trim() ? centsOf(amount) : null;
 
   /** Rent is whatever of the typed amount the deposit and invoices have not taken. */
@@ -373,6 +377,21 @@ export function TrustReceiptDialog({
     if (amountLocked) return;
     setAmount(next);
     applyRemainder(next, depositAmount, invoiceTotal ?? 0);
+  }
+
+  /**
+   * Rent typed by hand: the total stays the amount, so whatever rent no longer takes goes to the
+   * deposit. Rent above what is left to allocate changes nothing else (the submit check names it).
+   */
+  function onRentChange(next: string) {
+    if (amountLocked) setRentDraft(next);
+    else setRentAmount(next);
+    const rent = centsOf(next);
+    const total = amountLocked ? lockedAmountCents : amount.trim() ? centsOf(amount) : null;
+    if (rent == null || total == null || invoiceTotal == null) return;
+    const rest = total - rent - invoiceTotal;
+    if (rest < 0) return;
+    setDepositAmount(rest > 0 ? centsToDollarsInput(rest) : '');
   }
 
   function onDepositChange(next: string) {
@@ -661,8 +680,9 @@ export function TrustReceiptDialog({
                   <Input
                     inputMode="decimal"
                     value={rentInput}
-                    readOnly
                     disabled={pending}
+                    onChange={(event) => onRentChange(event.target.value)}
+                    onBlur={() => setRentDraft(null)}
                     placeholder="$0.00"
                     className="h-9 text-right tabular-nums"
                   />

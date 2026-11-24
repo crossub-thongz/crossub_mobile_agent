@@ -8,6 +8,7 @@ import { FilterChips } from '@/components/agent/filter-chips';
 import { TrustBankBalancesPanel } from '@/components/agent/trust/trust-bank-balances-panel';
 import { TrustBankStatementTab } from '@/components/agent/trust/trust-bank-statement-tab';
 import { TrustReconAdjustmentsPanel } from '@/components/agent/trust/trust-recon-adjustments-panel';
+import { TrustRecordBankBalancePanel } from '@/components/agent/trust/trust-record-bank-balance-panel';
 import {
   TrustLoadError,
   TrustLoading,
@@ -277,9 +278,13 @@ function MonthFigures({
   const [revoking, setRevoking] = useState(false);
   const [balanceInput, setBalanceInput] = useState('');
   const typedCents = parseDollarsToCents(useDebouncedValue(balanceInput), true);
-  const figures = useTrustResource(`${agencyId}:${bankAccountId}:${month}:${typedCents ?? ''}`, () =>
+  // The day the balance is recorded for; null is the month's own as-at day.
+  const [recordDate, setRecordDate] = useState<string | null>(null);
+  // The month's figures take the typed balance only while it is for the month's as-at day.
+  const figuresCents = recordDate == null ? typedCents : null;
+  const figures = useTrustResource(`${agencyId}:${bankAccountId}:${month}:${figuresCents ?? ''}`, () =>
     fetchTrustReconciliationFigures(agencyId, bankAccountId, month, {
-      statementBalanceCents: typedCents ?? undefined,
+      statementBalanceCents: figuresCents ?? undefined,
     }),
   );
   const [recording, setRecording] = useState(false);
@@ -297,7 +302,8 @@ function MonthFigures({
   }
 
   const open = data.status === TRUST_RECONCILIATION_STATUS.OPEN;
-  const statementCents = typedCents ?? data.recordedBalanceCents ?? null;
+  const statementCents = figuresCents ?? data.recordedBalanceCents ?? null;
+  const balanceDate = recordDate ?? data.asAt;
 
   async function onRecord(current: TrustReconciliationFigures) {
     const cents = parseDollarsToCents(balanceInput, true);
@@ -307,7 +313,7 @@ function MonthFigures({
     }
     setRecording(true);
     try {
-      await recordTrustBankBalance(agencyId, bankAccountId, current.asAt, { balanceCents: cents });
+      await recordTrustBankBalance(agencyId, bankAccountId, recordDate ?? current.asAt, { balanceCents: cents });
       toast.success(COPY.recorded);
       figures.reload();
       onChanged();
@@ -398,38 +404,18 @@ function MonthFigures({
       ) : null}
 
       {open ? (
-        <TrustPanel title={COPY.recordTitle}>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="trust-rec-balance">{COPY.statementBalance}</Label>
-              <Input
-                id="trust-rec-balance"
-                inputMode="decimal"
-                className="h-9 w-48"
-                value={balanceInput}
-                disabled={recording}
-                placeholder={(bank.suggestedStatementBalanceCents / 100).toFixed(2)}
-                onChange={(e) => setBalanceInput(e.target.value)}
-              />
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={recording || typedCents == null}
-              onClick={() => void onRecord(data)}
-            >
-              {recording ? <Loader2 className="size-4 animate-spin" /> : null}
-              {COPY.record}
-            </Button>
-          </div>
-          <p className="text-muted-foreground mt-2 text-xs">
-            {COPY.asAt(formatTrustDate(data.asAt))} ·{' '}
-            {COPY.suggested(formatCents(bank.suggestedStatementBalanceCents))}
-            {data.recordedBalanceCents != null
-              ? ` · ${COPY.recordedBalance(formatCents(data.recordedBalanceCents))}`
-              : ''}
-          </p>
-        </TrustPanel>
+        <TrustRecordBankBalancePanel
+          agencyId={agencyId}
+          bankAccountId={bankAccountId}
+          date={balanceDate}
+          onDateChange={(next) => setRecordDate(next === data.asAt ? null : next)}
+          balanceInput={balanceInput}
+          onBalanceInputChange={setBalanceInput}
+          typedCents={typedCents}
+          placeholderCents={bank.suggestedStatementBalanceCents}
+          recording={recording}
+          onRecord={() => void onRecord(data)}
+        />
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
