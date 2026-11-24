@@ -48,10 +48,8 @@ import {
   selectCurrentTenancyGroup,
 } from '@/utils/property-tenancy-groups';
 import {
-  openVacatingCaseForDisplayedTenancy,
   parseAmountInput,
   rentAmountForPeriod,
-  resolveTenancyVacateDate,
   weeklyRentFromPeriodAmount,
 } from '@/utils/property-tenancy-overview';
 
@@ -88,7 +86,7 @@ function formFrom(property: Property, record: PropertyTenancyOverview): TenancyF
     leaseType: leaseEnd ? TENANCY_LEASE_TERM_TYPE.FIXED : TENANCY_LEASE_TERM_TYPE.PERIODIC,
     leaseStartDate: dayKey(property.leaseStart) ?? dayKey(record.overview.leaseStartDate) ?? '',
     leaseEndDate: leaseEnd,
-    vacateDate: resolveTenancyVacateDate(record) ?? dayKey(property.vacateDate) ?? '',
+    vacateDate: dayKey(record.overview.vacateDate) ?? dayKey(property.vacateDate) ?? '',
     nextRentReviewAt: dayKey(property.nextRentReview) ?? dayKey(record.overview.nextRentReviewDate) ?? '',
     rentPeriod,
     rentAmount: amountText(weekly ? rentAmountForPeriod(weekly, rentPeriod) : null),
@@ -161,7 +159,6 @@ export function EditTenancyDialog({
   const [form, setForm] = useState<TenancyForm | null>(null);
   const [contactPhoneAtOpen, setContactPhoneAtOpen] = useState('');
   const [saving, setSaving] = useState(false);
-  const vacatingCase = openVacatingCaseForDisplayedTenancy(record);
   const currentTenancy = useMemo(
     () => selectCurrentTenancyGroup(buildPropertyTenancyGroups(record)),
     [record],
@@ -209,7 +206,7 @@ export function EditTenancyDialog({
     }
     let patch: AgentPropertyPatch;
     try {
-      patch = changedPatch(initial, vacatingCase ? { ...form, vacateDate: initial.vacateDate } : form);
+      patch = changedPatch(initial, form);
     } catch {
       return void toast.error(COPY.INVALID_AMOUNT);
     }
@@ -308,12 +305,7 @@ export function EditTenancyDialog({
               {form.leaseType === TENANCY_LEASE_TERM_TYPE.FIXED
                 ? textField('tenancy-lease-end', COPY.LEASE_END, 'leaseEndDate', 'date')
                 : null}
-              <div className="space-y-1.5">
-                {textField('tenancy-vacate', COPY.VACATE_DATE, 'vacateDate', 'date', Boolean(vacatingCase))}
-                {vacatingCase ? (
-                  <p className="text-muted-foreground text-[11px]">{COPY.VACATE_ON_CASE}</p>
-                ) : null}
-              </div>
+              {textField('tenancy-vacate', COPY.VACATE_DATE, 'vacateDate', 'date')}
               {textField('tenancy-next-review', COPY.NEXT_RENT_REVIEW, 'nextRentReviewAt', 'date')}
               <div className="space-y-1.5">
                 <Label htmlFor="tenancy-rent-period">{COPY.RENT_PERIOD}</Label>

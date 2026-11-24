@@ -18,7 +18,6 @@ import { Label } from '@/components/ui/label';
 import {
   dateOnly,
   PropertyVacateDateField,
-  vacateDateChangeInvalid,
 } from '@/components/agent/property-vacate-date-field';
 import { TenancyPagerControls } from '@/components/agent/tenancy-pager-controls';
 import { PROPERTY_EDIT_COPY } from '@/constants/property-profile-edit';
@@ -83,6 +82,14 @@ const EMPTY_TENANT_DRAFT: TenantDraft = {
   vacateDateChangeReason: '',
   nextInspectionAt: '',
 };
+
+/** Changing to another day needs a reason. Clearing the date does not. */
+function recordedVacateChangeNeedsReason(date: string, initialDate: string, reason: string): boolean {
+  const next = dateOnly(date);
+  const prev = dateOnly(initialDate);
+  if (!next || next === prev) return false;
+  return !reason.trim();
+}
 
 function draftFromTenancyForm(form: TenancyForm): TenantDraft {
   return {
@@ -159,6 +166,7 @@ function TenancyDateFields({
         date={values.vacateDate}
         initialDate={vacateInitial}
         reason={values.vacateDateChangeReason}
+        allowClearWithoutReason
         onDateChange={(value) => onChange('vacateDate', value)}
         onReasonChange={(value) => onChange('vacateDateChangeReason', value)}
       />
@@ -238,17 +246,6 @@ export function PropertyTenancyEditDialog({
       cancelled = true;
     };
   }, [open, propertyId]);
-
-  // Late-arriving end-leasing vacate date: fill only if the field is still empty.
-  useEffect(() => {
-    if (!open) return;
-    const incoming = dateOnly(initial.vacateDate);
-    if (!incoming) return;
-    setForm((prev) => (dateOnly(prev.vacateDate) ? prev : { ...prev, vacateDate: incoming }));
-    setBaseline((prev) =>
-      dateOnly(prev.vacateDate) ? prev : { ...prev, vacateDate: incoming },
-    );
-  }, [open, initial.vacateDate]);
 
   const set = <K extends keyof TenancyForm>(key: K, value: TenancyForm[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -364,9 +361,11 @@ export function PropertyTenancyEditDialog({
       dateOnly(prev.nextRentReviewAt),
     );
     setIfChanged(patch, 'rentPaidUntil', dateOnly(next.rentPaidUntil), dateOnly(prev.rentPaidUntil));
-    setIfChanged(patch, 'vacateDate', dateOnly(next.vacateDate), dateOnly(prev.vacateDate));
-    if (patch.vacateDate !== undefined) {
-      patch.vacateDateChangeReason = next.vacateDateChangeReason.trim();
+    const nextVacate = dateOnly(next.vacateDate);
+    const prevVacate = dateOnly(prev.vacateDate);
+    if (nextVacate !== prevVacate) {
+      patch.vacateDate = nextVacate || null;
+      if (nextVacate) patch.vacateDateChangeReason = next.vacateDateChangeReason.trim();
     }
     setIfChanged(
       patch,
@@ -414,7 +413,7 @@ export function PropertyTenancyEditDialog({
       return;
     }
     if (
-      vacateDateChangeInvalid(
+      recordedVacateChangeNeedsReason(
         tenantDraft.vacateDate,
         baseline.vacateDate,
         tenantDraft.vacateDateChangeReason,
@@ -494,7 +493,7 @@ export function PropertyTenancyEditDialog({
 
   const submit = async () => {
     if (
-      vacateDateChangeInvalid(form.vacateDate, baseline.vacateDate, form.vacateDateChangeReason)
+      recordedVacateChangeNeedsReason(form.vacateDate, baseline.vacateDate, form.vacateDateChangeReason)
     ) {
       toast.error('Provide a reason when changing the vacate date');
       return;

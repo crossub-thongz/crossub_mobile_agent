@@ -48,7 +48,7 @@ function terminationCaseOnDisplayedTenancy(
   );
 }
 
-/** The open end of lease of the household on screen; it owns their vacate date. */
+/** The open end of lease for the household on screen. */
 export function openVacatingCaseForDisplayedTenancy(
   record: PropertyTenancyOverview,
 ): PropertyTenancyCase | undefined {
@@ -67,7 +67,10 @@ function summaryDay(summary: string | null, pattern: RegExp): string | undefined
   return Number.isNaN(parsed) ? undefined : new Date(parsed).toISOString().slice(0, 10);
 }
 
-/** The Overview vacate date: the API's first, then a live case's, never the previous tenant's. */
+/**
+ * A live case vacate date. Tenancy cards do not use it: Edit tenancy clears the recorded
+ * registry date, and those cards show only that date.
+ */
 export function resolveTenancyVacateDate(record: PropertyTenancyOverview): string | undefined {
   const fromOverview = dayKey(record.overview.vacateDate);
   if (fromOverview) return fromOverview;

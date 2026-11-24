@@ -40,6 +40,7 @@ import { formatAgreementDate, formatDateMedium } from '@/lib/format-datetime';
 import type { Property } from '@/lib/types';
 import { cn, formatCurrency } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { dayKey } from '@/utils/current-tenancy';
 import {
   buildPropertyTenancyGroups,
   removableManualLeaseIds,
@@ -106,6 +107,8 @@ type Handlers = {
   onEditMember: (member: PropertyTenancyMember) => void;
   /** Property bond, used when the current tenancy's own figure is still 0. */
   propertyBondAmount?: number;
+  /** The registry vacate date this edit saves. A current tenancy does not borrow a case date. */
+  propertyVacateDate?: string | null;
 };
 
 /** The household's actions, once per tenancy. The rare ones sit under ⋯. */
@@ -204,7 +207,7 @@ function TenancyCard({ group, ...h }: Handlers & { group: PropertyTenancyGroup }
       ? formatDateMedium(group.leaseEndDate)
       : undefined;
   const vacateSource = isCurrent
-    ? (record.overview.vacateDate ?? group.recordedVacateDate)
+    ? (dayKey(record.overview.vacateDate) ?? dayKey(h.propertyVacateDate) ?? undefined)
     : (group.recordedVacateDate ?? group.moveOutDate);
   const rent = group.rentWeekly ?? (isCurrent ? record.financial.currentRentWeekly : null);
   const bond = isCurrent
@@ -510,6 +513,7 @@ export function PropertyTenanciesSection({
           })
         : undefined,
     propertyBondAmount: property.bondAmount,
+    propertyVacateDate: property.vacateDate,
   };
 
   const addButton = (
