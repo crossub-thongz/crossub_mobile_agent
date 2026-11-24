@@ -158,7 +158,7 @@ export type PropertyRegistryPatch = Partial<{
   leaseEndDate: string;
   nextRentReviewAt: string;
   rentPaidUntil: string;
-  vacateDate: string;
+  vacateDate: string | null;
   vacateDateChangeReason?: string;
   nextInspectionAt: string;
   bondAmount: number;

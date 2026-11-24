@@ -12,6 +12,7 @@ export function PropertyVacateDateField({
   onReasonChange,
   idPrefix = 'vacate',
   requireReason = false,
+  allowClearWithoutReason = false,
 }: {
   date: string;
   initialDate: string;
@@ -21,9 +22,12 @@ export function PropertyVacateDateField({
   idPrefix?: string;
   /** Always show and require a reason when the date changes (e.g. end-leasing change vacate). */
   requireReason?: boolean;
+  /** A blank date removes the recorded date, so it does not ask for a change reason. */
+  allowClearWithoutReason?: boolean;
 }) {
   const dateChanged = dateOnly(date) !== dateOnly(initialDate);
-  const showReason = dateChanged || requireReason;
+  const cleared = allowClearWithoutReason && !dateOnly(date);
+  const showReason = (dateChanged && !cleared) || requireReason;
 
   return (
     <div className="space-y-2 sm:col-span-2">

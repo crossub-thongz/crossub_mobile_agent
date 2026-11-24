@@ -49,6 +49,7 @@ import type { PropertyBondSnapshot } from '@/lib/use-property-overview-sync';
 import type { Property } from '@/lib/types';
 import { cn, formatCurrency } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { dayKey } from '@/utils/current-tenancy';
 import { isSamePortalParty, resolvePortalCoContacts } from '@/utils/portal-party';
 import {
   buildPropertyTenancyGroups,
@@ -64,7 +65,6 @@ import {
   resolveLeaseTermType,
   savedLeaseTerm,
   resolvePreviousFixedTermEnd,
-  resolveTenancyVacateDate,
   resolveUpcomingAcceptedRentChange,
 } from '@/utils/property-tenancy-overview';
 
@@ -385,7 +385,7 @@ export function SelfManagedOverviewCards({
     savedTerm ?? resolveCurrentLeaseTerm(record, currentTenancy, queuedUpcoming.length > 0);
   const leaseTermType = resolveLeaseTermType(record, currentTenancy, term);
   const previousFixedEnd = resolvePreviousFixedTermEnd(record, currentTenancy, leaseTermType, term);
-  const vacateDate = resolveTenancyVacateDate(record);
+  const vacateDate = dayKey(overview.vacateDate) ?? dayKey(property.vacateDate) ?? undefined;
   const rentPeriod = property.rentPeriod ?? PROPERTY_RENT_PERIOD.WEEKLY;
   const weeklyRent = financial.currentRentWeekly;
   const rentFigure =

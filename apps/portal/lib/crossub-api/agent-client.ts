@@ -362,7 +362,7 @@ export type CreateAgentPropertyInput = {
   leaseEndDate?: string;
   nextRentReviewAt?: string;
   rentPaidUntil?: string;
-  vacateDate?: string;
+  vacateDate?: string | null;
   vacateDateChangeReason?: string;
   nextInspectionAt?: string;
   rentWeekly?: number;

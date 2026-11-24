@@ -421,18 +421,17 @@ export function PropertyTenancyManagementSections({
       ? `Updated ${formatDateTime(sync.record.updatedAt)}`
       : null;
 
+  const recordedVacateDate = firstDate(
+    overview?.vacateDate,
+    sync.record?.vacateDate,
+    property.vacateDate,
+  );
+  const caseVacateDate = firstDate(
+    openEndLeasingCase ? endLeasingVacateDate(openEndLeasingCase) : null,
+    vacatingCases.find((c) => isActiveEndLeasingCase(c) && c.vacateDate)?.vacateDate,
+    vacatingCases.find((c) => c.apiStatus?.toUpperCase() === 'COMPLETED' && c.vacateDate)?.vacateDate,
+  );
   const tenancyDates = useMemo(() => {
-    const caseVacateFromList =
-      vacatingCases.find((c) => isActiveEndLeasingCase(c) && c.vacateDate)?.vacateDate ?? null;
-    const caseVacateFromCompleted =
-      vacatingCases.find(
-        (c) => c.apiStatus?.toUpperCase() === 'COMPLETED' && c.vacateDate,
-      )?.vacateDate ?? null;
-    const caseVacateFromDetail = openEndLeasingCase
-      ? endLeasingVacateDate(openEndLeasingCase)
-      : null;
-    const archiveVacate =
-      parseTenancyArchiveSnapshots(property.registryDraft)[0]?.vacateDate ?? null;
     return {
       leaseStart: firstDate(overview?.leaseStartDate, sync.record?.leaseStartDate, leaseStart),
       leaseEnd: firstDate(
@@ -445,32 +444,24 @@ export function PropertyTenancyManagementSections({
         sync.record?.nextRentReviewAt,
         property.nextRentReview,
       ),
-      vacateDate: firstDate(
-        caseVacateFromDetail,
-        caseVacateFromList,
-        caseVacateFromCompleted,
-        overview?.vacateDate,
-        sync.record?.vacateDate,
-        property.vacateDate,
-        archiveVacate,
-      ),
+      vacateDate: recordedVacateDate,
       nextRoutine: firstDate(overview?.nextRoutineInspectionDate, sync.record?.nextInspectionAt),
       routineAnnualVisits: overview?.routineInspectionFrequency ?? null,
       routineCycleMonths: overview?.routineInspectionFrequencyMonths ?? null,
     };
-  }, [overview, sync.record, property, leaseStart, vacatingCases, openEndLeasingCase]);
+  }, [overview, sync.record, property, leaseStart, recordedVacateDate]);
 
   const tenantVacatingHint = useMemo(() => {
     if (tenantHistoryIndex != null || viewingPreviousPage) return null;
     return resolveTenantVacatingOnHint({
       vacatingCases,
-      vacateDate: tenancyDates.vacateDate,
+      vacateDate: caseVacateDate,
       tenantName: tenant.name,
       isVacant,
       viewingArchivedTenant: tenantHistoryIndex != null,
       formatDate,
     });
-  }, [vacatingCases, tenancyDates.vacateDate, tenant.name, isVacant, tenantHistoryIndex, viewingPreviousPage]);
+  }, [vacatingCases, caseVacateDate, tenant.name, isVacant, tenantHistoryIndex, viewingPreviousPage]);
 
   const openCompletedEndLeasingCase = () => {
     if (!tenantVacatingHint) return;

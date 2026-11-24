@@ -508,7 +508,6 @@ export const EDIT_TENANCY_COPY = {
   LEASE_START: 'Lease start date',
   LEASE_END: 'Lease end date',
   VACATE_DATE: 'Vacate date',
-  VACATE_ON_CASE: 'Change it on the open end of lease',
   NEXT_RENT_REVIEW: 'Next rent review date',
   RENT_PERIOD: 'Rent period',
   RENT: 'Rent ($)',
