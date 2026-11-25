@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-25
+
+### Fixed
+- Record bank balance: the statement date is no longer filled with today; the date and balance open on the last ones recorded in the month and stay until changed
+
 ## 2026-11-24
 
 ### Added

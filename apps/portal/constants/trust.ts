@@ -920,7 +920,7 @@ export const TRUST_RECONCILIATION_COPY = {
 export const TRUST_RECORD_BALANCE_COPY = {
   cashBookOn: (date: string) => `Cash book balance on ${date}`,
   difference: 'Difference (bank less cash book)',
-  hint: 'The cash book is every receipt and payment posted up to that day. Imported bank lines count once they are receipted or matched.',
+  hint: 'The cash book is every receipt and payment posted up to that day, less any that was reversed. Imported bank lines count once they are receipted or matched.',
   empty: '—',
 } as const;
 

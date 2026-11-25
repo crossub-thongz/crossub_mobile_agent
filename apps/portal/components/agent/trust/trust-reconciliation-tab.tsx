@@ -48,6 +48,7 @@ import {
 import { useTrustOverview } from '@/hooks/use-trust-overview';
 import { useDebouncedValue, useTrustResource } from '@/hooks/use-trust-resource';
 import {
+  fetchTrustBankBalances,
   fetchTrustReconciliationFigures,
   fetchTrustReconciliationMonths,
   lockTrustReconciliationMonth,
@@ -58,11 +59,11 @@ import {
   type TrustReconciliationItem,
   type TrustReconciliationMonth,
 } from '@/lib/crossub-api/agent-trust-client';
-import { formatCents, formatTrustDate, parseDollarsToCents } from '@/lib/trust-accounting';
+import { centsToDollarsInput, formatCents, formatTrustDate, parseDollarsToCents } from '@/lib/trust-accounting';
 import { cn, formatDate } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { trustReconciliationBanner } from '@/utils/trust-overview';
-import { trustFolioBalancesCents } from '@/utils/trust-reconciliation';
+import { trustFolioBalancesCents, trustMonthAsAtKey } from '@/utils/trust-reconciliation';
 
 const WARN_TEXT = TRUST_TONE_TEXT.WARN;
 
@@ -276,12 +277,23 @@ function MonthFigures({
   onChanged: () => void;
 }) {
   const [revoking, setRevoking] = useState(false);
-  const [balanceInput, setBalanceInput] = useState('');
+  // The statement date and balance are the agent's alone (Daniel 25/11/2026): they open on the
+  // last balance recorded in this month, blank when there is none, and never move to today.
+  const lastRecorded = useTrustResource(`${agencyId}:${bankAccountId}:${month}:last-recorded`, () =>
+    fetchTrustBankBalances(
+      agencyId,
+      bankAccountId,
+      monthInfo ? { from: monthInfo.periodStart, to: monthInfo.periodEnd } : {},
+    ),
+  ).data?.rows[0];
+  // null until the agent touches the field; the last recorded value shows meanwhile.
+  const [dateEdit, setDateEdit] = useState<string | null>(null);
+  const [balanceEdit, setBalanceEdit] = useState<string | null>(null);
+  const balanceDate = dateEdit ?? lastRecorded?.date ?? '';
+  const balanceInput = balanceEdit ?? centsToDollarsInput(lastRecorded?.balanceCents);
   const typedCents = parseDollarsToCents(useDebouncedValue(balanceInput), true);
-  // The day the balance is recorded for; null is the month's own as-at day.
-  const [recordDate, setRecordDate] = useState<string | null>(null);
-  // The month's figures take the typed balance only while it is for the month's as-at day.
-  const figuresCents = recordDate == null ? typedCents : null;
+  // The month's figures take the balance only while it is for the month's as-at day.
+  const figuresCents = monthInfo && balanceDate === trustMonthAsAtKey(monthInfo) ? typedCents : null;
   const figures = useTrustResource(`${agencyId}:${bankAccountId}:${month}:${figuresCents ?? ''}`, () =>
     fetchTrustReconciliationFigures(agencyId, bankAccountId, month, {
       statementBalanceCents: figuresCents ?? undefined,
@@ -303,9 +315,12 @@ function MonthFigures({
 
   const open = data.status === TRUST_RECONCILIATION_STATUS.OPEN;
   const statementCents = figuresCents ?? data.recordedBalanceCents ?? null;
-  const balanceDate = recordDate ?? data.asAt;
 
-  async function onRecord(current: TrustReconciliationFigures) {
+  async function onRecord() {
+    if (!balanceDate) {
+      toast.error(COPY.dateRequired);
+      return;
+    }
     const cents = parseDollarsToCents(balanceInput, true);
     if (cents == null) {
       toast.error(COPY.balanceInvalid);
@@ -313,7 +328,7 @@ function MonthFigures({
     }
     setRecording(true);
     try {
-      await recordTrustBankBalance(agencyId, bankAccountId, recordDate ?? current.asAt, { balanceCents: cents });
+      await recordTrustBankBalance(agencyId, bankAccountId, balanceDate, { balanceCents: cents });
       toast.success(COPY.recorded);
       figures.reload();
       onChanged();
@@ -337,7 +352,7 @@ function MonthFigures({
       });
       toast.success(COPY.locked(current.label));
       setLockOpen(false);
-      setBalanceInput('');
+      setBalanceEdit(null);
       figures.reload();
       onChanged();
     } catch (err) {
@@ -408,13 +423,13 @@ function MonthFigures({
           agencyId={agencyId}
           bankAccountId={bankAccountId}
           date={balanceDate}
-          onDateChange={(next) => setRecordDate(next === data.asAt ? null : next)}
+          onDateChange={setDateEdit}
           balanceInput={balanceInput}
-          onBalanceInputChange={setBalanceInput}
+          onBalanceInputChange={setBalanceEdit}
           typedCents={typedCents}
           placeholderCents={bank.suggestedStatementBalanceCents}
           recording={recording}
-          onRecord={() => void onRecord(data)}
+          onRecord={() => void onRecord()}
         />
       ) : null}
 
