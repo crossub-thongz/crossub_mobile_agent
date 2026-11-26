@@ -1,4 +1,5 @@
 import { MAINTENANCE_REPLY_RULE } from '@/lib/maintenance/same-thread-job';
+import { toPlainTextBody } from '@/lib/message-body';
 import type { MaintenanceRequest, MessageThread, Property } from '@/lib/types';
 import { formatDateTime, formatPropertyFullAddress } from '@/lib/utils';
 import { formatListingDetails } from '@/lib/gii-property-context';
@@ -68,7 +69,7 @@ export function buildGiiMessageContext(args: {
   for (const msg of [...thread.messages].reverse()) {
     const block = [
       `--- ${msg.from} · ${formatDateTime(msg.at)} · ${msg.channel} ---`,
-      msg.body.trim(),
+      toPlainTextBody(msg.body).trim(),
       '',
     ].join('\n');
     if (used + block.length > threadBudget) {
@@ -81,12 +82,13 @@ export function buildGiiMessageContext(args: {
 
   if (threadBlocks.length === 0 && thread.messages.length > 0) {
     const latest = thread.messages[thread.messages.length - 1]!;
-    const latestBody = latest.body.trim().slice(0, threadBudget - 120);
+    const latestPlain = toPlainTextBody(latest.body).trim();
+    const latestBody = latestPlain.slice(0, threadBudget - 120);
     threadBlocks.push(
       [
         `--- ${latest.from} · ${formatDateTime(latest.at)} · ${latest.channel} ---`,
         latestBody,
-        latest.body.length > latestBody.length ? '[…message truncated]' : '',
+        latestPlain.length > latestBody.length ? '[…message truncated]' : '',
         '',
       ]
         .filter(Boolean)
