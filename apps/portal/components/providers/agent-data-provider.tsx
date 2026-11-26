@@ -131,6 +131,7 @@ import { notificationMatchesPrefs } from '@/lib/notification-prefs';
 import { useAgentStore } from '@/lib/store';
 import { displayName, formatCurrency, formatPropertyFullAddress } from '@/lib/utils';
 import { fetchMaintenanceCase } from '@/lib/maintenance/fetch-maintenance-case';
+import { listMaintenanceWithoutReplyDuplicates } from '@/lib/maintenance/same-thread-job';
 import { pickLatestSubmittedQuote } from '@/lib/data/map-maintenance';
 import {
   reviewMaintenanceQuotationDecisionCase,
@@ -1039,6 +1040,12 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     createdThreadIds,
   ]);
 
+  // One thread, one row. A reply with nothing committed yet is unread on the earlier job.
+  const maintenanceVisible = useMemo(
+    () => listMaintenanceWithoutReplyDuplicates(maintenanceAll, messages),
+    [maintenanceAll, messages],
+  );
+
   const sendMessage = useCallback(
     (threadId: string, body: string, mentions?: MessageMention[], channel?: 'app' | 'email') => {
       const from = user ? displayName(user) : 'Agent';
@@ -1515,8 +1522,8 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   )
 
   const liveMaintenance = useMemo(
-    () => maintenanceAll.filter((row) => propertyIds.has(row.propertyId)),
-    [maintenanceAll, propertyIds],
+    () => maintenanceVisible.filter((row) => propertyIds.has(row.propertyId)),
+    [maintenanceVisible, propertyIds],
   );
   const liveInspections = useMemo(
     () => inspections.filter((row) => propertyIds.has(row.propertyId)),
@@ -1614,7 +1621,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       const property = properties.find((p) => p.id === propertyId);
       if (!property) return [];
       return getPropertyNeedActions(property, {
-        maintenance: maintenanceAll,
+        maintenance: maintenanceVisible,
         inspections,
         rentReviews,
         tenantSelections,
@@ -1623,14 +1630,14 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         documents,
       });
     },
-    [properties, maintenanceAll, inspections, rentReviews, tenantSelections, tribunalCases, accounting, documents],
+    [properties, maintenanceVisible, inspections, rentReviews, tenantSelections, tribunalCases, accounting, documents],
   );
 
   const needActionItems = useMemo(
     () =>
       buildRemindingQueue(properties, (p) =>
         getPropertyNeedActions(p, {
-          maintenance: maintenanceAll,
+          maintenance: maintenanceVisible,
           inspections,
           rentReviews,
           tenantSelections,
@@ -1639,7 +1646,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           documents,
         }),
       ),
-    [properties, maintenanceAll, inspections, rentReviews, tenantSelections, tribunalCases, accounting, documents],
+    [properties, maintenanceVisible, inspections, rentReviews, tenantSelections, tribunalCases, accounting, documents],
   );
 
   const needActionGroups = useMemo(
@@ -1709,7 +1716,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     agentPortfolioId,
     refresh,
     maintenanceFromApi,
-    maintenanceAll,
+    maintenanceAll: maintenanceVisible,
     maintenanceKpis,
     properties,
     archivedProperties,

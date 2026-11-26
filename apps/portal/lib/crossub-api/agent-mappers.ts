@@ -574,6 +574,11 @@ export function mapAgentMaintenance(
         : {}),
       createdAt: m.createdAt,
       updatedAt: m.updatedAt ?? m.createdAt ?? undefined,
+      sourceThreadId:
+        m.emailThreadId?.trim() ||
+        m.conversationId?.trim() ||
+        m.sourceThreadId?.trim() ||
+        undefined,
       deleteReason: m.closureReason ?? undefined,
       deletedAt:
         m.status === MAINTENANCE_STATUS.CANCELLED ? m.updatedAt ?? m.createdAt : undefined,

@@ -1,4 +1,5 @@
-import type { MessageThread, Property } from '@/lib/types';
+import { MAINTENANCE_REPLY_RULE } from '@/lib/maintenance/same-thread-job';
+import type { MaintenanceRequest, MessageThread, Property } from '@/lib/types';
 import { formatDateTime, formatPropertyFullAddress } from '@/lib/utils';
 import { formatListingDetails } from '@/lib/gii-property-context';
 
@@ -14,6 +15,10 @@ function truncateContext(text: string, max = GII_MESSAGE_CONTEXT_MAX_CHARS): str
 export function buildGiiMessageContext(args: {
   thread: MessageThread;
   property?: Property | null;
+  /** Open maintenance already logged at the property. A reply must stay on one of these. */
+  openMaintenance?: readonly Pick<MaintenanceRequest, 'trackingNumber' | 'title'>[];
+  /** The job this thread is already linked to, when it has one. */
+  linkedReference?: string | null;
 }): string {
   const { thread, property } = args;
   const header: string[] = [];
@@ -33,6 +38,20 @@ export function buildGiiMessageContext(args: {
 
   if (thread.messageCategory || thread.taskType) {
     header.push(`Category: ${thread.messageCategory ?? thread.taskType}`);
+  }
+
+  const openMaintenance = args.openMaintenance ?? [];
+  if (args.linkedReference?.trim()) {
+    header.push(`Already logged as: ${args.linkedReference.trim()}`);
+  }
+  if (openMaintenance.length > 0) {
+    header.push('Open maintenance at this property:');
+    for (const job of openMaintenance.slice(0, 8)) {
+      header.push(`- ${job.trackingNumber}: ${job.title}`);
+    }
+  }
+  if (args.linkedReference?.trim() || openMaintenance.length > 0) {
+    header.push(MAINTENANCE_REPLY_RULE);
   }
 
   const headerText = header.join('\n');

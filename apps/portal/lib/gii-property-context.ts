@@ -1,3 +1,4 @@
+import { MAINTENANCE_REPLY_RULE } from '@/lib/maintenance/same-thread-job';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import type { Property, PropertyNeedAction } from '@/lib/types';
 import { formatCurrency, formatDate, formatPropertyFullAddress } from '@/lib/utils';
@@ -43,6 +44,9 @@ export function buildGiiPropertyContext(args: {
     }
     if (inProgressJobs.length > 12) {
       lines.push(`- …and ${inProgressJobs.length - 12} more`);
+    }
+    if (inProgressJobs.some((job) => job.kind === 'maintenance')) {
+      lines.push('', MAINTENANCE_REPLY_RULE);
     }
   }
 
