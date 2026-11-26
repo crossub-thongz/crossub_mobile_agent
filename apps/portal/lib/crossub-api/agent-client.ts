@@ -63,6 +63,10 @@ export type AgentMaintenance = components['schemas']['AgentMaintenanceDto'] & {
   closureReason?: string | null;
   updatedAt?: string | null;
   endLeasingMaintenance?: boolean;
+  /** Set when the job was opened from a conversation or mail thread. */
+  conversationId?: string | null;
+  emailThreadId?: string | null;
+  sourceThreadId?: string | null;
 };
 export type AgentRentReview = components['schemas']['AgentRentReviewDto'] & {
   leaseStart?: string | null;

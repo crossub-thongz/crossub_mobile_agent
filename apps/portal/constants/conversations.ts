@@ -294,6 +294,9 @@ export const CONVERSATIONS_COPY = {
   unlinkJob: 'Unlink',
   jobLinked: 'Job linked',
   jobUnlinked: 'Job unlinked',
+  alreadyLogged: (ref: string) =>
+    `Already logged as ${ref}. Replies on this thread stay on that job.`,
+  replyFiled: (ref: string) => `Filed on ${ref}. This reply stays on that job.`,
   noPropertyTitle: 'No property on this thread',
   noPropertyDescription: 'File it under one of your properties to see its jobs and owner decisions.',
   fileUnderProperty: 'File under property',

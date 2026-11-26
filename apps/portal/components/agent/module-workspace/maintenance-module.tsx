@@ -75,7 +75,9 @@ const COLUMNS: readonly ModuleWorkspaceColumn<MaintenanceRequest, MaintenanceSor
     label: MODULE_FIELD_LABELS.taskId,
     sortKey: 'reference',
     className: 'w-[9rem] pl-4',
-    cell: (m) => <TaskIdCell reference={m.trackingNumber} loggedAt={m.createdAt} />,
+    cell: (m) => (
+      <TaskIdCell reference={m.trackingNumber} loggedAt={m.createdAt} unread={m.threadUnread} />
+    ),
   },
   {
     id: 'property',
@@ -136,7 +138,8 @@ function MobileRow({ m }: { m: MaintenanceRequest }) {
         <ModuleLanePill lane={laneOf(m)} />
       </div>
       <p className="text-muted-foreground mt-0.5 truncate text-xs">
-        {m.trackingNumber} · {m.title}
+        {m.trackingNumber}
+        {m.threadUnread && m.threadUnread > 0 ? ` · ${m.threadUnread} unread` : ''} · {m.title}
       </p>
     </>
   );

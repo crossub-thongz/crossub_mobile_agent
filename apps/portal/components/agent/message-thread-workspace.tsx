@@ -7,6 +7,7 @@ import { MessageThreadBubble } from '@/components/agent/message-thread-bubble';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { buildGiiMessageContext } from '@/lib/gii-message-context';
+import { isOpenMaintenanceJob } from '@/lib/maintenance/same-thread-job';
 import type { MessageThread } from '@/lib/types';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -34,7 +35,7 @@ export function MessageThreadWorkspace({
   children?: React.ReactNode;
 }) {
   const isV2 = useIsAgentUiV2();
-  const { properties, archivedProperties } = useAgentData();
+  const { properties, archivedProperties, maintenanceAll } = useAgentData();
 
   const resolvedDockLayout =
     dockLayout ?? (isV2 ? 'panel' : dockFixed ? 'viewport' : 'panel');
@@ -50,7 +51,18 @@ export function MessageThreadWorkspace({
   }, [archivedProperties, properties, thread.propertyId]);
 
   const scope = useMemo(() => {
-    const messageContext = buildGiiMessageContext({ thread, property });
+    const openMaintenance = maintenanceAll.filter(
+      (job) => job.propertyId === thread.propertyId && isOpenMaintenanceJob(job),
+    );
+    const linked = thread.relatedCaseId
+      ? maintenanceAll.find((job) => job.id === thread.relatedCaseId)
+      : undefined;
+    const messageContext = buildGiiMessageContext({
+      thread,
+      property,
+      openMaintenance,
+      linkedReference: linked?.trackingNumber,
+    });
     return {
       propertyId: thread.propertyId,
       propertyAddress: property
@@ -58,7 +70,7 @@ export function MessageThreadWorkspace({
         : thread.propertyAddress,
       messageContext,
     };
-  }, [property, thread]);
+  }, [maintenanceAll, property, thread]);
 
   return (
     <div

@@ -39,6 +39,7 @@ import {
   type AgentConversationDetail,
 } from '@/lib/crossub-api/agent-conversation-client';
 import { useHouseholdTenants } from '@/lib/use-primary-tenant-name';
+import { matchReplyToOpenMaintenance } from '@/lib/maintenance/same-thread-job';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -111,6 +112,11 @@ function FileUnderProperty({
   );
 }
 
+/** Conversations already filed onto a job this session, so a remount does not file them twice. */
+const autoLinkAttempted = new Set<string>();
+/** Unlinked by hand — a reply must not be filed straight back onto the job. */
+const autoLinkSkipped = new Set<string>();
+
 /** Linked job: the portfolio's view of it when loaded, else the server's reference; link and unlink. */
 function LinkedJobSection({
   detail,
@@ -122,6 +128,7 @@ function LinkedJobSection({
   onChange: (detail: AgentConversationDetail) => void;
 }) {
   const { pending, run } = useConversationAction();
+  const { maintenanceAll } = useAgentData();
   const [jobs, setJobs] = useState<LinkableConversationJob[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobKey, setJobKey] = useState<string>(CONVERSATION_SELECT_PROMPT_VALUE);
@@ -149,6 +156,36 @@ function LinkedJobSection({
     };
   }, [detail.caseId, detail.id, detail.propertyId]);
 
+  // A reply that names one open job is filed there. It does not wait for a second work order.
+  useEffect(() => {
+    if (detail.caseId || !detail.propertyId) return;
+    if (autoLinkSkipped.has(detail.id) || autoLinkAttempted.has(detail.id)) return;
+    const match = matchReplyToOpenMaintenance({
+      propertyId: detail.propertyId,
+      subject: detail.subject ?? '',
+      text: (detail.messages ?? [])
+        .map((message: { body?: string }) => message.body ?? '')
+        .join('\n'),
+      jobs: maintenanceAll,
+    });
+    if (!match) return;
+    autoLinkAttempted.add(detail.id);
+    void (async () => {
+      try {
+        await linkAgentConversationJob(detail.id, {
+          workflowType: 'MAINTENANCE_REQUEST',
+          workflowId: match.id,
+        });
+        const next = await fetchAgentConversation(detail.id);
+        onChange(next);
+        toast.success(CONVERSATIONS_COPY.replyFiled(match.trackingNumber));
+      } catch (err: unknown) {
+        autoLinkAttempted.delete(detail.id);
+        toast.error(apiErrorMessage(err));
+      }
+    })();
+  }, [detail, maintenanceAll, onChange]);
+
   /** The link routes return the link, not the thread; re-read it so every pane agrees. */
   const linkThenReload = async (
     key: ConversationAction,
@@ -175,12 +212,14 @@ function LinkedJobSection({
     );
   };
 
-  const unlink = () =>
+  const unlink = () => {
+    autoLinkSkipped.add(detail.id);
     void linkThenReload(
       CONVERSATION_ACTION.UNLINK_JOB,
       () => unlinkAgentConversationJob(detail.id),
       CONVERSATIONS_COPY.jobUnlinked,
     );
+  };
 
   if (detail.caseId) {
     return (
@@ -191,6 +230,11 @@ function LinkedJobSection({
           </span>
           {job ? <ModuleLanePill lane={job.lane} /> : null}
         </div>
+        <p className="text-muted-foreground text-xs">
+          {CONVERSATIONS_COPY.alreadyLogged(
+            job?.reference ?? detail.caseLabel ?? 'this job',
+          )}
+        </p>
         {job ? <p className="text-sm font-medium">{job.title}</p> : null}
         <div className="flex flex-wrap gap-2">
           {job ? (

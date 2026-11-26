@@ -1,6 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
+import { Bell } from 'lucide-react';
 
 import { useAuth } from '@/components/providers/auth-provider';
 import type { ModuleLaneDefinition, ModuleLaneTone } from '@/constants/module-workspace';
@@ -66,11 +67,32 @@ export function TaskStatusPill({ lane }: { lane: ModuleLaneDefinition<string> })
   );
 }
 
-export function TaskIdCell({ reference, loggedAt }: { reference: string; loggedAt?: string | null }) {
+export function TaskIdCell({
+  reference,
+  loggedAt,
+  unread,
+}: {
+  reference: string;
+  loggedAt?: string | null;
+  /** Replies filed on this job since it was opened. */
+  unread?: number;
+}) {
   const logged = taskListDate(loggedAt);
+  const unreadCount = unread && unread > 0 ? unread : 0;
   return (
     <div className="min-w-0">
-      <p className="text-[13px] font-medium whitespace-nowrap tabular-nums">{reference}</p>
+      <p className="flex items-center gap-1.5 text-[13px] font-medium whitespace-nowrap tabular-nums">
+        <span>{reference}</span>
+        {unreadCount > 0 ? (
+          <span
+            className="text-muted-foreground inline-flex items-center gap-0.5 text-xs font-normal"
+            title={unreadCount === 1 ? '1 unread reply' : `${unreadCount} unread replies`}
+          >
+            <Bell className="size-3.5" aria-hidden />
+            <span className="tabular-nums">{unreadCount}</span>
+          </span>
+        ) : null}
+      </p>
       {logged ? <p className="text-muted-foreground mt-0.5 text-xs tabular-nums">{logged}</p> : null}
     </div>
   );

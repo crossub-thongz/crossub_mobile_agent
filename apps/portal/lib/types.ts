@@ -518,6 +518,13 @@ export interface MaintenanceRequest {
   timeline: TimelineEntry[];
   /** API created timestamp when available. */
   createdAt?: string;
+  /**
+   * Mail thread this job was opened from (`thread:` id, or `mail:` property + subject).
+   * Replies on that thread stay on this job.
+   */
+  sourceThreadId?: string;
+  /** Unread replies filed on this job, including replies that were not given their own row. */
+  threadUnread?: number;
   /** Last change on the maintenance case (tenant submit, quote, status change). */
   updatedAt?: string;
   source?: 'api';
