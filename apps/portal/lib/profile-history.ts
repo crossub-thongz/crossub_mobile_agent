@@ -1,3 +1,4 @@
+import { toPlainTextBody } from '@/lib/message-body';
 import type { MessageThread, RentReviewCase } from '@/lib/types';
 import type { ThreadMessage } from '@/lib/types';
 
@@ -24,11 +25,12 @@ export function buildProfileHistory(input: {
   for (const [threadId, sent] of Object.entries(input.sentThreadMessages)) {
     const thread = input.messages.find((m) => m.id === threadId);
     for (const msg of sent) {
+      const plain = toPlainTextBody(msg.body);
       items.push({
         id: msg.id,
         at: msg.at,
         title: thread ? `Message · ${thread.subject}` : 'Message sent',
-        detail: msg.body.length > 120 ? `${msg.body.slice(0, 120)}…` : msg.body,
+        detail: plain.length > 120 ? `${plain.slice(0, 120)}…` : plain,
         href: thread ? `/messages/${thread.id}` : undefined,
         kind: 'message',
       });

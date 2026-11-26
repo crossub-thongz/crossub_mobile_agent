@@ -6,7 +6,7 @@ import { MessageBody } from '@/components/agent/message-body';
 import { EmailAttachmentList } from '@/components/agent/email-attachment-list';
 import { EMAIL_BODY_COPY } from '@/constants/email-body';
 import type { JobCaseEmailAttachment } from '@/lib/job-case-email';
-import { httpLinks, splitQuotedHistory, toPlainTextBody } from '@/lib/message-body';
+import { httpLinks, splitQuotedHistory, stripReplyMarks, toDisplayBody } from '@/lib/message-body';
 import { cn } from '@/lib/utils';
 import {
   attachmentSizeLabel,
@@ -48,8 +48,9 @@ export function EmailMessageContent({
   attachments?: readonly ReceivedFile[] | null;
   className?: string;
 }) {
-  const plain = toPlainTextBody(body);
-  const { reply, quoted } = splitQuotedHistory(plain);
+  const display = toDisplayBody(body);
+  const plain = stripReplyMarks(display);
+  const { reply, quoted } = splitQuotedHistory(display);
   const links = httpLinks(plain);
   const files = toListAttachments(attachments);
   const [showQuoted, setShowQuoted] = useState(false);

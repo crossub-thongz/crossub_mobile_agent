@@ -1011,7 +1011,7 @@ export function mapAgentMessages(
       lastMessage:
         t.lastMessage != null
           ? toPlainTextBody(t.lastMessage)
-          : (messages[messages.length - 1]?.body ?? ''),
+          : toPlainTextBody(messages[messages.length - 1]?.body ?? ''),
       lastAt: t.lastAt ?? messages[messages.length - 1]?.at ?? '',
       unread: t.unread,
       channel: threadChannel(messages),

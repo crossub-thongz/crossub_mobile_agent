@@ -11,6 +11,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { AgentInputFeedbackAnchor } from '@/components/ui/agent-input-feedback';
 import type { MessageCategory, ThreadMessage } from '@/lib/types';
+import { stripReplyMarks } from '@/lib/message-body';
 import { bindSanitizedTextValue } from '@/lib/strip-emojis';
 import { cn, formatDateTime } from '@/lib/utils';
 
@@ -23,10 +24,9 @@ function parseEmailMessage(
 } {
   const text = msg.body.trim();
   const subjectMatch = text.match(/Subject:\s*([^\n]+)/i);
-  const title =
-    subjectMatch?.[1]?.trim() ??
-    threadSubject?.trim() ??
-    `Email from ${msg.from}`;
+  const title = stripReplyMarks(
+    subjectMatch?.[1]?.trim() ?? threadSubject?.trim() ?? `Email from ${msg.from}`,
+  );
   const bodyMatch = text.match(/Subject:\s*[^\n]+\n\n([\s\S]*)$/i);
   const body = bodyMatch?.[1]?.trim() ?? (subjectMatch ? '' : text);
 

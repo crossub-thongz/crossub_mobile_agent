@@ -41,6 +41,7 @@ import {
 } from '@/lib/crossub-api/agent-billing-client';
 import { isAgentPaymentNotification } from '@/lib/agent-payment-notification';
 import { invalidatePropertyTenantContacts } from '@/lib/property-tenant-contacts-cache';
+import { toPlainTextBody } from '@/lib/message-body';
 import { sanitizeCreatePropertyBody } from '@/lib/sanitize-create-property-body';
 import {
   MAX_UPLOAD_BYTES,
@@ -997,7 +998,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       return {
         ...thread,
         messages: allMessages,
-        lastMessage: last?.body ?? thread.lastMessage,
+        lastMessage: last ? toPlainTextBody(last.body) : thread.lastMessage,
         lastAt: last?.at ?? thread.lastAt,
       };
     };
