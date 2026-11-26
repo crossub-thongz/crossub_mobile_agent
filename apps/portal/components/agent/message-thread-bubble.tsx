@@ -2,7 +2,7 @@
 
 import { Mail, MessageSquare } from 'lucide-react';
 
-import { MessageBody } from '@/components/agent/message-body';
+import { EmailMessageContent } from '@/components/agent/email-message-content';
 import { messageThreadBubbleClasses } from '@/lib/message-thread-bubble';
 import type { ThreadMessage } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
@@ -46,7 +46,11 @@ export function MessageThreadBubble({
           <span className="font-medium">{msg.from}</span>
           <span className="tabular-nums">{formatDateTime(msg.at)}</span>
         </div>
-        <MessageBody body={msg.body} className={textSize === 'text-xs' ? 'text-xs leading-relaxed' : undefined} />
+        <EmailMessageContent
+          body={msg.body}
+          attachments={msg.attachments}
+          className={textSize === 'text-xs' ? 'text-xs leading-relaxed' : undefined}
+        />
         {msg.mentions && msg.mentions.length > 0 && (
           <p className={cn('mt-1.5', layout.meta)}>
             Tagged: {msg.mentions.map((m) => `@${m.name}`).join(', ')}

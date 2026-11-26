@@ -7,6 +7,12 @@ export interface JobCaseEmailAttachment {
   mimeType?: string;
   /** BFF-relative URL to open or download the attachment */
   url?: string;
+  /** Original file name when `name` was a stored "Attachment 3" label. */
+  fileName?: string;
+  /** The mail app embedded this image in the HTML instead of attaching it. */
+  inline?: boolean;
+  contentId?: string;
+  sizeBytes?: number;
 }
 
 /** Shared email record shape for job-case workflow history panels. */

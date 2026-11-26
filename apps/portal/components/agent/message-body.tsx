@@ -1,5 +1,24 @@
+import { linkSpans } from '@/lib/message-body';
 import { renderMentionSegments } from '@/lib/message-mentions';
 import { cn } from '@/lib/utils';
+
+function LinkifiedText({ text }: { text: string }) {
+  return linkSpans(text).map((span, index) =>
+    span.href ? (
+      <a
+        key={`${index}-${span.href}`}
+        href={span.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="break-all underline underline-offset-2"
+      >
+        {span.text}
+      </a>
+    ) : (
+      <span key={`${index}-${span.text}`}>{span.text}</span>
+    ),
+  );
+}
 
 export function MessageBody({
   body,
@@ -21,7 +40,7 @@ export function MessageBody({
             {segment.text}
           </span>
         ) : (
-          <span key={`${index}-${segment.text}`}>{segment.text}</span>
+          <LinkifiedText key={`${index}-${segment.text}`} text={segment.text} />
         ),
       )}
     </p>

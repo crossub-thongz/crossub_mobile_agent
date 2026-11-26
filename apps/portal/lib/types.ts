@@ -742,6 +742,17 @@ export interface MessageThread {
   messages: ThreadMessage[];
 }
 
+export interface ThreadMessageAttachment {
+  name: string;
+  fileName?: string;
+  mimeType?: string;
+  url?: string;
+  inline?: boolean;
+  contentId?: string;
+  sizeBytes?: number;
+  sizeLabel?: string;
+}
+
 export interface ThreadMessage {
   id: string;
   at: string;
@@ -750,6 +761,8 @@ export interface ThreadMessage {
   channel: 'app' | 'email';
   sentByAgent?: boolean;
   mentions?: MessageMention[];
+  /** Files on an inbound email. Absent when the message carried none. */
+  attachments?: ThreadMessageAttachment[];
 }
 
 export interface MessageMention {
