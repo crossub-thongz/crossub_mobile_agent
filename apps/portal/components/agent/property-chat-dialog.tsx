@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Mail, MessageSquareText, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { MessageBody } from '@/components/agent/message-body';
+import { EmailMessageContent } from '@/components/agent/email-message-content';
 import { MessageCompose } from '@/components/agent/message-compose';
 import { MessageThreadBubble } from '@/components/agent/message-thread-bubble';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -271,7 +271,11 @@ export function PropertyChatDialog({
                           {selectedEmail.msg.from} · {formatDateTime(selectedEmail.msg.at)}
                         </p>
                         <div className="rounded-lg border bg-card/40 p-3 text-sm leading-relaxed">
-                          <MessageBody body={selectedEmail.body} className="text-sm" />
+                          <EmailMessageContent
+                            body={selectedEmail.body}
+                            attachments={selectedEmail.msg.attachments}
+                            className="text-sm"
+                          />
                         </div>
                       </div>
                     ) : (

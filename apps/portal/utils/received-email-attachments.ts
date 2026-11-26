@@ -96,16 +96,23 @@ function isGenericSignatureName(fileName: string): boolean {
   return EMAIL_SIGNATURE_IMAGE_WORD.test(stem);
 }
 
+/** A content-id the mail app invented (`image001`, a uuid), not a file the sender named. */
+function isGeneratedImageName(fileName: string): boolean {
+  const base = fileName.trim().toLowerCase().split(/[/\\]/).pop() ?? '';
+  const stem = base.replace(/\.[a-z0-9]+$/, '');
+  return /^[0-9a-f-]{16,}$/i.test(stem);
+}
+
 /**
- * An image the mail app embedded in the signature or the HTML body.
- * A PDF, a spreadsheet, or a photo with a real name stays a file.
+ * An image the mail app embedded in the signature.
+ * A PDF, a spreadsheet, or a photo with a real name stays a file, even when the
+ * message marked it inline — an application scan is often sent that way.
  */
 export function isSignatureImageAttachment(facts: EmailAttachmentFacts): boolean {
   const fileName = resolveAttachmentName(facts);
   if (EMAIL_SIGNATURE_JUNK_FILE.test(fileName)) return true;
   if (!isImageAttachment(facts, fileName)) return false;
-  if (facts.inline || facts.contentId) return true;
-  return isGenericSignatureName(fileName);
+  return isGenericSignatureName(fileName) || isGeneratedImageName(fileName);
 }
 
 export function partitionEmailAttachments<T>(

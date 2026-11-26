@@ -46,7 +46,7 @@ import {
 } from '@/constants/api-enums';
 import type { PropertyApprovalStatus } from '@/constants/api-enums';
 import { agentDocumentFileHref } from '@/lib/document-preview';
-import { toPlainTextBody } from '@/lib/message-body';
+import { plainEmailBody, toPlainTextBody } from '@/lib/message-body';
 import { maintenanceReferenceLabel } from '@/lib/workflow-case-reference';
 import { TENANT_REJECTED_LABEL } from '@/lib/maintenance/tenant-rejected';
 import { MAINTENANCE_QUOTE_STATUS } from '@/constants/self-managed-maintenance';
@@ -77,6 +77,7 @@ import type {
   RentReviewCase,
   TenantSelectionCase,
   ThreadMessage,
+  ThreadMessageAttachment,
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
@@ -917,6 +918,31 @@ export function messageCategoryToDepartment(
   }
 }
 
+function messageAttachments(message: AgentThreadMessage): ThreadMessageAttachment[] | undefined {
+  const raw = (message as { attachments?: unknown }).attachments;
+  if (!Array.isArray(raw)) return undefined;
+  const files: ThreadMessageAttachment[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const fileName = typeof row.fileName === 'string' ? row.fileName.trim() : '';
+    const name = typeof row.name === 'string' ? row.name.trim() : '';
+    const url = typeof row.url === 'string' ? row.url.trim() : '';
+    if (!fileName && !name && !url) continue;
+    files.push({
+      name: name || fileName || 'Attachment',
+      fileName: fileName || undefined,
+      mimeType: typeof row.mimeType === 'string' ? row.mimeType : undefined,
+      url: url || undefined,
+      inline: row.inline === true,
+      contentId: typeof row.contentId === 'string' ? row.contentId : undefined,
+      sizeBytes: typeof row.sizeBytes === 'number' ? row.sizeBytes : undefined,
+      sizeLabel: typeof row.sizeLabel === 'string' ? row.sizeLabel : undefined,
+    });
+  }
+  return files.length > 0 ? files : undefined;
+}
+
 /** A single message channel → the app's two-value channel ('app' | 'email'). */
 function threadMessageChannel(
   channel: AgentThreadMessage['channel'],
@@ -953,10 +979,12 @@ export function mapAgentMessages(
       from: m.from,
       // API bodies are email-shaped (plain text + an inline portal CTA button), and the thread
       // bubble renders text — without this the markup prints verbatim under the sign-off.
-      body: toPlainTextBody(m.body),
+      // `plainEmailBody` also keeps a link that arrived only on the HTML or quoted copy.
+      body: plainEmailBody(m),
       channel: threadMessageChannel(m.channel),
       sentByAgent: m.fromSelf,
       mentions: [],
+      attachments: messageAttachments(m),
     }));
     return {
       id: t.id,

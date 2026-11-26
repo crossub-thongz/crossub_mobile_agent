@@ -10,6 +10,13 @@
 /** Class the API stamps on portal CTA buttons (`emailCtaButton`). */
 export const EMAIL_CTA_MARKER = 'crossub-email-cta';
 
+/** Labels for links and forwarded text inside a received email. */
+export const EMAIL_BODY_COPY = {
+  links: 'Links',
+  showQuotedHistory: 'Show quoted history',
+  hideQuotedHistory: 'Hide quoted history',
+} as const;
+
 /** Block-level tags whose close means "start a new line" in the plain-text projection. */
 export const HTML_BLOCK_TAGS = [
   'p',

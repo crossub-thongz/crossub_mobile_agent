@@ -213,6 +213,9 @@ export function EmailAttachmentList({
             {sizeLabel ? (
               <span className="text-muted-foreground shrink-0 tabular-nums">{sizeLabel}</span>
             ) : null}
+            {attachment.url ? null : (
+              <span className="text-muted-foreground shrink-0">No file link</span>
+            )}
             {attachment.url ? (
               <div className="ml-auto flex shrink-0 items-center gap-1">
                 <Button
