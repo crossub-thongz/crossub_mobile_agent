@@ -259,7 +259,8 @@ export function PropertyRentReviewTab({
         <p className="text-muted-foreground text-xs">
           Active rent reviews in progress. Click a case to open the full workflow. Countdown tracks
           the agent&apos;s {RENT_REVIEW_CONDUCT_WINDOW_DAYS}-day conduct window (review opens{' '}
-          {RENT_REVIEW_ADVANCE_ORDER_DAYS} days before lease end;{' '}
+          {RENT_REVIEW_ADVANCE_ORDER_DAYS} days before the first lawful increase — the later of
+          the fixed-term end and 12 months from the tenancy start;{' '}
           {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days remain for the statutory tenant notice).
         </p>
         {/*

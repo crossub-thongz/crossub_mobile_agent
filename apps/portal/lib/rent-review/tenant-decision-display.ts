@@ -167,7 +167,7 @@ export function buildRentIncreaseSchedulingNote(summary: TenantAcceptanceSummary
     return [
       'A periodic renewal has no new lease start or end date — only the rent increase start date above applies.',
       '',
-      `For a tenant's first rent review, the review order opens ${RENT_REVIEW_ADVANCE_ORDER_DAYS} days before the initial lease expiry.`,
+      `For a tenant's first rent review, the review order opens ${RENT_REVIEW_ADVANCE_ORDER_DAYS} days before the first lawful increase: the later of the fixed-term end and 12 months after the tenancy started.`,
       `For subsequent reviews, the order opens ${RENT_REVIEW_ADVANCE_ORDER_DAYS} days before the 12-month anniversary of the previous rent increase.`,
     ].join('\n');
   }
@@ -175,7 +175,7 @@ export function buildRentIncreaseSchedulingNote(summary: TenantAcceptanceSummary
   const lines = [
     'The rent increase start date and the new lease start/end dates are not the same.',
     '',
-    `For a tenant's first rent review, the review order opens ${RENT_REVIEW_ADVANCE_ORDER_DAYS} days before the initial lease expiry; the rent increase applies from the increase start date above.`,
+    `For a tenant's first rent review, the review order opens ${RENT_REVIEW_ADVANCE_ORDER_DAYS} days before the first lawful increase: the later of the fixed-term end and 12 months after the tenancy started. The rent increase applies from the increase start date above.`,
     `For subsequent reviews, the order opens ${RENT_REVIEW_ADVANCE_ORDER_DAYS} days before the 12-month anniversary of the previous rent increase.`,
     '',
     'The new lease period is the fixed-term renewal agreement. The rent increase date is when the higher weekly rent takes effect — typically the last day of the current fixed term when rolling into the new lease.',

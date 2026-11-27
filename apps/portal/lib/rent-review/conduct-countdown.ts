@@ -186,10 +186,10 @@ function buildTenantReminderBadge(
 
 function rentReviewSchedulingForCase(review: RentReviewCase) {
   return deriveRentReviewScheduling({
-    effectiveDate: review.dateStarted,
     leaseEnd: review.leaseEnd,
     leaseEndDate: review.leaseEnd,
-    newLeaseStart: review.leaseStart,
+    tenancyStartedOn: review.leaseStart,
+    termWeeks: review.fixedTermWeeks,
     createdAt: review.createdAt,
   });
 }

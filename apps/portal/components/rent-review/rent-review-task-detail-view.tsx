@@ -33,6 +33,7 @@ import {
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import { hasTenantNoticeSent, rentReviewLeaseTypeLabel } from '@/lib/rent-review/agent-workflow-model';
+import { limitsForRentReview } from '@/lib/rent-review/agent-decision-scheduling';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import {
   cn,
@@ -282,6 +283,8 @@ export function RentReviewTaskDetailView({
     vacating,
   ]);
 
+  const rentLimits = limitsForRentReview(detail, property);
+
   if (selfManaged) {
     const next = describeSelfManagedTenancyReview(detail);
     const pathway =
@@ -316,9 +319,16 @@ export function RentReviewTaskDetailView({
           { label: 'Lease', value: rentReviewLeaseTypeLabel(detail) },
           {
             label: 'Lease start',
-            value: detail.initialLeaseStartDate ? formatDate(detail.initialLeaseStartDate) : '—',
+            value: rentLimits.tenancyStartedOn
+              ? formatDate(rentLimits.tenancyStartedOn)
+              : detail.initialLeaseStartDate
+                ? formatDate(detail.initialLeaseStartDate)
+                : '—',
           },
-          { label: 'Lease end', value: detail.leaseEndDate ? formatDate(detail.leaseEndDate) : '—' },
+          {
+            label: 'Lease end',
+            value: rentLimits.leaseEndDate ? formatDate(rentLimits.leaseEndDate) : '—',
+          },
           { label: 'Review due', value: detail.rentReviewDate ? formatDate(detail.rentReviewDate) : '—' },
           { label: 'Pathway', value: pathway },
           {
