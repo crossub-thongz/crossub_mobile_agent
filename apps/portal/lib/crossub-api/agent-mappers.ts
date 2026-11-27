@@ -45,7 +45,7 @@ import {
   VACATING_STATUS,
 } from '@/constants/api-enums';
 import type { PropertyApprovalStatus } from '@/constants/api-enums';
-import { agentDocumentFileHref } from '@/lib/document-preview';
+import { agentDocumentPreviewHref } from '@/lib/document-preview';
 import { plainEmailBody, toPlainTextBody } from '@/lib/message-body';
 import { maintenanceReferenceLabel } from '@/lib/workflow-case-reference';
 import { TENANT_REJECTED_LABEL } from '@/lib/maintenance/tenant-rejected';
@@ -1075,8 +1075,9 @@ export function mapAgentNotifications(
  */
 export function mapAgentDocuments(dtos: AgentDocumentDto[]): AgentDocument[] {
   return dtos.map((d) => {
-    // Proxy through the API — direct R2 URLs fail browser fetch CORS in the preview dialog.
-    const href = agentDocumentFileHref(d.id);
+    // Inspection reports go to the report PDF route; other files use the documents proxy.
+    // Direct R2 URLs fail browser fetch CORS in the preview dialog.
+    const href = agentDocumentPreviewHref(d.id) ?? '';
     return {
       id: d.id,
       title: d.name,

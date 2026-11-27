@@ -1,5 +1,6 @@
 import { fetchApiBlobFromUrl } from '@/lib/api';
 import { agentDocumentFileHref } from '@/lib/document-preview';
+import { inspectionsApi } from '@/lib/inspections-api';
 
 /** Slug for a safe download filename segment. */
 function slug(value: string): string {
@@ -178,6 +179,7 @@ export function isSafeInspectionReportFallbackUrl(
  */
 export function inspectionReportAuthenticatedPreviewHrefs(inspectionId: string): string[] {
   return [
+    inspectionsApi.reportPdfUrl(inspectionId),
     agentDocumentFileHref(`inspection-report:${inspectionId}`),
     agentDocumentFileHref(`inspection:${inspectionId}`),
   ];
