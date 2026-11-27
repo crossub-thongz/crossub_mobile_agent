@@ -1,4 +1,18 @@
+import { inspectionsApi } from '@/lib/inspections-api';
+
 export type DocumentPreviewKind = 'pdf' | 'image' | 'docx' | 'none';
+
+/** Filed inspection PDFs use these ids. The documents file route 404s when no owned copy is stored. */
+const INSPECTION_DOCUMENT_ID =
+  /^(?:inspection-report|inspection):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
+export function inspectionIdFromAgentDocumentId(
+  documentId: string | null | undefined,
+): string | null {
+  const id = documentId?.trim();
+  if (!id) return null;
+  return INSPECTION_DOCUMENT_ID.exec(id)?.[1] ?? null;
+}
 
 export function isViewableDocumentUrl(url?: string | null): url is string {
   if (!url || url === '#') return false;
@@ -18,12 +32,24 @@ export function agentDocumentFileHref(documentId: string): string {
   return `/api/v1/agent/documents/${encodeURIComponent(documentId)}/file`;
 }
 
-/** Prefer the authenticated file proxy when we have a stable document id. */
+/**
+ * Preview and download href for a listed document.
+ *
+ * Inspection reports (`inspection-report:` / `inspection:`) are served by the inspection
+ * report PDF route. That route files or generates the PDF, including routine reports that
+ * have no row the agent documents file route can find. Uploaded portal files stay on the
+ * documents proxy.
+ */
 export function agentDocumentPreviewHref(
   documentId: string | undefined | null,
   fallbackUrl?: string | null,
 ): string | undefined {
-  if (documentId?.trim()) return agentDocumentFileHref(documentId.trim());
+  const id = documentId?.trim();
+  if (id) {
+    const inspectionId = inspectionIdFromAgentDocumentId(id);
+    if (inspectionId) return inspectionsApi.reportPdfUrl(inspectionId);
+    return agentDocumentFileHref(id);
+  }
   if (fallbackUrl && isViewableDocumentUrl(fallbackUrl)) return fallbackUrl;
   return undefined;
 }

@@ -2,6 +2,7 @@
 
 import { Download, FileText, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -337,7 +338,13 @@ export function DocumentPreviewDialog({
       anchor.remove();
       URL.revokeObjectURL(objectUrl);
     } catch {
-      window.open(url, '_blank', 'noopener,noreferrer');
+      // A public file URL can still open after a CORS-blocked fetch. An API miss is JSON;
+      // opening it only shows the error body.
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        toast.error('Could not download this document');
+      }
     } finally {
       setDownloadBusy(false);
     }
