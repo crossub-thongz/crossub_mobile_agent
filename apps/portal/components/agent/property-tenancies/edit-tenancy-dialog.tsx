@@ -46,8 +46,10 @@ import { isSamePortalParty } from '@/utils/portal-party';
 import {
   buildPropertyTenancyGroups,
   selectCurrentTenancyGroup,
+  selectIncomingTenancyGroups,
 } from '@/utils/property-tenancy-groups';
 import {
+  leaseShownOnTenancyCard,
   parseAmountInput,
   rentAmountForPeriod,
   weeklyRentFromPeriodAmount,
@@ -77,21 +79,35 @@ const amountText = (value: number | null | undefined) => (value != null && value
 
 function formFrom(property: Property, record: PropertyTenancyOverview): TenancyForm {
   const rentPeriod = property.rentPeriod ?? PROPERTY_RENT_PERIOD.WEEKLY;
-  const leaseEnd = dayKey(property.leaseEnd) ?? dayKey(record.overview.leaseEndDate) ?? '';
+  const groups = buildPropertyTenancyGroups(record);
+  const current = selectCurrentTenancyGroup(groups);
+  // Same start, end and type the Tenancy card prints, including the agreement
+  // when the property registry has no start date.
+  const shown = leaseShownOnTenancyCard({
+    property,
+    record,
+    current,
+    hasIncoming: selectIncomingTenancyGroups(groups).length > 0,
+  });
+  const leaseEnd = dayKey(shown.term.leaseEndDate) ?? '';
   const weekly = record.financial.currentRentWeekly ?? property.rentWeekly;
   return {
     tenantName: property.tenantName?.trim() ?? '',
     tenantEmail: property.tenantContact?.email ?? '',
     tenantPhone: property.tenantContact?.phone ?? '',
-    leaseType: leaseEnd ? TENANCY_LEASE_TERM_TYPE.FIXED : TENANCY_LEASE_TERM_TYPE.PERIODIC,
-    leaseStartDate: dayKey(property.leaseStart) ?? dayKey(record.overview.leaseStartDate) ?? '',
+    leaseType:
+      shown.leaseTermType ??
+      (leaseEnd ? TENANCY_LEASE_TERM_TYPE.FIXED : TENANCY_LEASE_TERM_TYPE.PERIODIC),
+    leaseStartDate: dayKey(shown.term.leaseStartDate) ?? '',
     leaseEndDate: leaseEnd,
     vacateDate: dayKey(record.overview.vacateDate) ?? dayKey(property.vacateDate) ?? '',
     nextRentReviewAt: dayKey(property.nextRentReview) ?? dayKey(record.overview.nextRentReviewDate) ?? '',
     rentPeriod,
     rentAmount: amountText(weekly ? rentAmountForPeriod(weekly, rentPeriod) : null),
     paymentReference: property.paymentReference ?? '',
-    bondAmount: amountText(recordedBondAmount(record.financial.bondAmount, property.bondAmount)),
+    bondAmount: amountText(
+      recordedBondAmount(record.financial.bondAmount, property.bondAmount, current?.bondAmount),
+    ),
     depositAmount: amountText(record.financial.depositAmount ?? property.depositAmount),
   };
 }
@@ -116,8 +132,12 @@ function changedPatch(before: TenancyForm, after: TenancyForm): AgentPropertyPat
   }
   if (after.leaseStartDate !== before.leaseStartDate) patch.leaseStartDate = after.leaseStartDate;
   // Periodic has no fixed end: switching to it clears the end the fixed term had.
-  const leaseEnd = after.leaseType === TENANCY_LEASE_TERM_TYPE.FIXED ? after.leaseEndDate : '';
-  if (leaseEnd !== before.leaseEndDate) patch.leaseEndDate = leaseEnd || null;
+  // Compare the end each type would save, so a periodic term opened from the
+  // agreement does not clear that end when the agent saves something else.
+  const fixedEnd = (value: TenancyForm) =>
+    value.leaseType === TENANCY_LEASE_TERM_TYPE.FIXED ? value.leaseEndDate : '';
+  const leaseEnd = fixedEnd(after);
+  if (leaseEnd !== fixedEnd(before)) patch.leaseEndDate = leaseEnd || null;
   // A blanked date clears it (null); an untouched one is not sent.
   if (after.vacateDate !== before.vacateDate) patch.vacateDate = after.vacateDate || null;
   if (after.nextRentReviewAt !== before.nextRentReviewAt) {
