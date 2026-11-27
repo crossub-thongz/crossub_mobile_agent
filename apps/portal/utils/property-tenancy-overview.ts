@@ -159,6 +159,22 @@ export function resolveCurrentLeaseTerm(
   });
 }
 
+/**
+ * The lease the Tenancy card prints, and that Edit tenancy must open with.
+ * A saved registry start wins; otherwise the current agreement does, the same
+ * way the card falls through when `savedLeaseTerm` is null.
+ */
+export function leaseShownOnTenancyCard(args: {
+  property: { leaseStart?: string | null; leaseEnd?: string | null };
+  record: PropertyTenancyOverview;
+  current: PropertyTenancyGroup | undefined;
+  hasIncoming: boolean;
+}): { term: LeaseTerm; leaseTermType: TenancyLeaseTermType | null } {
+  const term = savedLeaseTerm(args.property, args.record) ??
+    resolveCurrentLeaseTerm(args.record, args.current, args.hasIncoming);
+  return { term, leaseTermType: resolveLeaseTermType(args.record, args.current, term) };
+}
+
 /** Fixed or periodic, the way the Tenancy card reads it. */
 export function resolveLeaseTermType(
   record: PropertyTenancyOverview,

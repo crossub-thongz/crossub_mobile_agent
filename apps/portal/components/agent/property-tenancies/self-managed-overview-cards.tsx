@@ -61,8 +61,7 @@ import {
 import {
   isPastPropertyDay,
   rentAmountForPeriod,
-  resolveCurrentLeaseTerm,
-  resolveLeaseTermType,
+  leaseShownOnTenancyCard,
   savedLeaseTerm,
   resolvePreviousFixedTermEnd,
   resolveUpcomingAcceptedRentChange,
@@ -381,9 +380,12 @@ export function SelfManagedOverviewCards({
     : [];
   const ownerNames = owners.map((o) => o.name).join(' & ');
 
-  const term =
-    savedTerm ?? resolveCurrentLeaseTerm(record, currentTenancy, queuedUpcoming.length > 0);
-  const leaseTermType = resolveLeaseTermType(record, currentTenancy, term);
+  const { term, leaseTermType } = leaseShownOnTenancyCard({
+    property,
+    record,
+    current: currentTenancy,
+    hasIncoming: queuedUpcoming.length > 0,
+  });
   const previousFixedEnd = resolvePreviousFixedTermEnd(record, currentTenancy, leaseTermType, term);
   const vacateDate = dayKey(overview.vacateDate) ?? dayKey(property.vacateDate) ?? undefined;
   const rentPeriod = property.rentPeriod ?? PROPERTY_RENT_PERIOD.WEEKLY;
