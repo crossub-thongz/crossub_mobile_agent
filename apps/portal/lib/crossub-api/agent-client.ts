@@ -1,7 +1,7 @@
 import type { components, operations } from '@crossub-thongz/api-contract';
 
 import { ApiError, api, apiV1, recoverUnauthorizedSession } from '@/lib/api';
-import { fileToBase64WithProgress } from '@/lib/file-upload';
+import { BASE64_FALLBACK_MAX_BYTES, fileToBase64WithProgress } from '@/lib/file-upload';
 import type {
   ServerLeasingMainStatus,
   ServerLeasingReletDecision,
@@ -1353,13 +1353,16 @@ export async function uploadAgentDocumentFileWithProgress(
   };
 
   let session: DocumentUploadSession = { mode: 'inline' };
+  let sessionError: unknown = null;
   try {
     session = await beginDocumentUploadSession(payload);
-  } catch {
-    // Older APIs have no upload-session route. The base64 POST below is the working path.
+  } catch (err) {
+    // Older APIs have no upload-session route. Small files still use base64 below.
+    sessionError = err;
     session = { mode: 'inline' };
   }
 
+  let storeError: unknown = null;
   if (session.mode === 'direct' && session.uploadUrl && session.storageKey) {
     onNetworkProgress?.(0);
     const reportStoredProgress = (pct: number) =>
@@ -1373,7 +1376,7 @@ export async function uploadAgentDocumentFileWithProgress(
         reportStoredProgress,
       );
       stored = true;
-    } catch {
+    } catch (directErr) {
       try {
         await relayPresignedUpload(
           session.uploadUrl,
@@ -1382,8 +1385,8 @@ export async function uploadAgentDocumentFileWithProgress(
           reportStoredProgress,
         );
         stored = true;
-      } catch {
-        stored = false;
+      } catch (relayErr) {
+        storeError = relayErr instanceof Error ? relayErr : directErr;
       }
     }
     if (stored) {
@@ -1392,6 +1395,13 @@ export async function uploadAgentDocumentFileWithProgress(
       onNetworkProgress?.(100);
       return created;
     }
+  }
+
+  // A large base64 body hides the storage error behind a generic API failure.
+  if (file.size > BASE64_FALLBACK_MAX_BYTES) {
+    const reason = storeError ?? sessionError;
+    if (reason instanceof Error && reason.message.trim()) throw reason;
+    throw new Error('Could not store the file. Direct upload did not complete.');
   }
 
   return uploadDocumentInline(file, payload, onNetworkProgress);

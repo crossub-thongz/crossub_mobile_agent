@@ -71,6 +71,7 @@ import {
   writeConversationReplyDraft,
 } from '@/utils/conversation-reply-draft';
 import { fileToEmailAttachment, filesFromDataTransfer, imageFilesFromHtml } from '@/utils/email-attachment';
+import { pdfDownloadLink, splitEmailFiles } from '@/utils/email-download-link';
 import { isEmailAddress, recipientsWithTyped, splitEmailList } from '@/utils/email-recipients';
 
 type RunAction = <T>(key: ConversationAction, action: () => Promise<T>) => Promise<T | null>;
@@ -141,11 +142,12 @@ export function ReplyComposer({
   const [instruction, setInstruction] = useState('');
   const [crosOpen, setCrosOpen] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [linking, setLinking] = useState(false);
   const [channel, setChannel] = useState<ConversationReplyChannel>(() => defaultReplyChannel(detail));
   const appParties = useMemo(() => conversationAppParties(detail), [detail]);
   const isApp = channel === CONVERSATION_REPLY_CHANNEL.APP && appParties.length > 0;
   const editorRef = useRef<HTMLDivElement>(null);
-  const busy = pending !== null;
+  const busy = pending !== null || linking;
   const replyToMessageId = useMemo(() => latestInboundMessageId(detail), [detail]);
   const toTouched = useRef(false);
   const householdApplied = useRef(false);
@@ -183,16 +185,24 @@ export function ReplyComposer({
     syncEditor();
   };
 
+  const appendDownloadLink = (html: string) => {
+    const el = editorRef.current;
+    if (!el) return;
+    el.insertAdjacentHTML('beforeend', html);
+    syncEditor();
+  };
+
   const addFiles = async (incoming: FileList | readonly File[] | null, announce = false) => {
     const files = incoming ? Array.from(incoming) : [];
     if (files.length === 0) return;
     const room = CONVERSATION_ATTACHMENT_LIMITS.maxFiles - attachments.length;
-    if (room <= 0) {
+    const { attach, link, errors } = splitEmailFiles(files);
+    if (attach.length > 0 && room <= 0) {
       toast.error(CONVERSATIONS_COPY.tooManyFiles(CONVERSATION_ATTACHMENT_LIMITS.maxFiles));
-      return;
+    } else if (attach.length > room) {
+      toast.error(CONVERSATIONS_COPY.tooManyFiles(CONVERSATION_ATTACHMENT_LIMITS.maxFiles));
     }
-    if (files.length > room) toast.error(CONVERSATIONS_COPY.tooManyFiles(CONVERSATION_ATTACHMENT_LIMITS.maxFiles));
-    const picked = files.slice(0, room);
+    const picked = room > 0 ? attach.slice(0, room) : [];
     const settled = await Promise.allSettled(picked.map((file, index) => fileToEmailAttachment(file, index)));
     const next = settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
     const failed = settled.find((result) => result.status === 'rejected');
@@ -203,6 +213,22 @@ export function ReplyComposer({
     if (failed?.status === 'rejected') {
       const reason = failed.reason;
       toast.error(reason instanceof Error ? reason.message : CONVERSATIONS_COPY.attachFailed);
+    }
+    for (const message of errors) toast.error(message);
+    if (link.length === 0) return;
+    setLinking(true);
+    try {
+      for (const file of link) {
+        try {
+          const snippet = await pdfDownloadLink(file, detail.propertyId ?? undefined);
+          appendDownloadLink(snippet.html);
+          toast.success(CONVERSATIONS_COPY.fileLinked(file.name));
+        } catch (err) {
+          toast.error(err instanceof Error && err.message.trim() ? err.message : CONVERSATIONS_COPY.attachFailed);
+        }
+      }
+    } finally {
+      setLinking(false);
     }
   };
 

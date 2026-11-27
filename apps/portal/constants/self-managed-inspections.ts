@@ -96,7 +96,7 @@ export const SELF_MANAGED_INSPECTION_COPY = {
   signOff: 'Sign off report',
   signOffConfirmTitle: 'Sign off this report?',
   signOffConfirmTenant:
-    'Signing off emails the tenant their copy now. The owner is not emailed; use Send to owner for that.',
+    'Signing off emails the tenant their copy now. The owner is not emailed; use Send to owner for that. If the PDF is too large to attach, the tenant is emailed a download link.',
   signOffConfirmRoutine:
     'Signing off records your approval. Nobody is emailed; use Send to owner to email the owner a copy.',
   confirmSignOff: 'Confirm sign-off',
@@ -117,7 +117,12 @@ export const SELF_MANAGED_INSPECTION_COPY = {
   signedOffAt: (when: string) => `You signed this report off on ${when}.`,
   tenantCopySent: (when: string) => `Tenant copy emailed ${when}.`,
   tenantCopyPending: 'Tenant copy not emailed yet.',
-  tenantCopyFailed: "The tenant copy didn't send. Email the tenant the report yourself.",
+  tenantCopyFailed:
+    'The PDF was not attached. Email a download link instead — it opens without signing in, and it expires.',
+  tenantCopyLinkSent: 'Download link emailed to the tenant.',
+  emailDownloadLink: 'Email download link',
+  linkNeedsProperty: 'This inspection is not filed on a property, so the download link could not be emailed.',
+  linkEmailFailed: "Couldn't email the download link.",
   tenantCopySkipped: 'No tenant email on file, so no tenant copy was sent.',
 
   ownerCopyTitle: 'Owner copy',
@@ -127,11 +132,13 @@ export const SELF_MANAGED_INSPECTION_COPY = {
   sendOwnerCopyAgain: 'Send again',
   sendOwnerCopyConfirmTitle: 'Send this report to the owner?',
   sendOwnerCopyConfirmBody:
-    'The owner gets an email from your agency address with the report PDF attached.',
+    'The owner gets an email from your agency address with the report PDF attached. If the PDF is too large to attach, the owner is emailed a download link.',
   confirmSendOwnerCopy: 'Send to owner',
   ownerCopySentToast: 'Report sent to the owner',
   ownerCopySent: (when: string) => `Owner copy emailed ${when}.`,
-  ownerCopyFailed: "The owner copy didn't send. Try again, or email the owner the report yourself.",
+  ownerCopyFailed:
+    'The PDF was not attached. Email a download link instead — it opens without signing in, and it expires.',
+  ownerCopyLinkSent: 'Download link emailed to the owner.',
   ownerCopySkipped: 'No owner email on file, so no owner copy was sent. Add one, then try again.',
 } as const;
 

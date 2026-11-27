@@ -2,6 +2,7 @@
 
 import { Download, ExternalLink } from 'lucide-react';
 import { useId, useState } from 'react';
+import { toast } from 'sonner';
 
 import { FieldLabel, StepCard } from '@/components/agent/maintenance-self-managed/step-card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,11 @@ import {
 } from '@/lib/crossub-api/agent-inspection-client';
 import type { SelfManagedInspectionSteps } from '@/lib/inspections/self-managed-inspection-steps';
 import { formatDateTime } from '@/lib/utils';
+import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import {
+  emailInspectionReportLink,
+  inspectionReportTitle,
+} from '@/utils/email-download-link';
 
 /**
  * Open and download the report PDF (reviewable before sign-off on an agency job). Both are
@@ -29,6 +35,65 @@ import { formatDateTime } from '@/lib/utils';
  * navigation follows but a credentialed fetch cannot, and a report of hundreds of photos is
  * too large to fetch into the page anyway.
  */
+async function sendReportLink(
+  detail: AgentInspectionDetail,
+  propertyId: string | null,
+  recipient: 'tenant' | 'landlord',
+): Promise<boolean> {
+  if (!propertyId) {
+    toast.error(COPY.linkNeedsProperty);
+    return false;
+  }
+  await emailInspectionReportLink({
+    inspectionId: detail.id,
+    propertyId,
+    recipient,
+    reportTitle: inspectionReportTitle(detail.type),
+  });
+  return true;
+}
+
+function EmailDownloadLinkButton({
+  detail,
+  propertyId,
+  recipient,
+  sent,
+  onSent,
+  sentLabel,
+}: {
+  detail: AgentInspectionDetail;
+  propertyId: string | null;
+  recipient: 'tenant' | 'landlord';
+  sent: boolean;
+  onSent: () => void;
+  sentLabel: string;
+}) {
+  const [sending, setSending] = useState(false);
+  if (sent) return <p className="text-muted-foreground text-xs">{sentLabel}</p>;
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={sending}
+      onClick={() => {
+        setSending(true);
+        void sendReportLink(detail, propertyId, recipient)
+          .then((ok) => {
+            if (!ok) return;
+            onSent();
+            toast.success(sentLabel);
+          })
+          .catch((err: unknown) => {
+            toast.error(apiErrorMessage(err, COPY.linkEmailFailed));
+          })
+          .finally(() => setSending(false));
+      }}
+    >
+      {COPY.emailDownloadLink}
+    </Button>
+  );
+}
+
 function ReportLinks({ detail }: { detail: AgentInspectionDetail }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -57,11 +122,15 @@ export function ReportReviewStep({
   steps,
   busy,
   run,
+  propertyId,
+  onLinkEmailed,
 }: {
   detail: AgentInspectionDetail;
   steps: SelfManagedInspectionSteps;
   busy: boolean;
   run: SelfManagedInspectionRun;
+  propertyId: string | null;
+  onLinkEmailed: () => void;
 }) {
   const id = useId();
   const [confirming, setConfirming] = useState(false);
@@ -69,7 +138,24 @@ export function ReportReviewStep({
   const [reason, setReason] = useState('');
 
   const signOff = async () => {
-    const ok = await run(() => signOffAgencyInspection(detail.id), COPY.signedOffToast);
+    const ok = await run(async () => {
+      const next = await signOffAgencyInspection(detail.id);
+      if (
+        steps.tenantCopyApplies &&
+        next.tenantCopyStatus === AGENCY_INSPECTION_TENANT_COPY_STATUS.FAILED
+      ) {
+        try {
+          const sent = await sendReportLink(next, propertyId, 'tenant');
+          if (sent) {
+            onLinkEmailed();
+            toast.success(COPY.tenantCopyLinkSent);
+          }
+        } catch (err) {
+          toast.error(apiErrorMessage(err, COPY.linkEmailFailed));
+        }
+      }
+      return next;
+    }, COPY.signedOffToast);
     if (ok) setConfirming(false);
   };
 
@@ -183,22 +269,39 @@ function tenantCopyLine(steps: SelfManagedInspectionSteps): string {
 export function SignedOffStep({
   detail,
   steps,
+  propertyId,
+  linkEmailed,
+  onLinkEmailed,
 }: {
   detail: AgentInspectionDetail;
   steps: SelfManagedInspectionSteps;
+  propertyId: string | null;
+  linkEmailed: boolean;
+  onLinkEmailed: () => void;
 }) {
   if (!steps.signedOffAt) return null;
-  const tenantFailed = steps.tenantCopyStatus === AGENCY_INSPECTION_TENANT_COPY_STATUS.FAILED;
+  const tenantFailed =
+    steps.tenantCopyStatus === AGENCY_INSPECTION_TENANT_COPY_STATUS.FAILED && !linkEmailed;
   return (
     <StepCard title={COPY.sentTitle}>
       <ul className="space-y-1 text-xs">
         <li>{COPY.signedOffAt(formatDateTime(steps.signedOffAt))}</li>
         {steps.tenantCopyApplies ? (
           <li className={tenantFailed ? 'text-destructive' : 'text-muted-foreground'}>
-            {tenantCopyLine(steps)}
+            {linkEmailed ? COPY.tenantCopyLinkSent : tenantCopyLine(steps)}
           </li>
         ) : null}
       </ul>
+      {tenantFailed && detail.reportPdfPath !== null ? (
+        <EmailDownloadLinkButton
+          detail={detail}
+          propertyId={propertyId}
+          recipient="tenant"
+          sent={linkEmailed}
+          onSent={onLinkEmailed}
+          sentLabel={COPY.tenantCopyLinkSent}
+        />
+      ) : null}
       {detail.reportPdfPath !== null ? <ReportLinks detail={detail} /> : null}
     </StepCard>
   );
@@ -214,17 +317,24 @@ export function OwnerCopyStep({
   steps,
   busy,
   run,
+  propertyId,
+  linkEmailed,
+  onLinkEmailed,
 }: {
   detail: AgentInspectionDetail;
   steps: SelfManagedInspectionSteps;
   busy: boolean;
   run: SelfManagedInspectionRun;
+  propertyId: string | null;
+  linkEmailed: boolean;
+  onLinkEmailed: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   if (!steps.ownerCopyApplies) return null;
 
-  const line = ownerCopyLine(steps.ownerCopy);
-  const failed = steps.ownerCopy?.status === AGENCY_INSPECTION_OWNER_COPY_STATUS.FAILED;
+  const line = linkEmailed ? COPY.ownerCopyLinkSent : ownerCopyLine(steps.ownerCopy);
+  const failed =
+    steps.ownerCopy?.status === AGENCY_INSPECTION_OWNER_COPY_STATUS.FAILED && !linkEmailed;
   const sentBefore = steps.ownerCopy?.status === AGENCY_INSPECTION_OWNER_COPY_STATUS.SENT;
   const hint = !steps.sendOwnerCopy
     ? null
@@ -235,7 +345,23 @@ export function OwnerCopyStep({
         : COPY.ownerCopyHint;
 
   const send = async () => {
-    const ok = await run(() => sendAgencyInspectionOwnerCopy(detail.id), COPY.ownerCopySentToast);
+    const ok = await run(async () => {
+      const next = await sendAgencyInspectionOwnerCopy(detail.id);
+      if (next.ownerCopy?.status === AGENCY_INSPECTION_OWNER_COPY_STATUS.FAILED) {
+        try {
+          const sent = await sendReportLink(next, propertyId, 'landlord');
+          if (sent) {
+            onLinkEmailed();
+            toast.success(COPY.ownerCopyLinkSent);
+          }
+        } catch (err) {
+          toast.error(apiErrorMessage(err, COPY.linkEmailFailed));
+        }
+      } else {
+        toast.success(COPY.ownerCopySentToast);
+      }
+      return next;
+    }, null);
     if (ok) setConfirming(false);
   };
 
@@ -243,6 +369,16 @@ export function OwnerCopyStep({
     <StepCard title={COPY.ownerCopyTitle} hint={hint ?? undefined}>
       {line ? (
         <p className={failed ? 'text-destructive text-xs' : 'text-muted-foreground text-xs'}>{line}</p>
+      ) : null}
+      {failed && detail.reportPdfPath !== null ? (
+        <EmailDownloadLinkButton
+          detail={detail}
+          propertyId={propertyId}
+          recipient="landlord"
+          sent={linkEmailed}
+          onSent={onLinkEmailed}
+          sentLabel={COPY.ownerCopyLinkSent}
+        />
       ) : null}
       {steps.sendOwnerCopy ? (
         confirming ? (
