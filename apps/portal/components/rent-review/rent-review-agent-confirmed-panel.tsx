@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,9 +14,8 @@ import {
   hasTenantNoticeSent,
 } from '@/lib/rent-review/agent-workflow-model';
 import {
-  deriveNewLeaseStartDate,
-  deriveRentIncreaseOnDate,
   isCurrentTenancyFixed,
+  limitsForRentReview,
 } from '@/lib/rent-review/agent-decision-scheduling';
 import {
   formatRentReviewTermLabel,
@@ -26,9 +26,8 @@ import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import {
-  earliestCompliantRentIncreaseDate,
+  isoDateAddDays,
   RENT_REVIEW_STATUTORY_NOTICE_DAYS,
-  resolveNoticePayableFromDate,
   toDateOnly,
 } from '@/lib/rent-review/scheduling';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
@@ -87,6 +86,12 @@ export function RentReviewAgentConfirmedPanel({
   readOnly?: boolean;
 }) {
   const runMutation = useRentReviewStore((s) => s.runMutation);
+  const { properties } = useAgentData();
+  const property = properties.find((row) => row.id === detail.propertyId) ?? null;
+  const limits = useMemo(
+    () => limitsForRentReview(detail, property),
+    [detail, property],
+  );
   const [busy, setBusy] = useState(false);
   const [rentNegotiable, setRentNegotiable] = useState<boolean | null>(null);
   const [preferredRent, setPreferredRent] = useState('');
@@ -100,7 +105,10 @@ export function RentReviewAgentConfirmedPanel({
   const editable = canEditAgentDecision(detail) && !readOnly;
   const noticeSent = hasTenantNoticeSent(detail);
   const currentLeaseIsFixed = isCurrentTenancyFixed(detail);
-  const autoNewLeaseStart = useMemo(() => deriveNewLeaseStartDate(detail), [detail]);
+  const autoNewLeaseStart = useMemo(
+    () => (currentLeaseIsFixed && limits.leaseEndDate ? isoDateAddDays(limits.leaseEndDate, 1) : null),
+    [currentLeaseIsFixed, limits.leaseEndDate],
+  );
 
   useEffect(() => {
     setPreferredRent(
@@ -112,28 +120,17 @@ export function RentReviewAgentConfirmedPanel({
     );
     setFixedTermWeeks(resolveFixedTermWeeks(detail));
     setFixedTermEndDate(detail.newAgreementEnd ?? '');
-    setManualRentIncreaseOn(
-      toDateOnly(detail.effectiveDate) ??
-        resolveNoticePayableFromDate({
-          leaseEndDate: detail.leaseEndDate,
-          storedEffectiveDate: detail.effectiveDate,
-        }),
-    );
   }, [detail.id]);
 
-  const autoRentIncreaseOnResolved = useMemo(
-    () =>
-      resolveNoticePayableFromDate({
-        leaseEndDate: detail.leaseEndDate,
-        storedEffectiveDate: detail.effectiveDate,
-      }) || deriveRentIncreaseOnDate(detail),
-    [detail],
-  );
+  const autoRentIncreaseOnResolved = limits.payableFrom;
 
-  // Saving here serves the notice, so the statutory count starts tomorrow. Shown as `min` on
-  // the picker as well as in words: the API refuses anything earlier, and the agent should
-  // meet the rule while choosing rather than after saving.
-  const earliestIncreaseDate = useMemo(() => earliestCompliantRentIncreaseDate(), []);
+  useEffect(() => {
+    setManualRentIncreaseOn(limits.payableFrom);
+  }, [detail.id, limits.payableFrom]);
+
+  // Saving an increase serves the notice. The picker floor is the later of 60 days'
+  // notice and one increase in any 12 months.
+  const earliestIncreaseDate = limits.earliestDate;
 
   const effectiveDate = editable
     ? manualRentIncreaseOn || autoRentIncreaseOnResolved
@@ -180,13 +177,19 @@ export function RentReviewAgentConfirmedPanel({
       toast.error('Set the NSW notice payable-from date');
       return;
     }
+    if (weekly > detail.currentWeeklyRent && effectiveDate < limits.earliestDate) {
+      toast.error(
+        `Rent cannot increase before ${formatDateOnly(limits.earliestDate)}. NSW allows one increase in any 12 months.`,
+      );
+      return;
+    }
     void run(
       () =>
         rentReviewApi.setProposedRent(
           detail.id,
           {
             weekly,
-            effectiveDate,
+            effectiveDate: effectiveDate < limits.earliestDate ? limits.earliestDate : effectiveDate,
             rentNegotiable,
             preferredLeaseType,
             preferredFixedTermEndDate:
@@ -398,12 +401,21 @@ export function RentReviewAgentConfirmedPanel({
                 />
                 <p className="text-[11px] leading-relaxed">
                   Suggested: {formatDateOnly(autoRentIncreaseOnResolved) ?? '—'} — the later of the
-                  lease end date or the statutory minimum. Earliest permitted is{' '}
+                  fixed term, 12 months from the tenancy start
+                  {limits.tenancyStartedOn
+                    ? ` (${formatDateOnly(limits.tenancyStartedOn)})`
+                    : ''}
+                  , and {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days&apos; notice. Earliest permitted is{' '}
                   <span className="font-medium tabular-nums">
                     {formatDateOnly(earliestIncreaseDate) ?? '—'}
-                  </span>{' '}
-                  — {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days notice counted from the day after this
-                  notice is served.
+                  </span>
+                  .
+                  {limits.heldByTwelveMonthRule
+                    ? ' NSW allows one rent increase in any 12-month period, so this cannot be brought forward to the 60-day notice date.'
+                    : ` Notice is counted from the day after it is served.`}
+                  {limits.leaseEndCorrected && limits.leaseEndDate
+                    ? ` This fixed term ends ${formatDateOnly(limits.leaseEndDate)}. ${formatDateOnly(limits.storedLeaseEnd)} on the review is earlier than that term.`
+                    : ''}
                 </p>
                 <Button
                   type="button"

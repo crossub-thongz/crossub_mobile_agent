@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Bell, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -19,10 +19,9 @@ import {
   hasTenantNoticeSent,
 } from '@/lib/rent-review/agent-workflow-model';
 import { formatRentReviewAuditDetail } from '@/lib/rent-review/audit-detail-display';
-import {
-  earliestCompliantRentIncreaseDate,
-  RENT_REVIEW_STATUTORY_NOTICE_DAYS,
-} from '@/lib/rent-review/scheduling';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import { limitsForRentReview } from '@/lib/rent-review/agent-decision-scheduling';
+import { RENT_REVIEW_STATUTORY_NOTICE_DAYS } from '@/lib/rent-review/scheduling';
 import { listTenantResponseReminders } from '@/lib/rent-review/tenant-reminders';
 import { useIsPropertySelfManaged } from '@/hooks/use-self-managed-access';
 import {
@@ -46,6 +45,9 @@ export function RentReviewTenantNotifiedPanel({
   readOnly?: boolean;
 }) {
   const runMutation = useRentReviewStore((s) => s.runMutation);
+  const { properties } = useAgentData();
+  const property = properties.find((row) => row.id === detail.propertyId) ?? null;
+  const limits = useMemo(() => limitsForRentReview(detail, property), [detail, property]);
   const selfManaged = useIsPropertySelfManaged(detail.propertyId);
   const [busy, setBusy] = useState(false);
   const [effectiveDate, setEffectiveDate] = useState('');
@@ -59,11 +61,15 @@ export function RentReviewTenantNotifiedPanel({
   const [auditExpanded, setAuditExpanded] = useState(false);
 
   useEffect(() => {
-    setEffectiveDate(detail.effectiveDate ?? '');
-  }, [detail]);
+    const stored = detail.effectiveDate ?? '';
+    setEffectiveDate(
+      stored && stored < limits.earliestDate ? limits.payableFrom : stored || limits.payableFrom,
+    );
+  }, [detail, limits.earliestDate, limits.payableFrom]);
 
-  // This button serves the notice, so the statutory count starts tomorrow.
-  const earliestIncreaseDate = earliestCompliantRentIncreaseDate();
+  // This button serves the notice. The floor is the later of 60 days' notice and one
+  // increase in any 12 months.
+  const earliestIncreaseDate = limits.earliestDate;
   const auditEntries = auditEntriesForStep(detail, RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED);
   const noticeSent = hasTenantNoticeSent(detail);
   const showSendNotice = canSendTenantNotice(detail);
@@ -141,23 +147,31 @@ export function RentReviewTenantNotifiedPanel({
             onChange={(e) => setEffectiveDate(e.target.value)}
           />
           <p className="text-muted-foreground text-[12px] leading-relaxed">
-            Earliest {earliestIncreaseDate} — {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days notice
-            counted from the day after this notice is served. Re-sending serves a new notice, so
-            the count starts again from today.
+            Earliest {earliestIncreaseDate}
+            {limits.heldByTwelveMonthRule
+              ? ' — one increase in any 12 months, counted from the tenancy start or the last increase.'
+              : ` — ${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days notice counted from the day after this notice is served.`}{' '}
+            Re-sending serves a new notice, so the count starts again from today.
           </p>
           <Button
             className="w-full"
             disabled={busy}
-            onClick={() =>
+            onClick={() => {
+              if (effectiveDate && effectiveDate < earliestIncreaseDate) {
+                toast.error(
+                  `Rent cannot increase before ${earliestIncreaseDate}. NSW allows one increase in any 12 months.`,
+                );
+                return;
+              }
               void run(
                 () =>
                   sendNotice({
                     weekly: detail.proposedWeeklyRent ?? undefined,
-                    effectiveDate: effectiveDate || undefined,
+                    effectiveDate: effectiveDate || earliestIncreaseDate,
                   }),
                 'Tenant notice sent',
-              )
-            }
+              );
+            }}
           >
             {resendNotice ? 'Re-send formal notice to tenant' : 'Send formal notice to tenant'}
           </Button>

@@ -1,6 +1,7 @@
 import { formatDate, formatPropertyDateTime, formatPropertyTime } from '@/lib/format-datetime';
 import { isSettledInspectionActivity } from '@/lib/inspections/presentation';
 import { isSettledMaintenanceActivity } from '@/lib/property-job-rows';
+import { resolveRentIncreaseLimits } from '@/lib/rent-review/scheduling';
 import type {
   Inspection,
   MaintenanceRequest,
@@ -185,7 +186,21 @@ export function buildDashboardBoard(input: {
   const vacatingCases = fullService ? input.vacating : [];
   const accountingRows = fullService ? input.accounting : [];
   const openReviews = rentReviews.filter(rentReviewOpen);
+  const lawfulIncreaseOn = (review: RentReviewCase): string | null => {
+    const property = input.properties.find((row) => row.id === review.propertyId);
+    return resolveRentIncreaseLimits({
+      leaseEndDate: review.leaseEnd || property?.leaseEnd,
+      agreementEnd: property?.leaseEnd,
+      tenancyStartedOn: property?.leaseStart || review.leaseStart,
+      initialLeaseStartDate: review.leaseStart,
+      termWeeks: review.fixedTermWeeks,
+      lastRentIncreaseAt: property?.lastRentIncrease,
+    }).scheduleAnchor;
+  };
   const overdueReviews = openReviews.filter((review) => {
+    const lawful = lawfulIncreaseOn(review);
+    const untilLawful = daysUntil(lawful, now);
+    if (untilLawful != null && untilLawful >= 0) return false;
     const days = daysUntil(review.reviewDue, now);
     return days != null && days < 0;
   });
@@ -213,7 +228,12 @@ export function buildDashboardBoard(input: {
   const reviewPropertyIds = new Set<string>();
 
   for (const review of openReviews) {
-    const days = daysUntil(review.reviewDue || review.leaseEnd, now);
+    const replied = reviewTenantReplied(review);
+    const lawful = lawfulIncreaseOn(review);
+    const days = daysUntil(
+      replied ? review.reviewDue || review.leaseEnd : lawful || review.reviewDue || review.leaseEnd,
+      now,
+    );
     if (days == null || !withinHorizon(days)) continue;
     const address = review.propertyAddress;
     const href = input.rentReviewHref(review.id);
