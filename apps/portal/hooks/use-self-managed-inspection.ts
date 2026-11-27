@@ -11,7 +11,7 @@ import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
 export type SelfManagedInspectionRun = (
   action: () => Promise<AgentInspectionDetail>,
-  successMessage: string,
+  successMessage: string | null,
 ) => Promise<boolean>;
 
 /**
@@ -46,7 +46,7 @@ export function useSelfManagedInspection(inspectionId: string, onChanged?: () =>
       setBusy(true);
       try {
         setDetail(await action());
-        toast.success(successMessage);
+        if (successMessage) toast.success(successMessage);
         onChanged?.();
         return true;
       } catch (err) {

@@ -49,6 +49,7 @@ import { useHouseholdTenants } from '@/lib/use-primary-tenant-name';
 import { toPlainTextBody } from '@/lib/message-body';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { fileToEmailAttachment } from '@/utils/email-attachment';
+import { pdfDownloadLink, splitEmailFiles } from '@/utils/email-download-link';
 import { recipientsWithTyped } from '@/utils/email-recipients';
 
 /** Recipients an app message can go to: the tenant only. */
@@ -84,7 +85,8 @@ export function NewConversationDialog({
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [attachments, setAttachments] = useState<readonly AgentConversationAttachmentUpload[]>([]);
-  const busy = pending !== null;
+  const [linking, setLinking] = useState(false);
+  const busy = pending !== null || linking;
   const isApp = channel === CONVERSATION_REPLY_CHANNEL.APP;
   const writingToTenants = !isApp && recipient === CONVERSATION_RECIPIENT.TENANT;
   const selectedProperty = useMemo(() => {
@@ -127,12 +129,13 @@ export function NewConversationDialog({
   const addFiles = async (incoming: readonly File[]) => {
     if (incoming.length === 0) return;
     const room = CONVERSATION_ATTACHMENT_LIMITS.maxFiles - attachments.length;
-    if (room <= 0) {
+    const { attach, link, errors } = splitEmailFiles(incoming);
+    if (attach.length > 0 && room <= 0) {
       toast.error(CONVERSATIONS_COPY.tooManyFiles(CONVERSATION_ATTACHMENT_LIMITS.maxFiles));
-      return;
+    } else if (attach.length > room) {
+      toast.error(CONVERSATIONS_COPY.tooManyFiles(CONVERSATION_ATTACHMENT_LIMITS.maxFiles));
     }
-    if (incoming.length > room) toast.error(CONVERSATIONS_COPY.tooManyFiles(CONVERSATION_ATTACHMENT_LIMITS.maxFiles));
-    const picked = incoming.slice(0, room);
+    const picked = room > 0 ? attach.slice(0, room) : [];
     const settled = await Promise.allSettled(picked.map((file, index) => fileToEmailAttachment(file, index)));
     const next = settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
     const failed = settled.find((result) => result.status === 'rejected');
@@ -140,6 +143,24 @@ export function NewConversationDialog({
     if (failed?.status === 'rejected') {
       const reason = failed.reason;
       toast.error(reason instanceof Error ? reason.message : CONVERSATIONS_COPY.attachFailed);
+    }
+    for (const message of errors) toast.error(message);
+    if (link.length === 0) return;
+    setLinking(true);
+    try {
+      const propertyForFile =
+        propertyId !== CONVERSATION_SELECT_PROMPT_VALUE ? propertyId : undefined;
+      for (const file of link) {
+        try {
+          const snippet = await pdfDownloadLink(file, propertyForFile);
+          setBody((current) => (current.trim() ? `${current.trimEnd()}\n\n${snippet.text}` : snippet.text));
+          toast.success(CONVERSATIONS_COPY.fileLinked(file.name));
+        } catch (err) {
+          toast.error(err instanceof Error && err.message.trim() ? err.message : CONVERSATIONS_COPY.attachFailed);
+        }
+      }
+    } finally {
+      setLinking(false);
     }
   };
 

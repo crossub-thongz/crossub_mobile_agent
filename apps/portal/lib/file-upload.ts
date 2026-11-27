@@ -42,6 +42,12 @@ export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 
 export const MAX_UPLOAD_LABEL = '100 MB';
 
+/**
+ * Above this size a failed direct upload must not fall through to base64 JSON.
+ * The expanded body is what turns a storage failure into a generic API error.
+ */
+export const BASE64_FALLBACK_MAX_BYTES = 8 * 1024 * 1024;
+
 const BLOCKED_VIDEO_MIME = /^video\//i;
 const BLOCKED_GIF_MIME = /^image\/gif$/i;
 const BLOCKED_VIDEO_EXTENSIONS = new Set([

@@ -250,6 +250,8 @@ export const CONVERSATIONS_COPY = {
   removeAttachment: (name: string) => `Remove ${name}`,
   tooManyFiles: (max: number) => `Up to ${max} attachments.`,
   fileTooBig: (name: string, megabytes: number) => `${name} is over ${megabytes} MB.`,
+  fileLinked: (name: string) =>
+    `${name} is over 4 MB, so the email includes a download link instead of the file.`,
   attachFailed: "Couldn't attach that file.",
   signatureHint: 'CROSSUB signature is added on send',
   yourName: 'Your name',

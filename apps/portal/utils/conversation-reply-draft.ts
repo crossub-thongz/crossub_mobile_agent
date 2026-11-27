@@ -2,8 +2,9 @@ import { CONVERSATION_REPLY_DRAFT_KEY_PREFIX } from '@/constants/conversations';
 
 /**
  * An unsent reply kept in this browser, per conversation. Attachments are not kept: base64 files
- * fill the ~5 MB storage quota. Every access is guarded, because storage can be missing (private
- * window) or full, and a draft is a convenience that must never take the composer down.
+ * fill the ~5 MB storage quota. A PDF over the email cap is a download link in the body, so the
+ * draft keeps that link and not the file. Every access is guarded, because storage can be missing
+ * (private window) or full, and a draft is a convenience that must never take the composer down.
  */
 export interface ConversationReplyDraft {
   to: string[];
